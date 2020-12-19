@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="stm32-vcu" />
+		<Option makefile_is_custom="1" />
+		<Option pch_mode="2" />
+		<Option compiler="armelfgcc" />
+		<MakeCommands>
+			<Build command="make" />
+			<CompileFile command="$make -f $makefile $file" />
+			<Clean command="$make -f $makefile clean" />
+			<DistClean command="$make -f $makefile distclean$target" />
+			<AskRebuildNeeded command="$make -q -f $makefile $target" />
+			<SilentBuild command="$make -s -f $makefile $target" />
+		</MakeCommands>
+		<Build>
+			<Target title="STM32F103">
+				<Option output="stm32_sine" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="armelfgcc" />
+				<Compiler>
+					<Add directory="include/project" />
+					<Add directory="include" />
+				</Compiler>
+				<MakeCommands>
+					<Build command="make" />
+					<CompileFile command="$make -f  $file " />
+					<Clean command="make clean " />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q" />
+					<SilentBuild command="make &gt; $(CMD_NULL)" />
+				</MakeCommands>
+			</Target>
+			<Target title="Test">
+				<Option output="test/test_sine" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="test" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add directory="include/project" />
+					<Add directory="include" />
+				</Compiler>
+			</Target>
+		</Build>
+		<Unit filename="Makefile">
+			<Option target="STM32F103" />
+		</Unit>
+		<Unit filename="include/anain_prj.h" />
+		<Unit filename="include/digio_prj.h" />
+		<Unit filename="include/errormessage_prj.h" />
+		<Unit filename="include/hwdefs.h" />
+		<Unit filename="include/hwinit.h" />
+		<Unit filename="include/isa_shunt.h" />
+		<Unit filename="include/leafinv.h" />
+		<Unit filename="include/param_prj.h" />
+		<Unit filename="include/throttle.h" />
+		<Unit filename="libopeninv/include/anain.h" />
+		<Unit filename="libopeninv/include/digio.h" />
+		<Unit filename="libopeninv/include/errormessage.h" />
+		<Unit filename="libopeninv/include/my_fp.h" />
+		<Unit filename="libopeninv/include/my_math.h" />
+		<Unit filename="libopeninv/include/my_string.h" />
+		<Unit filename="libopeninv/include/param_save.h" />
+		<Unit filename="libopeninv/include/params.h" />
+		<Unit filename="libopeninv/include/printf.h" />
+		<Unit filename="libopeninv/include/stm32_can.h" />
+		<Unit filename="libopeninv/include/stm32scheduler.h" />
+		<Unit filename="libopeninv/include/terminal.h" />
+		<Unit filename="libopeninv/src/anain.cpp" />
+		<Unit filename="libopeninv/src/digio.cpp" />
+		<Unit filename="libopeninv/src/errormessage.cpp" />
+		<Unit filename="libopeninv/src/my_fp.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="libopeninv/src/my_string.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="libopeninv/src/param_save.cpp" />
+		<Unit filename="libopeninv/src/params.cpp" />
+		<Unit filename="libopeninv/src/printf.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="libopeninv/src/stm32_can.cpp" />
+		<Unit filename="libopeninv/src/stm32scheduler.cpp" />
+		<Unit filename="libopeninv/src/terminal.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/hwinit.cpp" />
+		<Unit filename="src/isa_shunt.cpp" />
+		<Unit filename="src/leafinv.cpp" />
+		<Unit filename="src/stm32_vcu.cpp" />
+		<Unit filename="src/terminal_prj.cpp" />
+		<Unit filename="src/throttle.cpp" />
+		<Unit filename="test/Makefile">
+			<Option target="Test" />
+		</Unit>
+		<Unit filename="test/test.h">
+			<Option target="Test" />
+		</Unit>
+		<Unit filename="test/test_fp.cpp">
+			<Option target="Test" />
+		</Unit>
+		<Unit filename="test/test_fu.cpp">
+			<Option target="Test" />
+		</Unit>
+		<Unit filename="test/test_list.h">
+			<Option target="Test" />
+		</Unit>
+		<Unit filename="test/test_main.cpp">
+			<Option target="Test" />
+		</Unit>
+		<Unit filename="test/test_throttle.cpp">
+			<Option target="Test" />
+		</Unit>
+		<Extensions>
+			<DoxyBlocks>
+				<comment_style block="0" line="0" />
+				<doxyfile_project />
+				<doxyfile_build />
+				<doxyfile_warnings />
+				<doxyfile_output />
+				<doxyfile_dot class_diagrams="1" have_dot="1" />
+				<general />
+			</DoxyBlocks>
+			<debugger>
+				<remote_debugging target="STM32F103">
+					<options conn_type="0" ip_address="localhost" ip_port="3333" additional_cmds="load&#x0A;r" />
+				</remote_debugging>
+			</debugger>
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
