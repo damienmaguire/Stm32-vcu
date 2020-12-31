@@ -217,7 +217,7 @@ void Can::SendAll()
    forEachCanMap(curMap, canSendMap)
    {
       uint32_t data[2] = { 0 }; //Had an issue with uint64_t, otherwise would have used that
-
+   uint8_t Len;
       forEachPosMap(curPos, curMap)
       {
          s32fp val = FP_MUL(Param::Get((Param::PARAM_NUM)curPos->mapParam), curPos->gain);
@@ -234,7 +234,7 @@ void Can::SendAll()
          }
       }
 
-      Send(curMap->canId, data);
+      Send(curMap->canId, data,Len);
    }
 }
 
@@ -369,11 +369,11 @@ uint32_t Can::GetLastRxTimestamp()
  * \return void
  *
  */
-void Can::Send(uint32_t canId, uint32_t data[2])
+void Can::Send(uint32_t canId, uint32_t data[2], uint8_t Len)
 {
    can_disable_irq(canDev, CAN_IER_TMEIE);
 
-   if (can_transmit(canDev, canId, false, false, 8, (uint8_t*)data) < 0 && sendCnt < SENDBUFFER_LEN)
+   if (can_transmit(canDev, canId, false, false, Len, (uint8_t*)data) < 0 && sendCnt < SENDBUFFER_LEN)
    {
       /* enqueue in send buffer if all TX mailboxes are full */
       sendBuffer[sendCnt].id = canId;
@@ -535,7 +535,7 @@ void Can::ProcessSDO(uint32_t data[2])
       sdo->cmd = SDO_ABORT;
       sdo->data = SDO_ERR_INVIDX;
    }
-   Can::Send(0x581, data);
+   Can::Send(0x581, data,8);
 }
 
 void Can::SetFilterBank(int& idIndex, int& filterId, uint16_t* idList)

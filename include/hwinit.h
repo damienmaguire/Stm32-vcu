@@ -30,9 +30,11 @@ extern "C"
 
 void clock_setup(void);
 void usart_setup(void);
+void usart2_setup(void);
 void nvic_setup(void);
 void rtc_setup(void);
 void tim_setup(void);
+void tim2_setup(void);
 HWREV detect_hw(void);
 
 #ifdef __cplusplus

@@ -1,0 +1,101 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//CONTROL TOYOTA/ LEXUS HYBRID INVERTER ROUTINE
+///////////////////////////////////////////////////////////////////////////
+
+
+void GS450H::ProcessHybrid(int8_t gear, int16_t torque)//must do this every 10ms
+{
+
+  speedSum=0;
+
+    if(mth_good)
+    {
+      dc_bus_voltage=(((mth_data[82]|mth_data[83]<<8)-5)/2);
+      temp_inv_water=(mth_data[42]|mth_data[43]<<8);
+      temp_inv_inductor=(mth_data[86]|mth_data[87]<<8);
+      mg1_speed=mth_data[6]|mth_data[7]<<8;
+      mg2_speed=mth_data[31]|mth_data[32]<<8;
+    }
+    mg2_torque; // -3500 (reverse) to 3500 (forward)
+    if(gear==0) mg2_torque=0;//Neutral
+    if(gear==32) mg2_torque=torque;//Drive
+    if(gear==-32) mg2_torque=torque*-1;//Reverse
+
+  mg1_torque=((mg2_torque*5)/4);
+  if(gear=-1) mg1_torque=0; //no mg1 torque in reverse.
+  Param::SetInt(Param::torque,mg2_torque);//post processed final torue value sent to inv to web interface
+
+    if((mg2_speed>MG2MAXSPEED)||(mg2_speed<-MG2MAXSPEED))mg2_torque=0;
+
+
+    //speed feedback
+    speedSum=mg2_speed+mg1_speed;
+    speedSum/=113;
+    uint8_t speedSum2=speedSum;
+    htm_data[0]=speedSum2;
+    htm_data[75]=(mg1_torque*4)&0xFF;
+    htm_data[76]=((mg1_torque*4)>>8);
+
+    //mg1
+    htm_data[5]=(mg1_torque*-1)&0xFF;  //negative is forward
+    htm_data[6]=((mg1_torque*-1)>>8);
+    htm_data[11]=htm_data[5];
+    htm_data[12]=htm_data[6];
+
+    //mg2
+    htm_data[26]=(mg2_torque)&0xFF; //positive is forward
+    htm_data[27]=((mg2_torque)>>8);
+    htm_data[32]=htm_data[26];
+    htm_data[33]=htm_data[27];
+
+    //checksum
+   int16_t htm_checksum=0;
+    for(uint8_t i=0;i<78;i++)htm_checksum+=htm_data[i];
+    htm_data[78]=htm_checksum&0xFF;
+    htm_data[79]=htm_checksum>>8;
+
+
+  DigIo::req_out.Set();
+
+
+    if(!htm_sent&&inv_status==0) dma_write(htm_data,80);
+
+
+    else if (!htm_sent&&inv_status!=0) dma_write(htm_data_setup,80);
+    if(mth_data[1]!=0) inv_status--;
+    htm_sent=1;
+
+}
+
+
+
+
+void GS450H::ProcessMTH()//must do this every 4ms
+{
+
+if(htm_sent)
+{
+
+    htm_sent=0;
+    uint8_t  mth_byte=0;
+    uint8_t  mth_checksum=0;
+
+    for(int i=0;i<100;i++)mth_data[i]=0;
+    dma_read(mth_data,100);
+
+    for(int i=0;i<98;i++)mth_checksum+=mth_data[i];
+    if(mth_checksum==(mth_data[98]|(mth_data[99]<<8)))mth_good=1;else mth_good=0;
+    DigIo::req_out.Clear();
+}
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+

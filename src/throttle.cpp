@@ -86,7 +86,7 @@ bool Throttle::CheckDualThrottle(int* potval, int pot2val)
    int diff = potnom2 - potnom1;
    diff = ABS(diff);
 
-   if (diff > 10)
+   if (diff > 100)
    {
       *potval = potmin[0];
       return false;
@@ -100,7 +100,7 @@ s32fp Throttle::CalcThrottle(int potval, int pot2val, bool brkpedal)
    s32fp scaledBrkMax = brkpedal ? brknompedal : brkmax;
 
    if (pot2val >= potmin[1])
-   {
+  {
       potnom = (FP_FROMINT(100) * (pot2val - potmin[1])) / (potmax[1] - potmin[1]);
       //Never reach 0, because that can spin up the motor
       scaledBrkMax = -1 + FP_MUL(scaledBrkMax, potnom) / 100;
@@ -186,13 +186,13 @@ bool Throttle::TemperatureDerate(s32fp temp, s32fp tempMax, s32fp& finalSpnt)
 
 void Throttle::BmsLimitCommand(s32fp& finalSpnt, bool dinbms)
 {
-   if (dinbms)
-   {
-      if (finalSpnt >= 0)
-         finalSpnt = (finalSpnt * bmslimhigh) / 100;
-      else
-         finalSpnt = -(finalSpnt * bmslimlow) / 100;
-   }
+ //  if (dinbms)
+ //  {
+  //    if (finalSpnt >= 0)
+  //       finalSpnt = (finalSpnt * bmslimhigh) / 100;
+  //    else
+   //      finalSpnt = -(finalSpnt * bmslimlow) / 100;
+  // }
 }
 
 void Throttle::UdcLimitCommand(s32fp& finalSpnt, s32fp udc)

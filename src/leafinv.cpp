@@ -1,5 +1,4 @@
 /*
- * This file is part of the tumanako_vc project.
  *
  * Copyright (C) 2020 Johannes Huebner <dev@johanneshuebner.com>
  *                      Damien Maguire <info@evbmw.com>
@@ -34,9 +33,10 @@ uint32_t LeafINV::lastRecv = 0;
 uint16_t LeafINV::voltage;
 uint16_t LeafINV::speed;
 uint16_t LeafINV::error;
-uint16_t LeafINV::inv_temp;
-uint16_t LeafINV::motor_temp;
+int16_t LeafINV::inv_temp;
+int16_t LeafINV::motor_temp;
 int16_t LeafINV::final_torque_request;
+
 
 
 void LeafINV::DecodeCAN(int id, uint32_t data[2], uint32_t time)
@@ -64,9 +64,12 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2], uint32_t time)
 
 
 
-void LeafINV::SetTorque(s32fp torque)
+void LeafINV::SetTorque(int8_t gear, int16_t torque)
 {
-//final_torque_request=-1000; //testing of can messages
+    if(gear==0) final_torque_request=0;//Neutral
+    if(gear==32) final_torque_request=torque;//Drive
+    if(gear==-32) final_torque_request=torque*-1;;//Reverse
+
 Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
 
 }
@@ -113,9 +116,6 @@ void LeafINV::Send10msMessages()
     // Weird value at D3:4 that goes along with the counter
     // NOTE: Not actually needed, you can just send constant AA C0
 
-   const uint8_t weird1[] = {0x55, 0x00};
-   const uint8_t weird2[] = {0x55, 0x40};
-   const uint8_t weird3[] = {0xaa, 0x80};
 
     bytes[3] = 0xAA;
     bytes[4] = 0xC0;
@@ -138,7 +138,7 @@ void LeafINV::Send10msMessages()
 
 
 
-    Can::GetInterface(0)->Send(0x11A, (uint32_t*)bytes);//send 0x11a
+    Can::GetInterface(0)->Send(0x11A, (uint32_t*)bytes,8);//send 0x11a
    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    //Send target motor torque signal
    ////////////////////////////////////////////////////
@@ -271,7 +271,7 @@ void LeafINV::Send10msMessages()
     // Extra CRC
     nissan_crc(bytes, 0x85);
 
-   Can::GetInterface(0)->Send(0x1D4, (uint32_t*)bytes);
+   Can::GetInterface(0)->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //We need to send 0x1db here with voltage measured by inverter
 //Zero seems to work also on my gen1
@@ -291,7 +291,7 @@ static uint8_t counter_1db;
     if(counter_1db >= 4)
       counter_1db = 0;
   // uint32_t canData_1DB[2] = {*bytes};//??? hopefully....
-   Can::GetInterface(0)->Send(0x1DB, (uint32_t*)bytes);
+   Can::GetInterface(0)->Send(0x1DB, (uint32_t*)bytes,8);
 //////////////////////////////////////////////////////////////////////////////////////////
     // Statistics from 2016 capture:
     //     10 00000000000000
@@ -310,7 +310,7 @@ static uint8_t counter_1db;
         bytes[5]=0x00;
         bytes[6]=0x00;
 
-  Can::GetInterface(0)->Send(0x50B, (uint32_t*)bytes);//possible problem here as 0x50B is DLC 7....
+  Can::GetInterface(0)->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
 }
 
 void LeafINV::Send100msMessages()

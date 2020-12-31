@@ -41,7 +41,7 @@ public:
    Can(uint32_t baseAddr, enum baudrates baudrate);
    void Clear(void);
    void SetBaudrate(enum baudrates baudrate);
-   void Send(uint32_t canId, uint32_t data[2]);
+   void Send(uint32_t canId, uint32_t data[2], uint8_t Len);//change here to add dlc
    void SendAll();
    void Save();
    void SetReceiveCallback(void (*recv)(uint32_t, uint32_t*));

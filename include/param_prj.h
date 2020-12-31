@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 1.03.R
+#define VER 1.00.A
 
 
 /* Entries must be ordered as follows:
@@ -27,7 +27,8 @@
 //Next param id (increase when adding new parameter!): 102
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
-    PARAM_ENTRY(CAT_SETUP,Inverter,     INVMODES    ,  0,      4,      0,      82  ) \
+    PARAM_ENTRY(CAT_SETUP,Inverter,     INVMODES    ,  0,      4,      0,      5  ) \
+    PARAM_ENTRY(CAT_SETUP,Vehicle,      VEHMODES    ,  0,      4,      0,      6  ) \
     PARAM_ENTRY(CAT_THROTTLE,potmin,      "dig",     0,      4095,   0,      17  ) \
     PARAM_ENTRY(CAT_THROTTLE,potmax,      "dig",     0,      4095,   4095,   18  ) \
     PARAM_ENTRY(CAT_THROTTLE,pot2min,     "dig",     0,      4095,   4095,   63  ) \
@@ -36,6 +37,7 @@
     PARAM_ENTRY(CAT_THROTTLE,dirmode,     DIRMODES,  0,      4,      1,      95  ) \
     PARAM_ENTRY(CAT_THROTTLE,throtramp,   "%/10ms",  0.1,    100,    100,    81  ) \
     PARAM_ENTRY(CAT_THROTTLE,throtramprpm,"rpm",     0,      20000,  20000,  85  )  \
+    PARAM_ENTRY(CAT_THROTTLE,revlim,        "rpm",      0,     20000,   6000,  19   ) \
     PARAM_ENTRY(CAT_THROTTLE,brkout,      "%",       -100,   -1,     -50,    67  ) \
     PARAM_ENTRY(CAT_THROTTLE,  bmslimhigh,  "%",       0,      100,    50,     55  ) \
     PARAM_ENTRY(CAT_THROTTLE,  bmslimlow,   "%",       -100,   0,      -1,     56  ) \
@@ -47,16 +49,14 @@
     PARAM_ENTRY(CAT_THROTTLE,  tmpmmax,     "°C",      70,     300,   300,     127 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtmax,    "%",       0,      100,   100,     97  ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtmin,    "%",       -100,   0,     -100,    119 ) \
+    PARAM_ENTRY(CAT_LEXUS,      GEAR    ,LOWHIGH,  0,      2,      0,      7  ) \
+    PARAM_ENTRY(CAT_LEXUS,      OilPump,    "%",  0,      100,      50,      8  ) \
     PARAM_ENTRY(CAT_CRUISE,   cruisestep,  "rpm",     1,      1000,   200,    3   ) \
     PARAM_ENTRY(CAT_CRUISE,   cruiseramp,  "rpm/100ms",1,     1000,   20,     9   ) \
     PARAM_ENTRY(CAT_CRUISE,   regenlevel,  "",        0,      3,      2,      101  ) \
     PARAM_ENTRY(CAT_CONTACT,    udcsw,       "V",       0,      1000,   330,    20  ) \
     PARAM_ENTRY(CAT_CONTACT,  cruiselight, ONOFF,     0,      1,      0,      0   ) \
-    PARAM_ENTRY(CAT_CONTACT,  errlights,   ERRLIGHTS, 0,      255,    0,      95  ) \
-    PARAM_ENTRY(CAT_GAUGE,    gaugeoffset, "dig",     0,      4096,   1000,   1   ) \
-    PARAM_ENTRY(CAT_GAUGE,    gaugegain,   "dig/%",   0,      4096,   5,      2   ) \
-    PARAM_ENTRY(CAT_GAUGE,    gaugebalance,"%",       0,      100,   50,      8   ) \
-    PARAM_ENTRY(CAT_GAUGE,    soctest,     "%",        0,      100,    0,      0   ) \
+    PARAM_ENTRY(CAT_CONTACT,  errlights,   ERRLIGHTS, 0,      255,    0,      25  ) \
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      0,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      0,      88  ) \
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
@@ -75,10 +75,11 @@
     VALUE_ENTRY(brakepressure,"dig",   2074 ) \
     VALUE_ENTRY(potnom,       "%",     2017 ) \
     VALUE_ENTRY(dir,         DIRS,    2018 ) \
+    VALUE_ENTRY(inv,         INVMODES,    2099 ) \
+    VALUE_ENTRY(veh,         VEHMODES,    2098 ) \
     VALUE_ENTRY(tmphs,        "°C",    2019 ) \
     VALUE_ENTRY(tmpm,         "°C",    2020 ) \
     VALUE_ENTRY(tmpaux,       "°C",    2072 ) \
-    VALUE_ENTRY(tmpmod,       "dig",   2040 ) \
     VALUE_ENTRY(uaux,         "V",     2021 ) \
     VALUE_ENTRY(canio,        CANIOS,  2022 ) \
     VALUE_ENTRY(cruisespeed,  "rpm",   2059 ) \
@@ -90,6 +91,11 @@
     VALUE_ENTRY(din_reverse,  ONOFF,   2028 ) \
     VALUE_ENTRY(din_bms,      ONOFF,   2032 ) \
     VALUE_ENTRY(handbrk,      ONOFF,   2071 ) \
+    VALUE_ENTRY(Gear1,      ONOFF,   2091 ) \
+    VALUE_ENTRY(Gear2,      ONOFF,   2092 ) \
+    VALUE_ENTRY(Gear3,      ONOFF,   2093 ) \
+    VALUE_ENTRY(T15Stat,      ONOFF,   2094 ) \
+    VALUE_ENTRY(GearFB,        LOWHIGH,   2073 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 
 //Next value Id: 2080
@@ -99,10 +105,12 @@
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie"
+#define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None"
 #define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
 #define ONOFF        "0=Off, 1=On, 2=na"
+#define LOWHIGH        "0=LOW, 1=HIGH, 2=AUTO"
 #define OKERR        "0=Error, 1=Ok, 2=na"
 #define CANSPEEDS    "0=250k, 1=500k, 2=800k, 3=1M"
 #define CANIOS       "1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms"
@@ -116,10 +124,9 @@
 #define CAT_CONTACT  "Contactor Control"
 #define CAT_TEST     "Testing"
 #define CAT_COMM     "Communication"
-#define CAT_GAUGE    "Fuel Gauge"
-#define CAT_SETUP      "Inverter Module"
+#define CAT_SETUP      "Vehicle Module"
 #define CAT_CRUISE   "Cruise Control"
-
+#define CAT_LEXUS   "Gearbox Control"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 
@@ -168,6 +175,21 @@ enum _invmodes
    GS450H = 1,
    UserCAN = 2, //used as a flag
    Zombie = 4
+};
+
+enum _gear
+{
+   LOW = 0,
+   HIGH = 1,
+   AUTO = 2
+};
+
+enum _vehmodes
+{
+   BMW_E46 = 0,
+   BMW_E65 = 1,
+   User = 2, //used as a flag
+   None = 4
 };
 
 enum _potmodes

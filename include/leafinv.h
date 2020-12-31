@@ -30,7 +30,9 @@ class LeafINV
       static void Send10msMessages();
       static void Send100msMessages();
       static uint16_t speed;
-      static void SetTorque(s32fp torque);
+      static void SetTorque(int8_t gear, int16_t torque);
+      static int16_t inv_temp;
+      static int16_t motor_temp;
 
 
    private:
@@ -41,8 +43,7 @@ class LeafINV
       static uint32_t lastRecv;
       static uint16_t voltage;
       static uint16_t error;
-      static uint16_t inv_temp;
-      static uint16_t motor_temp;
+
       static int16_t final_torque_request;
       //
 };

@@ -48,16 +48,19 @@ void clock_setup(void)
    rcc_periph_clock_enable(RCC_GPIOB);
    rcc_periph_clock_enable(RCC_GPIOC);
    rcc_periph_clock_enable(RCC_GPIOD);
-   rcc_periph_clock_enable(RCC_USART3);
-   rcc_periph_clock_enable(RCC_TIM1); //Main PWM
-   rcc_periph_clock_enable(RCC_TIM2); //Scheduler
-   rcc_periph_clock_enable(RCC_TIM3); //Rotor Encoder
-   rcc_periph_clock_enable(RCC_TIM4); //Overcurrent / AUX PWM
-   rcc_periph_clock_enable(RCC_DMA1);  //ADC, Encoder and UART receive
+  rcc_periph_clock_enable(RCC_USART3);
+   rcc_periph_clock_enable(RCC_USART2);//GS450H Inverter Comms
+   rcc_periph_clock_enable(RCC_TIM1); //GS450H oil pump pwm
+   rcc_periph_clock_enable(RCC_TIM2); //GS450H 500khz usart clock
+   rcc_periph_clock_enable(RCC_TIM3); //Scheduler
+   rcc_periph_clock_enable(RCC_TIM4); //
+   rcc_periph_clock_enable(RCC_DMA1);  //ADC, and UARTS
+  // rcc_periph_clock_enable(RCC_DMA2);
    rcc_periph_clock_enable(RCC_ADC1);
    rcc_periph_clock_enable(RCC_CRC);
-   rcc_periph_clock_enable(RCC_AFIO); //CAN
-   rcc_periph_clock_enable(RCC_CAN1); //CAN
+   rcc_periph_clock_enable(RCC_AFIO); //CAN AND USART3
+   rcc_periph_clock_enable(RCC_CAN1); //CAN1
+   rcc_periph_clock_enable(RCC_CAN2); //CAN2
 }
 
 static bool is_floating(uint32_t port, uint16_t pin)
@@ -93,7 +96,6 @@ void usart_setup(void)
 {
    gpio_set_mode(TERM_USART_TXPORT, GPIO_MODE_OUTPUT_50_MHZ,
                GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, TERM_USART_TXPIN);
-
    usart_set_baudrate(TERM_USART, USART_BAUDRATE);
    usart_set_databits(TERM_USART, 8);
    usart_set_stopbits(TERM_USART, USART_STOPBITS_2);
@@ -105,12 +107,12 @@ void usart_setup(void)
    if (hwRev != HW_REV1)
    {
       usart_enable_tx_dma(TERM_USART);
-      dma_channel_reset(DMA1, TERM_USART_DMATX);
-      dma_set_read_from_memory(DMA1, TERM_USART_DMATX);
-      dma_set_peripheral_address(DMA1, TERM_USART_DMATX, (uint32_t)&TERM_USART_DR);
-      dma_set_peripheral_size(DMA1, TERM_USART_DMATX, DMA_CCR_PSIZE_8BIT);
-      dma_set_memory_size(DMA1, TERM_USART_DMATX, DMA_CCR_MSIZE_8BIT);
-      dma_enable_memory_increment_mode(DMA1, TERM_USART_DMATX);
+      dma_channel_reset(DMA2, TERM_USART_DMATX);
+      dma_set_read_from_memory(DMA2, TERM_USART_DMATX);
+      dma_set_peripheral_address(DMA2, TERM_USART_DMATX, (uint32_t)&TERM_USART_DR);
+      dma_set_peripheral_size(DMA2, TERM_USART_DMATX, DMA_CCR_PSIZE_8BIT);
+      dma_set_memory_size(DMA2, TERM_USART_DMATX, DMA_CCR_MSIZE_8BIT);
+      dma_enable_memory_increment_mode(DMA2, TERM_USART_DMATX);
    }
 
    dma_channel_reset(DMA1, TERM_USART_DMARX);
@@ -118,9 +120,29 @@ void usart_setup(void)
    dma_set_peripheral_size(DMA1, TERM_USART_DMARX, DMA_CCR_PSIZE_8BIT);
    dma_set_memory_size(DMA1, TERM_USART_DMARX, DMA_CCR_MSIZE_8BIT);
    dma_enable_memory_increment_mode(DMA1, TERM_USART_DMARX);
+   	dma_set_priority(DMA1, TERM_USART_DMARX, DMA_CCR_PL_VERY_HIGH);
    dma_enable_channel(DMA1, TERM_USART_DMARX);
 
    usart_enable(TERM_USART);
+}
+
+/**
+* Setup USART2 500000 8N1 for Toyota inverter comms
+*/
+void usart2_setup(void)
+{
+ 	/* Setup GPIO pin GPIO_USART2_TX and GPIO_USART2_RX. */
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART2_TX);
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+		      GPIO_CNF_INPUT_FLOAT, GPIO_USART2_RX);
+   usart_set_baudrate(USART2, 500000);
+   usart_set_databits(USART2, 8);
+   usart_set_stopbits(USART2, USART_STOPBITS_1);
+   usart_set_mode(USART2, USART_MODE_TX_RX);
+   usart_set_parity(USART2, USART_PARITY_NONE);
+   usart_set_flow_control(USART2, USART_FLOWCONTROL_NONE);
+   usart_enable(USART2);
 }
 
 /**
@@ -128,23 +150,21 @@ void usart_setup(void)
 */
 void nvic_setup(void)
 {
-   nvic_enable_irq(PWM_TIMER_IRQ); //Main PWM
-   nvic_set_priority(PWM_TIMER_IRQ, 1 << 4); //Set second-highest priority
+    nvic_set_priority(NVIC_DMA1_CHANNEL7_IRQ, 0xf0);//usart2_TX
+	nvic_enable_irq(NVIC_DMA1_CHANNEL7_IRQ);
 
-   nvic_enable_irq(NVIC_TIM1_BRK_IRQ); //Emergency shut down
-   nvic_set_priority(NVIC_TIM1_BRK_IRQ, 0); //Highest priority
+	nvic_set_priority(NVIC_DMA1_CHANNEL6_IRQ, 0xf0);//usart2_RX low priority int
+	nvic_enable_irq(NVIC_DMA1_CHANNEL6_IRQ);
 
-   nvic_enable_irq(NVIC_EXTI2_IRQ); //Encoder Index pulse
-   nvic_set_priority(NVIC_EXTI2_IRQ, 0); //Set highest priority
+   nvic_enable_irq(NVIC_TIM3_IRQ); //Scheduler on tim3
+   nvic_set_priority(NVIC_TIM3_IRQ, 0); //Highest priority
 
-   nvic_enable_irq(NVIC_TIM2_IRQ); //Scheduler
-   nvic_set_priority(NVIC_TIM2_IRQ, 0xe << 4); //second lowest priority
 
 	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ); //CAN RX
-	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, 0xf << 4); //lowest priority
+	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, 0xe << 4); //second lowest priority
 
 	nvic_enable_irq(NVIC_USB_HP_CAN_TX_IRQ); //CAN TX
-	nvic_set_priority(NVIC_USB_HP_CAN_TX_IRQ, 0xf << 4); //lowest priority
+	nvic_set_priority(NVIC_USB_HP_CAN_TX_IRQ, 0xe << 4); //second lowest priority
 }
 
 void rtc_setup()
@@ -155,38 +175,57 @@ void rtc_setup()
    rtc_set_counter_val(0);
 }
 
-/**
-* Setup main PWM timer and timer for generating over current
-* reference values and external PWM
-*/
+
 void tim_setup()
 {
-   /*** Setup over/undercurrent and PWM output timer */
-   timer_disable_counter(FUELGAUGE_TIMER);
-   //edge aligned PWM
-   timer_set_alignment(FUELGAUGE_TIMER, TIM_CR1_CMS_EDGE);
-   timer_enable_preload(FUELGAUGE_TIMER);
-   /* PWM mode 1 and preload enable */
-   timer_set_oc_mode(FUELGAUGE_TIMER, TIM_OC2, TIM_OCM_PWM1);
-   timer_set_oc_mode(FUELGAUGE_TIMER, TIM_OC3, TIM_OCM_PWM1);
-   timer_set_oc_mode(FUELGAUGE_TIMER, TIM_OC4, TIM_OCM_PWM1);
-   timer_enable_oc_preload(FUELGAUGE_TIMER, TIM_OC2);
-   timer_enable_oc_preload(FUELGAUGE_TIMER, TIM_OC3);
-   timer_enable_oc_preload(FUELGAUGE_TIMER, TIM_OC4);
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+   //Code for timer 1 to create oil pump control pwm for Toyota hybrid gearbox
+   //Needs to be 1khz
+    ////////////////////////////////////////////////////////////////////////
+    gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_50_MHZ,	// High speed
+		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO8);	// GPIOA8=TIM1.CH1
 
-   timer_set_oc_polarity_high(FUELGAUGE_TIMER, TIM_OC2);
-   timer_set_oc_polarity_high(FUELGAUGE_TIMER, TIM_OC3);
-   timer_set_oc_polarity_high(FUELGAUGE_TIMER, TIM_OC4);
-   timer_enable_oc_output(FUELGAUGE_TIMER, TIM_OC2);
-   timer_enable_oc_output(FUELGAUGE_TIMER, TIM_OC3);
-   timer_enable_oc_output(FUELGAUGE_TIMER, TIM_OC4);
-   timer_generate_event(FUELGAUGE_TIMER, TIM_EGR_UG);
-   timer_set_prescaler(FUELGAUGE_TIMER, 0);
-   /* PWM frequency */
-   timer_set_period(FUELGAUGE_TIMER, GAUGEMAX);
-   timer_enable_counter(FUELGAUGE_TIMER);
+timer_disable_counter(TIM1);
+timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_CENTER_1,
+               TIM_CR1_DIR_UP);
+timer_set_prescaler(TIM1,16);
+timer_set_oc_mode(TIM1, TIM_OC1, TIM_OCM_PWM2);
+timer_enable_oc_output(TIM1, TIM_OC1);
+timer_enable_break_main_output(TIM1);
+timer_set_oc_value(TIM1, TIM_OC1, 1000);//duty. 1000 = 52% , 500 = 76% , 1500=28%
+timer_set_period(TIM1, 2100);
+timer_enable_counter(TIM1);
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   /** setup gpio */
-   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO7 | GPIO8 | GPIO9);
+}
+
+void tim2_setup()
+{
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+   //Code for timer 2 to create usart 2 clock for Toyota hybrid comms
+    ////////////////////////////////////////////////////////////////////////
+    gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_50_MHZ,	// High speed
+		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO1);	// GPIOA1=TIM2.CH2 clock for usart2
+
+	// TIM2:
+	timer_disable_counter(TIM2);
+//	timer_reset(TIM2);
+
+	timer_set_mode(TIM2,
+		TIM_CR1_CKD_CK_INT,
+		TIM_CR1_CMS_EDGE,
+		TIM_CR1_DIR_UP);
+	timer_set_prescaler(TIM2,0);
+    timer_enable_preload(TIM2);
+	timer_continuous_mode(TIM2);
+	timer_set_period(TIM2,143);//500khz
+
+	timer_disable_oc_output(TIM2,TIM_OC2);
+	timer_set_oc_mode(TIM2,TIM_OC2,TIM_OCM_PWM1);
+	timer_enable_oc_output(TIM2,TIM_OC2);
+
+	timer_set_oc_value(TIM2,TIM_OC2,72);//50% duty
+	timer_enable_counter(TIM2);
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
