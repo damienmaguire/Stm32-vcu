@@ -1,6 +1,8 @@
 # stm32-vcu
 Project based on the OpenInverter System by Johannes Huebner to provide a universal VCU (Vehicle Control Unit) for electric vehicle conversion projects. 
+
 Please visit the development thread on the Openinverter Forum for more information : https://openinverter.org/forum/viewtopic.php?f=3&t=1277
+
 NOTE : Not for use in a car as of this commit. Alpha status for bench testing only!
 
 # Features
