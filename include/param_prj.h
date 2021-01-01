@@ -106,7 +106,8 @@
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None"
-#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
+//#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
+#define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
 #define ONOFF        "0=Off, 1=On, 2=na"
@@ -134,15 +135,8 @@ enum modes
 {
    MOD_OFF = 0,
    MOD_RUN,
-   MOD_MANUAL,
-   MOD_BOOST,
-   MOD_BUCK,
-   MOD_SINE,
-   MOD_ACHEAT,
-   MOD_CHARGESTART,
-   MOD_CHARGELOCK,
-   MOD_CHARGE,
-   MOD_CHARGEND,
+   MOD_PRECHARGE,
+   MOD_PCHFAIL,
    MOD_LAST
 };
 

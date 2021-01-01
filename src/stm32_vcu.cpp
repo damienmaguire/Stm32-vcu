@@ -73,6 +73,7 @@ static int16_t torquePercent450;
 static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
+static uint32_t oldTime;
 
 
 
@@ -227,7 +228,7 @@ static s32fp ProcessUdc()
 //   s32fp udcmax = Param::Get(Param::udcmax);
    s32fp udclim = Param::Get(Param::udclim);
    s32fp udcsw = Param::Get(Param::udcsw);
-
+int opmode = Param::GetInt(Param::opmode);
    //Calculate "12V" supply voltage from voltage divider on mprot pin
    //1.2/(4.7+1.2)/3.33*4095 = 250 -> make it a bit less for pin losses etc
    //HW_REV1 had 3.9k resistors
@@ -250,10 +251,14 @@ static s32fp ProcessUdc()
       ErrorMessage::Post(ERR_OVERVOLTAGE);
    }
 
-   if (udcfp < (udcsw / 2) && rtc_get_counter_val() > PRECHARGE_TIMEOUT && DigIo::prec_out.Get())
+   if(opmode==MOD_PRECHARGE)
+   {
+   if (udcfp < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
    {
       DigIo::prec_out.Clear();
       ErrorMessage::Post(ERR_PRECHARGE);
+      Param::SetInt(Param::opmode, MOD_PCHFAIL);
+   }
    }
 
    return udcfp;
@@ -671,6 +676,34 @@ static void Ms10Task(void)
    stt |= udc >= Param::Get(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
    stt |= udc < Param::Get(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
+     if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65T15))//on detection of ign on we commence prechage and go to mode precharge
+      {
+        DigIo::prec_out.Set();//commence precharge
+         opmode = MOD_PRECHARGE;
+         Param::SetInt(Param::opmode, opmode);
+         oldTime=rtc_get_counter_val();
+      }
+
+       if(Module_Vehicle==BMW_E65){
+
+      if(opmode==MOD_PCHFAIL && E65T15==false)//use T15 status to reset
+      {
+                   opmode = MOD_OFF;
+         Param::SetInt(Param::opmode, opmode);
+      }
+       }
+
+         if(Module_Vehicle!=BMW_E65){
+
+      if(opmode==MOD_PCHFAIL && !Param::GetBool(Param::din_start)) //use start input to reset.
+      {
+                   opmode = MOD_OFF;
+         Param::SetInt(Param::opmode, opmode);
+      }
+       }
+
+
+
    /* switch on DC switch if
     * - throttle is not pressed
     * - start pin is high
@@ -691,14 +724,42 @@ static void Ms10Task(void)
 
    Param::SetInt(Param::status, stt);
 
+    if(Module_Vehicle==BMW_E65)
+  {
+    if(!E65T15) opmode = MOD_OFF; //switch to off mode via CAS command in an E65
+  }
+
+    if(Module_Vehicle!=BMW_E65)
+  {
+     //switch to off mode via igntition digital input. To be implemented in release HW
+  }
+
+
+
+
+
+
+
      if (newMode != MOD_OFF)
    {
       DigIo::dcsw_out.Set();
       DigIo::err_out.Clear();
       DigIo::prec_out.Clear();
+      DigIo::inv_out.Set();//inverter power on
       Param::SetInt(Param::opmode, newMode);
       ErrorMessage::UnpostAll();
    }
+
+
+     if (MOD_OFF == opmode)
+   {
+        DigIo::dcsw_out.Clear();
+      DigIo::err_out.Clear();
+      DigIo::prec_out.Clear();
+      DigIo::inv_out.Clear();//inverter power off
+ Param::SetInt(Param::opmode, newMode);
+   }
+
 
 
    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -802,6 +863,7 @@ extern "C" int main(void)
    term_Init();
    parm_load();
    parm_Change(Param::PARAM_LAST);
+    DigIo::inv_out.Clear();//inverter power off during bootup
 
    Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1
    Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2
@@ -832,7 +894,7 @@ extern "C" int main(void)
    s.AddTask(Ms500Task, 500);
 
   // ISA::initialize();//only call this once if a new sensor is fitted. Might put an option on web interface to call this....
-    DigIo::prec_out.Set();//commence precharge
+  //  DigIo::prec_out.Set();//commence precharge
    Param::SetInt(Param::version, 4); //backward compatibility
 
 
