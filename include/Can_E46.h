@@ -12,8 +12,8 @@ class Can_E46
 {
 
 public:
-    static		void Msg316();
-    static		void Msg329();
+    static		void Msg316(uint16_t outRPM);
+    static		void Msg329(uint16_t tempValue);
     static		void Msg545();
 
 private:

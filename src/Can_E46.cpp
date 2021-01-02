@@ -11,16 +11,21 @@
 //these messages go out on vehicle can and are specific to driving the E46 instrument cluster etc.
 
 //////////////////////DME Messages //////////////////////////////////////////////////////////
-void Can_E46::Msg316()
+void Can_E46::Msg316(uint16_t outRPM)
 {
-         //MSG 0x316
+if(outRPM<4800) outRPM=4800;  //set lowest rpm to 750 displayed on tach to keep car alive thinking engine is running.
+if(outRPM>44800) outRPM=44800;  //DONT READ MORE THAN 7000RPM!
+
+ char outRPMlo = outRPM & 0xFF;
+ char outRPMhi = outRPM >> 8;
+
  uint8_t bytes[8];
         bytes[0]=0x05;
         bytes[1]=0x00;
-       // bytes[2]=lowByte(outRPM);  //RPM LSB
-       // bytes[3]=highByte(outRPM);  //RPM MSB [RPM=(hex2dec("byte3"&"byte2"))/6.4]  0x12c0 should be 750rpm on tach
-        bytes[2]=0xc0;  //RPM LSB
-        bytes[3]=0x12;  //RPM MSB [RPM=(hex2dec("byte3"&"byte2"))/6.4]  0x12c0 should be 750rpm on tach
+        bytes[2]=outRPMlo;  //RPM LSB
+        bytes[3]=outRPMhi;  //RPM MSB [RPM=(hex2dec("byte3"&"byte2"))/6.4]  0x12c0 should be 750rpm on tach
+     //   bytes[2]=0xc0;  //RPM LSB
+     //   bytes[3]=0x12;  //RPM MSB [RPM=(hex2dec("byte3"&"byte2"))/6.4]  0x12c0 should be 750rpm on tach
  //       bytes[2]=0xff;  //RPM LSB
  //       bytes[3]=0x4f;  //RPM MSB [RPM=(hex2dec("byte3"&"byte2"))/6.4]  0x4fff gives 3200rpm on tach
         bytes[4]=0x00;
@@ -34,7 +39,7 @@ Can::GetInterface(1)->Send(0x316, (uint32_t*)bytes,8); //Send on CAN2
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Can_E46::Msg329()
+void Can_E46::Msg329(uint16_t tempValue)
 {
  uint8_t bytes[8];
 

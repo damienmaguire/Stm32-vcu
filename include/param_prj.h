@@ -28,7 +28,7 @@
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,Inverter,     INVMODES    ,  0,      4,      0,      5  ) \
-    PARAM_ENTRY(CAT_SETUP,Vehicle,      VEHMODES    ,  0,      4,      0,      6  ) \
+    PARAM_ENTRY(CAT_SETUP,Vehicle,      VEHMODES    ,  0,      6,      0,      6  ) \
     PARAM_ENTRY(CAT_THROTTLE,potmin,      "dig",     0,      4095,   0,      17  ) \
     PARAM_ENTRY(CAT_THROTTLE,potmax,      "dig",     0,      4095,   4095,   18  ) \
     PARAM_ENTRY(CAT_THROTTLE,pot2min,     "dig",     0,      4095,   4095,   63  ) \
@@ -57,8 +57,8 @@
     PARAM_ENTRY(CAT_CONTACT,    udcsw,       "V",       0,      1000,   330,    20  ) \
     PARAM_ENTRY(CAT_CONTACT,  cruiselight, ONOFF,     0,      1,      0,      0   ) \
     PARAM_ENTRY(CAT_CONTACT,  errlights,   ERRLIGHTS, 0,      255,    0,      25  ) \
-    PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      0,      83  ) \
-    PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      0,      88  ) \
+    PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
+    PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
     VALUE_ENTRY(hwver,        HWREVS,  2036 ) \
     VALUE_ENTRY(opmode,       OPMODES, 2000 ) \
@@ -105,7 +105,7 @@
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie"
-#define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None"
+#define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None , 5=BMW_E39 , 6=VAG"
 //#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
@@ -183,7 +183,9 @@ enum _vehmodes
    BMW_E46 = 0,
    BMW_E65 = 1,
    User = 2, //used as a flag
-   None = 4
+   None = 4,
+   BMW_E39 = 5,
+   VAG = 6
 };
 
 enum _potmodes

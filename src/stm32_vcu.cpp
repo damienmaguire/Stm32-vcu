@@ -39,8 +39,10 @@
 #include "stm32scheduler.h"
 #include "leafinv.h"
 #include "isa_shunt.h"
+#include "Can_E39.h"
 #include "Can_E46.h"
 #include "Can_E65.h"
+#include "Can_VAG.h"
 #include "GS450H.h"
 #include "throttle.h"
 #define RMS_SAMPLES 256
@@ -55,6 +57,8 @@
 #define  BMW_E65  1
 #define  User  2
 #define  None  4
+#define  BMW_E39  5
+#define  VAG  6
 #define  LOW_Gear  0
 #define  HIGH_Gear  1
 #define  AUTO_Gear  2
@@ -508,7 +512,7 @@ static int16_t tmpm;
 
    if(Module_Vehicle!=BMW_E65) E65Dash=false;
 
-   //ProcessCruiseControlButtons();
+  if(Module_Vehicle==VAG) Can_VAG::SendVAG100msMessage();
 
 
    if (!chargeMode && rtc_get_counter_val() > 100)
@@ -649,14 +653,17 @@ static void Ms10Task(void)
    s32fp tmpm = Param::Get(Param::tmpm);
    GetDigInputs();
 
-
-
+  if(Module_Vehicle==BMW_E39)   //send BMW E39 messages on can2 if we select E39
+{
+    Can_E39::SendE39(speed, Param::Get(Param::tmphs)); //send rpm and heatsink temp to e39 cluster
+}
 
   if(Module_Vehicle==BMW_E46)   //send BMW E46 messages on can2 if we select E46
  {
+     uint16_t tempGauge= change(Param::Get(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
      //Messages required for E46
-   Can_E46::Msg316();
-   Can_E46::Msg329();
+   Can_E46::Msg316(speed);//send rpm to e46 dash
+   Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
    Can_E46::Msg545();
    /////////////////////////
  }
