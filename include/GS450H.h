@@ -28,6 +28,7 @@ static void ProcessHybrid(int8_t gear, int16_t torque);
 static void ProcessMTH();
 static int16_t dc_bus_voltage,temp_inv_water, temp_inv_inductor, mg1_speed, mg2_speed;
 static void UpdateHTMState1Ms(int8_t gear, int16_t torque);
+static bool statusFB();
 
 	private:
 

@@ -95,6 +95,7 @@
     VALUE_ENTRY(Gear2,      ONOFF,   2092 ) \
     VALUE_ENTRY(Gear3,      ONOFF,   2093 ) \
     VALUE_ENTRY(T15Stat,      ONOFF,   2094 ) \
+    VALUE_ENTRY(InvStat,      ONOFF,   2095 ) \
     VALUE_ENTRY(GearFB,        LOWHIGH,   2073 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 

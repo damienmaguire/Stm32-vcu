@@ -47,8 +47,10 @@
 		<Unit filename="Makefile">
 			<Option target="STM32F103" />
 		</Unit>
+		<Unit filename="include/Can_E39.h" />
 		<Unit filename="include/Can_E46.h" />
 		<Unit filename="include/Can_E65.h" />
+		<Unit filename="include/Can_VAG.h" />
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/digio_prj.h" />
@@ -91,8 +93,10 @@
 		<Unit filename="libopeninv/src/terminal.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src/Can_E39.cpp" />
 		<Unit filename="src/Can_E46.cpp" />
 		<Unit filename="src/Can_E65.cpp" />
+		<Unit filename="src/Can_VAG.cpp" />
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/hwinit.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />

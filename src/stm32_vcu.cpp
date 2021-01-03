@@ -429,6 +429,8 @@ static void Ms100Task(void)
  if(Module_Inverter==GS450H)    //
  {
 
+ Param::SetInt(Param::InvStat, GS450H::statusFB());
+
 if(Lexus_Gear==1)
 {
     DigIo::SP_out.Clear();

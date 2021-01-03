@@ -262,5 +262,12 @@ case 5:{
 
 }
 }
+
+
+bool GS450H::statusFB()
+{
+    if (inv_status==0) return 1;
+    if (inv_status!=0) return 0;
+}
 //////////////////////////////////////////////////////////////
 
