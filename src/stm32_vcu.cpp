@@ -672,7 +672,7 @@ static void Ms10Task(void)
   if(Module_Vehicle==BMW_E65)
   {
 
-      Can_E65::Tacho(Param::Get(Param::speed));
+    if(E65T15) Can_E65::Tacho(Param::Get(Param::speed));//only send tach message if we are starting
       Can_E65::absdsc(Param::Get(Param::din_brake));
 
 
