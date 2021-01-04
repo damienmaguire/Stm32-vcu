@@ -416,7 +416,7 @@ static void ProcessCruiseControlButtons()
 
 static void Ms100Task(void)
 {
-     DigIo::led_out.Toggle();
+ DigIo::led_out.Toggle();
    iwdg_reset();
    s32fp cpuLoad = FP_FROMINT(scheduler->GetCpuLoad());
    Param::SetFlt(Param::cpuload, cpuLoad / 10);
@@ -429,7 +429,7 @@ static void Ms100Task(void)
  if(Module_Inverter==GS450H)    //
  {
 
- Param::SetInt(Param::InvStat, GS450H::statusFB());
+ Param::SetInt(Param::InvStat, GS450H::statusFB()); //update inverter status on web interface
 
 if(Lexus_Gear==1)
 {
@@ -757,6 +757,7 @@ static void Ms10Task(void)
       DigIo::inv_out.Set();//inverter power on
       Param::SetInt(Param::opmode, newMode);
       ErrorMessage::UnpostAll();
+
    }
 
 
@@ -874,15 +875,15 @@ extern "C" int main(void)
    parm_Change(Param::PARAM_LAST);
     DigIo::inv_out.Clear();//inverter power off during bootup
 
-   Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1
-   Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2
+   Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt.
+   Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2 vehicle side.
 
    c.SetReceiveCallback(CanCallback);
    c2.SetReceiveCallback(CanCallback);
     c.RegisterUserMessage(0x1DA);//Leaf inv msg
     c.RegisterUserMessage(0x55A);//Leaf inv msg
-    c.RegisterUserMessage(0x130);//E65 CAS
-    c.RegisterUserMessage(0x192);//E65 Shifter
+    c2.RegisterUserMessage(0x130);//E65 CAS
+    c2.RegisterUserMessage(0x192);//E65 Shifter
    c.RegisterUserMessage(0x521);//ISA MSG
    c.RegisterUserMessage(0x522);//ISA MSG
    c.RegisterUserMessage(0x523);//ISA MSG

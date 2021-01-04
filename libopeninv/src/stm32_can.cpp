@@ -369,14 +369,15 @@ uint32_t Can::GetLastRxTimestamp()
  * \return void
  *
  */
-void Can::Send(uint32_t canId, uint32_t data[2], uint8_t Len)
+void Can::Send(uint32_t canId, uint32_t data[2], uint8_t len)
 {
    can_disable_irq(canDev, CAN_IER_TMEIE);
 
-   if (can_transmit(canDev, canId, false, false, Len, (uint8_t*)data) < 0 && sendCnt < SENDBUFFER_LEN)
+   if (can_transmit(canDev, canId, false, false, len, (uint8_t*)data) < 0 && sendCnt < SENDBUFFER_LEN)
    {
       /* enqueue in send buffer if all TX mailboxes are full */
       sendBuffer[sendCnt].id = canId;
+      sendBuffer[sendCnt].len = len;
       sendBuffer[sendCnt].data[0] = data[0];
       sendBuffer[sendCnt].data[1] = data[1];
       sendCnt++;
@@ -466,7 +467,7 @@ void Can::HandleRx(int fifo)
 
 void Can::HandleTx()
 {
-   while (sendCnt > 0 && can_transmit(canDev, sendBuffer[sendCnt - 1].id, false, false, 8, (uint8_t*)sendBuffer[sendCnt - 1].data) >= 0)
+   while (sendCnt > 0 && can_transmit(canDev, sendBuffer[sendCnt - 1].id, false, false, sendBuffer[sendCnt - 1].len, (uint8_t*)sendBuffer[sendCnt - 1].data) >= 0)
       sendCnt--;
 
    if (sendCnt == 0)

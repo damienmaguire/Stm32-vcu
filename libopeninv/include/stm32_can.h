@@ -79,6 +79,7 @@ private:
    struct SENDBUFFER
    {
       uint16_t id;
+      uint32_t len;
       uint32_t data[2];
    };
 

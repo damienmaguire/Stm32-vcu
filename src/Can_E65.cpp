@@ -137,15 +137,19 @@ void Can_E65::Tacho(uint16_t speed)
     RPM=750;
   }
 
-        uint32_t RPM_A;// rpm value for E65
+        uint16_t RPM_A;// rpm value for E65
         RPM_A=RPM*4;
-   uint8_t* bytes_RPM = (uint8_t*)RPM_A;//convert to bytes
+
+ char outRPMlo = RPM_A & 0xFF;
+ char outRPMhi = RPM_A >> 8;
+
+
         bytes[0]=0x5f;
         bytes[1]=0x59;
         bytes[2]=0xff;
         bytes[3]=0x00;
-        bytes[4]=bytes_RPM[0];
-        bytes[5]=bytes_RPM[1];
+        bytes[4]=outRPMlo;
+        bytes[5]=outRPMhi;
         bytes[6]=0x80;
         bytes[7]=0x99;
 Can::GetInterface(1)->Send(0x0AA, (uint32_t*)bytes,8); //Send on CAN2
@@ -170,21 +174,6 @@ void Can_E65::absdsc(bool Brake_In)
 //////////send abs/dsc messages////////////////////////
 uint8_t a8_brake;
 uint8_t bytes[8];
-
-uint32_t check_BA = (gear_BA+0xff+0x0f+BA6+0x0ba);
-check_BA = (check_BA / 0x100)+ (check_BA & 0xff);
-check_BA = check_BA & 0xff;
-
-
-        bytes[0]=gear_BA; //was just 0x03
-        bytes[1]=0xff;
-        bytes[2]=0x0f;
-        bytes[3]=0x00;
-        bytes[4]=0x00;
-        bytes[5]=check_BA; //BA5; //counter byte 5
-        bytes[6]=BA6; //counter byte 6
-
-   Can::GetInterface(1)->Send(0x0BA, (uint32_t*)bytes,7); //Send on CAN2
 
   if(Brake_In)
   {
@@ -214,6 +203,7 @@ check_BA = check_BA & 0xff;
  Can::GetInterface(1)->Send(0x0A8, (uint32_t*)bytes,8); //Send on CAN2
 
 
+
         bytes[0]=A90; //first counter byte
         bytes[1]=A91; //second counter byte
         bytes[2]=0x79;
@@ -224,6 +214,21 @@ check_BA = check_BA & 0xff;
         bytes[7]=0x21;
 
  Can::GetInterface(1)->Send(0x0A9, (uint32_t*)bytes,8); //Send on CAN2
+
+uint32_t check_BA = (gear_BA+0xff+0x0f+BA6+0x0ba);
+check_BA = (check_BA / 0x100)+ (check_BA & 0xff);
+check_BA = check_BA & 0xff;
+
+
+        bytes[0]=gear_BA; //was just 0x03
+        bytes[1]=0xff;
+        bytes[2]=0x0f;
+        bytes[3]=0x00;
+        bytes[4]=0x00;
+        bytes[5]=check_BA; //BA5; //counter byte 5
+        bytes[6]=BA6; //counter byte 6
+
+   Can::GetInterface(1)->Send(0x0BA, (uint32_t*)bytes,7); //Send on CAN2
 
 
 
