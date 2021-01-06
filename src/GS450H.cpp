@@ -6,10 +6,11 @@ static uint8_t dma_complete;
 static uint8_t htm_state = 0;
 static uint8_t inv_status = 1;
 static bool htm_sent=0, mth_good=0;
-uint16_t rx_buffer_count;
+//uint16_t rx_buffer_count;
 uint16_t counter;
 static uint16_t htm_checksum;
 static int16_t mg1_torque, mg2_torque, speedSum;
+bool statusInv=0;
 int16_t GS450H::dc_bus_voltage;
 int16_t GS450H::temp_inv_water;
 int16_t GS450H::temp_inv_inductor;
@@ -51,7 +52,7 @@ static void dma_write(uint8_t *data, int size)
 	dma_set_priority(DMA1, DMA_CHANNEL7, DMA_CCR_PL_MEDIUM);
 
 	//dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNEL7);
-      //dma_clear_interrupt_flags(DMA1, DMA_CHANNEL7, DMA_TCIF);
+    //dma_clear_interrupt_flags(DMA1, DMA_CHANNEL7, DMA_TCIF);
 	dma_enable_channel(DMA1, DMA_CHANNEL7);
 
         usart_enable_tx_dma(USART2);
@@ -98,7 +99,7 @@ static void dma_read(uint8_t *data, int size)
 	dma_set_priority(DMA1, DMA_CHANNEL6, DMA_CCR_PL_LOW);
 
 	//dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNEL6);
-     // dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
+    // dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
 	dma_enable_channel(DMA1, DMA_CHANNEL6);
 
         usart_enable_rx_dma(USART2);
@@ -163,7 +164,6 @@ switch(htm_state){
 
 case 0:{
 dma_read(mth_data,100);//read in mth data via dma. Probably need some kind of check dma complete flag here
-rx_buffer_count=0;
  DigIo::req_out.Clear(); //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
 htm_state++;
 }break;
@@ -188,12 +188,16 @@ htm_state++;
 
 case 3:{
     //
-if(CalcMTHChecksum()==0 || rx_buffer_count!=100){
+   // dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF);
+if(CalcMTHChecksum()==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0){
 //HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1 );
+statusInv=0;
 }
 else{
 //HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 0 );
 //exchange data and prepare next HTM frame
+dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
+statusInv=1;
 dc_bus_voltage=(((mth_data[82]|mth_data[83]<<8)-5)/2);
 temp_inv_water=(mth_data[42]|mth_data[43]<<8);
 temp_inv_inductor=(mth_data[86]|mth_data[87]<<8);
@@ -266,8 +270,7 @@ case 5:{
 
 bool GS450H::statusFB()
 {
-    if (inv_status==0) return 1;
-    if (inv_status!=0) return 0;
+  return statusInv;
 }
 //////////////////////////////////////////////////////////////
 

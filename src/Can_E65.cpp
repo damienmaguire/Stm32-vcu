@@ -20,7 +20,7 @@ uint8_t gear;
 uint8_t gear_BA=0x03; //set to park as initial condition
 uint8_t mthCnt;
 uint8_t A80=0xbe;//0x0A8 first counter byte
-uint8_t A81=0xd0;//0x0A8 second counter byte
+uint8_t A81=0x00;//0x0A8 second counter byte
 uint8_t A90=0xe9;//0x0A9 first counter byte
 uint8_t A91=0x00;//0x0A9 second counter byte
 uint8_t BA5=0x4d;//0x0BA first counter byte(byte 5)
@@ -185,7 +185,7 @@ uint8_t bytes[8];
     a8_brake=0x04;
   }
 
-  uint32_t check_A8 = (A81+0x21+0xe0+0x21+0x1f+0x0f+a8_brake+0xa8);
+  int16_t check_A8 = (A81+0x21+0xe0+0x21+0x1f+0x0f+a8_brake+0xa8);
   check_A8 = (check_A8 / 0x100)+ (check_A8 & 0xff);
   check_A8 = check_A8 & 0xff;
 
@@ -215,7 +215,7 @@ uint8_t bytes[8];
 
  Can::GetInterface(1)->Send(0x0A9, (uint32_t*)bytes,8); //Send on CAN2
 
-uint32_t check_BA = (gear_BA+0xff+0x0f+BA6+0x0ba);
+int16_t check_BA = (gear_BA+0xff+0x0f+BA6+0x0ba);
 check_BA = (check_BA / 0x100)+ (check_BA & 0xff);
 check_BA = check_BA & 0xff;
 
@@ -245,7 +245,7 @@ BA6++;
 if (BA5==0x5C) //reload initial condition
 {
 A80=0xbe;//0x0A8 first counter byte
-A81=0xd0;//0x0A8 second counter byte
+A81=0x00;//0x0A8 second counter byte
 A90=0xe9;//0x0A9 first counter byte
 A91=0x00;//0x0A9 second counter byte
 BA5=0x4d;//0x0BA first counter byte(byte 5)

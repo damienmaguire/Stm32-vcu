@@ -753,7 +753,7 @@ static void Ms10Task(void)
    {
       DigIo::dcsw_out.Set();
       DigIo::err_out.Clear();
-      DigIo::prec_out.Clear();
+     // DigIo::prec_out.Clear();
       DigIo::inv_out.Set();//inverter power on
       Param::SetInt(Param::opmode, newMode);
       ErrorMessage::UnpostAll();
@@ -768,6 +768,7 @@ static void Ms10Task(void)
       DigIo::prec_out.Clear();
       DigIo::inv_out.Clear();//inverter power off
  Param::SetInt(Param::opmode, newMode);
+  if(Module_Vehicle==BMW_E65) E65Dash=false;
    }
 
 

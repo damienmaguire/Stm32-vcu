@@ -120,7 +120,8 @@ void usart_setup(void)
    dma_set_peripheral_size(DMA1, TERM_USART_DMARX, DMA_CCR_PSIZE_8BIT);
    dma_set_memory_size(DMA1, TERM_USART_DMARX, DMA_CCR_MSIZE_8BIT);
    dma_enable_memory_increment_mode(DMA1, TERM_USART_DMARX);
-   	dma_set_priority(DMA1, TERM_USART_DMARX, DMA_CCR_PL_VERY_HIGH);
+    dma_set_priority(DMA1, TERM_USART_DMARX, DMA_CCR_PL_VERY_HIGH);
+   // dma_enable_transfer_complete_interrupt(DMA1, TERM_USART_DMARX);
    dma_enable_channel(DMA1, TERM_USART_DMARX);
 
    usart_enable(TERM_USART);
@@ -150,11 +151,15 @@ void usart2_setup(void)
 */
 void nvic_setup(void)
 {
+    nvic_enable_irq(NVIC_DMA1_CHANNEL7_IRQ);
     nvic_set_priority(NVIC_DMA1_CHANNEL7_IRQ, 0xf0);//usart2_TX
-	nvic_enable_irq(NVIC_DMA1_CHANNEL7_IRQ);
 
-	nvic_set_priority(NVIC_DMA1_CHANNEL6_IRQ, 0xf0);//usart2_RX low priority int
 	nvic_enable_irq(NVIC_DMA1_CHANNEL6_IRQ);
+	nvic_set_priority(NVIC_DMA1_CHANNEL6_IRQ, 0xf0);//usart2_RX low priority int
+
+   // nvic_enable_irq(NVIC_DMA1_CHANNEL3_IRQ);
+	//nvic_set_priority(NVIC_DMA1_CHANNEL3_IRQ, 0x20);//usart3_RX high priority int
+
 
    nvic_enable_irq(NVIC_TIM3_IRQ); //Scheduler on tim3
    nvic_set_priority(NVIC_TIM3_IRQ, 0); //Highest priority
