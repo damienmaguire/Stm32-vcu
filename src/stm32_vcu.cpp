@@ -473,7 +473,7 @@ static int16_t tmpm;
       int tmpmg2 = AnaIn::MG2_Temp.Get();
 
  mTemps[0] = TempMeas::Lookup(tmpmg1, TempMeas::TEMP_TOYOTA);
- mTemps[2] = TempMeas::Lookup(tmpmg2, TempMeas::TEMP_TOYOTA);
+ mTemps[1] = TempMeas::Lookup(tmpmg2, TempMeas::TEMP_TOYOTA);
 
             tmpm = MAX(mTemps[0], mTemps[1]);//which ever is the hottest gets displayed
     Param::SetInt(Param::tmpm,tmpm);
