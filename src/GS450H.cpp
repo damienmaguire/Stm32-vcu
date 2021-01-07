@@ -172,7 +172,12 @@ case 1:{
  DigIo::req_out.Set();  //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
 
 if(inv_status==0){
-dma_write(htm_data,80); //HAL_UART_Transmit_IT(&huart2, htm_data, 80);
+        if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL7, DMA_TCIF))// if the transfer complete flag is set then send another packet
+        {
+        dma_clear_interrupt_flags(DMA1, DMA_CHANNEL7, DMA_TCIF);//clear the flag.
+          dma_write(htm_data,80); //HAL_UART_Transmit_IT(&huart2, htm_data, 80);
+        }
+
 }
 else {
 dma_write(htm_data_setup,80);   //HAL_UART_Transmit_IT(&huart2, htm_data_setup, 80);

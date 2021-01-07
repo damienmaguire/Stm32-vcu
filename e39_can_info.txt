@@ -1,0 +1,67 @@
+void SendBMW()
+{
+uint16_t outRPM = (GetInt(Param::speed)*7);
+uint16_t tempValue = (GetInt(Param::tmphs)*4);
+if(outRPM<4800) outRPM=4800;  //set lowest rpm to 750 displayed on tach to keep car alive thinking engine is running.
+if(outRPM>44800) outRPM=44800;  //DONT READ MORE THAN 7000RPM!
+
+ char outRPMlo = outRPM & 0xFF;
+ char outRPMhi = outRPM >> 8;
+
+char ABSMsg;
+bmw dme1Data;
+dme1Data.bytes[0] = 0x05;
+dme1Data.bytes[1] = 0x00;
+dme1Data.bytes[2] = outRPMlo;  //RPM LSB
+dme1Data.bytes[3] = outRPMhi;  //RPM MSB [RPM=(hex2dec("byte3"&"byte2"))/6.4]  0x12c0 should be 750rpm on tach
+dme1Data.bytes[4] = 0x00;
+dme1Data.bytes[5] = 0x00;
+dme1Data.bytes[6] = 0x00;
+dme1Data.bytes[7] = 0x00;
+
+
+
+    if(counter_329 >= 22) counter_329 = 0;
+    if(counter_329==0) ABSMsg=0x11;
+    if(counter_329>=8 && counter_329<15) ABSMsg=0x86;
+    if(counter_329>=15) ABSMsg=0xd9;
+    counter_329++;
+
+bmw dme2Data;
+dme2Data.bytes[0] = ABSMsg;  //needs to cycle 11,86,d9
+dme2Data.bytes[1] = tempValue; //temp bit tdata
+dme2Data.bytes[2] = 0xc5;
+dme2Data.bytes[3] = 0x00;
+dme2Data.bytes[4] = 0x00;
+dme2Data.bytes[5] = 0x00; //Throttle position currently just fixed value
+dme2Data.bytes[6] = 0x00;
+dme2Data.bytes[7] = 0x00;
+
+bmw dme3Data;
+dme3Data.bytes[0] = 0x00;  //2=check ewwngine on , 0=check engine off
+dme3Data.bytes[1] = 0x00; //LSB fuel comp
+dme3Data.bytes[2] = 0x00;  //MSB fuel comp
+dme3Data.bytes[3] = 0x00;   // hex 08 = Overheat light on
+dme3Data.bytes[4] = 0x7E;
+dme3Data.bytes[5] = 0x10;
+dme3Data.bytes[6] = 0x00;
+dme3Data.bytes[7] = 0x18;
+
+
+
+ uint32_t dataBMW316[2] = {dme1Data.value[0],dme1Data.value[1] };
+ uint32_t dataBMW329[2] = {dme2Data.value[0],dme2Data.value[1] };
+ uint32_t dataBMW545[2] = {dme3Data.value[0],dme3Data.value[1]};
+
+
+
+
+Send(0x316,dataBMW316);
+Send(0x329,dataBMW329);
+Send(0x545,dataBMW545);
+
+}
+
+
+ void SendBMW();
+
