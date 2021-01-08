@@ -24,29 +24,29 @@
 class TempMeas
 {
 public:
-   enum Sensors
-   {
-      TEMP_JCURVE = 0,
-      TEMP_SEMIKRON = 1,
-      TEMP_MBB600 = 2,
-      TEMP_KTY81HS = 3,
-      TEMP_PT1000 = 4,
-      TEMP_NTCK45 = 5, /*hier muss ein NTC K45 2k2 verwendet werden, der mit einem Parallelwiderstand mit 2k verschaltet wird. Achtung: Der Parallelwiderstand ist im Schaltplan und Layout nicht vorhanden! */
-      TEMP_LEAFHS = 6,
-      NUM_HS_SENSORS = 7,
-      TEMP_KTY83 = 12,
-      TEMP_KTY84 = 13,
-      TEMP_LEAF = 14,
-      TEMP_KTY81M = 15,
-      TEMP_TOYOTA = 16,
-      TEMP_TESLA_100K = 17,
-      TEMP_TESLA_52K = 18,
-      TEMP_TESLA_LDU_FLUID = 19,
-      TEMP_TESLA_10K = 20,
-      TEMP_LAST
-   };
+    enum Sensors
+    {
+        TEMP_JCURVE = 0,
+        TEMP_SEMIKRON = 1,
+        TEMP_MBB600 = 2,
+        TEMP_KTY81HS = 3,
+        TEMP_PT1000 = 4,
+        TEMP_NTCK45 = 5, /*hier muss ein NTC K45 2k2 verwendet werden, der mit einem Parallelwiderstand mit 2k verschaltet wird. Achtung: Der Parallelwiderstand ist im Schaltplan und Layout nicht vorhanden! */
+        TEMP_LEAFHS = 6,
+        NUM_HS_SENSORS = 7,
+        TEMP_KTY83 = 12,
+        TEMP_KTY84 = 13,
+        TEMP_LEAF = 14,
+        TEMP_KTY81M = 15,
+        TEMP_TOYOTA = 16,
+        TEMP_TESLA_100K = 17,
+        TEMP_TESLA_52K = 18,
+        TEMP_TESLA_LDU_FLUID = 19,
+        TEMP_TESLA_10K = 20,
+        TEMP_LAST
+    };
 
-   static s32fp Lookup(int digit, Sensors sensorId);
+    static s32fp Lookup(int digit, Sensors sensorId);
 };
 
 

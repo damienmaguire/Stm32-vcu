@@ -134,90 +134,90 @@
 
 enum modes
 {
-   MOD_OFF = 0,
-   MOD_RUN,
-   MOD_PRECHARGE,
-   MOD_PCHFAIL,
-   MOD_LAST
+    MOD_OFF = 0,
+    MOD_RUN,
+    MOD_PRECHARGE,
+    MOD_PCHFAIL,
+    MOD_LAST
 };
 
 enum cruisestate
 {
-   CRUISE_ON = 1,
-   CRUISE_DISABLE = 2,
-   CRUISE_SETN = 4,
-   CRUISE_SETP = 8
+    CRUISE_ON = 1,
+    CRUISE_DISABLE = 2,
+    CRUISE_SETN = 4,
+    CRUISE_SETP = 8
 };
 
 enum _tripmodes
 {
-   TRIP_ALLOFF = 0,
-   TRIP_DCSWON,
-   TRIP_PRECHARGEON
+    TRIP_ALLOFF = 0,
+    TRIP_DCSWON,
+    TRIP_PRECHARGEON
 };
 
 enum _dirmodes
 {
-   DIR_BUTTON = 0,
-   DIR_SWITCH = 1,
-   DIR_REVERSED = 2, //used as a flag
-   DIR_DEFAULTFORWARD = 4
+    DIR_BUTTON = 0,
+    DIR_SWITCH = 1,
+    DIR_REVERSED = 2, //used as a flag
+    DIR_DEFAULTFORWARD = 4
 };
 
 enum _invmodes
 {
-   Leaf_Gen1 = 0,
-   GS450H = 1,
-   UserCAN = 2, //used as a flag
-   Zombie = 4
+    Leaf_Gen1 = 0,
+    GS450H = 1,
+    UserCAN = 2, //used as a flag
+    Zombie = 4
 };
 
 enum _gear
 {
-   LOW = 0,
-   HIGH = 1,
-   AUTO = 2
+    LOW = 0,
+    HIGH = 1,
+    AUTO = 2
 };
 
 enum _vehmodes
 {
-   BMW_E46 = 0,
-   BMW_E65 = 1,
-   User = 2, //used as a flag
-   None = 4,
-   BMW_E39 = 5,
-   VAG = 6
+    BMW_E46 = 0,
+    BMW_E65 = 1,
+    User = 2, //used as a flag
+    None = 4,
+    BMW_E39 = 5,
+    VAG = 6
 };
 
 enum _potmodes
 {
-   POTMODE_REGENADJ = 0,
-   POTMODE_DUALCHANNEL,
-   POTMODE_CAN
+    POTMODE_REGENADJ = 0,
+    POTMODE_DUALCHANNEL,
+    POTMODE_CAN
 };
 
 enum _canio
 {
-   CAN_IO_CRUISE = 1,
-   CAN_IO_START = 2,
-   CAN_IO_BRAKE = 4,
-   CAN_IO_FWD = 8,
-   CAN_IO_REV = 16,
-   CAN_IO_BMS = 32
+    CAN_IO_CRUISE = 1,
+    CAN_IO_START = 2,
+    CAN_IO_BRAKE = 4,
+    CAN_IO_FWD = 8,
+    CAN_IO_REV = 16,
+    CAN_IO_BMS = 32
 };
 
 enum status
 {
-   STAT_NONE = 0,
-   STAT_UDCLOW = 1,
-   STAT_UDCHIGH = 2,
-   STAT_UDCBELOWUDCSW = 4,
-   STAT_UDCLIM = 8,
-   STAT_EMCYSTOP = 16,
-   STAT_MPROT = 32,
-   STAT_POTPRESSED = 64,
-   STAT_TMPHS = 128,
-   STAT_WAITSTART = 256
+    STAT_NONE = 0,
+    STAT_UDCLOW = 1,
+    STAT_UDCHIGH = 2,
+    STAT_UDCBELOWUDCSW = 4,
+    STAT_UDCLIM = 8,
+    STAT_EMCYSTOP = 16,
+    STAT_MPROT = 32,
+    STAT_POTPRESSED = 64,
+    STAT_TMPHS = 128,
+    STAT_WAITSTART = 256
 };
 
 extern const char* errorListString;

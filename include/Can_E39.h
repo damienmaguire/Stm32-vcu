@@ -15,16 +15,7 @@ class Can_E39
 public:
     static		void SendE39(uint16_t outRPM , uint16_t tempValue);
 
-
 private:
-
-
-
-
-
-
-
-
 
 };
 

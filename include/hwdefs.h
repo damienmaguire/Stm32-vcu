@@ -55,7 +55,7 @@
 
 typedef enum
 {
-   HW_REV1, HW_REV2, HW_REV3, HW_TESLA
+    HW_REV1, HW_REV2, HW_REV3, HW_TESLA
 } HWREV;
 
 extern HWREV hwRev;
