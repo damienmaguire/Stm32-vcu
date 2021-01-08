@@ -224,7 +224,7 @@ case 4:{
     if(gear==-32) mg2_torque=torque*-1;//Reverse
 
   mg1_torque=((mg2_torque*5)/4);
-  if(gear=-32) mg1_torque=0; //no mg1 torque in reverse.
+  if(gear==-32) mg1_torque=0; //no mg1 torque in reverse.
   Param::SetInt(Param::torque,mg2_torque);//post processed final torue value sent to inv to web interface
 
 	//speed feedback
@@ -232,8 +232,8 @@ case 4:{
 	speedSum/=113;
     uint8_t speedSum2=speedSum;
     htm_data[0]=speedSum2;
-	htm_data[75]=(mg1_torque*4)&0xFF;
-	htm_data[76]=((mg1_torque*4)>>8);
+	htm_data[75]=(mg1_torque*4) & 0xFF;
+	htm_data[76]=((mg1_torque*4)>>8) & 0xFF;
 
 	//mg1
 	htm_data[5]=(mg1_torque*-1)&0xFF;  //negative is forward
@@ -242,10 +242,16 @@ case 4:{
 	htm_data[12]=htm_data[6];
 
 	//mg2
-	htm_data[26]=(mg2_torque)&0xFF; //positive is forward
-	htm_data[27]=((mg2_torque)>>8);
+    htm_data[26]=(mg2_torque) & 0xFF; //positive is forward
+    htm_data[27]=((mg2_torque)>>8) & 0xFF;
 	htm_data[32]=htm_data[26];
 	htm_data[33]=htm_data[27];
+
+	htm_data[63]=(-5000)&0xFF;  // regen ability of battery
+    htm_data[64]=((-5000)>>8);
+
+    htm_data[65]=(27500)&0xFF;  // discharge ability of battery
+    htm_data[66]=((27500)>>8);
 
 	//checksum
 	htm_checksum=0;
