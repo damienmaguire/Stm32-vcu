@@ -18,14 +18,6 @@ public:
 
 private:
 
-
-
-
-
-
-
-
-
 };
 
 #endif /* Can_E46_h */

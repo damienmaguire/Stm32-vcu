@@ -24,14 +24,6 @@ public:
 
 private:
 
-
-
-
-
-
-
-
-
 };
 
 #endif /* Can_E65_h */

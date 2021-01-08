@@ -24,48 +24,48 @@
 
 class Throttle
 {
-   public:
-      static bool CheckAndLimitRange(int* potval, int potIdx);
-      static bool CheckDualThrottle(int* potval, int pot2val);
-      static s32fp CalcThrottle(int potval, int pot2val, bool brkpedal);
-      static s32fp CalcIdleSpeed(int speed);
-      static s32fp CalcCruiseSpeed(int speed);
-      static bool TemperatureDerate(s32fp tmp, s32fp tmpMax, s32fp& finalSpnt);
-      static void BmsLimitCommand(s32fp& finalSpnt, bool dinbms);
-      static void UdcLimitCommand(s32fp& finalSpnt, s32fp udc);
-      static void IdcLimitCommand(s32fp& finalSpnt, s32fp idc);
-      static void FrequencyLimitCommand(s32fp& finalSpnt, s32fp frequency);
-      static s32fp RampThrottle(s32fp finalSpnt);
-      static int potmin[2];
-      static int potmax[2];
-      static s32fp brknom;
-      static s32fp brknompedal;
-      static s32fp brkmax;
-      static s32fp brkcruise;
-      static s32fp throtmax;
-      static s32fp throtmin;
-      static int idleSpeed;
-      static int cruiseSpeed;
-      static s32fp speedkp;
-      static int speedflt;
-      static s32fp idleThrotLim;
-      static s32fp regenRamp;
-      static s32fp throttleRamp;
-      static int bmslimhigh;
-      static int bmslimlow;
-      static int accelmax;
-      static int accelflt;
-      static s32fp udcmin;
-      static s32fp udcmax;
-      static s32fp idcmin;
-      static s32fp idcmax;
-      static s32fp fmax;
+public:
+    static bool CheckAndLimitRange(int* potval, int potIdx);
+    static bool CheckDualThrottle(int* potval, int pot2val);
+    static s32fp CalcThrottle(int potval, int pot2val, bool brkpedal);
+    static s32fp CalcIdleSpeed(int speed);
+    static s32fp CalcCruiseSpeed(int speed);
+    static bool TemperatureDerate(s32fp tmp, s32fp tmpMax, s32fp& finalSpnt);
+    static void BmsLimitCommand(s32fp& finalSpnt, bool dinbms);
+    static void UdcLimitCommand(s32fp& finalSpnt, s32fp udc);
+    static void IdcLimitCommand(s32fp& finalSpnt, s32fp idc);
+    static void FrequencyLimitCommand(s32fp& finalSpnt, s32fp frequency);
+    static s32fp RampThrottle(s32fp finalSpnt);
+    static int potmin[2];
+    static int potmax[2];
+    static s32fp brknom;
+    static s32fp brknompedal;
+    static s32fp brkmax;
+    static s32fp brkcruise;
+    static s32fp throtmax;
+    static s32fp throtmin;
+    static int idleSpeed;
+    static int cruiseSpeed;
+    static s32fp speedkp;
+    static int speedflt;
+    static s32fp idleThrotLim;
+    static s32fp regenRamp;
+    static s32fp throttleRamp;
+    static int bmslimhigh;
+    static int bmslimlow;
+    static int accelmax;
+    static int accelflt;
+    static s32fp udcmin;
+    static s32fp udcmax;
+    static s32fp idcmin;
+    static s32fp idcmax;
+    static s32fp fmax;
 
-   private:
-      static int speedFiltered;
-      static s32fp potnomFiltered;
-      static s32fp brkRamped;
-      static s32fp throttleRamped;
+private:
+    static int speedFiltered;
+    static s32fp potnomFiltered;
+    static s32fp brkRamped;
+    static s32fp throttleRamped;
 };
 
 #endif // THROTTLE_H

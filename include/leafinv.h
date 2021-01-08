@@ -25,27 +25,27 @@
 
 class LeafINV
 {
-   public:
-      static void DecodeCAN(int id, uint32_t data[2], uint32_t time);
-      static void Send10msMessages();
-      static void Send100msMessages();
-      static uint16_t speed;
-      static void SetTorque(int8_t gear, int16_t torque);
-      static int16_t inv_temp;
-      static int16_t motor_temp;
+public:
+    static void DecodeCAN(int id, uint32_t data[2], uint32_t time);
+    static void Send10msMessages();
+    static void Send100msMessages();
+    static uint16_t speed;
+    static void SetTorque(int8_t gear, int16_t torque);
+    static int16_t inv_temp;
+    static int16_t motor_temp;
 
 
-   private:
+private:
     static void nissan_crc(uint8_t *data, uint8_t polynomial);
     static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
-      static uint8_t run10ms;
-      static uint8_t run100ms;
-      static uint32_t lastRecv;
-      static uint16_t voltage;
-      static uint16_t error;
+    static uint8_t run10ms;
+    static uint8_t run100ms;
+    static uint32_t lastRecv;
+    static uint16_t voltage;
+    static uint16_t error;
 
-      static int16_t final_torque_request;
-      //
+    static int16_t final_torque_request;
+    //
 };
 
 #endif // LEAFINV_H

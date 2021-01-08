@@ -42,23 +42,23 @@ int16_t LeafINV::final_torque_request;
 void LeafINV::DecodeCAN(int id, uint32_t data[2], uint32_t time)
 {
 
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
-   if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
-   {
-    voltage = (bytes[0] << 2) | (bytes[1] >> 6);//MEASURED VOLTAGE FROM LEAF INVERTER
+    if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
+    {
+        voltage = (bytes[0] << 2) | (bytes[1] >> 6);//MEASURED VOLTAGE FROM LEAF INVERTER
 
-    int16_t parsed_speed = (bytes[4] << 8) | bytes[5];
-    speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
+        int16_t parsed_speed = (bytes[4] << 8) | bytes[5];
+        speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
 
-    error = (bytes[6] & 0xb0) != 0x00;//INVERTER ERROR STATE
+        error = (bytes[6] & 0xb0) != 0x00;//INVERTER ERROR STATE
 
-   }
-   else if (id == 0x55A)// THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
-   {
-    inv_temp = fahrenheit_to_celsius(bytes[2]);//INVERTER TEMP
-    motor_temp = fahrenheit_to_celsius(bytes[1]);//MOTOR TEMP
-   }
+    }
+    else if (id == 0x55A)// THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
+    {
+        inv_temp = fahrenheit_to_celsius(bytes[2]);//INVERTER TEMP
+        motor_temp = fahrenheit_to_celsius(bytes[1]);//MOTOR TEMP
+    }
 
 }
 
@@ -70,7 +70,7 @@ void LeafINV::SetTorque(int8_t gear, int16_t torque)
     if(gear==32) final_torque_request=torque;//Drive
     if(gear==-32) final_torque_request=torque*-1;;//Reverse
 
-Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
+    Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
 
 }
 
@@ -82,7 +82,7 @@ void LeafINV::Send10msMessages()
 {
 
 
-  uint8_t bytes[8];
+    uint8_t bytes[8];
     static uint8_t counter_11a_d6;//why am i zeroing this all the time?
 
     // Data taken from a gen1 inFrame where the car is starting to
@@ -129,7 +129,7 @@ void LeafINV::Send10msMessages()
     counter_11a_d6++;
     if(counter_11a_d6 >= 4)
     {
-            counter_11a_d6 = 0;
+        counter_11a_d6 = 0;
     }
 
 
@@ -139,9 +139,9 @@ void LeafINV::Send10msMessages()
 
 
     Can::GetInterface(0)->Send(0x11A, (uint32_t*)bytes,8);//send 0x11a
-   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-   //Send target motor torque signal
-   ////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //Send target motor torque signal
+    ////////////////////////////////////////////////////
     static uint8_t counter_1d4;
     // Data taken from a gen1 inFrame where the car is starting to
     // move at about 10% throttle: F70700E0C74430D4
@@ -149,7 +149,7 @@ void LeafINV::Send10msMessages()
     // Usually F7, but can have values between 9A...F7 (gen1)
     bytes[0] = 0xF7;
     // 2016: 6E
-   // outFrame.data.bytes[0] = 0x6E;
+    // outFrame.data.bytes[0] = 0x6E;
 
     // Usually 07, but can have values between 07...70 (gen1)
     bytes[1] = 0x07;
@@ -158,15 +158,20 @@ void LeafINV::Send10msMessages()
 
     // Requested torque (signed 12-bit value + always 0x0 in low nibble)
     static int16_t last_logged_final_torque_request = 0;
-    if(final_torque_request != last_logged_final_torque_request){
-      last_logged_final_torque_request = final_torque_request;
+    if(final_torque_request != last_logged_final_torque_request)
+    {
+        last_logged_final_torque_request = final_torque_request;
 
     }
-    if(final_torque_request >= -2048 && final_torque_request <= 2047){bytes[2] = ((final_torque_request < 0) ? 0x80 : 0) |((final_torque_request >> 4) & 0x7f);
-      bytes[3] = (final_torque_request << 4) & 0xf0;
-    } else {
-      bytes[2] = 0x00;
-      bytes[3] = 0x00;
+    if(final_torque_request >= -2048 && final_torque_request <= 2047)
+    {
+        bytes[2] = ((final_torque_request < 0) ? 0x80 : 0) |((final_torque_request >> 4) & 0x7f);
+        bytes[3] = (final_torque_request << 4) & 0xf0;
+    }
+    else
+    {
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
     }
 
     // MSB nibble: Runs through the sequence 0, 4, 8, C
@@ -182,7 +187,7 @@ void LeafINV::Send10msMessages()
 
     counter_1d4++;
     if(counter_1d4 >= 4)
-      counter_1d4 = 0;
+        counter_1d4 = 0;
 
     // MSB nibble:
     //   0: 35-40ms at startup when gear is 0, then at shutdown 40ms
@@ -265,33 +270,33 @@ void LeafINV::Send10msMessages()
 
     // Value chosen from a 2016 log
     // 2016-24kWh-ev-on-drive-park-off.pcap #12101 / 15.63s
-   // outFrame.data.bytes[6] = 0x01;
+    // outFrame.data.bytes[6] = 0x01;
     //byte 6 brake signal
 
     // Extra CRC
     nissan_crc(bytes, 0x85);
 
-   Can::GetInterface(0)->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
+    Can::GetInterface(0)->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //We need to send 0x1db here with voltage measured by inverter
 //Zero seems to work also on my gen1
 ////////////////////////////////////////////////////////////////
-static uint8_t counter_1db;
-        bytes[0]=0x00;
-        bytes[1]=0x00;
-        bytes[2]=0x00;
-        bytes[3]=0x00;
-        bytes[4]=0x00;
-        bytes[5]=0x00;
-        bytes[6]=counter_1db;
-        bytes[7]=0x00;
+    static uint8_t counter_1db;
+    bytes[0]=0x00;
+    bytes[1]=0x00;
+    bytes[2]=0x00;
+    bytes[3]=0x00;
+    bytes[4]=0x00;
+    bytes[5]=0x00;
+    bytes[6]=counter_1db;
+    bytes[7]=0x00;
 
 
     counter_1db++;
     if(counter_1db >= 4)
-      counter_1db = 0;
-  // uint32_t canData_1DB[2] = {*bytes};//??? hopefully....
-   Can::GetInterface(0)->Send(0x1DB, (uint32_t*)bytes,8);
+        counter_1db = 0;
+    // uint32_t canData_1DB[2] = {*bytes};//??? hopefully....
+    Can::GetInterface(0)->Send(0x1DB, (uint32_t*)bytes,8);
 //////////////////////////////////////////////////////////////////////////////////////////
     // Statistics from 2016 capture:
     //     10 00000000000000
@@ -301,63 +306,63 @@ static uint8_t counter_1db;
 
     // Let's just send the most common one all the time
     // FIXME: This is a very sloppy implementation
-  //  hex_to_data(outFrame.data.bytes, "00,00,06,c0,00,00,00");
-        bytes[0]=0x00;
-        bytes[1]=0x00;
-        bytes[2]=0x06;
-        bytes[3]=0xc0;
-        bytes[4]=0x00;
-        bytes[5]=0x00;
-        bytes[6]=0x00;
+    //  hex_to_data(outFrame.data.bytes, "00,00,06,c0,00,00,00");
+    bytes[0]=0x00;
+    bytes[1]=0x00;
+    bytes[2]=0x06;
+    bytes[3]=0xc0;
+    bytes[4]=0x00;
+    bytes[5]=0x00;
+    bytes[6]=0x00;
 
-  Can::GetInterface(0)->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
+    Can::GetInterface(0)->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
 }
 
 void LeafINV::Send100msMessages()
 {
-   uint32_t canData[2] = { 0, 0 };
+    uint32_t canData[2] = { 0, 0 };
 
-  // Can::GetInterface(0)->Send(0x390, canData);
-
-
-  // Can::GetInterface(0)->Send(0x50C, canData);
+    // Can::GetInterface(0)->Send(0x390, canData);
 
 
-  // Can::GetInterface(0)->Send(0x54C, canData);
+    // Can::GetInterface(0)->Send(0x50C, canData);
 
-   run100ms = (run100ms + 1) & 3;
+
+    // Can::GetInterface(0)->Send(0x54C, canData);
+
+    run100ms = (run100ms + 1) & 3;
 }
 
 
 int8_t LeafINV::fahrenheit_to_celsius(uint16_t fahrenheit)
 {
-  int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
-  if(result < -128)
-    return -128;
-  if(result > 127)
-    return 127;
-  return result;
+    int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
+    if(result < -128)
+        return -128;
+    if(result > 127)
+        return 127;
+    return result;
 }
 
 
 
 void LeafINV::nissan_crc(uint8_t *data, uint8_t polynomial)
 {
-  // We want to process 8 bytes with the 8th byte being zero
-  data[7] = 0;
-  uint8_t crc = 0;
-  for(int b=0; b<8; b++)
-  {
-    for(int i=7; i>=0; i--)
+    // We want to process 8 bytes with the 8th byte being zero
+    data[7] = 0;
+    uint8_t crc = 0;
+    for(int b=0; b<8; b++)
     {
-      uint8_t bit = ((data[b] &(1 << i)) > 0) ? 1 : 0;
-      if(crc >= 0x80)
-        crc = (uint8_t)(((crc << 1) + bit) ^ polynomial);
-      else
-        crc = (uint8_t)((crc << 1) + bit);
+        for(int i=7; i>=0; i--)
+        {
+            uint8_t bit = ((data[b] &(1 << i)) > 0) ? 1 : 0;
+            if(crc >= 0x80)
+                crc = (uint8_t)(((crc << 1) + bit) ^ polynomial);
+            else
+                crc = (uint8_t)((crc << 1) + bit);
+        }
     }
-  }
-  data[7] = crc;
+    data[7] = crc;
 }
 
 
