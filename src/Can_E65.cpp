@@ -123,7 +123,7 @@ Can::GetInterface(1)->Send(0x332, (uint32_t*)bytes,2); //Send on CAN2
 /////////////Send frames every 10ms and send/rexeive inverter control serial data ///////////////////////////////////////
 
 //Send this frames every 10ms.
-void Can_E65::Tacho(uint16_t speed)
+void Can_E65::Tacho(int16_t speed)
 {
  uint8_t bytes[8];
  //uint8_t bytes_RPM[4];
@@ -140,8 +140,8 @@ void Can_E65::Tacho(uint16_t speed)
         uint16_t RPM_A;// rpm value for E65
         RPM_A=RPM*4;
 
- char outRPMlo = RPM_A & 0xFF;
- char outRPMhi = RPM_A >> 8;
+ uint8_t outRPMlo = RPM_A & 0xFF;
+ uint8_t outRPMhi = (RPM_A >> 8) & 0xFF;
 
 
         bytes[0]=0x5f;

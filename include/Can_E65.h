@@ -15,7 +15,7 @@ class Can_E65
 public:
     static		bool Cas(int id, uint32_t data[2], uint32_t time);
     static		void Gear(int id, uint32_t data[2], uint32_t time);
-    static		void Tacho(uint16_t speed);
+    static		void Tacho(int16_t speed);
     static		void absdsc(bool Brake_In);
     static		void DashOn();
     static		void GDis();

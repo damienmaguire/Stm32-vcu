@@ -445,7 +445,7 @@ if(Lexus_Gear==1)
 if(Lexus_Gear==0)
 {
     DigIo::SP_out.Clear();
-     DigIo::SL1_out.Set();
+     DigIo::SL1_out.Clear();
      DigIo::SL2_out.Set();
 
   Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
@@ -672,7 +672,12 @@ static void Ms10Task(void)
   if(Module_Vehicle==BMW_E65)
   {
 
-    if(E65T15) Can_E65::Tacho(Param::Get(Param::speed));//only send tach message if we are starting
+    if(E65T15)
+    {
+        int16_t tempSpeed=Param::GetInt(Param::speed);
+     Can_E65::Tacho(tempSpeed);//only send tach message if we are starting
+     }
+
       Can_E65::absdsc(Param::Get(Param::din_brake));
 
 
