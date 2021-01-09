@@ -80,9 +80,6 @@ static uint16_t maxRevs;
 static uint32_t oldTime;
 
 
-
-
-
 static void PostErrorIfRunning(ERROR_MESSAGE_NUM err)
 {
     if (Param::GetInt(Param::opmode) == MOD_RUN)
@@ -96,7 +93,6 @@ int32_t change(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32
 {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
-
 
 
 static int GetUserThrottleCommand()
@@ -163,10 +159,17 @@ static void SelectDirection()
     int8_t userDirSelection = 0;
     int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
 
-    if(Module_Vehicle!=BMW_E65) //only use this if we are NOT in an E65.
+    if (Module_Vehicle == BMW_E65)
     {
-
-
+        // if in an E65 we get direction from the shift stalk via CAN
+        if(Can_E65::Gear_E65()==0) selectedDir = 0; //park
+        if(Can_E65::Gear_E65()==2) selectedDir = 0; //neutral
+        if(Can_E65::Gear_E65()==1) selectedDir = -1; //reverse
+        if(Can_E65::Gear_E65()==3) selectedDir = 1; //drive
+    }
+    else
+    {
+        // only use this if we are NOT in an E65.
         if (Param::GetInt(Param::dirmode) == DIR_DEFAULTFORWARD)
         {
             if (Param::GetBool(Param::din_forward) && Param::GetBool(Param::din_reverse))
@@ -208,30 +211,25 @@ static void SelectDirection()
             selectedDir = 0;
     }
 
-    if(Module_Vehicle==BMW_E65)    //if in an E65 we get direction from the shift stalk via CAN
-    {
-        if(Can_E65::Gear_E65()==0) selectedDir = 0; //park
-        if(Can_E65::Gear_E65()==2) selectedDir = 0; //neutral
-        if(Can_E65::Gear_E65()==1) selectedDir = -1; //reverse
-        if(Can_E65::Gear_E65()==3) selectedDir = 1; //drive
-
-    }
-
     Param::SetInt(Param::dir, selectedDir);
 }
 
 static s32fp ProcessUdc()
 {
+    // FIXME: 32bit integer?
     int32_t udc = ISA::Voltage;//get voltage from isa sensor and post to parameter database
     Param::SetInt(Param::udc, udc);
     s32fp idc = ISA::Amperes;//get current from isa sensor and post to parameter database
     Param::SetInt(Param::idc, idc);
     s32fp kw = ISA::KW;//get power from isa sensor and post to parameter database
     Param::SetInt(Param::power, kw);
-    s32fp udcmin = Param::Get(Param::udcmin);
-//   s32fp udcmax = Param::Get(Param::udcmax);
     s32fp udclim = Param::Get(Param::udclim);
     s32fp udcsw = Param::Get(Param::udcsw);
+
+    // Currently unused parameters:
+    // s32fp udcmin = Param::Get(Param::udcmin);
+    // s32fp udcmax = Param::Get(Param::udcmax);
+
     int opmode = Param::GetInt(Param::opmode);
     //Calculate "12V" supply voltage from voltage divider on mprot pin
     //1.2/(4.7+1.2)/3.33*4095 = 250 -> make it a bit less for pin losses etc
@@ -255,7 +253,7 @@ static s32fp ProcessUdc()
         ErrorMessage::Post(ERR_OVERVOLTAGE);
     }
 
-    if(opmode==MOD_PRECHARGE)
+    if(opmode == MOD_PRECHARGE)
     {
         if (udcfp < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
         {
@@ -276,13 +274,6 @@ static s32fp ProcessUdc()
 
 static void Ms500Task(void)
 {
-
-
-
-
-
-
-
     static modes modeLast = MOD_OFF;
     static int blinks = 0;
     static int regenLevelLast = 0;
@@ -317,6 +308,7 @@ static void Ms500Task(void)
     modeLast = mode;
 }
 
+/* --- Currently unused ---
 static void ProcessCruiseControlButtons()
 {
     static bool transition = false;
@@ -411,7 +403,8 @@ static void ProcessCruiseControlButtons()
         Param::SetInt(Param::cruisespeed, cruisespeed);
     }
 }
-
+--- Currently Unused ---
+*/
 
 
 static void Ms100Task(void)
@@ -425,13 +418,11 @@ static void Ms100Task(void)
     SelectDirection();
     ProcessUdc();
 
-
-    if(Module_Inverter==GS450H)    //
+    if (Module_Inverter == GS450H)
     {
-
         Param::SetInt(Param::InvStat, GS450H::statusFB()); //update inverter status on web interface
 
-        if(Lexus_Gear==1)
+        if (Lexus_Gear == 1)
         {
             DigIo::SP_out.Clear();
             DigIo::SL1_out.Clear();
@@ -440,9 +431,7 @@ static void Ms100Task(void)
             Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
         }
 
-
-
-        if(Lexus_Gear==0)
+        if (Lexus_Gear == 0)
         {
             DigIo::SP_out.Clear();
             DigIo::SL1_out.Clear();
@@ -450,7 +439,7 @@ static void Ms100Task(void)
 
             Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
         }
-        if(timersrunning==false)
+        if (timersrunning == false)
         {
             tim_setup();//toyota hybrid oil pump pwm timer
             tim2_setup();//TOYOTA HYBRID INVERTER INTERFACE CLOCK
@@ -477,13 +466,10 @@ static void Ms100Task(void)
 
         tmpm = MAX(mTemps[0], mTemps[1]);//which ever is the hottest gets displayed
         Param::SetInt(Param::tmpm,tmpm);
-
-
     }
-
-    if(Module_Inverter!=GS450H)
+    else
     {
-
+        // These are only used with the Totoa hybrid option.
         timer_disable_counter(TIM2);//TOYOTA HYBRID INVERTER INTERFACE CLOCK
         timer_disable_counter(TIM1);//toyota hybrid oil pump pwm timer
         timersrunning=false;  //timers are now stopped
@@ -501,15 +487,12 @@ static void Ms100Task(void)
     {
         Can_E65::GDis();//needs to be every 200ms
 
-
         if(!E65Dash)
         {
             for (int i = 0; i < 3; i++)  Can_E65::DashOn(); //send it 3 times to be sure...
             E65Dash=true;
-
         }
         Param::SetInt(Param::T15Stat,E65T15);
-
     }
 
     if(Module_Vehicle!=BMW_E65) E65Dash=false;
@@ -548,16 +531,13 @@ static void GetDigInputs()
     Param::SetInt(Param::din_forward, DigIo::fwd_in.Get() | ((canio & CAN_IO_FWD) != 0));
     Param::SetInt(Param::din_reverse, DigIo::rev_in.Get() | ((canio & CAN_IO_REV) != 0));
     Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0 || (DigIo::bms_in.Get()) );
-
 }
-
-
-
 
 
 static s32fp ProcessThrottle()
 {
-    s32fp throtSpnt, finalSpnt;
+    // s32fp throtSpnt;
+    s32fp finalSpnt;
 
     if (LeafINV::speed < Param::GetInt(Param::throtramprpm))
         Throttle::throttleRamp = Param::Get(Param::throtramp);
@@ -568,7 +548,6 @@ static s32fp ProcessThrottle()
 
 //   GetCruiseCreepCommand(finalSpnt, throtSpnt);
     finalSpnt = Throttle::RampThrottle(finalSpnt);
-
 
 
     Throttle::UdcLimitCommand(finalSpnt, Param::Get(Param::udc));
@@ -601,12 +580,9 @@ static void Ms1Task(void)
     if(Module_Inverter==GS450H)
     {
         //GS450H::ProcessMTH();
-        GS450H::UpdateHTMState1Ms(Param::Get(Param::dir),torquePercent450);//send direction and torque request to inverter
-
+        GS450H::UpdateHTMState1Ms(Param::Get(Param::dir),torquePercent450); //send direction and torque request to inverter
     }
-
 }
-
 
 
 static void Ms10Task(void)
@@ -625,7 +601,6 @@ static void Ms10Task(void)
         FP_TOINT(torquePercent);
         if(ABS(speed)>=maxRevs) torquePercent=0;//Hard cut limiter:)
     }
-
     else
     {
         torquePercent = ProcessThrottle();
@@ -652,39 +627,31 @@ static void Ms10Task(void)
 
 
     Param::SetInt(Param::speed, speed);
-    s32fp tmpm = Param::Get(Param::tmpm);
     GetDigInputs();
 
-    if(Module_Vehicle==BMW_E39)   //send BMW E39 messages on can2 if we select E39
+    // Send CAN 2 (Vehicle CAN) messages if necessary for vehicle integration.
+    if (Module_Vehicle == BMW_E39)
     {
+        // FIXME: Note this is essentially the same as E46. 0x545 should be slightly different. Refactor.
         Can_E39::SendE39(speed, Param::Get(Param::tmphs)); //send rpm and heatsink temp to e39 cluster
     }
-
-    if(Module_Vehicle==BMW_E46)   //send BMW E46 messages on can2 if we select E46
+    else if (Module_Vehicle == BMW_E46)
     {
-        uint16_t tempGauge= change(Param::Get(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
+        uint16_t tempGauge = change(Param::Get(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
         //Messages required for E46
         Can_E46::Msg316(speed);//send rpm to e46 dash
         Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
         Can_E46::Msg545();
-        /////////////////////////
     }
-    if(Module_Vehicle==BMW_E65)
+    else if (Module_Vehicle == BMW_E65)
     {
-
-        if(E65T15)
-        {
-            int16_t tempSpeed=Param::GetInt(Param::speed);
-            Can_E65::Tacho(tempSpeed);//only send tach message if we are starting
-        }
-
         Can_E65::absdsc(Param::Get(Param::din_brake));
-
-
+        if(E65T15)
+            Can_E65::Tacho(Param::GetInt(Param::speed));//only send tach message if we are starting
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //MODE CONTROL SECTION
+    //////////////////////////////////////////////////
+    //            MODE CONTROL SECTION              //
     //////////////////////////////////////////////////
     stt |= Param::GetInt(Param::potnom) <= 0 ? STAT_NONE : STAT_POTPRESSED;
     stt |= udc >= Param::Get(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
@@ -707,18 +674,14 @@ static void Ms10Task(void)
             Param::SetInt(Param::opmode, opmode);
         }
     }
-
-    if(Module_Vehicle!=BMW_E65)
+    else
     {
-
         if(opmode==MOD_PCHFAIL && !Param::GetBool(Param::din_start)) //use start input to reset.
         {
             opmode = MOD_OFF;
             Param::SetInt(Param::opmode, opmode);
         }
     }
-
-
 
     /* switch on DC switch if
      * - throttle is not pressed
@@ -734,7 +697,6 @@ static void Ms10Task(void)
             newMode = MOD_RUN;
         }
 
-
         stt |= opmode != MOD_OFF ? STAT_NONE : STAT_WAITSTART;
     }
 
@@ -744,17 +706,10 @@ static void Ms10Task(void)
     {
         if(!E65T15) opmode = MOD_OFF; //switch to off mode via CAS command in an E65
     }
-
-    if(Module_Vehicle!=BMW_E65)
+    else
     {
         //switch to off mode via igntition digital input. To be implemented in release HW
     }
-
-
-
-
-
-
 
     if (newMode != MOD_OFF)
     {
@@ -768,7 +723,7 @@ static void Ms10Task(void)
     }
 
 
-    if (MOD_OFF == opmode)
+    if (opmode == MOD_OFF)
     {
         DigIo::dcsw_out.Clear();
         DigIo::err_out.Clear();
@@ -777,16 +732,13 @@ static void Ms10Task(void)
         Param::SetInt(Param::opmode, newMode);
         if(Module_Vehicle==BMW_E65) E65Dash=false;
     }
-
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
-/** This function is called when the user changes a parameter */
+
 extern void parm_Change(Param::PARAM_NUM paramNum)
 {
+    // This function is called when the user changes a parameter
     if (Param::canspeed == paramNum)
         can->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
 
@@ -808,8 +760,6 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     maxRevs=Param::GetInt(Param::revlim);//get revlimiter value
 
 }
-
-
 
 
 static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go when a defined CAN message is received.
@@ -841,14 +791,23 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
         ISA::handle528(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
         break;
     default:
-        if(Module_Inverter==Leaf_Gen1)  LeafINV::DecodeCAN(id, data, rtc_get_counter_val());//process leaf inverter return messages
-        if(Module_Vehicle==BMW_E65) E65T15=Can_E65::Cas(id, data, rtc_get_counter_val());//process BMW E65 CAN return messages
-        if(Module_Vehicle==BMW_E65)  Can_E65::Gear(id, data, rtc_get_counter_val());//process BMW E65 CAN return messages
-
+        if (Module_Inverter==Leaf_Gen1)
+        {
+            // process leaf inverter return messages
+            LeafINV::DecodeCAN(id, data, rtc_get_counter_val());
+        }
+        if(Module_Vehicle==BMW_E65)
+        {
+            // process BMW E65 CAS (Conditional Access System) return messages
+            E65T15=Can_E65::Cas(id, data, rtc_get_counter_val());
+            // process BMW E65 CAN Gear Stalk messages
+            Can_E65::Gear(id, data, rtc_get_counter_val());
+        }
 
         break;
     }
 }
+
 
 static void ConfigureVariantIO()
 {
@@ -861,12 +820,11 @@ static void ConfigureVariantIO()
     AnaIn::Start();
 }
 
+
 extern "C" void tim3_isr(void)
 {
     scheduler->Run();
-
 }
-
 
 
 extern "C" int main(void)
@@ -886,12 +844,10 @@ extern "C" int main(void)
     Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt.
     Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2 vehicle side.
 
+    // Set up CAN 1 callback and messages to listen for
     c.SetReceiveCallback(CanCallback);
-    c2.SetReceiveCallback(CanCallback);
     c.RegisterUserMessage(0x1DA);//Leaf inv msg
     c.RegisterUserMessage(0x55A);//Leaf inv msg
-    c2.RegisterUserMessage(0x130);//E65 CAS
-    c2.RegisterUserMessage(0x192);//E65 Shifter
     c.RegisterUserMessage(0x521);//ISA MSG
     c.RegisterUserMessage(0x522);//ISA MSG
     c.RegisterUserMessage(0x523);//ISA MSG
@@ -901,7 +857,12 @@ extern "C" int main(void)
     c.RegisterUserMessage(0x527);//ISA MSG
     c.RegisterUserMessage(0x528);//ISA MSG
 
-    can = &c;
+    // Set up CAN 2 (Vehicle CAN) callback and messages to listen for.
+    c2.SetReceiveCallback(CanCallback);
+    c2.RegisterUserMessage(0x130);//E65 CAS
+    c2.RegisterUserMessage(0x192);//E65 Shifter
+
+    can = &c; // FIXME: What about CAN2?
 
     Stm32Scheduler s(TIM3); //We never exit main so it's ok to put it on stack
     scheduler = &s;
@@ -915,10 +876,7 @@ extern "C" int main(void)
     //  DigIo::prec_out.Set();//commence precharge
     Param::SetInt(Param::version, 4); //backward compatibility
 
-
     term_Run();
-
-
 
     return 0;
 }
