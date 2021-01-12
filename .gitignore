@@ -38,3 +38,6 @@
 
 # Codeblocks window layout
 stm32-vcu.layout
+
+# Linker
+linker.map
