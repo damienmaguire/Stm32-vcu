@@ -308,6 +308,12 @@ static void Ms500Task(void)
     modeLast = mode;
 }
 
+
+static void Ms200Task(void)
+{
+    if(Module_Vehicle==BMW_E65) Can_E65::GDis();//needs to be every 200ms
+}
+
 /* --- Currently unused ---
 static void ProcessCruiseControlButtons()
 {
@@ -435,7 +441,7 @@ static void Ms100Task(void)
         {
             DigIo::SP_out.Clear();
             DigIo::SL1_out.Clear();
-            DigIo::SL2_out.Set();
+            DigIo::SL2_out.Clear();
 
             Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
         }
@@ -485,7 +491,6 @@ static void Ms100Task(void)
     }
     if(Module_Vehicle==BMW_E65)
     {
-        Can_E65::GDis();//needs to be every 200ms
 
         if(!E65Dash)
         {
@@ -870,6 +875,7 @@ extern "C" int main(void)
     s.AddTask(Ms1Task, 1);
     s.AddTask(Ms10Task, 10);
     s.AddTask(Ms100Task, 100);
+    s.AddTask(Ms200Task, 200);
     s.AddTask(Ms500Task, 500);
 
     // ISA::initialize();//only call this once if a new sensor is fitted. Might put an option on web interface to call this....
