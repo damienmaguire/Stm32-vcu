@@ -272,41 +272,7 @@ static s32fp ProcessUdc()
 
 
 
-static void Ms500Task(void)
-{
-    static modes modeLast = MOD_OFF;
-    static int blinks = 0;
-    static int regenLevelLast = 0;
-    modes mode = (modes)Param::GetInt(Param::opmode);
-    bool cruiseLight = Param::GetBool(Param::cruiselight);
 
-
-    if (mode == MOD_RUN && modeLast == MOD_OFF)
-    {
-        blinks = 10;
-    }
-    if (blinks > 0)
-    {
-        blinks--;
-        Param::SetInt(Param::cruiselight, !cruiseLight);
-    }
-    else if (Param::GetInt(Param::cruisespeed) > 0)
-    {
-        Param::SetInt(Param::cruiselight, 1);
-    }
-    else
-    {
-        Param::SetInt(Param::cruiselight, 0);
-        //Signal regen level by number of blinks + 1
-        if (mode == MOD_RUN && Param::GetInt(Param::regenlevel) != regenLevelLast)
-        {
-            blinks = 2 * (Param::GetInt(Param::regenlevel) + 1);
-        }
-    }
-
-    regenLevelLast = Param::GetInt(Param::regenlevel);
-    modeLast = mode;
-}
 
 
 static void Ms200Task(void)
@@ -314,103 +280,7 @@ static void Ms200Task(void)
     if(Module_Vehicle==BMW_E65) Can_E65::GDis();//needs to be every 200ms
 }
 
-/* --- Currently unused ---
-static void ProcessCruiseControlButtons()
-{
-    static bool transition = false;
-    static int cruiseTarget = 0;
-    int cruisespeed = Param::GetInt(Param::cruisespeed);
-    int cruisestt = Param::GetInt(Param::cruisestt);
 
-    if (transition)
-    {
-        if ((cruisestt & (CRUISE_SETP | CRUISE_SETN)) == 0)
-        {
-            transition = false;
-        }
-        return;
-    }
-    else
-    {
-        if (cruisestt & (CRUISE_SETP | CRUISE_SETN))
-        {
-            transition = true;
-        }
-    }
-
-    //When pressing cruise control buttons and brake pedal
-    //Use them to adjust regen level
-    if (Param::GetBool(Param::din_brake))
-    {
-        int regenLevel = Param::GetInt(Param::regenlevel);
-        if (cruisestt & CRUISE_SETP)
-        {
-            regenLevel++;
-            regenLevel = MIN(3, regenLevel);
-        }
-        else if (cruisestt & CRUISE_SETN)
-        {
-            regenLevel--;
-            regenLevel = MAX(0, regenLevel);
-        }
-        Param::SetInt(Param::regenlevel, regenLevel);
-    }
-
-    if (cruisestt & CRUISE_ON && Param::GetInt(Param::opmode) == MOD_RUN)
-    {
-        if (cruisespeed <= 0)
-        {
-            if (cruisestt & CRUISE_SETN) //Start cruise control at current speed
-            {
-                cruiseTarget = Param::GetInt(Param::speed);
-                cruisespeed = cruiseTarget;
-            }
-            else if (cruisestt & CRUISE_SETP) //resume via ramp
-            {
-                cruisespeed = Param::GetInt(Param::speed);
-            }
-        }
-        else
-        {
-            if (cruisestt & CRUISE_DISABLE || Param::GetBool(Param::din_brake))
-            {
-                cruisespeed = 0;
-            }
-            else if (cruisestt & CRUISE_SETP)
-            {
-                cruiseTarget += Param::GetInt(Param::cruisestep);
-            }
-            else if (cruisestt & CRUISE_SETN)
-            {
-                cruiseTarget -= Param::GetInt(Param::cruisestep);
-            }
-        }
-    }
-    else
-    {
-        cruisespeed = 0;
-        cruiseTarget = 0;
-    }
-
-    if (cruisespeed <= 0)
-    {
-        Param::SetInt(Param::cruisespeed, 0);
-    }
-    else if (cruisespeed < cruiseTarget)
-    {
-        Param::SetInt(Param::cruisespeed, RAMPUP(cruisespeed, cruiseTarget, Param::GetInt(Param::cruiseramp)));
-    }
-    else if (cruisespeed > cruiseTarget)
-    {
-        Param::SetInt(Param::cruisespeed, RAMPDOWN(cruisespeed, cruiseTarget, Param::GetInt(Param::cruiseramp)));
-    }
-    else
-    {
-        Param::SetInt(Param::cruisespeed, cruisespeed);
-    }
-}
---- Currently Unused ---
-*/
 
 
 static void Ms100Task(void)
@@ -876,7 +746,7 @@ extern "C" int main(void)
     s.AddTask(Ms10Task, 10);
     s.AddTask(Ms100Task, 100);
     s.AddTask(Ms200Task, 200);
-    s.AddTask(Ms500Task, 500);
+
 
     // ISA::initialize();//only call this once if a new sensor is fitted. Might put an option on web interface to call this....
     //  DigIo::prec_out.Set();//commence precharge
