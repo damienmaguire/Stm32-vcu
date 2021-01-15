@@ -41,3 +41,7 @@ stm32-vcu.layout
 
 # Linker
 linker.map
+
+# executable and bin
+stm32_vcu
+stm32_vcu.bin

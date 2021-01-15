@@ -55,7 +55,7 @@ Q := @
 NULL := 2>/dev/null
 endif
 
-all: directories images
+all: directories get-deps images
 Debug:images
 Release: images
 cleanDebug:clean
@@ -108,7 +108,7 @@ flash: images
 		       -c "reset" \
 		       -c "shutdown" $(NULL)
 
-.PHONY: directories images clean
+.PHONY: directories get-deps images clean
 
 get-deps:
 	@printf "  GIT SUBMODULE\n"
