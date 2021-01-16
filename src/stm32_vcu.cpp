@@ -22,8 +22,6 @@
 
 #define RMS_SAMPLES 256
 #define SQRT2OV1 0.707106781187
-#define  Leaf_Gen1  0
-#define  GS450  1
 #define  UserCAN  2
 #define  Zombie  4
 #define  BMW_E46  0
@@ -40,7 +38,7 @@ static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
 static bool timersrunning = false;
 static Can* can;
-static uint8_t Module_Inverter;
+static _invmodes targetInverter;
 static _vehmodes targetVehicle;
 static int16_t torquePercent450;
 static uint8_t Lexus_Gear;
@@ -71,7 +69,7 @@ static void Ms100Task(void)
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
 
-    if (Module_Inverter == GS450H)
+    if (targetInverter == _invmodes::GS450H)
     {
         Param::SetInt(Param::InvStat, GS450H::statusFB()); //update inverter status on web interface
 
@@ -129,7 +127,7 @@ static void Ms100Task(void)
     }
 
 
-    if(Module_Inverter==Leaf_Gen1)
+    if(targetInverter == _invmodes::Leaf_Gen1)
     {
         LeafINV::Send100msMessages();
         Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
@@ -191,7 +189,7 @@ static void Ms10Task(void)
     }
 
 
-    if(Module_Inverter==Leaf_Gen1)
+    if(targetInverter == _invmodes::Leaf_Gen1)
     {
         LeafINV::Send10msMessages();//send leaf messages on can1 if we select leaf
         speed = LeafINV::speed;//set motor rpm on interface
@@ -201,7 +199,7 @@ static void Ms10Task(void)
     }
 
 
-    if(Module_Inverter==GS450H)
+    if(targetInverter == _invmodes::GS450H)
     {
         torquePercent450 = utils::change(torquePercent, 0, 3040, 0, 3500);//map throttle for GS450H inverter
         //GS450H::ProcessHybrid(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
@@ -321,7 +319,7 @@ static void Ms10Task(void)
 
 static void Ms1Task(void)
 {
-    if(Module_Inverter==GS450H)
+    if(targetInverter == _invmodes::GS450H)
     {
         //GS450H::ProcessMTH();
         GS450H::UpdateHTMState1Ms(Param::Get(Param::dir),torquePercent450); //send direction and torque request to inverter
@@ -345,8 +343,8 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     Throttle::idcmin = Param::Get(Param::idcmin);
     Throttle::idcmax = Param::Get(Param::idcmax);
     Throttle::udcmin = FP_MUL(Param::Get(Param::udcmin), FP_FROMFLT(0.95)); //Leave some room for the notification light
-    Module_Inverter=Param::GetInt(Param::Inverter);//get inverter setting from menu
-    Param::SetInt(Param::inv, Module_Inverter);//Confirm mode
+    targetInverter=static_cast<_invmodes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
+    Param::SetInt(Param::inv, targetInverter);//Confirm mode
     targetVehicle=static_cast<_vehmodes>(Param::GetInt(Param::Vehicle));//get vehicle setting from menu
     Param::SetInt(Param::veh, targetVehicle);//Confirm mode
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
@@ -385,7 +383,7 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
         ISA::handle528(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
         break;
     default:
-        if (Module_Inverter==Leaf_Gen1)
+        if (targetInverter == _invmodes::Leaf_Gen1)
         {
             // process leaf inverter return messages
             LeafINV::DecodeCAN(id, data, rtc_get_counter_val());
