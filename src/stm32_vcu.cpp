@@ -29,18 +29,13 @@
 #define  None  4
 #define  BMW_E39  5
 #define  VAG  6
-#define  LOW_Gear  0
-#define  HIGH_Gear  1
-#define  AUTO_Gear  2
 
 HWREV hwRev; // Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
-static bool timersrunning = false;
 static Can* can;
 static _invmodes targetInverter;
 static _vehmodes targetVehicle;
-static int16_t torquePercent450;
 static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
@@ -49,6 +44,7 @@ static uint32_t oldTime;
 
 // Instantiate Classes
 BMW_E65Class E65Vehicle;
+GS450HClass gs450Inverter;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -71,69 +67,20 @@ static void Ms100Task(void)
 
     if (targetInverter == _invmodes::GS450H)
     {
-        Param::SetInt(Param::InvStat, GS450H::statusFB()); //update inverter status on web interface
-
-        if (Lexus_Gear == 1)
-        {
-            DigIo::SP_out.Clear();
-            DigIo::SL1_out.Clear();
-            DigIo::SL2_out.Clear();
-
-            Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
-        }
-
-        if (Lexus_Gear == 0)
-        {
-            DigIo::SP_out.Clear();
-            DigIo::SL1_out.Clear();
-            DigIo::SL2_out.Clear();
-
-            Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
-        }
-        if (timersrunning == false)
-        {
-            tim_setup();//toyota hybrid oil pump pwm timer
-            tim2_setup();//TOYOTA HYBRID INVERTER INTERFACE CLOCK
-            timersrunning=true;  //timers are now running
-        }
-
-        uint16_t Lexus_Oil2 = utils::change(Lexus_Oil, 10, 80, 1875, 425); //map oil pump pwm to timer
-        timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
-
-        Param::SetInt(Param::Gear1,DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
-        Param::SetInt(Param::Gear2,DigIo::gear2_in.Get());
-        Param::SetInt(Param::Gear3,DigIo::gear3_in.Get());
-
-        Param::SetInt(Param::tmphs,GS450H::temp_inv_water);//send GS450H inverter temp to web interface
-
-        static int16_t mTemps[2];
-        static int16_t tmpm;
-
-        int tmpmg1 = AnaIn::MG1_Temp.Get();//in the gs450h case we must read the analog temp values from sensors in the gearbox
-        int tmpmg2 = AnaIn::MG2_Temp.Get();
-
-        mTemps[0] = TempMeas::Lookup(tmpmg1, TempMeas::TEMP_TOYOTA);
-        mTemps[1] = TempMeas::Lookup(tmpmg2, TempMeas::TEMP_TOYOTA);
-
-        tmpm = MAX(mTemps[0], mTemps[1]);//which ever is the hottest gets displayed
-        Param::SetInt(Param::tmpm,tmpm);
+        gs450Inverter.run100msTask(Lexus_Gear, Lexus_Oil);
     }
     else
     {
-        // These are only used with the Totoa hybrid option.
-        timer_disable_counter(TIM2);//TOYOTA HYBRID INVERTER INTERFACE CLOCK
-        timer_disable_counter(TIM1);//toyota hybrid oil pump pwm timer
-        timersrunning=false;  //timers are now stopped
+        gs450Inverter.setTimerState(false);
     }
 
-
-    if(targetInverter == _invmodes::Leaf_Gen1)
+    if (targetInverter == _invmodes::Leaf_Gen1)
     {
         LeafINV::Send100msMessages();
         Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
         Param::SetInt(Param::tmpm,LeafINV::motor_temp);
-
     }
+
     if(targetVehicle == _vehmodes::BMW_E65)
     {
         if (E65Vehicle.getTerminal15())
@@ -159,8 +106,6 @@ static void Ms100Task(void)
     {
         if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
             can->SendAll();
-
-
     }
     int16_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
@@ -188,7 +133,6 @@ static void Ms10Task(void)
         torquePercent = 0;
     }
 
-
     if(targetInverter == _invmodes::Leaf_Gen1)
     {
         LeafINV::Send10msMessages();//send leaf messages on can1 if we select leaf
@@ -198,14 +142,11 @@ static void Ms10Task(void)
 
     }
 
-
     if(targetInverter == _invmodes::GS450H)
     {
-        torquePercent450 = utils::change(torquePercent, 0, 3040, 0, 3500);//map throttle for GS450H inverter
-        //GS450H::ProcessHybrid(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
-        speed = GS450H::mg2_speed;//return MG2 rpm as speed param
+        gs450Inverter.setTorqueTarget(torquePercent);//map throttle for GS450HClass inverter
+        speed = GS450HClass::mg2_speed;//return MG2 rpm as speed param
     }
-
 
     Param::SetInt(Param::speed, speed);
     utils::GetDigInputs(can);
@@ -321,8 +262,9 @@ static void Ms1Task(void)
 {
     if(targetInverter == _invmodes::GS450H)
     {
-        //GS450H::ProcessMTH();
-        GS450H::UpdateHTMState1Ms(Param::Get(Param::dir),torquePercent450); //send direction and torque request to inverter
+        // Send direction from this context.
+        // Torque updated in 10ms loop.
+        gs450Inverter.UpdateHTMState1Ms(Param::Get(Param::dir));
     }
 }
 

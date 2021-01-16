@@ -15,26 +15,30 @@
 #define MG2MAXSPEED 10000
 #define MAX_COMMAND_SIZE 200
 
-class GS450H
+class GS450HClass
 {
-    GS450H();
-    ~GS450H();
-
 
 public:
 
     static void ProcessHybrid(int8_t gear, int16_t torque);
     static void ProcessMTH();
     static int16_t dc_bus_voltage,temp_inv_water, temp_inv_inductor, mg1_speed, mg2_speed;
-    static void UpdateHTMState1Ms(int8_t gear, int16_t torque);
     static bool statusFB();
+    void run100msTask(uint8_t, uint16_t);
+    void setTimerState(bool);
+    void setTorqueTarget(int16_t);
+    void UpdateHTMState1Ms(int8_t gear);
 
+    GS450HClass()
+    {
+        scaledTorqueTarget = 0;
+        timerIsRunning = false;
+    }
 private:
 
     static void UpdateHTMParams(int8_t gear, int16_t torque);
-
-
-
+    bool timerIsRunning;
+    int scaledTorqueTarget;
 
 };
 
