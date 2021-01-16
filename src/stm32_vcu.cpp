@@ -18,37 +18,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <stdint.h>
-#include <libopencm3/stm32/usart.h>
-#include <libopencm3/stm32/timer.h>
-#include <libopencm3/stm32/rtc.h>
-#include <libopencm3/stm32/can.h>
-#include <libopencm3/stm32/iwdg.h>
-#include "stm32_can.h"
-#include "terminal.h"
-#include "params.h"
-#include "hwdefs.h"
-#include "digio.h"
-#include "hwinit.h"
-#include "anain.h"
-#include "temp_meas.h"
-#include "param_save.h"
-#include "my_math.h"
-#include "errormessage.h"
-#include "printf.h"
-#include "stm32scheduler.h"
-#include "leafinv.h"
-#include "isa_shunt.h"
-#include "Can_E39.h"
-#include "Can_E46.h"
-#include "BMW_E65.h"
-#include "Can_VAG.h"
-#include "GS450H.h"
-#include "throttle.h"
+#include "stm32_vcu.h"
+
 #define RMS_SAMPLES 256
 #define SQRT2OV1 0.707106781187
-#define PRECHARGE_TIMEOUT 500 //5s
-#define CAN_TIMEOUT       50  //500ms
 #define  Leaf_Gen1  0
 #define  GS450  1
 #define  UserCAN  2
@@ -62,8 +35,7 @@
 #define  HIGH_Gear  1
 #define  AUTO_Gear  2
 
-HWREV hwRev; //Hardware variant of board we are running on
-
+HWREV hwRev; // Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
 static bool timersrunning = false;
@@ -81,218 +53,11 @@ static uint32_t oldTime;
 BMW_E65Class E65Vehicle;
 
 
-static void PostErrorIfRunning(ERROR_MESSAGE_NUM err)
-{
-    if (Param::GetInt(Param::opmode) == MOD_RUN)
-    {
-        ErrorMessage::Post(err);
-    }
-}
-
-
-int32_t change(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
-{
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-
-static int GetUserThrottleCommand()
-{
-    int potval, pot2val;
-    bool brake = Param::GetBool(Param::din_brake);
-    int potmode = Param::GetInt(Param::potmode);
-
-    if (potmode == POTMODE_CAN)
-    {
-        //500ms timeout
-        if ((rtc_get_counter_val() - can->GetLastRxTimestamp()) < CAN_TIMEOUT)
-        {
-            potval = Param::GetInt(Param::pot);
-            pot2val = Param::GetInt(Param::pot2);
-        }
-        else
-        {
-            DigIo::err_out.Set();
-            PostErrorIfRunning(ERR_CANTIMEOUT);
-            return 0;
-        }
-    }
-    else
-    {
-        potval = AnaIn::throttle1.Get();
-        pot2val = AnaIn::throttle2.Get();
-        Param::SetInt(Param::pot, potval);
-        Param::SetInt(Param::pot2, pot2val);
-    }
-
-    /* Error light on implausible value */
-    if (!Throttle::CheckAndLimitRange(&potval, 0))
-    {
-        DigIo::err_out.Set();
-        PostErrorIfRunning(ERR_THROTTLE1);
-        return 0;
-    }
-
-    bool throt2Res = Throttle::CheckAndLimitRange(&pot2val, 1);
-
-    if (potmode == POTMODE_DUALCHANNEL)
-    {
-        if (!Throttle::CheckDualThrottle(&potval, pot2val) || !throt2Res)
-        {
-            DigIo::err_out.Set();
-            PostErrorIfRunning(ERR_THROTTLE1);
-            Param::SetInt(Param::potnom, 0);
-            return 0;
-        }
-        pot2val = Throttle::potmax[1]; //make sure we don't attenuate regen
-    }
-
-    if (Param::GetInt(Param::dir) == 0)
-        return 0;
-
-    return Throttle::CalcThrottle(potval, pot2val, brake);
-}
-
-
-static void SelectDirection()
-{
-    int8_t selectedDir = Param::GetInt(Param::dir);
-    int8_t userDirSelection = 0;
-    int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
-
-    if (targetVehicle == _vehmodes::BMW_E65)
-    {
-        // if in an E65 we get direction from the shift stalk via CAN
-        switch (E65Vehicle.getGear())
-        {
-        case 0:
-            selectedDir = 0; // Park
-            break;
-        case 1:
-            selectedDir = -1; // Reverse
-            break;
-        case 2:
-            selectedDir = 0; // Neutral
-            break;
-        case 3:
-            selectedDir = 1; // Drive
-            break;
-        }
-    }
-    else
-    {
-        // only use this if we are NOT in an E65.
-        if (Param::GetInt(Param::dirmode) == DIR_DEFAULTFORWARD)
-        {
-            if (Param::GetBool(Param::din_forward) && Param::GetBool(Param::din_reverse))
-                selectedDir = 0;
-            else if (Param::GetBool(Param::din_reverse))
-                userDirSelection = -1;
-            else
-                userDirSelection = 1;
-        }
-        else if ((Param::GetInt(Param::dirmode) & 1) == DIR_BUTTON)
-        {
-            /* if forward AND reverse selected, force neutral, because it's charge mode */
-            if (Param::GetBool(Param::din_forward) && Param::GetBool(Param::din_reverse))
-                selectedDir = 0;
-            else if (Param::GetBool(Param::din_forward))
-                userDirSelection = 1 * dirSign;
-            else if (Param::GetBool(Param::din_reverse))
-                userDirSelection = -1 * dirSign;
-            else
-                userDirSelection = selectedDir;
-        }
-        else
-        {
-            /* neither forward nor reverse or both forward and reverse -> neutral */
-            if (!(Param::GetBool(Param::din_forward) ^ Param::GetBool(Param::din_reverse)))
-                selectedDir = 0;
-            else if (Param::GetBool(Param::din_forward))
-                userDirSelection = 1 * dirSign;
-            else if (Param::GetBool(Param::din_reverse))
-                userDirSelection = -1 * dirSign;
-        }
-
-        /* Only change direction when below certain motor speed */
-//   if ((int)Encoder::GetSpeed() < Param::GetInt(Param::dirchrpm))
-        selectedDir = userDirSelection;
-
-        /* Current direction doesn't match selected direction -> neutral */
-        if (selectedDir != userDirSelection)
-            selectedDir = 0;
-    }
-
-    Param::SetInt(Param::dir, selectedDir);
-}
-
-static s32fp ProcessUdc()
-{
-    // FIXME: 32bit integer?
-    int32_t udc = ISA::Voltage;//get voltage from isa sensor and post to parameter database
-    Param::SetInt(Param::udc, udc);
-    s32fp idc = ISA::Amperes;//get current from isa sensor and post to parameter database
-    Param::SetInt(Param::idc, idc);
-    s32fp kw = ISA::KW;//get power from isa sensor and post to parameter database
-    Param::SetInt(Param::power, kw);
-    s32fp udclim = Param::Get(Param::udclim);
-    s32fp udcsw = Param::Get(Param::udcsw);
-
-    // Currently unused parameters:
-    // s32fp udcmin = Param::Get(Param::udcmin);
-    // s32fp udcmax = Param::Get(Param::udcmax);
-
-    int opmode = Param::GetInt(Param::opmode);
-    //Calculate "12V" supply voltage from voltage divider on mprot pin
-    //1.2/(4.7+1.2)/3.33*4095 = 250 -> make it a bit less for pin losses etc
-    //HW_REV1 had 3.9k resistors
-    int uauxGain = 289;
-    Param::SetFlt(Param::uaux, FP_DIV(AnaIn::uaux.Get(), uauxGain));
-    udc = Param::Get(Param::udc);
-    s32fp  udcfp = udc;
-
-
-    if (udcfp > udclim)
-    {
-        if (LeafINV::speed < 50) //If motor is stationary, over voltage comes from outside
-        {
-            DigIo::dcsw_out.Clear();  //In this case, open DC switch
-            DigIo::prec_out.Clear();  //and
-
-        }
-
-        Param::SetInt(Param::opmode, MOD_OFF);
-        ErrorMessage::Post(ERR_OVERVOLTAGE);
-    }
-
-    if(opmode == MOD_PRECHARGE)
-    {
-        if (udcfp < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
-        {
-            DigIo::prec_out.Clear();
-            ErrorMessage::Post(ERR_PRECHARGE);
-            Param::SetInt(Param::opmode, MOD_PCHFAIL);
-        }
-    }
-
-    return udcfp;
-}
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
 static void Ms200Task(void)
 {
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
 }
-
-
 
 
 static void Ms100Task(void)
@@ -303,8 +68,8 @@ static void Ms100Task(void)
     Param::SetFlt(Param::cpuload, cpuLoad / 10);
     Param::SetInt(Param::lasterr, ErrorMessage::GetLastError());
 
-    SelectDirection();
-    ProcessUdc();
+    utils::SelectDirection(targetVehicle, E65Vehicle);
+    utils::ProcessUdc(oldTime, GetInt(Param::speed));
 
     if (Module_Inverter == GS450H)
     {
@@ -334,7 +99,7 @@ static void Ms100Task(void)
             timersrunning=true;  //timers are now running
         }
 
-        uint16_t Lexus_Oil2 = change(Lexus_Oil, 10, 80, 1875, 425); //map oil pump pwm to timer
+        uint16_t Lexus_Oil2 = utils::change(Lexus_Oil, 10, 80, 1875, 425); //map oil pump pwm to timer
         timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
 
         Param::SetInt(Param::Gear1,DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
@@ -403,100 +168,26 @@ static void Ms100Task(void)
     Param::SetInt(Param::tmpaux,IsaTemp);
 }
 
-static void GetDigInputs()
-{
-    static bool canIoActive = false;
-    int canio = Param::GetInt(Param::canio);
-
-    canIoActive |= canio != 0;
-
-    if ((rtc_get_counter_val() - can->GetLastRxTimestamp()) >= CAN_TIMEOUT && canIoActive)
-    {
-        canio = 0;
-        Param::SetInt(Param::canio, 0);
-        ErrorMessage::Post(ERR_CANTIMEOUT);
-    }
-
-    Param::SetInt(Param::din_cruise, DigIo::cruise_in.Get() | ((canio & CAN_IO_CRUISE) != 0));
-    Param::SetInt(Param::din_start, DigIo::start_in.Get() | ((canio & CAN_IO_START) != 0));
-    Param::SetInt(Param::din_brake, DigIo::brake_in.Get() | ((canio & CAN_IO_BRAKE) != 0));
-    Param::SetInt(Param::din_forward, DigIo::fwd_in.Get() | ((canio & CAN_IO_FWD) != 0));
-    Param::SetInt(Param::din_reverse, DigIo::rev_in.Get() | ((canio & CAN_IO_REV) != 0));
-    Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0 || (DigIo::bms_in.Get()) );
-}
-
-
-static s32fp ProcessThrottle()
-{
-    // s32fp throtSpnt;
-    s32fp finalSpnt;
-
-    if (LeafINV::speed < Param::GetInt(Param::throtramprpm))
-        Throttle::throttleRamp = Param::Get(Param::throtramp);
-    else
-        Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
-
-    finalSpnt = GetUserThrottleCommand();
-
-//   GetCruiseCreepCommand(finalSpnt, throtSpnt);
-    finalSpnt = Throttle::RampThrottle(finalSpnt);
-
-
-    Throttle::UdcLimitCommand(finalSpnt, Param::Get(Param::udc));
-
-
-    if (Throttle::TemperatureDerate(Param::Get(Param::tmphs), Param::Get(Param::tmphsmax), finalSpnt))
-    {
-        DigIo::err_out.Set();
-        ErrorMessage::Post(ERR_TMPHSMAX);
-    }
-
-    if (Throttle::TemperatureDerate(Param::Get(Param::tmpm), Param::Get(Param::tmpmmax), finalSpnt))
-    {
-        DigIo::err_out.Set();
-        ErrorMessage::Post(ERR_TMPMMAX);
-    }
-
-    Param::SetFlt(Param::potnom, finalSpnt);
-
-    if (finalSpnt < Param::Get(Param::brkout))
-        DigIo::brk_out.Set();
-    else
-        DigIo::brk_out.Clear();
-
-    return finalSpnt;
-}
-
-static void Ms1Task(void)
-{
-    if(Module_Inverter==GS450H)
-    {
-        //GS450H::ProcessMTH();
-        GS450H::UpdateHTMState1Ms(Param::Get(Param::dir),torquePercent450); //send direction and torque request to inverter
-    }
-}
-
 
 static void Ms10Task(void)
 {
-    int16_t speed=Param::GetInt(Param::speed);
+    int16_t previousSpeed=Param::GetInt(Param::speed);
+    int16_t speed = 0;
     s32fp torquePercent;
     int opmode = Param::GetInt(Param::opmode);
     int newMode = MOD_OFF;
     int stt = STAT_NONE;
-    s32fp udc = ProcessUdc();
     ErrorMessage::SetTime(rtc_get_counter_val());
 
     if (Param::GetInt(Param::opmode) == MOD_RUN)
     {
-        torquePercent = ProcessThrottle();
+        torquePercent = utils::ProcessThrottle(previousSpeed, can);
         FP_TOINT(torquePercent);
-        if(ABS(speed)>=maxRevs) torquePercent=0;//Hard cut limiter:)
+        if(ABS(previousSpeed)>=maxRevs) torquePercent=0;//Hard cut limiter:)
     }
     else
     {
-        torquePercent = ProcessThrottle();
-        torquePercent=0;
+        torquePercent = 0;
     }
 
 
@@ -504,7 +195,7 @@ static void Ms10Task(void)
     {
         LeafINV::Send10msMessages();//send leaf messages on can1 if we select leaf
         speed = LeafINV::speed;//set motor rpm on interface
-        torquePercent = change(torquePercent, 0, 3040, 0, 2047); //map throttle for Leaf inverter
+        torquePercent = utils::change(torquePercent, 0, 3040, 0, 2047); //map throttle for Leaf inverter
         LeafINV::SetTorque(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
 
     }
@@ -512,14 +203,14 @@ static void Ms10Task(void)
 
     if(Module_Inverter==GS450H)
     {
-        torquePercent450 = change(torquePercent, 0, 3040, 0, 3500);//map throttle for GS450H inverter
+        torquePercent450 = utils::change(torquePercent, 0, 3040, 0, 3500);//map throttle for GS450H inverter
         //GS450H::ProcessHybrid(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
         speed = GS450H::mg2_speed;//return MG2 rpm as speed param
     }
 
 
     Param::SetInt(Param::speed, speed);
-    GetDigInputs();
+    utils::GetDigInputs(can);
 
     // Send CAN 2 (Vehicle CAN) messages if necessary for vehicle integration.
     if (targetVehicle == BMW_E39)
@@ -529,7 +220,7 @@ static void Ms10Task(void)
     }
     else if (targetVehicle == BMW_E46)
     {
-        uint16_t tempGauge = change(Param::Get(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
+        uint16_t tempGauge = utils::change(Param::Get(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
         //Messages required for E46
         Can_E46::Msg316(speed);//send rpm to e46 dash
         Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
@@ -545,6 +236,7 @@ static void Ms10Task(void)
     //////////////////////////////////////////////////
     //            MODE CONTROL SECTION              //
     //////////////////////////////////////////////////
+    s32fp udc = utils::ProcessUdc(oldTime, GetInt(Param::speed));
     stt |= Param::GetInt(Param::potnom) <= 0 ? STAT_NONE : STAT_POTPRESSED;
     stt |= udc >= Param::Get(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
     stt |= udc < Param::Get(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
@@ -624,10 +316,20 @@ static void Ms10Task(void)
         Param::SetInt(Param::opmode, newMode);
         if(targetVehicle == _vehmodes::BMW_E65) E65Vehicle.DashOff();
     }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
 
+static void Ms1Task(void)
+{
+    if(Module_Inverter==GS450H)
+    {
+        //GS450H::ProcessMTH();
+        GS450H::UpdateHTMState1Ms(Param::Get(Param::dir),torquePercent450); //send direction and torque request to inverter
+    }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 extern void parm_Change(Param::PARAM_NUM paramNum)
 {
     // This function is called when the user changes a parameter
@@ -773,4 +475,3 @@ extern "C" int main(void)
 
     return 0;
 }
-
