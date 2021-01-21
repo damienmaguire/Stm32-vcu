@@ -1,21 +1,28 @@
-#include <GS450H.h>
+#include "GS450H.h"
+#include "hwinit.h"
+#include "temp_meas.h"
+#include <libopencm3/stm32/timer.h>
+#include "anain.h"
+#include "my_math.h"
+#include "utils.h"
 
+#define  LOW_Gear  0
+#define  HIGH_Gear  1
+#define  AUTO_Gear  2
 
 
 static uint8_t dma_complete;
 static uint8_t htm_state = 0;
 static uint8_t inv_status = 1;
-static bool htm_sent=0, mth_good=0;
-//uint16_t rx_buffer_count;
 uint16_t counter;
 static uint16_t htm_checksum;
 static int16_t mg1_torque, mg2_torque, speedSum;
 bool statusInv=0;
-int16_t GS450H::dc_bus_voltage;
-int16_t GS450H::temp_inv_water;
-int16_t GS450H::temp_inv_inductor;
-int16_t GS450H::mg1_speed;
-int16_t GS450H::mg2_speed;
+int16_t GS450HClass::dc_bus_voltage;
+int16_t GS450HClass::temp_inv_water;
+int16_t GS450HClass::temp_inv_inductor;
+int16_t GS450HClass::mg1_speed;
+int16_t GS450HClass::mg2_speed;
 
 
 //80 bytes out and 100 bytes back in (with offset of 8 bytes.
@@ -23,8 +30,78 @@ static uint8_t mth_data[100];
 static uint8_t htm_data_setup[80]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,128,0,0,0,128,0,0,0,37,1};
 static uint8_t htm_data[80]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0};
 
+void GS450HClass::setTimerState(bool desiredTimerState)
+{
+    if (desiredTimerState != this->timerIsRunning)
+    {
+        if (desiredTimerState)
+        {
+            tim_setup(); //toyota hybrid oil pump pwm timer
+            tim2_setup(); //TOYOTA HYBRID INVERTER INTERFACE CLOCK
+            this->timerIsRunning=true; //timers are now running
+        }
+        else
+        {
+            // These are only used with the Totoa hybrid option.
+            timer_disable_counter(TIM2); //TOYOTA HYBRID INVERTER INTERFACE CLOCK
+            timer_disable_counter(TIM1); //toyota hybrid oil pump pwm timer
+            this->timerIsRunning=false; //timers are now stopped
+        }
+    }
+}
+
+void GS450HClass::setTorqueTarget(int16_t torquePercent)
+{
+    this->scaledTorqueTarget = utils::change(torquePercent, 0, 3040, 0, 3500);//map throttle for GS450HClass inverter
+}
 
 
+// 100 ms code
+void GS450HClass::run100msTask(uint8_t Lexus_Gear, uint16_t Lexus_Oil)
+{
+
+    Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update inverter status on web interface
+
+    if (Lexus_Gear == 1)
+    {
+        DigIo::SP_out.Clear();
+        DigIo::SL1_out.Clear();
+        DigIo::SL2_out.Clear();
+
+        Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
+    }
+
+    if (Lexus_Gear == 0)
+    {
+        DigIo::SP_out.Clear();
+        DigIo::SL1_out.Clear();
+        DigIo::SL2_out.Clear();
+
+        Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
+    }
+    setTimerState(true);
+
+    uint16_t Lexus_Oil2 = utils::change(Lexus_Oil, 10, 80, 1875, 425); //map oil pump pwm to timer
+    timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
+
+    Param::SetInt(Param::Gear1,DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
+    Param::SetInt(Param::Gear2,DigIo::gear2_in.Get());
+    Param::SetInt(Param::Gear3,DigIo::gear3_in.Get());
+
+    Param::SetInt(Param::tmphs,GS450HClass::temp_inv_water);//send GS450H inverter temp to web interface
+
+    static int16_t mTemps[2];
+    static int16_t tmpm;
+
+    int tmpmg1 = AnaIn::MG1_Temp.Get();//in the gs450h case we must read the analog temp values from sensors in the gearbox
+    int tmpmg2 = AnaIn::MG2_Temp.Get();
+
+    mTemps[0] = TempMeas::Lookup(tmpmg1, TempMeas::TEMP_TOYOTA);
+    mTemps[1] = TempMeas::Lookup(tmpmg2, TempMeas::TEMP_TOYOTA);
+
+    tmpm = MAX(mTemps[0], mTemps[1]);//which ever is the hottest gets displayed
+    Param::SetInt(Param::tmpm,tmpm);
+}
 
 
 
@@ -159,9 +236,8 @@ void CalcHTMChecksum(void)
 
 
 
-void GS450H::UpdateHTMState1Ms(int8_t gear, int16_t torque)
+void GS450HClass::UpdateHTMState1Ms(int8_t gear)
 {
-
 
     switch(htm_state)
     {
@@ -235,8 +311,8 @@ void GS450H::UpdateHTMState1Ms(int8_t gear, int16_t torque)
 
         // -3500 (reverse) to 3500 (forward)
         if(gear==0) mg2_torque=0;//Neutral
-        if(gear==32) mg2_torque=torque;//Drive
-        if(gear==-32) mg2_torque=torque*-1;//Reverse
+        if(gear==32) mg2_torque=this->scaledTorqueTarget;//Drive
+        if(gear==-32) mg2_torque=this->scaledTorqueTarget*-1;//Reverse
 
         mg1_torque=((mg2_torque*5)/4);
         if(gear==-32) mg1_torque=0; //no mg1 torque in reverse.
@@ -298,7 +374,7 @@ void GS450H::UpdateHTMState1Ms(int8_t gear, int16_t torque)
 }
 
 
-bool GS450H::statusFB()
+bool GS450HClass::statusFB()
 {
     return statusInv;
 }
