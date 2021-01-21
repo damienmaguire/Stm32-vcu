@@ -1,4 +1,4 @@
-#include <Can_E65.h>
+#include <BMW_E65.h>
 #include "stm32_can.h"
 #include "params.h"
 
@@ -9,14 +9,10 @@
 #define NEUTRAL 2
 #define DRIVE 3
 
-//bool Can_E65::T15Status;
-bool T15Status;
 
 int32_t RPM;
 uint8_t  Gcount; //gear display counter byte
-uint32_t GLeaver;  //unsigned int to contain result of message 0x192. Gear selector lever position
 uint8_t shiftPos=0xe1; //contains byte to display gear position on dash.default to park
-uint8_t gear;
 uint8_t gear_BA=0x03; //set to park as initial condition
 uint8_t mthCnt;
 uint8_t A80=0xbe;//0x0A8 first counter byte
@@ -26,30 +22,38 @@ uint8_t A91=0x00;//0x0A9 second counter byte
 uint8_t BA5=0x4d;//0x0BA first counter byte(byte 5)
 uint8_t BA6=0x80;//0x0BA second counter byte(byte 6)
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////Handle incomming pt can messages from the car here
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool Can_E65::Cas(int id, uint32_t data[2], uint32_t time)
+void BMW_E65Class::Cas(int id, uint32_t data[2], uint32_t time)
 {
-
+    // Initalize to a value. Unused unless the message ID matches.
+    bool T15Status = false;
     ///////////Message from CAS on 0x130 byte one for Terminal 15 wakeup
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     if(id==0x130)
     {
-        if(bytes[0] == 0x45) T15Status=true; //if the cas sends 0x45 in byte 0 of id 0x130 we have a run command
-        else T15Status=false;
+        if ((bytes[0] == 0x45) || (bytes[0] == 0x55))
+        {
+            // 0x45 is run, 0x55 is engine crank request
+            T15Status=true;
+        }
+        else
+        {
+            T15Status=false;
+        }
+        this->setTerminal15(T15Status);
     }
-    return T15Status;
+    return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void Can_E65::Gear(int id, uint32_t data[2], uint32_t time)
+void BMW_E65Class::Gear(int id, uint32_t data[2], uint32_t time)
 {
-    uint32_t Gleaver;
     //////////////////////Decode gear selector , update inverter and display back onto cluster in car.
     if(id==0x192)
     {
+        uint32_t GLeaver;  //unsigned int to contain result of message 0x192. Gear selector lever position
         GLeaver=data[0];//lower 32 bits
         GLeaver=GLeaver&0x00ffffff; //mask off byte 3
         switch (GLeaver)
@@ -58,7 +62,7 @@ void Can_E65::Gear(int id, uint32_t data[2], uint32_t time)
             break;
 
         case 0x80506a:  //park button pressed
-            gear=PARK;
+            this->gear=PARK;
             gear_BA=0x03;
             shiftPos=0xe1;
             break;
@@ -66,7 +70,7 @@ void Can_E65::Gear(int id, uint32_t data[2], uint32_t time)
 
             break;
         case 0x80042d: //R+ position
-            gear=REVERSE;
+            this->gear=REVERSE;
             gear_BA=0x02;
             shiftPos=0xd2;
             break;
@@ -74,7 +78,7 @@ void Can_E65::Gear(int id, uint32_t data[2], uint32_t time)
 
             break;
         case 0x800374:  //D+ pressed
-            gear=DRIVE;
+            this->gear=DRIVE;
             gear_BA=0x08;
             shiftPos=0x78;
             break;
@@ -102,19 +106,29 @@ void Can_E65::Gear(int id, uint32_t data[2], uint32_t time)
 }
 
 /////////////////this can id must be sent once at T15 on to fire up the instrument cluster/////////////////////////
-void Can_E65::DashOn()
+void BMW_E65Class::DashOn()
 {
     uint8_t bytes[8];
 
     bytes[0]=0x61;  //sets max rpm on tach (temp thing)
     bytes[1]=0x82;
 
-    Can::GetInterface(1)->Send(0x332, (uint32_t*)bytes,2); //Send on CAN2
+    if (!this->dashInit)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            Can::GetInterface(1)->Send(0x332, (uint32_t*)bytes,2); //Send on CAN2
+        }
+    }
+    this->dashInit=true;
 
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+void BMW_E65Class::DashOff()
+{
+    this->dashInit=false;
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +137,7 @@ void Can_E65::DashOn()
 /////////////Send frames every 10ms and send/rexeive inverter control serial data ///////////////////////////////////////
 
 //Send this frames every 10ms.
-void Can_E65::Tacho(int16_t speed)
+void BMW_E65Class::Tacho(int16_t speed)
 {
     uint8_t bytes[8];
 //uint8_t bytes_RPM[4];
@@ -168,7 +182,7 @@ void Can_E65::Tacho(int16_t speed)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-void Can_E65::absdsc(bool Brake_In)
+void BMW_E65Class::absdsc(bool Brake_In)
 {
 
 //////////send abs/dsc messages////////////////////////
@@ -254,14 +268,26 @@ void Can_E65::absdsc(bool Brake_In)
 
 }
 
-uint8_t Can_E65::Gear_E65()
+// Class functions (getter / setter)
+bool BMW_E65Class::getTerminal15()
+{
+    return Terminal15On;
+}
+
+void BMW_E65Class::setTerminal15(bool t15Status)
+{
+    Terminal15On = t15Status;
+}
+
+
+uint8_t BMW_E65Class::getGear()
 {
     return gear;    //send the shifter pos
 }
 
 
 ////////////Send these frames every 200ms /////////////////////////////////////////
-void Can_E65::GDis()
+void BMW_E65Class::GDis()
 {
     uint8_t bytes[8];
 ///////////////////////////////////////////////////////////////////////////////////////////////////

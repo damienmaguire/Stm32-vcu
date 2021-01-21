@@ -41,7 +41,7 @@
 #include "isa_shunt.h"
 #include "Can_E39.h"
 #include "Can_E46.h"
-#include "Can_E65.h"
+#include "BMW_E65.h"
 #include "Can_VAG.h"
 #include "GS450H.h"
 #include "throttle.h"
@@ -54,7 +54,6 @@
 #define  UserCAN  2
 #define  Zombie  4
 #define  BMW_E46  0
-#define  BMW_E65  1
 #define  User  2
 #define  None  4
 #define  BMW_E39  5
@@ -68,16 +67,18 @@ HWREV hwRev; //Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
 static bool timersrunning = false;
-static bool E65Dash = false;
-static bool E65T15 = false;
 static Can* can;
 static uint8_t Module_Inverter;
-static uint8_t Module_Vehicle;
+static _vehmodes targetVehicle;
 static int16_t torquePercent450;
 static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
 static uint32_t oldTime;
+
+
+// Instantiate Classes
+BMW_E65Class E65Vehicle;
 
 
 static void PostErrorIfRunning(ERROR_MESSAGE_NUM err)
@@ -159,13 +160,24 @@ static void SelectDirection()
     int8_t userDirSelection = 0;
     int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
 
-    if (Module_Vehicle == BMW_E65)
+    if (targetVehicle == _vehmodes::BMW_E65)
     {
         // if in an E65 we get direction from the shift stalk via CAN
-        if(Can_E65::Gear_E65()==0) selectedDir = 0; //park
-        if(Can_E65::Gear_E65()==2) selectedDir = 0; //neutral
-        if(Can_E65::Gear_E65()==1) selectedDir = -1; //reverse
-        if(Can_E65::Gear_E65()==3) selectedDir = 1; //drive
+        switch (E65Vehicle.getGear())
+        {
+        case 0:
+            selectedDir = 0; // Park
+            break;
+        case 1:
+            selectedDir = -1; // Reverse
+            break;
+        case 2:
+            selectedDir = 0; // Neutral
+            break;
+        case 3:
+            selectedDir = 1; // Drive
+            break;
+        }
     }
     else
     {
@@ -277,7 +289,7 @@ static s32fp ProcessUdc()
 
 static void Ms200Task(void)
 {
-    if(Module_Vehicle==BMW_E65) Can_E65::GDis();//needs to be every 200ms
+    if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
 }
 
 
@@ -359,20 +371,25 @@ static void Ms100Task(void)
         Param::SetInt(Param::tmpm,LeafINV::motor_temp);
 
     }
-    if(Module_Vehicle==BMW_E65)
+    if(targetVehicle == _vehmodes::BMW_E65)
     {
-
-        if(!E65Dash)
+        if (E65Vehicle.getTerminal15())
         {
-            for (int i = 0; i < 3; i++)  Can_E65::DashOn(); //send it 3 times to be sure...
-            E65Dash=true;
+            E65Vehicle.DashOn();
+            Param::SetInt(Param::T15Stat,1);
         }
-        Param::SetInt(Param::T15Stat,E65T15);
+        else
+        {
+            Param::SetInt(Param::T15Stat,0);
+        }
+    }
+    else
+    {
+        E65Vehicle.DashOff();
     }
 
-    if(Module_Vehicle!=BMW_E65) E65Dash=false;
 
-    if(Module_Vehicle==VAG) Can_VAG::SendVAG100msMessage();
+    if(targetVehicle==VAG) Can_VAG::SendVAG100msMessage();
 
 
     if (!chargeMode && rtc_get_counter_val() > 100)
@@ -505,12 +522,12 @@ static void Ms10Task(void)
     GetDigInputs();
 
     // Send CAN 2 (Vehicle CAN) messages if necessary for vehicle integration.
-    if (Module_Vehicle == BMW_E39)
+    if (targetVehicle == BMW_E39)
     {
         // FIXME: Note this is essentially the same as E46. 0x545 should be slightly different. Refactor.
         Can_E39::SendE39(speed, Param::Get(Param::tmphs)); //send rpm and heatsink temp to e39 cluster
     }
-    else if (Module_Vehicle == BMW_E46)
+    else if (targetVehicle == BMW_E46)
     {
         uint16_t tempGauge = change(Param::Get(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
         //Messages required for E46
@@ -518,11 +535,11 @@ static void Ms10Task(void)
         Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
         Can_E46::Msg545();
     }
-    else if (Module_Vehicle == BMW_E65)
+    else if (targetVehicle == _vehmodes::BMW_E65)
     {
-        Can_E65::absdsc(Param::Get(Param::din_brake));
-        if(E65T15)
-            Can_E65::Tacho(Param::GetInt(Param::speed));//only send tach message if we are starting
+        BMW_E65Class::absdsc(Param::Get(Param::din_brake));
+        if(E65Vehicle.getTerminal15())
+            BMW_E65Class::Tacho(Param::GetInt(Param::speed));//only send tach message if we are starting
     }
 
     //////////////////////////////////////////////////
@@ -532,7 +549,7 @@ static void Ms10Task(void)
     stt |= udc >= Param::Get(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
     stt |= udc < Param::Get(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
-    if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65T15))//on detection of ign on we commence prechage and go to mode precharge
+    if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15()))//on detection of ign on we commence prechage and go to mode precharge
     {
         DigIo::prec_out.Set();//commence precharge
         opmode = MOD_PRECHARGE;
@@ -540,10 +557,10 @@ static void Ms10Task(void)
         oldTime=rtc_get_counter_val();
     }
 
-    if(Module_Vehicle==BMW_E65)
+    if(targetVehicle == _vehmodes::BMW_E65)
     {
 
-        if(opmode==MOD_PCHFAIL && E65T15==false)//use T15 status to reset
+        if(opmode==MOD_PCHFAIL && E65Vehicle.getTerminal15()==false)//use T15 status to reset
         {
             opmode = MOD_OFF;
             Param::SetInt(Param::opmode, opmode);
@@ -567,7 +584,7 @@ static void Ms10Task(void)
     if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
     {
 
-        if (Param::GetBool(Param::din_start) || E65T15)
+        if (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15())
         {
             newMode = MOD_RUN;
         }
@@ -577,9 +594,9 @@ static void Ms10Task(void)
 
     Param::SetInt(Param::status, stt);
 
-    if(Module_Vehicle==BMW_E65)
+    if(targetVehicle == _vehmodes::BMW_E65)
     {
-        if(!E65T15) opmode = MOD_OFF; //switch to off mode via CAS command in an E65
+        if(!E65Vehicle.getTerminal15()) opmode = MOD_OFF; //switch to off mode via CAS command in an E65
     }
     else
     {
@@ -605,7 +622,7 @@ static void Ms10Task(void)
         DigIo::prec_out.Clear();
         DigIo::inv_out.Clear();//inverter power off
         Param::SetInt(Param::opmode, newMode);
-        if(Module_Vehicle==BMW_E65) E65Dash=false;
+        if(targetVehicle == _vehmodes::BMW_E65) E65Vehicle.DashOff();
     }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
@@ -628,8 +645,8 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     Throttle::udcmin = FP_MUL(Param::Get(Param::udcmin), FP_FROMFLT(0.95)); //Leave some room for the notification light
     Module_Inverter=Param::GetInt(Param::Inverter);//get inverter setting from menu
     Param::SetInt(Param::inv, Module_Inverter);//Confirm mode
-    Module_Vehicle=Param::GetInt(Param::Vehicle);//get vehicle setting from menu
-    Param::SetInt(Param::veh, Module_Vehicle);//Confirm mode
+    targetVehicle=static_cast<_vehmodes>(Param::GetInt(Param::Vehicle));//get vehicle setting from menu
+    Param::SetInt(Param::veh, targetVehicle);//Confirm mode
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
     Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
     maxRevs=Param::GetInt(Param::revlim);//get revlimiter value
@@ -671,12 +688,12 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
             // process leaf inverter return messages
             LeafINV::DecodeCAN(id, data, rtc_get_counter_val());
         }
-        if(Module_Vehicle==BMW_E65)
+        if(targetVehicle == _vehmodes::BMW_E65)
         {
             // process BMW E65 CAS (Conditional Access System) return messages
-            E65T15=Can_E65::Cas(id, data, rtc_get_counter_val());
+            E65Vehicle.Cas(id, data, rtc_get_counter_val());
             // process BMW E65 CAN Gear Stalk messages
-            Can_E65::Gear(id, data, rtc_get_counter_val());
+            E65Vehicle.Gear(id, data, rtc_get_counter_val());
         }
 
         break;
