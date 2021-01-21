@@ -1,0 +1,3 @@
+[submodule "libopencm3"]
+	path = libopencm3
+	url = https://github.com/jsphuebner/libopencm3
