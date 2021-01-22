@@ -35,14 +35,14 @@ public:
     static      int32_t KW;
 
 
-    static void handle521(int id, uint32_t data[2], uint32_t time);
-    static void handle522(int id, uint32_t data[2], uint32_t time);
-    static  void handle523(int id, uint32_t data[2], uint32_t time);
-    static  void handle524(int id, uint32_t data[2], uint32_t time);
-    static void handle525(int id, uint32_t data[2], uint32_t time);
-    static void handle526(int id, uint32_t data[2], uint32_t time);
-    static void handle527(int id, uint32_t data[2], uint32_t time);
-    static void handle528(int id, uint32_t data[2], uint32_t time);
+    static void handle521(uint32_t data[2]);
+    static void handle522(uint32_t data[2]);
+    static void handle523(uint32_t data[2]);
+    static void handle524(uint32_t data[2]);
+    static void handle525(uint32_t data[2]);
+    static void handle526(uint32_t data[2]);
+    static void handle527(uint32_t data[2]);
+    static void handle528(uint32_t data[2]);
 
 
 

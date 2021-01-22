@@ -56,7 +56,7 @@ static void delay(void) //delay used for isa setup fumction. probably much bette
 }
 
 
-void ISA::handle521(int id, uint32_t data[2], uint32_t time)  //AMperes
+void ISA::handle521(uint32_t data[2])  //AMperes
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -64,14 +64,13 @@ void ISA::handle521(int id, uint32_t data[2], uint32_t time)  //AMperes
     int32_t current=0;
     current = ((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
-    int32_t milliamps=current;
     Amperes=current/1000;
 
 
 
 }
 
-void ISA::handle522(int id, uint32_t data[2], uint32_t time)  //Voltage
+void ISA::handle522(uint32_t data[2])  //Voltage
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -95,7 +94,7 @@ void ISA::handle522(int id, uint32_t data[2], uint32_t time)  //Voltage
 
 }
 
-void ISA::handle523(int id, uint32_t data[2], uint32_t time) //Voltage2
+void ISA::handle523(uint32_t data[2]) //Voltage2
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -115,7 +114,7 @@ void ISA::handle523(int id, uint32_t data[2], uint32_t time) //Voltage2
 
 }
 
-void ISA::handle524(int id, uint32_t data[2], uint32_t time)  //Voltage3
+void ISA::handle524(uint32_t data[2])  //Voltage3
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -131,7 +130,7 @@ void ISA::handle524(int id, uint32_t data[2], uint32_t time)  //Voltage3
 
 }
 
-void ISA::handle525(int id, uint32_t data[2], uint32_t time)  //Temperature
+void ISA::handle525(uint32_t data[2])  //Temperature
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -145,7 +144,7 @@ void ISA::handle525(int id, uint32_t data[2], uint32_t time)  //Temperature
 
 
 
-void ISA::handle526(int id, uint32_t data[2], uint32_t time) //Kilowatts
+void ISA::handle526(uint32_t data[2]) //Kilowatts
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -160,7 +159,7 @@ void ISA::handle526(int id, uint32_t data[2], uint32_t time) //Kilowatts
 }
 
 
-void ISA::handle527(int id, uint32_t data[2], uint32_t time) //Ampere-Hours
+void ISA::handle527(uint32_t data[2]) //Ampere-Hours
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -176,7 +175,7 @@ void ISA::handle527(int id, uint32_t data[2], uint32_t time) //Ampere-Hours
 
 }
 
-void ISA::handle528(int id, uint32_t data[2], uint32_t time)  //kiloWatt-hours
+void ISA::handle528(uint32_t data[2])  //kiloWatt-hours
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
