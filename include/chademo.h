@@ -22,13 +22,15 @@
 #include <stdint.h>
 #include "my_math.h"
 #include "my_fp.h"
+#include "stm32_can.h"
 
 class ChaDeMo
 {
    public:
       static void Process108Message(uint32_t data[2]);
       static void Process109Message(uint32_t data[2]);
-      static void SendMessages();
+      /** Must be called every 100ms */
+      static void SendMessages(Can* can);
 
       static void SetTargetBatteryVoltage(uint16_t vtg) { targetBatteryVoltage = vtg; }
       static void SetChargeCurrent(uint8_t cur);
@@ -36,7 +38,7 @@ class ChaDeMo
       /** Set vehicle in parking position, true=yes, 0=false */
       static void SetParkPosition(bool pos) { parkingPosition = !pos; }
       static void SetContactor(bool state) { contactorOpen = !state; }
-      static void SetFault(bool flt) { fault = flt; }
+      static void SetGeneralFault() { fault = true; }
       /** Set current state of charge */
       static void SetSoC(s32fp soC) { soc = soC >> (FRAC_DIGITS - 1); }
       static int GetChargerOutputVoltage() { return chargerOutputVoltage; }
@@ -46,6 +48,8 @@ class ChaDeMo
       static bool ConnectorLocked() { return (chargerStatus & 0x4) != 0; }
       static bool ChargerStopRequest() { return (chargerStatus & 0x2A) != 0; }
       static uint8_t GetRampedCurrentRequest() { return rampedCurReq; }
+      /** Must be called every 100 ms */
+      static void CheckSensorDeviation(uint16_t internalVoltage);
    protected:
 
    private:
@@ -61,6 +65,8 @@ class ChaDeMo
       static uint16_t chargerOutputVoltage;
       static uint8_t chargerOutputCurrent;
       static uint8_t soc;
+      static uint32_t vtgTimeout;
+      static uint32_t curTimeout;
 };
 
 #endif // CHADEMO_H
