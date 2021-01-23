@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "chademo.h"
-#include "stm32_can.h"
+#include "my_math.h"
 
 bool ChaDeMo::chargeEnabled = false;
 bool ChaDeMo::parkingPosition = false;
@@ -31,6 +31,8 @@ uint16_t ChaDeMo::chargerOutputVoltage = 0;
 uint8_t ChaDeMo::chargerOutputCurrent = 0;
 uint8_t ChaDeMo::chargerStatus = 0;
 uint8_t ChaDeMo::soc;
+uint32_t ChaDeMo::vtgTimeout = 0;
+uint32_t ChaDeMo::curTimeout = 0;
 
 void ChaDeMo::Process108Message(uint32_t data[2])
 {
@@ -64,23 +66,56 @@ void ChaDeMo::SetChargeCurrent(uint8_t current)
       rampedCurReq--;
 }
 
-void ChaDeMo::SendMessages()
+void ChaDeMo::CheckSensorDeviation(uint16_t internalVoltage)
+{
+   int vtgDev = (int)internalVoltage - (int)chargerOutputVoltage;
+
+   vtgDev = ABS(vtgDev);
+
+   if (vtgDev > 10)
+   {
+      vtgTimeout++;
+   }
+   else
+   {
+      vtgTimeout = 0;
+   }
+
+   if (chargerOutputCurrent > (rampedCurReq + 12))
+   {
+      curTimeout++;
+   }
+   else
+   {
+      curTimeout = 0;
+   }
+}
+
+void ChaDeMo::SendMessages(Can* can)
 {
    uint32_t data[2];
+   bool curSensFault = curTimeout > 10;
+   bool vtgSensFault = vtgTimeout > 50;
 
    //Capacity fixed to 200 - so SoC resolution is 0.5
    data[0] = 0;
    data[1] = (targetBatteryVoltage + 10) | 200 << 16;
 
-   Can::GetInterface(0)->Send(0x100, data);
+   can->Send(0x100, data);
 
    data[0] = 0x00FEFF00;
    data[1] = 0;
 
-   Can::GetInterface(0)->Send(0x101, data);
+   can->Send(0x101, data);
 
    data[0] = 1 | ((uint32_t)targetBatteryVoltage << 8) | ((uint32_t)rampedCurReq << 24);
-   data[1] = (uint32_t)fault | (uint32_t)chargeEnabled << 8 | (uint32_t)parkingPosition << 9 | (uint32_t)contactorOpen << 10 | ((uint32_t)soc << 16);
+   data[1] = (uint32_t)curSensFault << 2 |
+             (uint32_t)vtgSensFault << 4 |
+             (uint32_t)chargeEnabled << 8 |
+             (uint32_t)parkingPosition << 9 |
+             (uint32_t)fault << 10 |
+             (uint32_t)contactorOpen << 11 |
+             (uint32_t)soc << 16;
 
-   Can::GetInterface(0)->Send(0x102, data);
+   can->Send(0x102, data);
 }
