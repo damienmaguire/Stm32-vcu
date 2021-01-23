@@ -31,7 +31,8 @@ public:
     static s32fp CalcIdleSpeed(int speed);
     static s32fp CalcCruiseSpeed(int speed);
     static bool TemperatureDerate(s32fp tmp, s32fp tmpMax, s32fp& finalSpnt);
-    static void BmsLimitCommand(s32fp& finalSpnt, bool dinbms);
+    // FIXME: Currently unused
+    // static void BmsLimitCommand(s32fp& finalSpnt, bool dinbms);
     static void UdcLimitCommand(s32fp& finalSpnt, s32fp udc);
     static void IdcLimitCommand(s32fp& finalSpnt, s32fp idc);
     static void FrequencyLimitCommand(s32fp& finalSpnt, s32fp frequency);

@@ -16,10 +16,10 @@ public:
     static		void Tacho(int16_t speed);
     static		void absdsc(bool Brake_In);
     static		void GDis();
-    void Cas(int id, uint32_t data[2], uint32_t time);
+    void Cas(int id, uint32_t data[2]);
     void DashOn();
     void DashOff();
-    void Gear(int id, uint32_t data[2], uint32_t time);
+    void Gear(int id, uint32_t data[2]);
     uint8_t getGear();
     void setGear();
     bool getTerminal15();

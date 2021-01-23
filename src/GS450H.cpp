@@ -11,7 +11,6 @@
 #define  AUTO_Gear  2
 
 
-static uint8_t dma_complete;
 static uint8_t htm_state = 0;
 static uint8_t inv_status = 1;
 uint16_t counter;
