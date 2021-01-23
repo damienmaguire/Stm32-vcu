@@ -55,11 +55,11 @@ Q := @
 NULL := 2>/dev/null
 endif
 
-all: directories get-deps images
+all: directories images
 Debug:images
 Release: images
 cleanDebug:clean
-images: $(BINARY)
+images: get-deps $(BINARY) 
 	@printf "  OBJCOPY $(BINARY).bin\n"
 	$(Q)$(OBJCOPY) -Obinary $(BINARY) $(BINARY).bin
 	@printf "  OBJCOPY $(BINARY).hex\n"
@@ -111,10 +111,12 @@ flash: images
 .PHONY: directories get-deps images clean
 
 get-deps:
+ifneq ($(shell test -s libopencm3/lib/libopencm3_stm32f1.a && echo -n yes),yes)
 	@printf "  GIT SUBMODULE\n"
 	$(Q)git submodule update --init
 	@printf "  MAKE libopencm3\n"
 	$(Q)${MAKE} -C libopencm3
+endif
 
 Test:
 	cd test && $(MAKE)

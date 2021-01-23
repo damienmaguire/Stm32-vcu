@@ -301,41 +301,41 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
     switch (id)
     {
     case 0x521:
-        ISA::handle521(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle521(data);//ISA CAN MESSAGE
         break;
     case 0x522:
-        ISA::handle522(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle522(data);//ISA CAN MESSAGE
         break;
     case 0x523:
-        ISA::handle523(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle523(data);//ISA CAN MESSAGE
         break;
     case 0x524:
-        ISA::handle524(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle524(data);//ISA CAN MESSAGE
         break;
     case 0x525:
-        ISA::handle525(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle525(data);//ISA CAN MESSAGE
         break;
     case 0x526:
-        ISA::handle526(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle526(data);//ISA CAN MESSAGE
         break;
     case 0x527:
-        ISA::handle527(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle527(data);//ISA CAN MESSAGE
         break;
     case 0x528:
-        ISA::handle528(id, data, rtc_get_counter_val());//ISA CAN MESSAGE
+        ISA::handle528(data);//ISA CAN MESSAGE
         break;
     default:
         if (targetInverter == _invmodes::Leaf_Gen1)
         {
             // process leaf inverter return messages
-            LeafINV::DecodeCAN(id, data, rtc_get_counter_val());
+            LeafINV::DecodeCAN(id, data);
         }
         if(targetVehicle == _vehmodes::BMW_E65)
         {
             // process BMW E65 CAS (Conditional Access System) return messages
-            E65Vehicle.Cas(id, data, rtc_get_counter_val());
+            E65Vehicle.Cas(id, data);
             // process BMW E65 CAN Gear Stalk messages
-            E65Vehicle.Gear(id, data, rtc_get_counter_val());
+            E65Vehicle.Gear(id, data);
         }
 
         break;
