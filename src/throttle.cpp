@@ -184,6 +184,7 @@ bool Throttle::TemperatureDerate(s32fp temp, s32fp tempMax, s32fp& finalSpnt)
     return limit < FP_FROMINT(100);
 }
 
+/* Currently unused function
 void Throttle::BmsLimitCommand(s32fp& finalSpnt, bool dinbms)
 {
 //  if (dinbms)
@@ -194,6 +195,7 @@ void Throttle::BmsLimitCommand(s32fp& finalSpnt, bool dinbms)
     //      finalSpnt = -(finalSpnt * bmslimlow) / 100;
     // }
 }
+*/
 
 void Throttle::UdcLimitCommand(s32fp& finalSpnt, s32fp udc)
 {

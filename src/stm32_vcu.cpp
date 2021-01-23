@@ -328,14 +328,14 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
         if (targetInverter == _invmodes::Leaf_Gen1)
         {
             // process leaf inverter return messages
-            LeafINV::DecodeCAN(id, data, rtc_get_counter_val());
+            LeafINV::DecodeCAN(id, data);
         }
         if(targetVehicle == _vehmodes::BMW_E65)
         {
             // process BMW E65 CAS (Conditional Access System) return messages
-            E65Vehicle.Cas(id, data, rtc_get_counter_val());
+            E65Vehicle.Cas(id, data);
             // process BMW E65 CAN Gear Stalk messages
-            E65Vehicle.Gear(id, data, rtc_get_counter_val());
+            E65Vehicle.Gear(id, data);
         }
 
         break;

@@ -26,7 +26,7 @@
 class LeafINV
 {
 public:
-    static void DecodeCAN(int id, uint32_t data[2], uint32_t time);
+    static void DecodeCAN(int id, uint32_t data[2]);
     static void Send10msMessages();
     static void Send100msMessages();
     static uint16_t speed;

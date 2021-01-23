@@ -25,7 +25,7 @@ uint8_t BA6=0x80;//0x0BA second counter byte(byte 6)
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////Handle incomming pt can messages from the car here
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void BMW_E65Class::Cas(int id, uint32_t data[2], uint32_t time)
+void BMW_E65Class::Cas(int id, uint32_t data[2])
 {
     // Initalize to a value. Unused unless the message ID matches.
     bool T15Status = false;
@@ -48,7 +48,7 @@ void BMW_E65Class::Cas(int id, uint32_t data[2], uint32_t time)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void BMW_E65Class::Gear(int id, uint32_t data[2], uint32_t time)
+void BMW_E65Class::Gear(int id, uint32_t data[2])
 {
     //////////////////////Decode gear selector , update inverter and display back onto cluster in car.
     if(id==0x192)

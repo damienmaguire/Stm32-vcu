@@ -39,7 +39,7 @@ int16_t LeafINV::final_torque_request;
 
 
 
-void LeafINV::DecodeCAN(int id, uint32_t data[2], uint32_t time)
+void LeafINV::DecodeCAN(int id, uint32_t data[2])
 {
 
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
@@ -320,7 +320,8 @@ void LeafINV::Send10msMessages()
 
 void LeafINV::Send100msMessages()
 {
-    uint32_t canData[2] = { 0, 0 };
+    // FIXME: Temporarily commenting out to suppress warnings while data send is commented out.
+    // FIXME: uint32_t canData[2] = { 0, 0 };
 
     // Can::GetInterface(0)->Send(0x390, canData);
 
