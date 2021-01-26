@@ -172,6 +172,10 @@ s32fp utils::ProcessUdc(uint32_t oldTime, int motorSpeed)
     // FIXME: 32bit integer?
     int32_t udc = ISA::Voltage;//get voltage from isa sensor and post to parameter database
     Param::SetInt(Param::udc, udc);
+    int32_t udc2 = ISA::Voltage2;//get voltage from isa sensor and post to parameter database
+    Param::SetInt(Param::udc2, udc2);
+    int32_t udc3 = ISA::Voltage3;//get voltage from isa sensor and post to parameter database
+    Param::SetInt(Param::udc3, udc3);
     s32fp idc = ISA::Amperes;//get current from isa sensor and post to parameter database
     Param::SetInt(Param::idc, idc);
     s32fp kw = ISA::KW;//get power from isa sensor and post to parameter database

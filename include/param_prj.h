@@ -59,12 +59,15 @@
     PARAM_ENTRY(CAT_CONTACT,  errlights,   ERRLIGHTS, 0,      255,    0,      25  ) \
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
+    PARAM_ENTRY(CAT_CHARGER, chargemode,  CHARGEMODS,0,      4,      0,      74  ) \
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
     VALUE_ENTRY(hwver,        HWREVS,  2036 ) \
     VALUE_ENTRY(opmode,       OPMODES, 2000 ) \
     VALUE_ENTRY(lasterr,      errorListString,  2038 ) \
     VALUE_ENTRY(status,      STATUS,  2044 ) \
     VALUE_ENTRY(udc,         "V",     2001 ) \
+    VALUE_ENTRY(udc2,         "V",     2002 ) \
+    VALUE_ENTRY(udc3,         "V",     2003 ) \
     VALUE_ENTRY(power,        "kW",    2051 ) \
     VALUE_ENTRY(idc,          "A",     2047 ) \
     VALUE_ENTRY(speed,        "rpm",   2012 ) \
@@ -129,6 +132,8 @@
 #define CAT_SETUP      "Vehicle Module"
 #define CAT_CRUISE   "Cruise Control"
 #define CAT_LEXUS   "Gearbox Control"
+#define CAT_CHARGER  "Charger Control"
+#define CHARGEMODS   "0=Off, 3=HV_Only, 4=Volt_Ampera"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 

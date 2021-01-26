@@ -53,6 +53,7 @@
 		<Unit filename="include/Can_VAG.h" />
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/anain_prj.h" />
+		<Unit filename="include/chademo.h" />
 		<Unit filename="include/digio_prj.h" />
 		<Unit filename="include/errormessage_prj.h" />
 		<Unit filename="include/hwdefs.h" />
@@ -60,8 +61,10 @@
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/leafinv.h" />
 		<Unit filename="include/param_prj.h" />
+		<Unit filename="include/stm32_vcu.h" />
 		<Unit filename="include/temp_meas.h" />
 		<Unit filename="include/throttle.h" />
+		<Unit filename="include/utils.h" />
 		<Unit filename="libopeninv/include/anain.h" />
 		<Unit filename="libopeninv/include/digio.h" />
 		<Unit filename="libopeninv/include/errormessage.h" />
@@ -98,6 +101,7 @@
 		<Unit filename="src/Can_E46.cpp" />
 		<Unit filename="src/Can_VAG.cpp" />
 		<Unit filename="src/GS450H.cpp" />
+		<Unit filename="src/chademo.cpp" />
 		<Unit filename="src/hwinit.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
 		<Unit filename="src/leafinv.cpp" />
@@ -105,6 +109,7 @@
 		<Unit filename="src/temp_meas.cpp" />
 		<Unit filename="src/terminal_prj.cpp" />
 		<Unit filename="src/throttle.cpp" />
+		<Unit filename="src/utils.cpp" />
 		<Unit filename="test/Makefile">
 			<Option target="Test" />
 		</Unit>
