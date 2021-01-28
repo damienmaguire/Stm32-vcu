@@ -36,6 +36,7 @@ static bool chargeMode = false;
 static Can* can;
 static _invmodes targetInverter;
 static _vehmodes targetVehicle;
+static _chgmodes targetCharger;
 static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
@@ -45,12 +46,17 @@ static uint32_t oldTime;
 // Instantiate Classes
 BMW_E65Class E65Vehicle;
 GS450HClass gs450Inverter;
+chargerClass chgtype;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
+    if(targetCharger == _chgmodes::Volt_Ampera)
+    {
+
+    }
 }
 
 

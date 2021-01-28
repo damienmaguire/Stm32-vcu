@@ -26,3 +26,4 @@
 #include "GS450H.h"
 #include "throttle.h"
 #include "utils.h"
+#include "charger.h"

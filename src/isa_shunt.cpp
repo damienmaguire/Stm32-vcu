@@ -21,9 +21,9 @@ int32_t ISA::Amperes;   // Floating point with current in Amperes
 static  s32fp AH;      //Floating point with accumulated ampere-hours
 int32_t ISA::KW;
 static  s32fp KWH;
-int32_t ISA::Voltage;
-int32_t ISA::Voltage2;
-int32_t ISA::Voltage3;
+int32_t ISA::Voltage=0;
+int32_t ISA::Voltage2=0;
+int32_t ISA::Voltage3=0;
 
 static		uint16_t Voltage1;
 //static		uint16_t Voltage2;
@@ -100,7 +100,7 @@ void ISA::handle523(uint32_t data[2]) //Voltage2
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     framecount++;
-    uint16_t volt=0;
+    int32_t volt=0;
     volt = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
     Voltage2=volt/1000;
@@ -120,7 +120,7 @@ void ISA::handle524(uint32_t data[2])  //Voltage3
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     framecount++;
-    uint16_t volt=0;
+    int32_t volt=0;
     volt = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
     Voltage3=volt/1000;

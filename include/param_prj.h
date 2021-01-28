@@ -59,7 +59,9 @@
     PARAM_ENTRY(CAT_CONTACT,  errlights,   ERRLIGHTS, 0,      255,    0,      25  ) \
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
-    PARAM_ENTRY(CAT_CHARGER, chargemode,  CHARGEMODS,0,      4,      0,      74  ) \
+    PARAM_ENTRY(CAT_CHARGER, chargemode,  CHGMODS,0,      4,      0,      74  ) \
+    PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   330,    75  ) \
+    PARAM_ENTRY(CAT_CHARGER, Curspnt,       "A",       0,      1000,   10,    76  ) \
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
     VALUE_ENTRY(hwver,        HWREVS,  2036 ) \
     VALUE_ENTRY(opmode,       OPMODES, 2000 ) \
@@ -111,7 +113,7 @@
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None , 5=BMW_E39 , 6=VAG"
 //#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
-#define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail"
+#define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
 #define ONOFF        "0=Off, 1=On, 2=na"
@@ -133,7 +135,7 @@
 #define CAT_CRUISE   "Cruise Control"
 #define CAT_LEXUS   "Gearbox Control"
 #define CAT_CHARGER  "Charger Control"
-#define CHARGEMODS   "0=Off, 3=HV_Only, 4=Volt_Ampera"
+#define CHGMODS   "0=Off, 3=HV_Only, 4=Volt_Ampera"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 
@@ -143,6 +145,7 @@ enum modes
     MOD_RUN,
     MOD_PRECHARGE,
     MOD_PCHFAIL,
+    MOD_CHARGE,
     MOD_LAST
 };
 
@@ -165,7 +168,7 @@ enum _dirmodes
 {
     DIR_BUTTON = 0,
     DIR_SWITCH = 1,
-    DIR_REVERSED = 2, //used as a flag
+    DIR_REVERSED = 2,
     DIR_DEFAULTFORWARD = 4
 };
 
@@ -173,8 +176,15 @@ enum _invmodes
 {
     Leaf_Gen1 = 0,
     GS450H = 1,
-    UserCAN = 2, //used as a flag
+    UserCAN = 2,
     Zombie = 4
+};
+
+enum _chgmodes
+{
+    Off = 0,
+    HV_Only = 3,
+    Volt_Ampera = 4
 };
 
 enum _gear

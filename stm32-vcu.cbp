@@ -54,6 +54,7 @@
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/chademo.h" />
+		<Unit filename="include/charger.h" />
 		<Unit filename="include/digio_prj.h" />
 		<Unit filename="include/errormessage_prj.h" />
 		<Unit filename="include/hwdefs.h" />
@@ -102,6 +103,7 @@
 		<Unit filename="src/Can_VAG.cpp" />
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/chademo.cpp" />
+		<Unit filename="src/charger.cpp" />
 		<Unit filename="src/hwinit.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
 		<Unit filename="src/leafinv.cpp" />
