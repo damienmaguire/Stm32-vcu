@@ -263,3 +263,14 @@ s32fp utils::ProcessThrottle(int speed, Can* can)
 
     return finalSpnt;
 }
+
+
+void utils::displayThrottle()
+{
+
+    uint16_t potdisp = AnaIn::throttle1.Get();
+    uint16_t pot2disp = AnaIn::throttle2.Get();
+        Param::SetInt(Param::pot, potdisp);
+        Param::SetInt(Param::pot2, pot2disp);
+
+}

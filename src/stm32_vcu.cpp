@@ -137,6 +137,7 @@ static void Ms10Task(void)
     else
     {
         torquePercent = 0;
+        utils::displayThrottle();//just displays pot and pot2 when not in run mode to allow throttle cal
     }
 
     if(targetInverter == _invmodes::Leaf_Gen1)
@@ -238,6 +239,7 @@ static void Ms10Task(void)
     else
     {
         //switch to off mode via igntition digital input. To be implemented in release HW
+        if(!Param::GetBool(Param::din_forward)) opmode = MOD_OFF; //using the forward input to test in the E46
     }
 
     if (newMode != MOD_OFF)

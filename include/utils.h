@@ -22,6 +22,7 @@ namespace utils
     void GetDigInputs(Can*);
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
     void SelectDirection(_vehmodes, BMW_E65Class);
+    void displayThrottle();
 }
 
 #endif
