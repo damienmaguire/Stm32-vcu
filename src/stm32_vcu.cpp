@@ -85,6 +85,7 @@ static void Ms100Task(void)
         LeafINV::Send100msMessages();
         Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
         Param::SetInt(Param::tmpm,LeafINV::motor_temp);
+        Param::SetInt(Param::InvStat, LeafINV::error); //update inverter status on web interface
     }
 
     if(targetVehicle == _vehmodes::BMW_E65)
@@ -140,6 +141,9 @@ static void Ms10Task(void)
         utils::displayThrottle();//just displays pot and pot2 when not in run mode to allow throttle cal
     }
 
+    if (opmode != MOD_OFF)  //send leaf messages only when not in off mode.
+    {
+
     if(targetInverter == _invmodes::Leaf_Gen1)
     {
         LeafINV::Send10msMessages();//send leaf messages on can1 if we select leaf
@@ -148,6 +152,8 @@ static void Ms10Task(void)
         LeafINV::SetTorque(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
 
     }
+
+     }
 
     if(targetInverter == _invmodes::GS450H)
     {
@@ -189,6 +195,7 @@ static void Ms10Task(void)
 
     if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15()))//on detection of ign on we commence prechage and go to mode precharge
     {
+        DigIo::inv_out.Set();//inverter power on (possibly needed here by leaf inverter)
         DigIo::prec_out.Set();//commence precharge
         opmode = MOD_PRECHARGE;
         Param::SetInt(Param::opmode, opmode);
@@ -247,7 +254,7 @@ static void Ms10Task(void)
         DigIo::dcsw_out.Set();
         DigIo::err_out.Clear();
         // DigIo::prec_out.Clear();
-        DigIo::inv_out.Set();//inverter power on
+       // DigIo::inv_out.Set();//inverter power on
         Param::SetInt(Param::opmode, newMode);
         ErrorMessage::UnpostAll();
 

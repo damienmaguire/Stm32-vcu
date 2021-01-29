@@ -32,7 +32,7 @@ uint8_t LeafINV::run100ms = 0;
 uint32_t LeafINV::lastRecv = 0;
 uint16_t LeafINV::voltage;
 uint16_t LeafINV::speed;
-uint16_t LeafINV::error;
+bool LeafINV::error=false;
 int16_t LeafINV::inv_temp;
 int16_t LeafINV::motor_temp;
 int16_t LeafINV::final_torque_request;
@@ -115,10 +115,17 @@ void LeafINV::Send10msMessages()
 
     // Weird value at D3:4 that goes along with the counter
     // NOTE: Not actually needed, you can just send constant AA C0
+    const static uint8_t weird_d34_values[4][2] = {
+      {0xaa, 0xc0},
+      {0x55, 0x00},
+      {0x55, 0x40},
+      {0xaa, 0x80},
+    };
 
 
-    bytes[3] = 0xAA;
-    bytes[4] = 0xC0;
+
+    bytes[3] = weird_d34_values[counter_11a_d6][0];//0xAA;
+    bytes[4] = weird_d34_values[counter_11a_d6][1];//0xC0;
 
     // Always 0x00 (LeafLogs, canmsgs)
     bytes[5] = 0x00;

@@ -33,6 +33,7 @@ public:
     static void SetTorque(int8_t gear, int16_t torque);
     static int16_t inv_temp;
     static int16_t motor_temp;
+    static bool error;
 
 
 private:
@@ -42,7 +43,7 @@ private:
     static uint8_t run100ms;
     static uint32_t lastRecv;
     static uint16_t voltage;
-    static uint16_t error;
+
 
     static int16_t final_torque_request;
     //
