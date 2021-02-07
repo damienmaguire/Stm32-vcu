@@ -5,11 +5,15 @@ Please visit the development thread on the Openinverter Forum for more informati
 
 NOTE : Not for use in a car as of this commit. Alpha status for bench testing only!
 
+Video on progress : https://vimeo.com/506480876
+
 # Features
 
 - Nissan Leaf Gen1 inverter via CAN
 - Lexus GS450H inverter / gearbox via sync serial
+- Toyota Prius/Yaris/Auris Gen 3 inverters via sync serial
 - BMW E46 CAN support
+- BMW E39 CAN support
 - BMW E65 CAN Support
 
 # Compiling
