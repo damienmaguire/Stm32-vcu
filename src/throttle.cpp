@@ -199,6 +199,8 @@ void Throttle::BmsLimitCommand(s32fp& finalSpnt, bool dinbms)
 
 void Throttle::UdcLimitCommand(s32fp& finalSpnt, s32fp udc)
 {
+    if(udcmin>0)    //ignore if set to zero. useful for bench testing without isa shunt
+    {
     if (finalSpnt >= 0)
     {
         s32fp udcErr = udc - udcmin;
@@ -212,6 +214,11 @@ void Throttle::UdcLimitCommand(s32fp& finalSpnt, s32fp udc)
         s32fp res = udcErr * 5;
         res = MIN(0, res);
         finalSpnt = MAX(finalSpnt, res);
+    }
+    }
+    else
+    {
+       finalSpnt = finalSpnt;
     }
 }
 

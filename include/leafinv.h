@@ -34,6 +34,7 @@ public:
     static int16_t inv_temp;
     static int16_t motor_temp;
     static bool error;
+    static uint16_t voltage;
 
 
 private:
@@ -42,7 +43,7 @@ private:
     static uint8_t run10ms;
     static uint8_t run100ms;
     static uint32_t lastRecv;
-    static uint16_t voltage;
+
 
 
     static int16_t final_torque_request;

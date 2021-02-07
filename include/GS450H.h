@@ -28,6 +28,9 @@ public:
     void setTimerState(bool);
     void setTorqueTarget(int16_t);
     void UpdateHTMState1Ms(int8_t gear);
+	void SetPrius();
+	void SetGS450H();
+
 
     GS450HClass()
     {
@@ -39,6 +42,8 @@ private:
     static void UpdateHTMParams(int8_t gear, int16_t torque);
     bool timerIsRunning;
     int scaledTorqueTarget;
+    uint8_t VerifyMTHChecksum(uint16_t );
+	void CalcHTMChecksum(uint16_t);
 
 };
 

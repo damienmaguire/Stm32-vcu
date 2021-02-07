@@ -23,7 +23,7 @@
 #define RMS_SAMPLES 256
 #define SQRT2OV1 0.707106781187
 #define  UserCAN  2
-#define  Zombie  4
+#define  Zombie  3
 #define  BMW_E46  0
 #define  User  2
 #define  None  4
@@ -55,7 +55,7 @@ static void Ms200Task(void)
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
     if(targetCharger == _chgmodes::Volt_Ampera)
     {
-
+        //to be done
     }
 }
 
@@ -71,14 +71,24 @@ static void Ms100Task(void)
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
 
-    if (targetInverter == _invmodes::GS450H)
+    if (targetInverter == _invmodes::Prius_Gen3)
     {
+        gs450Inverter.SetPrius();//select prius inverter mode
         gs450Inverter.run100msTask(Lexus_Gear, Lexus_Oil);
+        Param::SetInt(Param::INVudc,gs450Inverter.dc_bus_voltage);//display inverter derived dc link voltage on web interface
+    }
+
+  else if (targetInverter == _invmodes::GS450H)
+    {
+        gs450Inverter.SetGS450H();//select gs450h inverter mode
+        gs450Inverter.run100msTask(Lexus_Gear, Lexus_Oil);
+        Param::SetInt(Param::INVudc,gs450Inverter.dc_bus_voltage);//display inverter derived dc link voltage on web interface
     }
     else
     {
         gs450Inverter.setTimerState(false);
     }
+
 
     if (targetInverter == _invmodes::Leaf_Gen1)
     {
@@ -86,6 +96,7 @@ static void Ms100Task(void)
         Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
         Param::SetInt(Param::tmpm,LeafINV::motor_temp);
         Param::SetInt(Param::InvStat, LeafINV::error); //update inverter status on web interface
+        Param::SetInt(Param::INVudc,LeafINV::voltage);//display inverter derived dc link voltage on web interface
     }
 
     if(targetVehicle == _vehmodes::BMW_E65)
@@ -156,6 +167,12 @@ static void Ms10Task(void)
      }
 
     if(targetInverter == _invmodes::GS450H)
+    {
+        gs450Inverter.setTorqueTarget(torquePercent);//map throttle for GS450HClass inverter
+        speed = GS450HClass::mg2_speed;//return MG2 rpm as speed param
+    }
+
+       if(targetInverter == _invmodes::Prius_Gen3)
     {
         gs450Inverter.setTorqueTarget(torquePercent);//map throttle for GS450HClass inverter
         speed = GS450HClass::mg2_speed;//return MG2 rpm as speed param
@@ -281,7 +298,15 @@ static void Ms1Task(void)
         // Torque updated in 10ms loop.
         gs450Inverter.UpdateHTMState1Ms(Param::Get(Param::dir));
     }
+
+        if(targetInverter == _invmodes::Prius_Gen3)
+    {
+        // Send direction from this context.
+        // Torque updated in 10ms loop.
+        gs450Inverter.UpdateHTMState1Ms(Param::Get(Param::dir));
+    }
 }
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

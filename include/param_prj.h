@@ -27,7 +27,7 @@
 //Next param id (increase when adding new parameter!): 102
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
-    PARAM_ENTRY(CAT_SETUP,Inverter,     INVMODES    ,  0,      4,      0,      5  ) \
+    PARAM_ENTRY(CAT_SETUP,Inverter,     INVMODES    ,  0,      5,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,Vehicle,      VEHMODES    ,  0,      6,      0,      6  ) \
     PARAM_ENTRY(CAT_THROTTLE,potmin,      "dig",     0,      4095,   0,      17  ) \
     PARAM_ENTRY(CAT_THROTTLE,potmax,      "dig",     0,      4095,   4095,   18  ) \
@@ -70,6 +70,7 @@
     VALUE_ENTRY(udc,         "V",     2001 ) \
     VALUE_ENTRY(udc2,         "V",     2002 ) \
     VALUE_ENTRY(udc3,         "V",     2003 ) \
+    VALUE_ENTRY(INVudc,      "V",     2004 ) \
     VALUE_ENTRY(power,        "kW",    2051 ) \
     VALUE_ENTRY(idc,          "A",     2047 ) \
     VALUE_ENTRY(speed,        "rpm",   2012 ) \
@@ -110,7 +111,7 @@
 #define POTMODES     "0=SingleRegen, 1=DualChannel, 2=CAN"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
-#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie"
+#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie, 4=Prius_Gen3"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None , 5=BMW_E39 , 6=VAG"
 //#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
@@ -177,7 +178,8 @@ enum _invmodes
     Leaf_Gen1 = 0,
     GS450H = 1,
     UserCAN = 2,
-    Zombie = 4
+    Zombie = 3,
+    Prius_Gen3 = 4
 };
 
 enum _chgmodes

@@ -12,9 +12,10 @@
 
 
 static uint8_t htm_state = 0;
-static uint8_t inv_status = 1;
+static uint8_t inv_status = 1;//must be 1 for gs450h
 uint16_t counter;
 static uint16_t htm_checksum;
+static uint8_t frame_count;
 static int16_t mg1_torque, mg2_torque, speedSum;
 bool statusInv=0;
 int16_t GS450HClass::dc_bus_voltage;
@@ -25,9 +26,22 @@ int16_t GS450HClass::mg2_speed;
 
 
 //80 bytes out and 100 bytes back in (with offset of 8 bytes.
-static uint8_t mth_data[100];
-static uint8_t htm_data_setup[80]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,128,0,0,0,128,0,0,0,37,1};
-static uint8_t htm_data[80]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0};
+static uint8_t mth_data[120];
+static uint8_t htm_data_setup[100]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,128,0,0,0,128,0,0,0,37,1};
+static uint8_t htm_data[100]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0};
+
+static uint8_t htm_data_setup_auris[100]= {0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x00, 0x00, 0x00, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5F, 0x01};
+
+uint8_t htm_data_init[7][100]={
+{0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,0,0,0,136,0,0,0,160,0,0,0,0,0,0,0,95,1},
+{0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,0,0,0,136,0,0,0,160,0,0,0,0,0,0,0,95,1},
+{0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,173,255,82,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,25,60,246,52,8,0,0,0,0,0,0,138,0,0,0,168,0,0,0,1,0,0,0,72,7},
+{0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,25,60,246,52,8,0,0,0,0,0,0,138,0,0,0,168,0,0,0,2,0,0,0,75,5},
+{0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,25,60,246,52,8,0,0,0,0,0,0,138,0,0,0,168,0,0,0,2,0,0,0,75,5},
+{0,30,0,0,0,0,0,18,0,154,250,0,0,255,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,255,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,255,4,73,25,60,246,52,8,0,0,255,0,0,0,138,0,0,0,168,0,0,0,3,0,0,0,70,9},
+{0,30,0,2,0,0,0,18,0,154,250,0,0,16,0,97,0,0,0,0,0,0,200,249,56,6,165,0,136,0,63,0,16,0,0,0,63,0,16,0,3,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,16,0,75,12,45,248,21,6,0,0,16,0,0,0,202,0,211,0,16,0,0,0,134,16,0,0,130,10}
+};
+
 
 void GS450HClass::setTimerState(bool desiredTimerState)
 {
@@ -208,32 +222,48 @@ void dma1_channel6_isr(void)
 //Dilbert's code here
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void GS450HClass::SetPrius(){
 
-uint8_t CalcMTHChecksum(void)
+    if (htm_state<5)
+    {
+	htm_state = 5;
+    inv_status = 0;//must be 0 for prius
+    }
+}
+void GS450HClass::SetGS450H(){
+	if (htm_state>4)
+	{
+	htm_state = 0;
+	inv_status = 1;//must be 1 for gs450h
+	}
+}
+
+
+
+uint8_t GS450HClass::VerifyMTHChecksum(uint16_t len)
 {
 
     uint16_t mth_checksum=0;
 
-    for(int i=0; i<98; i++)mth_checksum+=mth_data[i];
+    for(int i=0; i<(len-2); i++)
+		mth_checksum+=mth_data[i];
 
 
-    if(mth_checksum==(mth_data[98]|(mth_data[99]<<8))) return 1;
+    if(mth_checksum==(mth_data[len-2]|(mth_data[len-1]<<8))) return 1;
     else return 0;
 
 }
 
-void CalcHTMChecksum(void)
+void GS450HClass::CalcHTMChecksum(uint16_t len)
 {
 
     uint16_t htm_checksum=0;
 
-    for(int i=0; i<78; i++)htm_checksum+=htm_data[i];
-    htm_data[78]=htm_checksum&0xFF;
-    htm_data[79]=htm_checksum>>8;
+    for(int i=0; i<(len-2); i++)htm_checksum+=htm_data[i];
+    htm_data[len-2]=htm_checksum&0xFF;
+    htm_data[len-1]=htm_checksum>>8;
 
 }
-
-
 
 void GS450HClass::UpdateHTMState1Ms(int8_t gear)
 {
@@ -280,7 +310,7 @@ void GS450HClass::UpdateHTMState1Ms(int8_t gear)
     {
         //
         // dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF);
-        if(CalcMTHChecksum()==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0)
+        if(VerifyMTHChecksum(100)==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0)
         {
 //HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1 );
             statusInv=0;
@@ -363,11 +393,141 @@ void GS450HClass::UpdateHTMState1Ms(int8_t gear)
     }
     break;
 
-    case 5:
+	/***** Demo code for Gen3 Prius/Auris direct communications! */
+   case 5:
+    {
+        dma_read(mth_data,120);//read in mth data via dma. Probably need some kind of check dma complete flag here
+        DigIo::req_out.Clear(); //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
+        htm_state++;
+    }
+    break;
+
+    case 6:
+    {
+        DigIo::req_out.Set();  //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
+
+if(inv_status>5)
+{
+if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL7, DMA_TCIF))// if the transfer complete flag is set then send another packet
+{
+dma_clear_interrupt_flags(DMA1, DMA_CHANNEL7, DMA_TCIF);//clear the flag.
+dma_write(htm_data,100); //HAL_UART_Transmit_IT(&huart2, htm_data, 80);
+}
+
+}
+else
+{
+dma_write(&htm_data_init[ inv_status ][0],100); //HAL_UART_Transmit_IT(&huart2, htm_data_setup, 80);
+
+inv_status++;
+if(inv_status==6){
+//memcpy(htm_data, &htm_data_init[ inv_status ][0], 100);
+}
+}
+        htm_state++;
+        break;
+
+	case 7:
+		htm_state++;
+	}
+	break;
+
+    case 8:
+    {
+        //
+        // dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF);
+        if(VerifyMTHChecksum(120)==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0)
+        {
+
+            statusInv=0;
+        }
+        else
+        {
+
+			//exchange data and prepare next HTM frame
+            dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
+            statusInv=1;
+            dc_bus_voltage=(((mth_data[100]|mth_data[101]<<8)-5)/2);
+            temp_inv_water=(mth_data[42]|mth_data[43]<<8);
+            temp_inv_inductor=(mth_data[86]|mth_data[87]<<8);
+            mg1_speed=mth_data[6]|mth_data[7]<<8;
+            mg2_speed=mth_data[38]|mth_data[39]<<8;
+        }
+
+        mth_data[98]=0;
+        mth_data[99]=0;
+
+        htm_state++;
+    }
+    break;
+
+    case 9:
     {
 
-    } break;
+        // -3500 (reverse) to 3500 (forward)
+        if(gear==0) mg2_torque=0;//Neutral
+        if(gear==32) mg2_torque=this->scaledTorqueTarget;//Drive
+        if(gear==-32) mg2_torque=this->scaledTorqueTarget*-1;//Reverse
 
+        mg1_torque=((mg2_torque*5)/4);
+        if(gear==-32) mg1_torque=0; //no mg1 torque in reverse.
+        Param::SetInt(Param::torque,mg2_torque);//post processed final torue value sent to inv to web interface
+
+        //speed feedback
+        speedSum=mg2_speed+mg1_speed;
+        speedSum/=113;
+        uint8_t speedSum2=speedSum;
+        	//Possibly not needed
+		//htm_data[0]=speedSum2;
+
+		//these bytes are used, and seem to be MG1 for startup, but can't work out the relatino to the
+		//bytes earlier in the stream, possibly the byte order has been flipped on these 2 bytes
+		//could be a software bug ?
+        htm_data[76]=(mg1_torque*4) & 0xFF;
+        htm_data[75]=((mg1_torque*4)>>8) & 0xFF;
+
+        //mg1
+        htm_data[5]=(mg1_torque)&0xFF;  //negative is forward
+        htm_data[6]=((mg1_torque)>>8);
+        htm_data[11]=htm_data[5];
+        htm_data[12]=htm_data[6];
+
+        //mg2 the MG2 values are now beside each other!
+htm_data[30]=(mg2_torque) & 0xFF; //positive is forward
+htm_data[31]=((mg2_torque)>>8) & 0xFF;
+
+if(gear==32) { //forward direction these bytes should match
+htm_data[26]=htm_data[30];
+htm_data[27]=htm_data[31];
+htm_data[28]=(mg2_torque/2) & 0xFF; //positive is forward
+htm_data[29]=((mg2_torque/2)>>8) & 0xFF;
+}
+
+if(gear==-32) { //reverse direction these bytes should match
+htm_data[28]=htm_data[30];
+htm_data[29]=htm_data[31];
+htm_data[26]=(mg2_torque/2) & 0xFF; //positive is forward
+htm_data[27]=((mg2_torque/2)>>8) & 0xFF;
+}
+
+		//This data has moved!
+
+        htm_data[85]=(-5000)&0xFF;  // regen ability of battery
+        htm_data[86]=((-5000)>>8);
+
+        htm_data[87]=(-10000)&0xFF;  // discharge ability of battery
+        htm_data[88]=((-10000)>>8);
+
+        //checksum
+        if(++frame_count & 0x01){
+        htm_data[94]++;
+        }
+
+		CalcHTMChecksum(100);
+
+        htm_state=5;
+    }
+    break;
 
     }
 }
@@ -378,4 +538,3 @@ bool GS450HClass::statusFB()
     return statusInv;
 }
 //////////////////////////////////////////////////////////////
-
