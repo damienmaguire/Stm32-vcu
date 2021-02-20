@@ -73,6 +73,8 @@
     VALUE_ENTRY(INVudc,      "V",     2004 ) \
     VALUE_ENTRY(power,        "kW",    2051 ) \
     VALUE_ENTRY(idc,          "A",     2047 ) \
+    VALUE_ENTRY(KWh,          "kwh",   2048 ) \
+    VALUE_ENTRY(AMPh,          "Ah",   2049 ) \
     VALUE_ENTRY(speed,        "rpm",   2012 ) \
     VALUE_ENTRY(torque,       "dig",   2013 ) \
     VALUE_ENTRY(pot,          "dig",   2015 ) \
@@ -136,7 +138,7 @@
 #define CAT_CRUISE   "Cruise Control"
 #define CAT_LEXUS   "Gearbox Control"
 #define CAT_CHARGER  "Charger Control"
-#define CHGMODS   "0=Off, 3=HV_Only, 4=Volt_Ampera"
+#define CHGMODS   "0=Off, 1=HV_ON, 2=HV_OFF 3=HV_Only, 4=Volt_Ampera"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 
@@ -185,6 +187,8 @@ enum _invmodes
 enum _chgmodes
 {
     Off = 0,
+    HV_ON=1,
+    HV_OFF=2,
     HV_Only = 3,
     Volt_Ampera = 4
 };

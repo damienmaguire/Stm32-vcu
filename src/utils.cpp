@@ -170,16 +170,20 @@ void utils::SelectDirection(_vehmodes targetVehicle, BMW_E65Class E65Vehicle)
 s32fp utils::ProcessUdc(uint32_t oldTime, int motorSpeed)
 {
     // FIXME: 32bit integer?
-    int32_t udc = ISA::Voltage;//get voltage from isa sensor and post to parameter database
-    Param::SetInt(Param::udc, udc);
-    int32_t udc2 = ISA::Voltage2;//get voltage from isa sensor and post to parameter database
-    Param::SetInt(Param::udc2, udc2);
-    int32_t udc3 = ISA::Voltage3;//get voltage from isa sensor and post to parameter database
-    Param::SetInt(Param::udc3, udc3);
-    s32fp idc = ISA::Amperes;//get current from isa sensor and post to parameter database
-    Param::SetInt(Param::idc, idc);
-    s32fp kw = ISA::KW;//get power from isa sensor and post to parameter database
-    Param::SetInt(Param::power, kw);
+    int32_t udc = FP_FROMINT(ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
+    Param::SetFlt(Param::udc, udc);
+    int32_t udc2 = FP_FROMINT(ISA::Voltage2)/1000;//get voltage from isa sensor and post to parameter database
+    Param::SetFlt(Param::udc2, udc2);
+    int32_t udc3 = FP_FROMINT(ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
+    Param::SetFlt(Param::udc3, udc3);
+    int32_t idc = FP_FROMINT(ISA::Amperes)/1000;//get current from isa sensor and post to parameter database
+    Param::SetFlt(Param::idc, idc);
+    int32_t kw = FP_FROMINT(ISA::KW)/1000;//get power from isa sensor and post to parameter database
+    Param::SetFlt(Param::power, kw);
+    int32_t kwh = FP_FROMINT(ISA::KWh)/1000;//get kwh from isa sensor and post to parameter database
+    Param::SetFlt(Param::KWh, kwh);
+    int32_t Amph = FP_FROMINT(ISA::Ah)/3600;//get Ah from isa sensor and post to parameter database
+    Param::SetFlt(Param::AMPh, Amph);
     s32fp udclim = Param::Get(Param::udclim);
     s32fp udcsw = Param::Get(Param::udcsw);
 

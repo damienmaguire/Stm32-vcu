@@ -35,6 +35,8 @@ public:
     static		int16_t Temperature;
     static      int32_t Amperes;   // Floating point with current in Amperes
     static      int32_t KW;
+    static      int32_t KWh;
+    static      int32_t Ah;
 
 
     static void handle521(uint32_t data[2]);

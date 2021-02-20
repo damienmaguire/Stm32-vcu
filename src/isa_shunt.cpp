@@ -17,35 +17,16 @@
 uint16_t  framecount=0;
 bool firstframe=true;
 
-int32_t ISA::Amperes;   // Floating point with current in Amperes
-static  s32fp AH;      //Floating point with accumulated ampere-hours
+int32_t ISA::Amperes;
+int32_t ISA::Ah;
 int32_t ISA::KW;
-static  s32fp KWH;
+int32_t ISA::KWh;
 int32_t ISA::Voltage=0;
 int32_t ISA::Voltage2=0;
 int32_t ISA::Voltage3=0;
-
-static		uint16_t Voltage1;
-//static		uint16_t Voltage2;
-//static		uint16_t Voltage3;
-static		uint16_t VoltageHI;
-static		uint16_t Voltage1HI;
-static		uint16_t Voltage2HI;
-static		uint16_t Voltage3HI;
-static		uint16_t VoltageLO;
-static		uint16_t Voltage1LO;
-static		uint16_t Voltage2LO;
-static		uint16_t Voltage3LO;
-
 int16_t ISA::Temperature;
 
 
-s32fp timestamp;
-static		int32_t watt;
-static		s32fp As;
-static		s32fp lastAs;
-static		s32fp wh;
-static		s32fp lastWh;
 
 
 #define FLASH_DELAY 8000000
@@ -57,41 +38,20 @@ static void delay(void) //delay used for isa setup fumction. probably much bette
 }
 
 
-void ISA::handle521(uint32_t data[2])  //AMperes
+void ISA::handle521(uint32_t data[2])  //Amperes
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    framecount++;
-    int32_t current=0;
-    current = ((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
-    Amperes=current/1000;
-
-
-
+    Amperes = ((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 }
 
 void ISA::handle522(uint32_t data[2])  //Voltage
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    framecount++;
-    int32_t volt=0;
-    volt = (int32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
+    Voltage=((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
-    Voltage=volt/1000;
-    Voltage1=Voltage-(Voltage2+Voltage3);
-    if(framecount<150)
-    {
-        VoltageLO=Voltage;
-        Voltage1LO=Voltage1;
-    }
-    if(Voltage<VoltageLO &&  framecount>150)VoltageLO=Voltage;
-    if(Voltage>VoltageHI && framecount>150)VoltageHI=Voltage;
-    if(Voltage1<Voltage1LO && framecount>150)Voltage1LO=Voltage1;
-    if(Voltage1>Voltage1HI && framecount>150)Voltage1HI=Voltage1;
 
-// Param::SetInt(Param::udc,Voltage);//send dc voltage measured by isa shunt to parameter table
 
 }
 
@@ -99,18 +59,7 @@ void ISA::handle523(uint32_t data[2]) //Voltage2
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    framecount++;
-    int32_t volt=0;
-    volt = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
-    Voltage2=volt/1000;
-    if(Voltage2>3)Voltage2-=Voltage3;
-    if(framecount<150)Voltage2LO=Voltage2;
-    if(Voltage2<Voltage2LO  && framecount>150)Voltage2LO=Voltage2;
-    if(Voltage2>Voltage2HI&& framecount>150)Voltage2HI=Voltage2;
-
-
-
+    Voltage2 = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
 
 }
@@ -119,15 +68,7 @@ void ISA::handle524(uint32_t data[2])  //Voltage3
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    framecount++;
-    int32_t volt=0;
-    volt = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
-    Voltage3=volt/1000;
-    if(framecount<150)Voltage3LO=Voltage3;
-    if(Voltage3<Voltage3LO && framecount>150 && Voltage3>10)Voltage3LO=Voltage3;
-    if(Voltage3>Voltage3HI && framecount>150)Voltage3HI=Voltage3;
-
+    Voltage3 = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
 }
 
@@ -149,13 +90,7 @@ void ISA::handle526(uint32_t data[2]) //Kilowatts
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    framecount++;
-    watt=0;
-    watt = (int32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
-    KW=watt/1000;
-
-    //  Param::SetFlt(Param::power,KW);//send dc power measured by isa shunt to parameter table
+    KW = (int32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
 }
 
@@ -164,15 +99,7 @@ void ISA::handle527(uint32_t data[2]) //Ampere-Hours
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    framecount++;
-    As=0;
-    As = (bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]);
-
-    AH+=(As-lastAs)/3600;
-    lastAs=As;
-
-
-
+    Ah = (bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]);
 
 }
 
@@ -180,12 +107,7 @@ void ISA::handle528(uint32_t data[2])  //kiloWatt-hours
 
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    framecount++;
-
-    wh = (long)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-    KWH+=(wh-lastWh)/1000;
-    lastWh=wh;
-
+    KWh=((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
 }
 
@@ -217,9 +139,6 @@ void ISA::initialize()
     }
     START();
     delay();
-    lastAs=As;
-    lastWh=wh;
-
 
 }
 
@@ -336,6 +255,5 @@ void ISA::initCurrent()
     sendSTORE();
     START();
     delay();
-    lastAs=As;
-    lastWh=wh;
+
 }

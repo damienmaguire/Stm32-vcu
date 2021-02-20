@@ -57,7 +57,30 @@ static void Ms200Task(void)
     {
         //to be done
     }
+
+    if(targetCharger == _chgmodes::Off)
+    {
+        chargeMode = false;
+    }
+
+    if(targetCharger == _chgmodes::HV_ON)
+    {
+        chargeMode = true;
+    }
+    if(targetCharger == _chgmodes::HV_OFF)
+    {
+       chargeMode = false;
+    }
+
+    if(targetCharger == _chgmodes::HV_Only)
+    {
+        //to be done
+    }
 }
+
+
+
+
 
 
 static void Ms100Task(void)
@@ -96,7 +119,7 @@ static void Ms100Task(void)
         Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
         Param::SetInt(Param::tmpm,LeafINV::motor_temp);
         Param::SetInt(Param::InvStat, LeafINV::error); //update inverter status on web interface
-        Param::SetInt(Param::INVudc,LeafINV::voltage);//display inverter derived dc link voltage on web interface
+        Param::SetInt(Param::INVudc,(LeafINV::voltage/2));//display inverter derived dc link voltage on web interface
     }
 
     if(targetVehicle == _vehmodes::BMW_E65)
@@ -210,14 +233,16 @@ static void Ms10Task(void)
     stt |= udc >= Param::Get(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
     stt |= udc < Param::Get(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
-    if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15()))//on detection of ign on we commence prechage and go to mode precharge
+    if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15() || chargeMode))//on detection of ign on or charge mode enable we commence prechage and go to mode precharge
     {
-        DigIo::inv_out.Set();//inverter power on (possibly needed here by leaf inverter)
+      if(!chargeMode) DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
         DigIo::prec_out.Set();//commence precharge
         opmode = MOD_PRECHARGE;
         Param::SetInt(Param::opmode, opmode);
         oldTime=rtc_get_counter_val();
     }
+
+
 
     if(targetVehicle == _vehmodes::BMW_E65)
     {
@@ -237,6 +262,15 @@ static void Ms10Task(void)
         }
     }
 
+
+
+        if(opmode==MOD_PCHFAIL && chargeMode)
+        {
+        //    opmode = MOD_OFF;
+        //    Param::SetInt(Param::opmode, opmode);
+        }
+
+
     /* switch on DC switch if
      * - throttle is not pressed
      * - start pin is high
@@ -251,10 +285,19 @@ static void Ms10Task(void)
             newMode = MOD_RUN;
         }
 
+         if (chargeMode)
+        {
+            newMode = MOD_CHARGE;
+        }
+
+
         stt |= opmode != MOD_OFF ? STAT_NONE : STAT_WAITSTART;
     }
 
     Param::SetInt(Param::status, stt);
+
+    if(opmode != MOD_CHARGE) //only shut off via ign command if not in charge mode
+    {
 
     if(targetVehicle == _vehmodes::BMW_E65)
     {
@@ -265,13 +308,14 @@ static void Ms10Task(void)
         //switch to off mode via igntition digital input. To be implemented in release HW
         if(!Param::GetBool(Param::din_forward)) opmode = MOD_OFF; //using the forward input to test in the E46
     }
+    }
+
+  if(opmode == MOD_CHARGE && !chargeMode) opmode = MOD_OFF; //if we are in charge mode and commdn charge mode off then go to mode off.
 
     if (newMode != MOD_OFF)
     {
         DigIo::dcsw_out.Set();
         DigIo::err_out.Clear();
-        // DigIo::prec_out.Clear();
-       // DigIo::inv_out.Set();//inverter power on
         Param::SetInt(Param::opmode, newMode);
         ErrorMessage::UnpostAll();
 
@@ -328,6 +372,7 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     targetInverter=static_cast<_invmodes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
     Param::SetInt(Param::inv, targetInverter);//Confirm mode
     targetVehicle=static_cast<_vehmodes>(Param::GetInt(Param::Vehicle));//get vehicle setting from menu
+    targetCharger=static_cast<_chgmodes>(Param::GetInt(Param::chargemode));//get charger setting from menu
     Param::SetInt(Param::veh, targetVehicle);//Confirm mode
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
     Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
