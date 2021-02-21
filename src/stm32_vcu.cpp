@@ -233,6 +233,7 @@ static void Ms10Task(void)
     stt |= udc >= Param::Get(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
     stt |= udc < Param::Get(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
+
     if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15() || chargeMode))//on detection of ign on or charge mode enable we commence prechage and go to mode precharge
     {
       if(!chargeMode) DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
@@ -296,7 +297,7 @@ static void Ms10Task(void)
 
     Param::SetInt(Param::status, stt);
 
-    if(opmode != MOD_CHARGE) //only shut off via ign command if not in charge mode
+    if(opmode == MOD_RUN) //only shut off via ign command if not in charge mode
     {
 
     if(targetVehicle == _vehmodes::BMW_E65)
