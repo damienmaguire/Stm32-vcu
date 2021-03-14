@@ -1,5 +1,40 @@
 #include <charger.h>
 
+bool chargerClass::HVreq=false;
+static uint8_t counter_109 = 0;
+
+
+void chargerClass::handle108(uint32_t data[2])  //HV request
+
+{
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+    if(bytes[0]==0xAA) HVreq=true;
+    if(bytes[0]==0xCC) HVreq=false;
+    //Counter in byte 7 to validate msg.
+}
+
+void chargerClass::Send100msMessages()
+{
+uint8_t bytes[8];
+uint16_t HVvolts=Param::GetInt(Param::udc);
+bytes[0] = Param::GetInt(Param::opmode);//operation mode
+bytes[1] = (HVvolts&0xFF);//HV voltage lowbyte
+bytes[2] = ((HVvolts&0xFF00)>>8);//HV voltage highbyte
+bytes[3] = 0x00;
+bytes[4] = 0x00;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = counter_109;
+counter_109++;
+if(counter_109 >= 0x0F) counter_109 = 0;
+
+
+
+Can::GetInterface(1)->Send(0x109, (uint32_t*)bytes,8); //Send on CAN2
+
+}
+
+
 
 
 

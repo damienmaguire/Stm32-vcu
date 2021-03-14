@@ -52,6 +52,7 @@ chargerClass chgtype;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
+    int opmode = Param::GetInt(Param::opmode);
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
     if(targetCharger == _chgmodes::Volt_Ampera)
     {
@@ -65,16 +66,31 @@ static void Ms200Task(void)
 
     if(targetCharger == _chgmodes::HV_ON)
     {
-        chargeMode = true;
+      if(opmode != MOD_RUN)  chargeMode = true;
     }
-    if(targetCharger == _chgmodes::HV_OFF)
+    if(targetCharger == _chgmodes::EXT_CAN)
     {
-       chargeMode = false;
+      // chargeMode = false;  //this mode accepts a request for HV via CAN from a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
+                            //request expected on id 0x108
+                            //response with HV on given on id 0x109
+     if(opmode != MOD_RUN)
+        {
+    if(chargerClass::HVreq==true) chargeMode = true;
+    if(chargerClass::HVreq==false) chargeMode = false;
+        }
+
+
     }
 
-    if(targetCharger == _chgmodes::HV_Only)
+    if(targetCharger == _chgmodes::EXT_DIGI)
     {
-        //to be done
+        chargeMode = false;             //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
+                                        //response with a 12v output signal on a digital output.
+                                        //will be implemented on release HW.
+
+
+
+
     }
 }
 
@@ -150,6 +166,8 @@ static void Ms100Task(void)
     }
     int16_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
+
+    chargerClass::Send100msMessages();
 }
 
 
@@ -376,8 +394,9 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     targetInverter=static_cast<_invmodes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
     Param::SetInt(Param::inv, targetInverter);//Confirm mode
     targetVehicle=static_cast<_vehmodes>(Param::GetInt(Param::Vehicle));//get vehicle setting from menu
-    targetCharger=static_cast<_chgmodes>(Param::GetInt(Param::chargemode));//get charger setting from menu
     Param::SetInt(Param::veh, targetVehicle);//Confirm mode
+    targetCharger=static_cast<_chgmodes>(Param::GetInt(Param::chargemode));//get charger setting from menu
+    Param::SetInt(Param::Charger, targetCharger);//Confirm mode
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
     Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
     maxRevs=Param::GetInt(Param::revlim);//get revlimiter value
@@ -412,6 +431,9 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
         break;
     case 0x528:
         ISA::handle528(data);//ISA CAN MESSAGE
+        break;
+    case 0x108:
+        chargerClass::handle108(data);// HV request from an external charger
         break;
     default:
         if (targetInverter == _invmodes::Leaf_Gen1)
@@ -484,6 +506,7 @@ extern "C" int main(void)
     c2.SetReceiveCallback(CanCallback);
     c2.RegisterUserMessage(0x130);//E65 CAS
     c2.RegisterUserMessage(0x192);//E65 Shifter
+    c2.RegisterUserMessage(0x108);//Charger HV request
 
     can = &c; // FIXME: What about CAN2?
 
