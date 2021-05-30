@@ -29,7 +29,7 @@ public:
     static void DecodeCAN(int id, uint32_t data[2]);
     static void Send10msMessages();
     static void Send100msMessages();
-    static uint16_t speed;
+    static int16_t speed;
     static void SetTorque(int8_t gear, int16_t torque);
     static int16_t inv_temp;
     static int16_t motor_temp;

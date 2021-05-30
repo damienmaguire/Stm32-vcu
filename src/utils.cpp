@@ -187,6 +187,10 @@ s32fp utils::ProcessUdc(uint32_t oldTime, int motorSpeed)
     s32fp udclim = Param::Get(Param::udclim);
     s32fp udcsw = Param::Get(Param::udcsw);
 
+    s32fp deltaVolts1 = ABS((udc3/2)-udc2);
+    s32fp deltaVolts2 = ABS((udc2+udc3)-udc);
+    Param::SetFlt(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
+
     // Currently unused parameters:
     // s32fp udcmin = Param::Get(Param::udcmin);
     // s32fp udcmax = Param::Get(Param::udcmax);

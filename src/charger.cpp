@@ -17,16 +17,19 @@ void chargerClass::Send100msMessages()
 {
 uint8_t bytes[8];
 uint16_t HVvolts=Param::GetInt(Param::udc);
+uint16_t HVspnt=Param::GetInt(Param::Voltspnt);
+uint16_t HVpwr=Param::GetInt(Param::Pwrspnt);
 bytes[0] = Param::GetInt(Param::opmode);//operation mode
 bytes[1] = (HVvolts&0xFF);//HV voltage lowbyte
 bytes[2] = ((HVvolts&0xFF00)>>8);//HV voltage highbyte
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = counter_109;
+bytes[3] = (HVspnt&0xFF);//HV voltage setpoint lowbyte
+bytes[4] = ((HVspnt&0xFF00)>>8);//HV voltage setpoint highbyte
+bytes[5] = (HVpwr&0xFF);//HV voltage power setpoint lowbyte
+bytes[6] = ((HVpwr&0xFF00)>>8);//HV voltage power setpoint highbyte
+if(!Param::GetBool(Param::Chgctrl))bytes[7] = ((0xA <<4)|counter_109);  //send vcu enable
+if(Param::GetBool(Param::Chgctrl))bytes[7] = ((0xC <<4)|counter_109);      //send vcu disable
 counter_109++;
-if(counter_109 >= 0x0F) counter_109 = 0;
+if(counter_109 >= 0xF) counter_109 = 0;
 
 
 

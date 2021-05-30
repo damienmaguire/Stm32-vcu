@@ -31,7 +31,7 @@ uint8_t LeafINV::run10ms = 0;
 uint8_t LeafINV::run100ms = 0;
 uint32_t LeafINV::lastRecv = 0;
 uint16_t LeafINV::voltage;
-uint16_t LeafINV::speed;
+int16_t LeafINV::speed;
 bool LeafINV::error=false;
 int16_t LeafINV::inv_temp;
 int16_t LeafINV::motor_temp;

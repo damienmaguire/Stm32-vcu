@@ -92,6 +92,9 @@ static void Ms200Task(void)
 
 
     }
+
+
+
 }
 
 
@@ -199,7 +202,7 @@ static void Ms10Task(void)
     if(targetInverter == _invmodes::Leaf_Gen1)
     {
         LeafINV::Send10msMessages();//send leaf messages on can1 if we select leaf
-        speed = LeafINV::speed/2;//set motor rpm on interface
+        speed = ABS(LeafINV::speed/2);//set motor rpm on interface
         torquePercent = utils::change(torquePercent, 0, 3040, 0, 2047); //map throttle for Leaf inverter
         LeafINV::SetTorque(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
 

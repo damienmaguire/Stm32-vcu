@@ -60,8 +60,9 @@
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
     PARAM_ENTRY(CAT_CHARGER, chargemode,  CHGMODS,0,      4,      0,      74  ) \
-    PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   330,    75  ) \
-    PARAM_ENTRY(CAT_CHARGER, Curspnt,       "A",       0,      1000,   10,    76  ) \
+    PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \
+    PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
+    PARAM_ENTRY(CAT_CHARGER, Chgctrl,  CHGCTRL,0,      1,      0,      77  ) \
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
     VALUE_ENTRY(hwver,        HWREVS,  2036 ) \
     VALUE_ENTRY(opmode,       OPMODES, 2000 ) \
@@ -70,6 +71,7 @@
     VALUE_ENTRY(udc,         "V",     2001 ) \
     VALUE_ENTRY(udc2,         "V",     2002 ) \
     VALUE_ENTRY(udc3,         "V",     2003 ) \
+    VALUE_ENTRY(deltaV,         "V",     2005 ) \
     VALUE_ENTRY(INVudc,      "V",     2004 ) \
     VALUE_ENTRY(power,        "kW",    2051 ) \
     VALUE_ENTRY(idc,          "A",     2047 ) \
@@ -140,6 +142,7 @@
 #define CAT_LEXUS   "Gearbox Control"
 #define CAT_CHARGER  "Charger Control"
 #define CHGMODS   "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera"
+#define CHGCTRL   "0=Enable, 1=Disable"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 
@@ -192,6 +195,13 @@ enum _chgmodes
     EXT_CAN=2,
     EXT_DIGI = 3,
     Volt_Ampera = 4
+};
+
+enum _chgctrl
+{
+    Enable = 0,
+    Disable =1
+
 };
 
 enum _gear
