@@ -60,8 +60,12 @@
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
     PARAM_ENTRY(CAT_CHARGER, chargemode,  CHGMODS,0,      4,      0,      74  ) \
+    PARAM_ENTRY(CAT_CHARGER, interface,  CHGint,0,      2,      0,      78  ) \
     PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \
     PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
+    PARAM_ENTRY(CAT_CHARGER, CCS_VLim,       "V",       0,      1000,   400,    79  ) \
+    PARAM_ENTRY(CAT_CHARGER, CCS_ILim,       "A",       0,      350,   100,    80  ) \
+    PARAM_ENTRY(CAT_CHARGER, CCS_SOCLim,       "%",       0,      100,   80,    81  ) \
     PARAM_ENTRY(CAT_CHARGER, Chgctrl,  CHGCTRL,0,      1,      0,      77  ) \
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
     VALUE_ENTRY(hwver,        HWREVS,  2036 ) \
@@ -108,6 +112,10 @@
     VALUE_ENTRY(T15Stat,      ONOFF,   2094 ) \
     VALUE_ENTRY(InvStat,      ONOFF,   2095 ) \
     VALUE_ENTRY(GearFB,        LOWHIGH,   2073 ) \
+    VALUE_ENTRY(CableLim,        "A",   2100 ) \
+    VALUE_ENTRY(PilotLim,        "A",   2101 ) \
+    VALUE_ENTRY(PlugDet,        ONOFF,   2102 ) \
+    VALUE_ENTRY(PilotTyp,       PLTMODES,   2103 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 
 //Next value Id: 2080
@@ -117,6 +125,7 @@
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie, 4=Prius_Gen3"
+#define PLTMODES     "0=Absent, 1=ACStd, 2=ACchg, 3=5%pwm, 4=CCS"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None , 5=BMW_E39 , 6=VAG"
 //#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
@@ -143,6 +152,7 @@
 #define CAT_CHARGER  "Charger Control"
 #define CHGMODS   "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera"
 #define CHGCTRL   "0=Enable, 1=Disable"
+#define CHGint   "0=Unused, 1=i3LIM"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 
@@ -195,6 +205,13 @@ enum _chgmodes
     EXT_CAN=2,
     EXT_DIGI = 3,
     Volt_Ampera = 4
+};
+
+enum _interface
+{
+    Unused = 0,
+    i3LIM =1
+
 };
 
 enum _chgctrl

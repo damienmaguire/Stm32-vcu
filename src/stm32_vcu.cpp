@@ -30,6 +30,7 @@
 #define  BMW_E39  5
 #define  VAG  6
 
+
 HWREV hwRev; // Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
@@ -37,6 +38,7 @@ static Can* can;
 static _invmodes targetInverter;
 static _vehmodes targetVehicle;
 static _chgmodes targetCharger;
+static _interface targetChgint;
 static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
@@ -49,6 +51,7 @@ GS450HClass gs450Inverter;
 chargerClass chgtype;
 
 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
@@ -58,6 +61,19 @@ static void Ms200Task(void)
     {
         //to be done
     }
+
+    if(targetChgint == _interface::Unused) //No charger interface module used
+    {
+
+    }
+
+    if(targetChgint == _interface::i3LIM) //BMW i3 LIM
+    {
+        i3LIMClass::Send200msMessages();
+    }
+
+
+
 
     if(targetCharger == _chgmodes::Off)
     {
@@ -112,6 +128,11 @@ static void Ms100Task(void)
 
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
+
+        if(targetChgint == _interface::i3LIM) //BMW i3 LIM
+    {
+        i3LIMClass::Send100msMessages();
+    }
 
     if (targetInverter == _invmodes::Prius_Gen3)
     {
@@ -183,6 +204,11 @@ static void Ms10Task(void)
     int newMode = MOD_OFF;
     int stt = STAT_NONE;
     ErrorMessage::SetTime(rtc_get_counter_val());
+
+    if(targetChgint == _interface::i3LIM) //BMW i3 LIM
+    {
+        i3LIMClass::Send10msMessages();
+    }
 
     if (Param::GetInt(Param::opmode) == MOD_RUN)
     {
@@ -399,6 +425,7 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     targetVehicle=static_cast<_vehmodes>(Param::GetInt(Param::Vehicle));//get vehicle setting from menu
     Param::SetInt(Param::veh, targetVehicle);//Confirm mode
     targetCharger=static_cast<_chgmodes>(Param::GetInt(Param::chargemode));//get charger setting from menu
+    targetChgint=static_cast<_interface>(Param::GetInt(Param::interface));//get interface setting from menu
     Param::SetInt(Param::Charger, targetCharger);//Confirm mode
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
     Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
@@ -438,6 +465,10 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
     case 0x108:
         chargerClass::handle108(data);// HV request from an external charger
         break;
+    case 0x3b4:
+        i3LIMClass::handle3B4(data);// Data msg from LIM
+        break;
+
     default:
         if (targetInverter == _invmodes::Leaf_Gen1)
         {
@@ -489,7 +520,7 @@ extern "C" int main(void)
     parm_Change(Param::PARAM_LAST);
     DigIo::inv_out.Clear();//inverter power off during bootup
 
-    Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt.
+    Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt/LIM.
     Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2 vehicle side.
 
     // Set up CAN 1 callback and messages to listen for
@@ -504,12 +535,14 @@ extern "C" int main(void)
     c.RegisterUserMessage(0x526);//ISA MSG
     c.RegisterUserMessage(0x527);//ISA MSG
     c.RegisterUserMessage(0x528);//ISA MSG
+    c.RegisterUserMessage(0x3b4);//LIM MSG
 
     // Set up CAN 2 (Vehicle CAN) callback and messages to listen for.
     c2.SetReceiveCallback(CanCallback);
     c2.RegisterUserMessage(0x130);//E65 CAS
     c2.RegisterUserMessage(0x192);//E65 Shifter
-    c2.RegisterUserMessage(0x108);//Charger HV request
+   c2.RegisterUserMessage(0x108);//Charger HV request
+
 
     can = &c; // FIXME: What about CAN2?
 

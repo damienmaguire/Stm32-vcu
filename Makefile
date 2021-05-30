@@ -38,7 +38,7 @@ LDSCRIPT	= $(BINARY).ld
 LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections,-Map,linker.map
 OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
            my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o Can_E46.o BMW_E65.o GS450H.o temp_meas.o Can_E39.o Can_VAG.o \
-           param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o charger.o
+           param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o charger.o i3LIM.o
 OBJS     = $(patsubst %.o,$(OUT_DIR)/%.o, $(OBJSL))
 vpath %.c src/ libopeninv/src/
 vpath %.cpp src/ libopeninv/src/
