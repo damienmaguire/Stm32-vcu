@@ -48,9 +48,33 @@ void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
 
 }
 
+void i3LIMClass::handle29E(uint32_t data[2])  //Lim data. Available current and voltage from the ccs charger
 
+{
+uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
+}
 
+void i3LIMClass::handle2B2(uint32_t data[2])  //Lim data. Current and Votage as measured by the ccs charger
+
+{
+uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+}
+
+void i3LIMClass::handle2EF(uint32_t data[2])  //Lim data. Min available voltage from the ccs charger.
+
+{
+uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+}
+
+void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state and charge flap open/close status.
+
+{
+uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+}
 
 
 void i3LIMClass::Send10msMessages()

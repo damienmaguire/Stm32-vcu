@@ -469,6 +469,25 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
         i3LIMClass::handle3B4(data);// Data msg from LIM
         break;
 
+    case 0x272:
+        i3LIMClass::handle3B4(data);// Data msg from LIM
+        break;
+
+    case 0x29e:
+        i3LIMClass::handle3B4(data);// Data msg from LIM
+        break;
+
+    case 0x2b2:
+        i3LIMClass::handle3B4(data);// Data msg from LIM
+        break;
+
+    case 0x2ef:
+        i3LIMClass::handle3B4(data);// Data msg from LIM
+        break;
+
+
+
+
     default:
         if (targetInverter == _invmodes::Leaf_Gen1)
         {
@@ -536,6 +555,10 @@ extern "C" int main(void)
     c.RegisterUserMessage(0x527);//ISA MSG
     c.RegisterUserMessage(0x528);//ISA MSG
     c.RegisterUserMessage(0x3b4);//LIM MSG
+    c.RegisterUserMessage(0x29e);//LIM MSG
+    c.RegisterUserMessage(0x2b2);//LIM MSG
+    c.RegisterUserMessage(0x2ef);//LIM MSG
+    c.RegisterUserMessage(0x272);//LIM MSG
 
     // Set up CAN 2 (Vehicle CAN) callback and messages to listen for.
     c2.SetReceiveCallback(CanCallback);

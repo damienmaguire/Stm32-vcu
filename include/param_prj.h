@@ -116,6 +116,12 @@
     VALUE_ENTRY(PilotLim,        "A",   2101 ) \
     VALUE_ENTRY(PlugDet,        ONOFF,   2102 ) \
     VALUE_ENTRY(PilotTyp,       PLTMODES,   2103 ) \
+    VALUE_ENTRY(CCS_I_Avail,     "A",   2104 ) \
+    VALUE_ENTRY(CCS_V_Avail,     "V",   2105 ) \
+    VALUE_ENTRY(CCS_I,     "A",   2106 ) \
+    VALUE_ENTRY(CCS_V,     "V",   2107 ) \
+    VALUE_ENTRY(CCS_V_Min, "V",   2108 ) \
+    VALUE_ENTRY(CCS_ConStat,   ONOFF,   2109 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 
 //Next value Id: 2080
