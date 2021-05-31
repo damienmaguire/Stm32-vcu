@@ -108,7 +108,7 @@ void i3LIMClass::Send10msMessages()
    V_Batt2=(Param::GetInt(Param::udc))/4;
    I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
    //I_Batt=0xa0a0;
-   SOC_Local=(Param::GetInt(Param::SOC))*10;
+   SOC_Local=50;//(Param::GetInt(Param::SOC))*10;
 uint8_t bytes[8]; //seems to be from i3 BMS.
 bytes[0] = I_Batt & 0xFF;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
 bytes[1] = I_Batt >> 8;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
@@ -154,6 +154,17 @@ bytes[5] = 0x26;
 bytes[6] = 0xf3;
 bytes[7] = 0x4b;
 Can::GetInterface(0)->Send(0x431, (uint32_t*)bytes,8); //Send on CAN1
+
+                //LIM needs to see this but doesnt control anything...
+bytes[0] = 0x00;
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0xfe;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x60;
+Can::GetInterface(0)->Send(0x560, (uint32_t*)bytes,8); //Send on CAN1
 
 }
 
@@ -223,12 +234,12 @@ if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl)))  //if we 
   CHG_Status=Status_Rdy;
   CHG_Req=Req_Charge;
   CHG_Ready=Chg_Rdy;
-  CHG_Pwr=1000;//just a holding value of 1kw for now.
+  CHG_Pwr=0;//just a holding value of 1kw for now.
     return AC_Chg;
 
 }
 
-if (!Param::GetBool(Param::PlugDet)&&(Param::GetBool(Param::Chgctrl)))  //if we a disable or plug remove shut down
+if (!Param::GetBool(Param::PlugDet)||(Param::GetBool(Param::Chgctrl)))  //if we a disable or plug remove shut down
 {
   EOC_Time=0x00;
   CHG_Status=Status_NotRdy;

@@ -475,25 +475,18 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
     case 0x3b4:
         i3LIMClass::handle3B4(data);// Data msg from LIM
         break;
-
     case 0x272:
-        i3LIMClass::handle3B4(data);// Data msg from LIM
+        i3LIMClass::handle272(data);// Data msg from LIM
         break;
-
     case 0x29e:
-        i3LIMClass::handle3B4(data);// Data msg from LIM
+        i3LIMClass::handle29E(data);// Data msg from LIM
         break;
-
     case 0x2b2:
-        i3LIMClass::handle3B4(data);// Data msg from LIM
+        i3LIMClass::handle2B2(data);// Data msg from LIM
         break;
-
     case 0x2ef:
-        i3LIMClass::handle3B4(data);// Data msg from LIM
+        i3LIMClass::handle2EF(data);// Data msg from LIM
         break;
-
-
-
 
     default:
         if (targetInverter == _invmodes::Leaf_Gen1)
