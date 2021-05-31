@@ -43,6 +43,7 @@ static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
 static uint32_t oldTime;
+uint8_t LIMmode=0;
 
 
 // Instantiate Classes
@@ -55,6 +56,8 @@ chargerClass chgtype;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
+    if(Param::GetBool(Param::Chgctrl)) Param::SetInt(Param::chgcont,1);
+    if(!Param::GetBool(Param::Chgctrl)) Param::SetInt(Param::chgcont,0);
     int opmode = Param::GetInt(Param::opmode);
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
     if(targetCharger == _chgmodes::Volt_Ampera)
@@ -70,7 +73,7 @@ static void Ms200Task(void)
     if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send200msMessages();
-      uint8_t LIMmode=i3LIMClass::Control_Charge();
+      LIMmode=i3LIMClass::Control_Charge();
       if(LIMmode==0x1) chargeMode = true;
       if(LIMmode==0x0) chargeMode = false;
     }

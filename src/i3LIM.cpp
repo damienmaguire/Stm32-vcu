@@ -216,17 +216,19 @@ uint8_t i3LIMClass::Control_Charge()
     int opmode = Param::GetInt(Param::opmode);
     if (opmode != MOD_RUN)
     {
-if(Param::GetBool(Param::Chgctrl)&&Param::GetBool(Param::PlugDet))  //if we have an enable and a plug in lets go.
+if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl)))  //if we have an enable and a plug in lets go.
 {
+
   EOC_Time=0xFE;
   CHG_Status=Status_Rdy;
   CHG_Req=Req_Charge;
   CHG_Ready=Chg_Rdy;
   CHG_Pwr=1000;//just a holding value of 1kw for now.
     return AC_Chg;
+
 }
 
-if(!Param::GetBool(Param::Chgctrl)||!Param::GetBool(Param::PlugDet))  //if we have a disable command or plug pulled then shutdown
+if (!Param::GetBool(Param::PlugDet)&&(Param::GetBool(Param::Chgctrl)))  //if we a disable or plug remove shut down
 {
   EOC_Time=0x00;
   CHG_Status=Status_NotRdy;
