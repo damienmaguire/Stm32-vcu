@@ -60,6 +60,7 @@
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
     PARAM_ENTRY(CAT_CHARGER, chargemode,  CHGMODS,0,      4,      0,      74  ) \
+    PARAM_ENTRY(CAT_CHARGER, BattCap,       "Wh",       0,      65534,   21000,    82  ) \
     PARAM_ENTRY(CAT_CHARGER, interface,  CHGint,0,      2,      0,      78  ) \
     PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \
     PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
@@ -81,6 +82,7 @@
     VALUE_ENTRY(idc,          "A",     2047 ) \
     VALUE_ENTRY(KWh,          "kwh",   2048 ) \
     VALUE_ENTRY(AMPh,          "Ah",   2049 ) \
+    VALUE_ENTRY(SOC,          "%",   2110 ) \
     VALUE_ENTRY(speed,        "rpm",   2012 ) \
     VALUE_ENTRY(torque,       "dig",   2013 ) \
     VALUE_ENTRY(pot,          "dig",   2015 ) \

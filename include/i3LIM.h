@@ -23,6 +23,7 @@ static void handle272(uint32_t data[2]);
 static void Send200msMessages();
 static void Send100msMessages();
 static void Send10msMessages();
+static uint8_t Control_Charge();
 private:
 
 };

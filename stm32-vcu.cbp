@@ -59,6 +59,7 @@
 		<Unit filename="include/errormessage_prj.h" />
 		<Unit filename="include/hwdefs.h" />
 		<Unit filename="include/hwinit.h" />
+		<Unit filename="include/i3LIM.h" />
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/leafinv.h" />
 		<Unit filename="include/param_prj.h" />
@@ -105,6 +106,7 @@
 		<Unit filename="src/chademo.cpp" />
 		<Unit filename="src/charger.cpp" />
 		<Unit filename="src/hwinit.cpp" />
+		<Unit filename="src/i3LIM.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
 		<Unit filename="src/leafinv.cpp" />
 		<Unit filename="src/stm32_vcu.cpp" />

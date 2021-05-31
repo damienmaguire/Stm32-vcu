@@ -2,6 +2,10 @@
 #define CAN_TIMEOUT       50  //500ms
 #define PRECHARGE_TIMEOUT 500 //5s
 
+uint8_t SOCVal=0;
+int32_t NetWh=0;
+
+
 int32_t utils::change(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
 {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -280,5 +284,21 @@ void utils::displayThrottle()
     uint16_t pot2disp = AnaIn::throttle2.Get();
         Param::SetInt(Param::pot, potdisp);
         Param::SetInt(Param::pot2, pot2disp);
+
+}
+
+
+void CalcSOC()
+{
+int32_t Capacity_Parm = Param::GetInt(Param::BattCap);
+int32_t kwh_Used = FP_FROMINT(ISA::KWh);    //grab actual Wh from isa shunt
+if(kwh_Used<0)
+{
+    NetWh = Capacity_Parm - kwh_Used;
+    SOCVal = (kwh_Used/Capacity_Parm)*100;
+}
+
+if(kwh_Used>0) SOCVal=100;
+Param::SetInt(Param::SOC,SOCVal);
 
 }

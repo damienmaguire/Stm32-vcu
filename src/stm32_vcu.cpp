@@ -70,6 +70,9 @@ static void Ms200Task(void)
     if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send200msMessages();
+      uint8_t LIMmode=i3LIMClass::Control_Charge();
+      if(LIMmode==0x1) chargeMode = true;
+      if(LIMmode==0x0) chargeMode = false;
     }
 
 
@@ -89,7 +92,7 @@ static void Ms200Task(void)
       // chargeMode = false;  //this mode accepts a request for HV via CAN from a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
                             //request expected on id 0x108
                             //response with HV on given on id 0x109
-     if(opmode != MOD_RUN)
+     if(opmode != MOD_RUN && targetChgint == _interface::Unused)
         {
     if(chargerClass::HVreq==true) chargeMode = true;
     if(chargerClass::HVreq==false) chargeMode = false;
@@ -128,6 +131,7 @@ static void Ms100Task(void)
 
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
+    utils::CalcSOC;
 
         if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {

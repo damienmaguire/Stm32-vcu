@@ -19,6 +19,7 @@ namespace utils
     int GetUserThrottleCommand(Can*);
     s32fp ProcessThrottle(int, Can*);
     s32fp ProcessUdc(uint32_t, int);
+    void CalcSOC();
     void GetDigInputs(Can*);
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
     void SelectDirection(_vehmodes, BMW_E65Class);

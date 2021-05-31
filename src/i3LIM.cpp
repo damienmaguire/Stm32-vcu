@@ -4,7 +4,32 @@ static uint8_t CP_Amps=0;
 static uint8_t PP_Amps=0;
 static uint8_t CP_Mode=0;
 static uint8_t CP_Typ=0;
+static uint16_t V_Batt=0;
+static uint8_t V_Batt2=0;
+static int32_t I_Batt=0;
+static int32_t I_Math=0;
+static uint16_t SOC_Local=0;
+static uint16_t Wh_Local=0;
 static bool PP=false;
+uint16_t CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
+int16_t  FC_Cur=0; //10 bit signed int with the ccs dc current command.scale of 1.
+uint8_t  EOC_Time=0x00; //end of charge time in minutes.
+uint8_t CHG_Status=0;  //observed values 0 when not charging , 1 and transition to 2 when commanded to charge. only 4 bits used.
+                    //seems to control led colour.
+uint8_t CHG_Req=0;  //observed values 0 when not charging , 1 when requested to charge. only 1 bit used in logs so far.
+uint8_t CHG_Ready=0;  //indicator to the LIM that we are ready to charge. observed values 0 when not charging , 1 when commanded to charge. only 2 bits used.
+uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
+
+#define Status_NotRdy 0x0 //no led
+#define Status_Rdy 0x2  //pulsing blue led when on charge. 0x2. 0x1 = 1 red flash then off
+#define Req_Charge 0x1
+#define Req_EndCharge 0x0
+#define Chg_Rdy 0x1
+#define Chg_NotRdy 0x0
+
+#define No_Chg 0x0
+#define AC_Chg 0x1
+#define DC_Chg 0x2
 
 void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
 
@@ -79,15 +104,20 @@ uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array in
 
 void i3LIMClass::Send10msMessages()
 {
-uint8_t bytes[8]; //Main LIM control message
-bytes[0] = 0xf9;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
-bytes[1] = 0x1f;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
-bytes[2] = 0x8b;  //Battery voltage LSB. Scale 0.1. 16 bit unsigned int.
-bytes[3] = 0x0e;  //Battery voltage MSB. Scale 0.1. 16 bit unsigned int.
-bytes[4] = 0xa6;  //Battery SOC LSB. 12 bit unsigned int. Scale 0.1. 0-100%
-bytes[5] = 0x71;  //Battery SOC MSB. 12 bit unsigned int. Scale 0.1. 0-100%
+   V_Batt=Param::GetInt(Param::udc)*10;
+   V_Batt2=(Param::GetInt(Param::udc))/4;
+   I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
+   //I_Batt=0xa0a0;
+   SOC_Local=(Param::GetInt(Param::SOC))*10;
+uint8_t bytes[8]; //seems to be from i3 BMS.
+bytes[0] = I_Batt & 0xFF;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
+bytes[1] = I_Batt >> 8;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
+bytes[2] = V_Batt & 0xFF;  //Battery voltage LSB. Scale 0.1. 16 bit unsigned int.
+bytes[3] = V_Batt >> 8;  //Battery voltage MSB. Scale 0.1. 16 bit unsigned int.
+bytes[4] = SOC_Local & 0xFF;;  //Battery SOC LSB. 12 bit unsigned int. Scale 0.1. 0-100%
+bytes[5] = SOC_Local >> 8;  //Battery SOC MSB. 12 bit unsigned int. Scale 0.1. 0-100%
 bytes[6] = 0x65;  //Low nibble battery status. Seem to need to be 0x5.
-bytes[7] = 0x5d;  //zwischenkreis. Battery voltage. Scale 4. 8 bit unsigned int.
+bytes[7] = V_Batt2;  //zwischenkreis. Battery voltage. Scale 4. 8 bit unsigned int.
 
 Can::GetInterface(0)->Send(0x112, (uint32_t*)bytes,8); //Send on CAN1
 
@@ -97,16 +127,19 @@ Can::GetInterface(0)->Send(0x112, (uint32_t*)bytes,8); //Send on CAN1
 
 void i3LIMClass::Send200msMessages()
 {
+    Wh_Local=Param::GetInt(Param::BattCap);
+ uint16_t CHG_Pwr1=CHG_Pwr/25;
+    CHG_Pwr1=(CHG_Pwr1 & 0xFFF);
 uint8_t bytes[8]; //Main LIM control message
-bytes[0] = 0x01;  //Battery Wh lowbyte
-bytes[1] = 0x00;  //BAttery Wh high byte
-bytes[2] = 0x00;  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
-bytes[3] = 0x00;  //charge readiness in bits 0 and 1. 1 = ready to charge.upper nibble is LSB of charge power.
-bytes[4] = 0x00;   //MSB of charge power.in this case 0x28 = 40x25 = 1000W. Probably net DC power into the Batt.
+bytes[0] = Wh_Local & 0xFF;  //Battery Wh lowbyte
+bytes[1] = Wh_Local >> 8;  //BAttery Wh high byte
+bytes[2] = ((CHG_Status<<4)|(CHG_Req));  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
+bytes[3] = (((CHG_Pwr1)<<4)|CHG_Ready);  //charge readiness in bits 0 and 1. 1 = ready to charge.upper nibble is LSB of charge power.
+bytes[4] = CHG_Pwr1>>4;   //MSB of charge power.in this case 0x28 = 40x25 = 1000W. Probably net DC power into the Batt.
 bytes[5] = 0x00;   //LSB of the DC ccs current command
 bytes[6] = 0x00;   //bits 0 and 1 MSB of the DC ccs current command.Upper nibble is DC ccs contactor control. Observed in DC fc logs only.
                     //transitions from 0 to 2 and start of charge but 2 to 1 to 0 at end. Status and Ready operate the same as in AC logs.
-bytes[7] = 0x00;    // end of charge timer.
+bytes[7] = EOC_Time;    // end of charge timer.
 
 
 Can::GetInterface(0)->Send(0x3E9, (uint32_t*)bytes,8); //Send on CAN1
@@ -175,5 +208,33 @@ bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
 Can::GetInterface(0)->Send(0x2fa, (uint32_t*)bytes,8); //Send on CAN1
+
+}
+
+uint8_t i3LIMClass::Control_Charge()
+{
+    int opmode = Param::GetInt(Param::opmode);
+    if (opmode != MOD_RUN)
+    {
+if(Param::GetBool(Param::Chgctrl)&&Param::GetBool(Param::PlugDet))  //if we have an enable and a plug in lets go.
+{
+  EOC_Time=0xFE;
+  CHG_Status=Status_Rdy;
+  CHG_Req=Req_Charge;
+  CHG_Ready=Chg_Rdy;
+  CHG_Pwr=1000;//just a holding value of 1kw for now.
+    return AC_Chg;
+}
+
+if(!Param::GetBool(Param::Chgctrl)||!Param::GetBool(Param::PlugDet))  //if we have a disable command or plug pulled then shutdown
+{
+  EOC_Time=0x00;
+  CHG_Status=Status_NotRdy;
+  CHG_Req=Req_EndCharge;
+  CHG_Ready=Chg_NotRdy;
+  CHG_Pwr=0;
+    return No_Chg;
+}
+}
 
 }
