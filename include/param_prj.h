@@ -59,7 +59,7 @@
     PARAM_ENTRY(CAT_CONTACT,  errlights,   ERRLIGHTS, 0,      255,    0,      25  ) \
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
-    PARAM_ENTRY(CAT_CHARGER, chargemode,  CHGMODS,0,      4,      0,      74  ) \
+    PARAM_ENTRY(CAT_CHARGER, chargemodes,  CHGMODS,0,      4,      0,      74  ) \
     PARAM_ENTRY(CAT_CHARGER, BattCap,       "Wh",       0,      65534,   21000,    82  ) \
     PARAM_ENTRY(CAT_CHARGER, interface,  CHGint,0,      2,      0,      78  ) \
     PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \

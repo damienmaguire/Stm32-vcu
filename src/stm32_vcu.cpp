@@ -70,13 +70,7 @@ static void Ms200Task(void)
 
     }
 
-    if(targetChgint == _interface::i3LIM) //BMW i3 LIM
-    {
-        i3LIMClass::Send200msMessages();
-      LIMmode=i3LIMClass::Control_Charge();
-      if(LIMmode==0x1) chargeMode = true;
-      if((LIMmode==0x0)&&(chargerClass::HVreq==false)) chargeMode = false;
-    }
+
 
 
 
@@ -92,14 +86,13 @@ static void Ms200Task(void)
     }
     if(targetCharger == _chgmodes::EXT_CAN)
     {
-      // chargeMode = false;  //this mode accepts a request for HV via CAN from a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
-                            //request expected on id 0x108
-                            //response with HV on given on id 0x109
-     if(opmode != MOD_RUN && targetChgint == _interface::Unused)
-        {
-    if(chargerClass::HVreq==true) chargeMode = true;
-    if(chargerClass::HVreq==false) chargeMode = false;
-        }
+    if(targetChgint == _interface::i3LIM) //BMW i3 LIM
+    {
+        i3LIMClass::Send200msMessages();
+      LIMmode=i3LIMClass::Control_Charge();
+      if(LIMmode==0x1) chargeMode = true;
+      if(LIMmode==0x0) chargeMode = false;
+    }
 
 
     }
@@ -431,7 +424,7 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     Param::SetInt(Param::inv, targetInverter);//Confirm mode
     targetVehicle=static_cast<_vehmodes>(Param::GetInt(Param::Vehicle));//get vehicle setting from menu
     Param::SetInt(Param::veh, targetVehicle);//Confirm mode
-    targetCharger=static_cast<_chgmodes>(Param::GetInt(Param::chargemode));//get charger setting from menu
+    targetCharger=static_cast<_chgmodes>(Param::GetInt(Param::chargemodes));//get charger setting from menu
     targetChgint=static_cast<_interface>(Param::GetInt(Param::interface));//get interface setting from menu
     Param::SetInt(Param::Charger, targetCharger);//Confirm mode
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
