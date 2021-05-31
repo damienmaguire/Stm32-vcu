@@ -234,7 +234,7 @@ if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl)))  //if we 
   CHG_Status=Status_Rdy;
   CHG_Req=Req_Charge;
   CHG_Ready=Chg_Rdy;
-  CHG_Pwr=0;//just a holding value of 1kw for now.
+  CHG_Pwr=1000;//just a holding value of 1kw for now.
     return AC_Chg;
 
 }

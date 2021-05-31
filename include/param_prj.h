@@ -124,7 +124,7 @@
     VALUE_ENTRY(CCS_V,     "V",   2107 ) \
     VALUE_ENTRY(CCS_V_Min, "V",   2108 ) \
     VALUE_ENTRY(CCS_ConStat,   ONOFF,   2109 ) \
-    VALUE_ENTRY(chgcont,   ONOFF,   2111 ) \
+    VALUE_ENTRY(hvChg,   ONOFF,   2111 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 
 //Next value Id: 2080

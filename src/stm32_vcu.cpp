@@ -56,8 +56,8 @@ chargerClass chgtype;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
-    if(Param::GetBool(Param::Chgctrl)) Param::SetInt(Param::chgcont,1);
-    if(!Param::GetBool(Param::Chgctrl)) Param::SetInt(Param::chgcont,0);
+    if(chargerClass::HVreq==true) Param::SetInt(Param::hvChg,1);
+    if(chargerClass::HVreq==false) Param::SetInt(Param::hvChg,0);
     int opmode = Param::GetInt(Param::opmode);
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
     if(targetCharger == _chgmodes::Volt_Ampera)
@@ -75,7 +75,7 @@ static void Ms200Task(void)
         i3LIMClass::Send200msMessages();
       LIMmode=i3LIMClass::Control_Charge();
       if(LIMmode==0x1) chargeMode = true;
-      if(LIMmode==0x0) chargeMode = false;
+      if((LIMmode==0x0)&&(chargerClass::HVreq==false)) chargeMode = false;
     }
 
 
