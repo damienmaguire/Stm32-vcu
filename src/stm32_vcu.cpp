@@ -73,11 +73,21 @@ static void Ms200Task(void)
     if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send200msMessages();
+
+       if (opmode == MOD_OFF)
+    {
       LIMmode=i3LIMClass::Control_Charge();
       if(LIMmode==0x1) chargeMode = true;
       if(LIMmode==0x0) chargeMode = false;
     }
 
+    if (opmode == MOD_CHARGE)
+    {
+        LIMmode=i3LIMClass::Control_Charge();
+     // if(LIMmode==0x1) chargeMode = true;
+      if(LIMmode==0x0) chargeMode = false;
+    }
+    }
 
 
 
