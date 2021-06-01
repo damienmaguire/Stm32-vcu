@@ -85,7 +85,7 @@ static void Ms200Task(void)
     {
         LIMmode=i3LIMClass::Control_Charge();
      // if(LIMmode==0x1) chargeMode = true;
-      if(LIMmode==0x0) chargeMode = false;
+      if((LIMmode==0x0)&&(chargerClass::HVreq==false)) chargeMode = false;
     }
     }
 
