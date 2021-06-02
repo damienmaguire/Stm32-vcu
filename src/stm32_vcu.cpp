@@ -34,6 +34,7 @@
 HWREV hwRev; // Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
+static bool chargeModeDC = false;
 static Can* can;
 static _invmodes targetInverter;
 static _vehmodes targetVehicle;
@@ -76,9 +77,21 @@ static void Ms200Task(void)
 
        if (opmode == MOD_OFF)
     {
+        Param::SetInt(Param::chgtyp,OFF);
       LIMmode=i3LIMClass::Control_Charge();
-      if(LIMmode==0x1) chargeMode = true;
-      if(LIMmode==0x0) chargeMode = false;
+      if(LIMmode==0x2)   //DC charge mode
+      {
+            chargeMode = true;
+            chargeModeDC = true;   //DC charge mode
+          Param::SetInt(Param::chgtyp,DCFC);
+      }
+      if(LIMmode==0x1)
+      {
+          chargeMode = true;   //AC charge mode
+          Param::SetInt(Param::chgtyp,AC);
+      }
+
+      if(LIMmode==0x0) chargeMode = false;  //no charge mode
     }
 
     if (opmode == MOD_CHARGE)
@@ -86,7 +99,12 @@ static void Ms200Task(void)
         LIMmode=i3LIMClass::Control_Charge();
      // if(LIMmode==0x1) chargeMode = true;
       if((LIMmode==0x0)&&(chargerClass::HVreq==false)) chargeMode = false;
-    }
+      if (LIMmode==0x0)
+        {
+            chargeMode = false;  //no charge mode
+            chargeModeDC = false;
+            Param::SetInt(Param::chgtyp,OFF);
+        }
     }
 
 
@@ -113,14 +131,11 @@ static void Ms200Task(void)
         chargeMode = false;             //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
                                         //response with a 12v output signal on a digital output.
                                         //will be implemented on release HW.
-
-
-
-
     }
 
 
 
+}
 }
 
 

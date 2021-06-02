@@ -71,6 +71,7 @@
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
     VALUE_ENTRY(hwver,        HWREVS,  2036 ) \
     VALUE_ENTRY(opmode,       OPMODES, 2000 ) \
+    VALUE_ENTRY(chgtyp,       CHGTYPS, 2113 ) \
     VALUE_ENTRY(lasterr,      errorListString,  2038 ) \
     VALUE_ENTRY(status,      STATUS,  2044 ) \
     VALUE_ENTRY(udc,         "V",     2001 ) \
@@ -123,6 +124,7 @@
     VALUE_ENTRY(CCS_I,     "A",   2106 ) \
     VALUE_ENTRY(CCS_V,     "V",   2107 ) \
     VALUE_ENTRY(CCS_V_Min, "V",   2108 ) \
+    VALUE_ENTRY(CCS_V_Con, "V",   2114 ) \
     VALUE_ENTRY(CCS_ConStat,   ONOFF,   2109 ) \
     VALUE_ENTRY(hvChg,   ONOFF,   2111 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
@@ -138,6 +140,7 @@
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None , 5=BMW_E39 , 6=VAG"
 //#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
+#define CHGTYPS      "0=Off, 1=AC, 2=DCFC"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
 #define ONOFF        "0=Off, 1=On, 2=na"
@@ -173,6 +176,13 @@ enum modes
     MOD_PCHFAIL,
     MOD_CHARGE,
     MOD_LAST
+};
+
+enum ctyps
+{
+    OFF = 0,
+    AC,
+    DCFC
 };
 
 enum cruisestate
