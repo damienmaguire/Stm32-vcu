@@ -8,6 +8,7 @@ static uint8_t Batt_Cmp=0;
 static uint8_t Flap_stat=0;
 static uint8_t Cont_stat=0;
 static uint8_t Cont_test=0;
+static uint8_t Chg_Phase=0;
 static uint16_t Cont_Volts=0;
 static uint16_t V_Batt=0;
 static uint16_t V_Avail=0;
@@ -156,16 +157,15 @@ Can::GetInterface(0)->Send(0x112, (uint32_t*)bytes,8); //Send on CAN1
 void i3LIMClass::Send200msMessages()
 {
     Wh_Local=Param::GetInt(Param::BattCap);
- uint16_t CHG_Pwr1=CHG_Pwr/25;
-    CHG_Pwr1=(CHG_Pwr1 & 0xFFF);
+    CHG_Pwr=(CHG_Pwr & 0xFFF);
 uint8_t bytes[8]; //Main LIM control message
 bytes[0] = Wh_Local & 0xFF;  //Battery Wh lowbyte
 bytes[1] = Wh_Local >> 8;  //BAttery Wh high byte
 bytes[2] = ((CHG_Status<<4)|(CHG_Req));  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
-bytes[3] = (((CHG_Pwr1)<<4)|CHG_Ready);  //charge readiness in bits 0 and 1. 1 = ready to charge.upper nibble is LSB of charge power.
-bytes[4] = CHG_Pwr1>>4;   //MSB of charge power.in this case 0x28 = 40x25 = 1000W. Probably net DC power into the Batt.
-bytes[5] = 0x00;   //LSB of the DC ccs current command
-bytes[6] = 0x00;   //bits 0 and 1 MSB of the DC ccs current command.Upper nibble is DC ccs contactor control. Observed in DC fc logs only.
+bytes[3] = (((CHG_Pwr)<<4)|CHG_Ready);  //charge readiness in bits 0 and 1. 1 = ready to charge.upper nibble is LSB of charge power.Charge power forecast not actual power!
+bytes[4] = CHG_Pwr>>4;   //MSB of charge power.in this case 0x28 = 40x25 = 1000W. Probably net DC power into the Batt.
+bytes[5] = FC_Cur & 0xff;   //LSB of the DC ccs current command
+bytes[6] = ((CONT_Ctrl<<4)|(FC_Cur>>12));   //bits 0 and 1 MSB of the DC ccs current command.Upper nibble is DC ccs contactor control. Observed in DC fc logs only.
                     //transitions from 0 to 2 and start of charge but 2 to 1 to 0 at end. Status and Ready operate the same as in AC logs.
 bytes[7] = EOC_Time;    // end of charge timer.
 
@@ -238,7 +238,7 @@ Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
 
 bytes[0] = 0x84; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[1] = 0x04; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
-bytes[2] = 0x00;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
+bytes[2] = Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
                     //more investigation needed here...
                    //Lower nibble seems to be intended for two end charge commands each of 2 bits.
 bytes[3] = 0xff;
@@ -257,12 +257,14 @@ uint8_t i3LIMClass::Control_Charge()
     {
 if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x9||CP_Mode==0xA))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
 {
-
+    Chg_Phase=0x0;
+    CONT_Ctrl=0x0; //dc contactor mode 0 in AC
+    FC_Cur=0;//ccs current request zero
   EOC_Time=0xFE;
   CHG_Status=Status_Rdy;
   CHG_Req=Req_Charge;
   CHG_Ready=Chg_Rdy;
-  CHG_Pwr=FP_FROMFLT(Param::GetInt(Param::udc));
+  CHG_Pwr=6500/25;//approx 6.5kw ac
     return AC_Chg;
 
 }
@@ -270,12 +272,27 @@ if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode=
 
 if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0xC||CP_Mode==0xD))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
 {
+/*
+DC goes all off, chgstatus=1, chg req=1, contactor=0.then move to chg ready=1.then add eoc time.then add contactor=2.then add current command.
+phase 0 at start. then phase 1 when chg status and chg req go to 1. phase 9 when chg readiness goes to 1 then to 2 and onto 3 and send current req.
+0x0 Standby
+0x1 Initialisation
+0x2 Subpoena
+0x3 Energy transfer
+0x4 Turn off
+0xF Reserved
+0xE Reserved
+0xF Invalid signal
 
+*/
+    Chg_Phase=0x0;
+    CONT_Ctrl=0x0; //dc contactor mode control required in DC
+    FC_Cur=0;//ccs current request zero
   EOC_Time=0xFE;
   CHG_Status=Status_Rdy;
   CHG_Req=Req_Charge;
   CHG_Ready=Chg_Rdy;
-  CHG_Pwr=FP_FROMFLT(Param::GetInt(Param::udc));
+  CHG_Pwr=49000/25;//approx 50kw dc
     return DC_Chg;
 
 }
@@ -283,12 +300,14 @@ if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode=
 
 if (!Param::GetBool(Param::PlugDet)||(Param::GetBool(Param::Chgctrl)))  //if we a disable or plug remove shut down
 {
-    uint16_t test1=Param::GetInt(Param::udc);
+    Chg_Phase=0x0;
+    CONT_Ctrl=0x0; //dc contactor mode 0 in off
+    FC_Cur=0;//ccs current request zero
   EOC_Time=0x00;
   CHG_Status=Status_NotRdy;
   CHG_Req=Req_EndCharge;
   CHG_Ready=Chg_NotRdy;
-  CHG_Pwr=test1;
+  CHG_Pwr=0;
     return No_Chg;
 }
 }
