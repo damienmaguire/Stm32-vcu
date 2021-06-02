@@ -64,6 +64,7 @@
     PARAM_ENTRY(CAT_CHARGER, interface,  CHGint,0,      2,      0,      78  ) \
     PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \
     PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
+    PARAM_ENTRY(CAT_CHARGER, CCS_ICmd,       "A",       0,      100,   0,    120  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_VLim,       "V",       0,      1000,   400,    79  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_ILim,       "A",       0,      350,   100,    80  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_SOCLim,       "%",       0,      100,   80,    81  ) \

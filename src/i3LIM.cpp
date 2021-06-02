@@ -137,7 +137,7 @@ void i3LIMClass::Send10msMessages()
    V_Batt2=(Param::GetInt(Param::udc))/4;
    I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
    //I_Batt=0xa0a0;
-   SOC_Local=50;//(Param::GetInt(Param::SOC))*10;
+   SOC_Local=50*10;//(Param::GetInt(Param::SOC))*10;
 uint8_t bytes[8]; //seems to be from i3 BMS.
 bytes[0] = I_Batt & 0xFF;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
 bytes[1] = I_Batt >> 8;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
@@ -287,7 +287,7 @@ phase 0 at start. then phase 1 when chg status and chg req go to 1. phase 9 when
 */
     Chg_Phase=0x0;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
-    FC_Cur=0;//ccs current request zero
+    FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs current request zero
   EOC_Time=0xFE;
   CHG_Status=Status_Rdy;
   CHG_Req=Req_Charge;
