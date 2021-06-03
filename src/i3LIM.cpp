@@ -48,6 +48,17 @@ uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
 void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
 
 {
+    /*
+    0x3B4 D4 low nible: status pilot
+0=no pilot
+1=10-96%PWM not charge ready
+2=10-96%PWM charge ready
+3=error
+4=5% not charge ready
+5=5% charge ready
+6=pilot static
+    */
+
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     CP_Amps=bytes[0];
     Param::SetInt(Param::PilotLim,CP_Amps);
@@ -55,27 +66,35 @@ void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
     Param::SetInt(Param::CableLim,PP_Amps);
     PP=(bytes[2]&0x1);
     Param::SetInt(Param::PlugDet,PP);
-    CP_Mode=(bytes[4]&0xF);
+    CP_Mode=(bytes[4]&0x7);
      switch (CP_Mode)
     {
-        case 0x8:
+        case 0x0:
         CP_Typ=0;   //No pilot signal
         break;
 
-        case 0x9:
+        case 0x1:
         CP_Typ=1;   //Standard AC pilot. Not charging
         break;
 
-        case 0xA:
+        case 0x2:
         CP_Typ=2;   //Standard AC pilot. charging
         break;
 
-        case 0xC:
-        CP_Typ=3;   //5% pilot requesting CCS
+        case 0x3:
+        CP_Typ=3;   //Pilot error
         break;
 
-        case 0xD:
-        CP_Typ=4;   //CCS greenphy comms
+        case 0x4:
+        CP_Typ=4;   //5% not ready
+        break;
+
+        case 0x5:
+        CP_Typ=5;   //5% ready
+        break;
+
+        case 0x6:
+        CP_Typ=6;   //Pilot static
         break;
 
         default:
@@ -258,7 +277,7 @@ uint8_t i3LIMClass::Control_Charge()
     int opmode = Param::GetInt(Param::opmode);
     if (opmode != MOD_RUN)
     {
-if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x9||CP_Mode==0xA))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
+if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
 {
     lim_state=0;//return to state 0
     Chg_Phase=0x0;
@@ -274,7 +293,7 @@ if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode=
 }
 
 
-if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0xC||CP_Mode==0xD))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
+if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x4||CP_Mode==0x5))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
 {
 /*
 DC goes all off, chgstatus=1, chg req=1, contactor=0.then move to chg ready=1.then add eoc time.then add contactor=2.then add current command.
