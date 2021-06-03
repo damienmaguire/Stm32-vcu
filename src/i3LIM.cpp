@@ -1,39 +1,20 @@
 #include <i3LIM.h>
 
-static uint8_t CP_Amps=0;
-static uint8_t PP_Amps=0;
 static uint8_t CP_Mode=0;
-static uint8_t CP_Typ=0;
-static uint8_t Batt_Cmp=0;
-static uint8_t Flap_stat=0;
-static uint8_t Cont_stat=0;
-static uint8_t Cont_test=0;
 static uint8_t Chg_Phase=0;
 static uint8_t lim_state=0;
 static uint8_t lim_stateCnt=0;
 static uint8_t ctr_328=0;
 static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
-static uint16_t V_Batt=0;
-static uint16_t V_Avail=0;
-static uint16_t minV_Avail=0;
-static uint16_t I_Avail=0;
-static uint16_t CCS_Vmeas=0;
-static uint16_t CCS_Imeas=0;
-static uint8_t V_Batt2=0;
-static int32_t I_Batt=0;
-static int32_t I_Math=0;
-static uint16_t SOC_Local=0;
-static uint16_t Wh_Local=0;
-static bool PP=false;
-s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
-int16_t  FC_Cur=0; //10 bit signed int with the ccs dc current command.scale of 1.
-uint8_t  EOC_Time=0x00; //end of charge time in minutes.
-uint8_t CHG_Status=0;  //observed values 0 when not charging , 1 and transition to 2 when commanded to charge. only 4 bits used.
+static s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
+static int16_t  FC_Cur=0; //10 bit signed int with the ccs dc current command.scale of 1.
+static uint8_t  EOC_Time=0x00; //end of charge time in minutes.
+static uint8_t CHG_Status=0;  //observed values 0 when not charging , 1 and transition to 2 when commanded to charge. only 4 bits used.
                     //seems to control led colour.
-uint8_t CHG_Req=0;  //observed values 0 when not charging , 1 when requested to charge. only 1 bit used in logs so far.
-uint8_t CHG_Ready=0;  //indicator to the LIM that we are ready to charge. observed values 0 when not charging , 1 when commanded to charge. only 2 bits used.
-uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
+static uint8_t CHG_Req=0;  //observed values 0 when not charging , 1 when requested to charge. only 1 bit used in logs so far.
+static uint8_t CHG_Ready=0;  //indicator to the LIM that we are ready to charge. observed values 0 when not charging , 1 when commanded to charge. only 2 bits used.
+static uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
 
 #define Status_NotRdy 0x0 //no led
 #define Status_Rdy 0x2
@@ -62,11 +43,11 @@ void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
     */
 
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-    CP_Amps=bytes[0];
+    uint8_t CP_Amps=bytes[0];
     Param::SetInt(Param::PilotLim,CP_Amps);
-    PP_Amps=bytes[1];
+    uint8_t PP_Amps=bytes[1];
     Param::SetInt(Param::CableLim,PP_Amps);
-    PP=(bytes[2]&0x1);
+    bool PP=(bytes[2]&0x1);
     Param::SetInt(Param::PlugDet,PP);
     CP_Mode=(bytes[4]&0x7);
 
@@ -82,11 +63,11 @@ void i3LIMClass::handle29E(uint32_t data[2])  //Lim data. Available current and 
 
 {
 uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-V_Avail=((bytes[2]<<8)|(bytes[1]));
+uint16_t V_Avail=((bytes[2]<<8)|(bytes[1]));
 V_Avail=FP_TOINT(FP_DIV(V_Avail,10));
 Param::SetInt(Param::CCS_V_Avail,V_Avail);//available voltage from ccs charger
 
-I_Avail=((bytes[4]<<8)|(bytes[3]));
+uint16_t I_Avail=((bytes[4]<<8)|(bytes[3]));
 I_Avail=FP_TOINT(FP_DIV(I_Avail,10));
 Param::SetInt(Param::CCS_I_Avail,I_Avail);//available current from ccs charger
 }
@@ -95,21 +76,21 @@ void i3LIMClass::handle2B2(uint32_t data[2])  //Lim data. Current and Votage as 
 
 {
 uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-CCS_Vmeas=((bytes[1]<<8)|(bytes[0]));
+uint16_t CCS_Vmeas=((bytes[1]<<8)|(bytes[0]));
 CCS_Vmeas=FP_TOINT(FP_DIV(CCS_Vmeas,10));
 Param::SetInt(Param::CCS_V,CCS_Vmeas);//Voltage measurement from ccs charger
 
-CCS_Imeas=((bytes[3]<<8)|(bytes[2]));
+uint16_t CCS_Imeas=((bytes[3]<<8)|(bytes[2]));
 CCS_Imeas=FP_TOINT(FP_DIV(CCS_Imeas,10));
 Param::SetInt(Param::CCS_I,CCS_Imeas);//Current measurement from ccs charger
-Batt_Cmp=bytes[4]&&0xc0;    //battrery compatability flag from charger? upper two bits of byte 4.
+[[maybe_unused]] uint8_t Batt_Cmp=bytes[4]&&0xc0;    //battrery compatability flag from charger? upper two bits of byte 4.
 }
 
 void i3LIMClass::handle2EF(uint32_t data[2])  //Lim data. Min available voltage from the ccs charger.
 
 {
 uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-minV_Avail=((bytes[1]<<8)|(bytes[0]));
+uint16_t minV_Avail=((bytes[1]<<8)|(bytes[0]));
 minV_Avail=FP_TOINT(FP_DIV(minV_Avail,10));
 Param::SetInt(Param::CCS_V_Min,minV_Avail);//minimum available voltage from ccs charger
 }
@@ -118,17 +99,17 @@ void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state an
 
 {
 uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-Cont_stat=bytes[2];
+[[maybe_unused]] uint8_t Cont_stat=bytes[2];
 }
 
 
 void i3LIMClass::Send10msMessages()
 {
-   V_Batt=Param::GetInt(Param::udc)*10;
-   V_Batt2=(Param::GetInt(Param::udc))/4;
-   I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
+   uint16_t V_Batt=Param::GetInt(Param::udc)*10;
+   uint8_t V_Batt2=(Param::GetInt(Param::udc))/4;
+   int32_t I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
    //I_Batt=0xa0a0;
-   SOC_Local=50*10;//(Param::GetInt(Param::SOC))*10;
+   uint16_t SOC_Local=50*10;//(Param::GetInt(Param::SOC))*10;
 uint8_t bytes[8]; //seems to be from i3 BMS.
 bytes[0] = I_Batt & 0xFF;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
 bytes[1] = I_Batt >> 8;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
@@ -155,7 +136,7 @@ Can::GetInterface(0)->Send(0x1a1, (uint32_t*)bytes,5); //Send on CAN1
 
 void i3LIMClass::Send200msMessages()
 {
-    Wh_Local=Param::GetInt(Param::BattCap);
+    uint16_t Wh_Local=Param::GetInt(Param::BattCap);
     CHG_Pwr=(CHG_Pwr & 0xFFF);
 uint8_t bytes[8]; //Main LIM control message
 bytes[0] = Wh_Local & 0xFF;  //Battery Wh lowbyte
