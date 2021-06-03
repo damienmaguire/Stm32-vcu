@@ -52,7 +52,7 @@ void Can_E46::Msg316(uint16_t speed_input)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Can_E46::Msg329(uint16_t tempValue)
+void Can_E46::Msg329([[maybe_unused]] uint16_t tempValue)
 {
     //********************temp sense  *******************************
     //  tempValue=analogRead(tempIN); //read Analog pin voltage
