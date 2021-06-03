@@ -260,6 +260,7 @@ uint8_t i3LIMClass::Control_Charge()
     {
 if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x9||CP_Mode==0xA))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
 {
+    lim_state=0;//return to state 0
     Chg_Phase=0x0;
     CONT_Ctrl=0x0; //dc contactor mode 0 in AC
     FC_Cur=0;//ccs current request zero
@@ -432,21 +433,14 @@ return DC_Chg;//set dc charge mode then enter state machine
 
     }
 
-    Chg_Phase=0x0;
-    CONT_Ctrl=0x0; //dc contactor mode control required in DC
-    FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
-  EOC_Time=0xFE;
-  CHG_Status=Status_Rdy;
-  CHG_Req=Req_Charge;
-  CHG_Ready=Chg_Rdy;
-  CHG_Pwr=49000/25;//approx 50kw dc
-    return DC_Chg;
+
 
 }
 
 
 if (!Param::GetBool(Param::PlugDet)||(Param::GetBool(Param::Chgctrl)))  //if we a disable or plug remove shut down
 {
+    lim_state=0;//return to state 0
     Chg_Phase=0x0;
     CONT_Ctrl=0x0; //dc contactor mode 0 in off
     FC_Cur=0;//ccs current request zero
