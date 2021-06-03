@@ -28,12 +28,13 @@ OBJCOPY		= $(PREFIX)-objcopy
 OBJDUMP		= $(PREFIX)-objdump
 MKDIR_P     = mkdir -p
 TERMINAL_DEBUG ?= 0
-CFLAGS		= -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
+CFLAGS		= -Os -Wall -Wextra -Werror -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
              -fno-common -fno-builtin -pedantic -DSTM32F1 -DT_DEBUG=$(TERMINAL_DEBUG)  \
-				 -mcpu=cortex-m3 -mthumb -std=gnu99 -ffunction-sections -fdata-sections
-CPPFLAGS    = -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
-            -fno-common -std=c++11 -pedantic -DSTM32F1 -DT_DEBUG=$(TERMINAL_DEBUG)  \
-		 -ffunction-sections -fdata-sections -fno-builtin -fno-rtti -fno-exceptions -fno-unwind-tables -mcpu=cortex-m3 -mthumb
+				 -mcpu=cortex-m3 -mthumb -std=gnu99 -ffunction-sections -fdata-sections -ggdb3
+CPPFLAGS    = -Os -Wall -Wextra -Werror -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
+            -fno-common -std=c++17 -pedantic -DSTM32F1 -DT_DEBUG=$(TERMINAL_DEBUG)  \
+		 -ffunction-sections -fdata-sections -fno-builtin -fno-rtti -fno-exceptions \
+		 -fno-unwind-tables -mcpu=cortex-m3 -mthumb -ggdb3
 LDSCRIPT	= $(BINARY).ld
 LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections,-Map,linker.map
 OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
