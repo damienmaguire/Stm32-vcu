@@ -42,7 +42,7 @@ Can::GetInterface(1)->Send(0x109, (uint32_t*)bytes,8); //Send on CAN2
 
 
 
-/*
+#if 0
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////
 //HV Current: first 13 bits (divide by 20 for Amps)
@@ -93,7 +93,7 @@ void Frames30MS()
     if(timer_Frames30.check())
   {
           //Coda charger
-          /*
+#if 0
         outFrame.id = 0x050;            // Set our transmission address ID
         outFrame.length = 8;            // Data payload 8 bytes
         outFrame.extended = 0;          // Extended addresses - 0=11-bit 1=29bit
@@ -107,16 +107,16 @@ void Frames30MS()
         outFrame.data.bytes[6]=0x96;    //command lear charger on in charge and 12v aux mode.
         outFrame.data.bytes[7]=0x01;    //command lear charger on in charge and 12v aux mode.
         Can1.sendFrame(outFrame);
-        */
+#endif
+#if 0
         //Lear charger (Ampera)
-        /*
         outFrame.id = 0x30E;            // Set our transmission address ID
         outFrame.length = 1;            // Data payload 8 bytes
         outFrame.extended = 0;          // Extended addresses - 0=11-bit 1=29bit
         outFrame.rtr=1;                 //No request
         outFrame.data.bytes[0]=CHGCON;  //0x03;    //command lear charger on in charge and 12v aux mode.
         Can1.sendFrame(outFrame);
-
+#endif
 
 
   }
@@ -148,5 +148,5 @@ void Frames200MS()
 
 
 }
-*/
+#endif
 
