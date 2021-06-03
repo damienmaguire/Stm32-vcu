@@ -576,5 +576,6 @@ if (!Param::GetBool(Param::PlugDet)||(Param::GetBool(Param::Chgctrl)))  //if we 
     return No_Chg;
 }
 }
-
+    // If nothing matches then we aren't charging
+    return No_Chg;
 }
