@@ -9,6 +9,8 @@ static uint8_t Flap_stat=0;
 static uint8_t Cont_stat=0;
 static uint8_t Cont_test=0;
 static uint8_t Chg_Phase=0;
+static uint8_t lim_state=0;
+static uint8_t lim_stateCnt=0;
 static uint16_t Cont_Volts=0;
 static uint16_t V_Batt=0;
 static uint16_t V_Avail=0;
@@ -32,7 +34,8 @@ uint8_t CHG_Ready=0;  //indicator to the LIM that we are ready to charge. observ
 uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
 
 #define Status_NotRdy 0x0 //no led
-#define Status_Rdy 0x2  //pulsing blue led when on charge. 0x2. 0x1 = 1 red flash then off
+#define Status_Rdy 0x2
+#define Status_RdyDC 0x1  //dc ccs mode
 #define Req_Charge 0x1
 #define Req_EndCharge 0x0
 #define Chg_Rdy 0x1
@@ -284,10 +287,154 @@ phase 0 at start. then phase 1 when chg status and chg req go to 1. phase 9 when
 0xE Reserved
 0xF Invalid signal
 
+DC Sequence : On detect 5% pilot Chg status goes to 1 and Chg req goes to 1. Target phase standby.
+Next step : Target phase initialisation
+Set chg power forecast (49050W in logs). Target phase to 9 (unknown?). At this point we switch from 5% to greenphy. Chg readiness to 1.
+Contactor weld test begins.Set end of charge timer. V ramps to 410v and holds for a few seconds.
+Voltage ramps down to 0 and afer a few seconds we go target phase Subpoena (precharge).
+Once contactor measured volts matches batt voltage in 0x112 we go contactor command 2 in 0x3e9 and target phase to energy transfer.
+Start sending current command and party hard!
+
+
 */
+return DC_Chg;//set dc charge mode then enter state machine
+
+    switch(lim_state)
+    {
+
+    case 0:
+    {
+    Chg_Phase=0x0;//standby phase
+    CONT_Ctrl=0x0; //dc contactor mode control required in DC
+    FC_Cur=0;//ccs current request from web ui for now.
+  EOC_Time=0x00;//end of charge timer
+  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
+  CHG_Pwr=0;//0 power
+        lim_stateCnt++; //increment state timer counter
+        if(lim_stateCnt>10)
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+    }
+    break;
+
+    case 1:
+        {
+    Chg_Phase=0x1;//initilisation phase
+    CONT_Ctrl=0x0; //dc contactor mode control required in DC
+    FC_Cur=0;//ccs current request from web ui for now.
+  EOC_Time=0x00;//end of charge timer
+  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
+  CHG_Pwr=0;//0 power
+        lim_stateCnt++; //increment state timer counter
+        if(lim_stateCnt>10)
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+    }
+        break;
+
+        case 2:
+        {
+    Chg_Phase=0x9;//weld detect
+    CONT_Ctrl=0x0; //dc contactor mode control required in DC
+    FC_Cur=0;//ccs current request from web ui for now.
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_Rdy; //chg ready
+  CHG_Pwr=49000/25;//49kw approx power
+
+        if(Cont_Volts>0)lim_state++; //we wait for the contactor voltage to rise before hitting next state.
+
+    }
+        break;
+
+           case 3:
+        {
+    Chg_Phase=0x9;//weld detect phase in sthis state
+    CONT_Ctrl=0x0; //dc contactor mode control required in DC
+    FC_Cur=0;//ccs current request from web ui for now.
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_Rdy; //chg ready
+  CHG_Pwr=49000/25;//49kw approx power
+
+        if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate end of weld detect phase
+        if(lim_stateCnt>10)
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+    }
+        break;
+
+             case 4:
+        {
+    Chg_Phase=0x2;//precharge phase in this state
+    CONT_Ctrl=0x0; //dc contactor mode control required in DC
+    FC_Cur=0;//ccs current request from web ui for now.
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_Rdy; //chg ready
+  CHG_Pwr=49000/25;//49kw approx power
+
+        if((Param::GetInt(Param::udc)-Cont_Volts)<20)lim_stateCnt++; //we wait for the contactor voltage to be 20v or less diff to main batt v
+        if(lim_stateCnt>10)
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+    }
+        break;
+    case 5:
+        {
+    Chg_Phase=0x3;//energy transfer phase in this state
+    CONT_Ctrl=0x2; //dc contactor to close mode
+    FC_Cur=0;//ccs current request from web ui for now.
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_Rdy; //chg ready
+  CHG_Pwr=49000/25;//49kw approx power
+
+        if(lim_stateCnt>10) //wait 2 seconds
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+    }
+        break;
+
+      case 6:
+        {
+    Chg_Phase=0x3;//energy transfer phase in this state
+    CONT_Ctrl=0x2; //dc contactor to close mode
+    FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_Rdy; //chg ready
+  CHG_Pwr=49000/25;//49kw approx power
+   //we chill out here charging.
+
+    }
+        break;
+
+
+    }
+
     Chg_Phase=0x0;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
-    FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs current request zero
+    FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
   EOC_Time=0xFE;
   CHG_Status=Status_Rdy;
   CHG_Req=Req_Charge;
