@@ -67,41 +67,8 @@ void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
     PP=(bytes[2]&0x1);
     Param::SetInt(Param::PlugDet,PP);
     CP_Mode=(bytes[4]&0x7);
-     switch (CP_Mode)
-    {
-        case 0x0:
-        CP_Typ=0;   //No pilot signal
-        break;
 
-        case 0x1:
-        CP_Typ=1;   //Standard AC pilot. Not charging
-        break;
-
-        case 0x2:
-        CP_Typ=2;   //Standard AC pilot. charging
-        break;
-
-        case 0x3:
-        CP_Typ=3;   //Pilot error
-        break;
-
-        case 0x4:
-        CP_Typ=4;   //5% not ready
-        break;
-
-        case 0x5:
-        CP_Typ=5;   //5% ready
-        break;
-
-        case 0x6:
-        CP_Typ=6;   //Pilot static
-        break;
-
-        default:
-        CP_Typ=0;   //No pilot signal
-        break;
-    }
-    Param::SetInt(Param::PilotTyp,CP_Typ);
+    Param::SetInt(Param::PilotTyp,CP_Mode);
 
     Cont_Volts=bytes[7]*2;
    // Cont_Volts=FP_MUL(Cont_Volts,2);
