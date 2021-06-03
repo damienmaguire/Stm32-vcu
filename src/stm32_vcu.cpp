@@ -153,7 +153,7 @@ static void Ms100Task(void)
 
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
-    utils::CalcSOC;
+    utils::CalcSOC();
 
         if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
