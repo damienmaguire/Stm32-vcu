@@ -11,6 +11,8 @@ static uint8_t Cont_test=0;
 static uint8_t Chg_Phase=0;
 static uint8_t lim_state=0;
 static uint8_t lim_stateCnt=0;
+static uint8_t ctr_328=0;
+static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
 static uint16_t V_Batt=0;
 static uint16_t V_Avail=0;
@@ -139,6 +141,14 @@ bytes[7] = V_Batt2;  //zwischenkreis. Battery voltage. Scale 4. 8 bit unsigned i
 
 Can::GetInterface(0)->Send(0x112, (uint32_t*)bytes,8); //Send on CAN1
 
+                //Vehicle speed msg should be 20ms. Lets try 10...
+bytes[0] = 0x7c;
+bytes[1] = 0xcb;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0x8a;
+Can::GetInterface(0)->Send(0x1a1, (uint32_t*)bytes,5); //Send on CAN1
+
 
 }
 
@@ -182,6 +192,146 @@ bytes[5] = 0x00;
 bytes[6] = 0x00;
 bytes[7] = 0x60;
 Can::GetInterface(0)->Send(0x560, (uint32_t*)bytes,8); //Send on CAN1
+//////////////////////////////////////////////////////////////////////////////
+//Possibly needed for dc ccs.
+////////////////////////////////////
+bytes[0] = 0xff;//vehicle status msg
+bytes[1] = 0x5f;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0x00;
+bytes[5] = 0x00;
+bytes[6] = 0xff;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x03c, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x88;//central locking
+bytes[1] = 0x88;
+bytes[2] = 0xf8;
+bytes[3] = 0x0f;
+bytes[4] = 0xff;
+bytes[5] = 0xff;
+bytes[6] = 0xff;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x2a0, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x00;//obd msg
+bytes[1] = 0x2a;
+bytes[2] = 0x00;
+bytes[3] = 0x6c;
+bytes[4] = 0x0f;
+bytes[5] = 0x55;
+bytes[6] = 0x00;
+Can::GetInterface(0)->Send(0x397, (uint32_t*)bytes,7); //Send on CAN1
+
+bytes[0] = 0xf1;//obd msg
+bytes[1] = 0xff;
+Can::GetInterface(0)->Send(0x3E8, (uint32_t*)bytes,2); //Send on CAN1
+
+bytes[0] = 0xc0;//engine info? rex?
+bytes[1] = 0xf9;
+bytes[2] = 0x80;
+bytes[3] = 0xe0;
+bytes[4] = 0x43;
+bytes[5] = 0x3c;
+bytes[6] = 0xc3;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x3f9, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0xff;//vehicle condition
+bytes[1] = 0xff;
+bytes[2] = 0xc0;
+bytes[3] = 0xff;
+bytes[4] = 0xff;
+bytes[5] = 0xff;
+bytes[6] = 0xff;
+bytes[7] = 0xfc;
+Can::GetInterface(0)->Send(0x3a0, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0xa8;//range info, milage display
+bytes[1] = 0x86;
+bytes[2] = 0x01;
+bytes[3] = 0x02;
+bytes[4] = 0x00;
+bytes[5] = 0x05;
+bytes[6] = 0xac;
+bytes[7] = 0x03;
+Can::GetInterface(0)->Send(0x330, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x2c;//BMS soc msg. May need to be dynamic
+bytes[1] = 0xe2;
+bytes[2] = 0x10;
+bytes[3] = 0xa3;
+bytes[4] = 0x30;
+bytes[5] = 0xff;
+bytes[6] = 0x02;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x432, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x00;//network management
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0x50;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x1a;
+Can::GetInterface(0)->Send(0x51a, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x00;//network management.May need to be dynamic
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0xfd;
+bytes[5] = 0x3c;
+bytes[6] = 0xff;
+bytes[7] = 0x40;
+Can::GetInterface(0)->Send(0x540, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x00;//network management edme
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0x00;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x12;
+Can::GetInterface(0)->Send(0x512, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x00;//network management kombi
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0xfe;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x60;
+Can::GetInterface(0)->Send(0x560, (uint32_t*)bytes,8); //Send on CAN1
+
+bytes[0] = 0x40;//network management zgw
+bytes[1] = 0x10;
+bytes[2] = 0x20;
+bytes[3] = 0x00;
+bytes[4] = 0x00;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x00;
+Can::GetInterface(0)->Send(0x510, (uint32_t*)bytes,8); //Send on CAN1
+
+ctr_328++;
+if(ctr_328==5)//only send every 1 second.
+{
+ ctr_328=0;
+ sec_328++; //increment seconds counter.
+bytes[0] = sec_328;//rtc msg. needs to be every 1 sec. first 32 bits are 1 second wrap counter
+bytes[1] = sec_328<<8;
+bytes[2] = sec_328<<16;
+bytes[3] = sec_328<<24;
+bytes[4] = 0x87;    //day counter 16 bit.
+bytes[5] = 0x1e;
+Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
+}
+////////////////////////////////////////////////////////////////////////////////
 
 }
 
