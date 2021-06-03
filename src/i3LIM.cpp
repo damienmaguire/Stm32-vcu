@@ -247,6 +247,7 @@ uint8_t i3LIMClass::Control_Charge()
 if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
 {
     lim_state=0;//return to state 0
+     Param::SetInt(Param::CCS_State,lim_state);
     Chg_Phase=0x0;
     CONT_Ctrl=0x0; //dc contactor mode 0 in AC
     FC_Cur=0;//ccs current request zero
@@ -284,8 +285,8 @@ Start sending current command and party hard!
 
 
 */
-return DC_Chg;//set dc charge mode then enter state machine
 
+   Param::SetInt(Param::CCS_State,lim_state);
     switch(lim_state)
     {
 
@@ -305,6 +306,7 @@ return DC_Chg;//set dc charge mode then enter state machine
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
         }
+
     }
     break;
 
@@ -324,6 +326,7 @@ return DC_Chg;//set dc charge mode then enter state machine
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
         }
+
     }
         break;
 
@@ -360,6 +363,7 @@ return DC_Chg;//set dc charge mode then enter state machine
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
         }
+
     }
         break;
 
@@ -380,6 +384,7 @@ return DC_Chg;//set dc charge mode then enter state machine
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
         }
+
     }
         break;
     case 5:
@@ -398,6 +403,7 @@ return DC_Chg;//set dc charge mode then enter state machine
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
         }
+
     }
         break;
 
@@ -419,7 +425,7 @@ return DC_Chg;//set dc charge mode then enter state machine
 
     }
 
-
+return DC_Chg;//set dc charge mode then enter state machine
 
 }
 
@@ -427,6 +433,7 @@ return DC_Chg;//set dc charge mode then enter state machine
 if (!Param::GetBool(Param::PlugDet)||(Param::GetBool(Param::Chgctrl)))  //if we a disable or plug remove shut down
 {
     lim_state=0;//return to state 0
+     Param::SetInt(Param::CCS_State,lim_state);
     Chg_Phase=0x0;
     CONT_Ctrl=0x0; //dc contactor mode 0 in off
     FC_Cur=0;//ccs current request zero
