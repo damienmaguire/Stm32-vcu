@@ -5,6 +5,7 @@ static uint8_t Chg_Phase=0;
 static uint8_t lim_state=0;
 static uint8_t lim_stateCnt=0;
 static uint8_t ctr_328=0;
+static uint8_t ctr_2fa=0;
 static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
 static s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
@@ -314,6 +315,23 @@ Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
 }
 ////////////////////////////////////////////////////////////////////////////////
 
+ctr_2fa++;
+if(ctr_2fa==5)//only send every 1 second.
+{
+ctr_2fa=0;       //Lim command 3. Used in DC mode. Needs to go every 1 second
+
+bytes[0] = 0x84; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
+bytes[1] = 0x04; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
+bytes[2] = Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
+                    //more investigation needed here...
+                   //Lower nibble seems to be intended for two end charge commands each of 2 bits.
+bytes[3] = 0xff;
+bytes[4] = 0xff;
+bytes[5] = 0xff;
+bytes[6] = 0xff;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x2fa, (uint32_t*)bytes,8); //Send on CAN1
+}
 }
 
 void i3LIMClass::Send100msMessages()
@@ -354,7 +372,7 @@ bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=
 
 Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
 
-                //Lim command 3. Used in DC mode
+                //Lim command 3. Used in DC mode. Needs to go every 1 second
 
 bytes[0] = 0x84; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[1] = 0x04; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
@@ -452,7 +470,7 @@ Start sending current command and party hard!
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
         lim_stateCnt++; //increment state timer counter
-        if(lim_stateCnt>10)
+        if(lim_stateCnt>40)//8 secs in itialisation as per logs
         {
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
