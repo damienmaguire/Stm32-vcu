@@ -509,14 +509,15 @@ Start sending current command and party hard!
         if((Param::GetInt(Param::udc)-Cont_Volts)<20)
         {
            lim_stateCnt++; //we wait for the contactor voltage to be 20v or less diff to main batt v
-           CONT_Ctrl=0x2; //dc contactor to close mode
+          // CONT_Ctrl=0x2; //dc contactor to close mode
 
         }
 
-        if(lim_stateCnt>5)
+        if(lim_stateCnt>20)
         {
-           lim_state++; //next state after 1 secs
+           lim_state++; //next state after 4 secs
            lim_stateCnt=0;
+           CONT_Ctrl=0x2; //dc contactor to close mode
         }
 
     }
