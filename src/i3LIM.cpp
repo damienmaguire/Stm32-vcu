@@ -110,7 +110,7 @@ void i3LIMClass::Send10msMessages()
    uint8_t V_Batt2=(Param::GetInt(Param::udc))/4;
    int32_t I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
    //I_Batt=0xa0a0;
-   uint16_t SOC_Local=50*10;//(Param::GetInt(Param::SOC))*10;
+   uint16_t SOC_Local=25*10;//(Param::GetInt(Param::SOC))*10;
 uint8_t bytes[8]; //seems to be from i3 BMS.
 bytes[0] = I_Batt & 0xFF;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
 bytes[1] = I_Batt >> 8;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
@@ -164,16 +164,7 @@ bytes[6] = 0xf3;
 bytes[7] = 0x4b;
 Can::GetInterface(0)->Send(0x431, (uint32_t*)bytes,8); //Send on CAN1
 
-                //LIM needs to see this but doesnt control anything...
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0xfe;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x60;
-Can::GetInterface(0)->Send(0x560, (uint32_t*)bytes,8); //Send on CAN1
+
 //////////////////////////////////////////////////////////////////////////////
 //Possibly needed for dc ccs.
 ////////////////////////////////////
@@ -372,19 +363,7 @@ bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=
 
 Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
 
-                //Lim command 3. Used in DC mode. Needs to go every 1 second
 
-bytes[0] = 0x84; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
-bytes[1] = 0x04; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
-bytes[2] = Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
-                    //more investigation needed here...
-                   //Lower nibble seems to be intended for two end charge commands each of 2 bits.
-bytes[3] = 0xff;
-bytes[4] = 0xff;
-bytes[5] = 0xff;
-bytes[6] = 0xff;
-bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x2fa, (uint32_t*)bytes,8); //Send on CAN1
 
 }
 
@@ -450,7 +429,7 @@ Start sending current command and party hard!
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
         lim_stateCnt++; //increment state timer counter
-        if(lim_stateCnt>10)
+        if(lim_stateCnt>10)//2 second delay
         {
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
