@@ -235,7 +235,7 @@ bytes[0] = 0x2c;//BMS soc msg. May need to be dynamic
 bytes[1] = 0xe2;
 bytes[2] = 0x10;
 bytes[3] = 0xa3;
-bytes[4] = 0x30;
+bytes[4] = 0x30;    //display soc. scale 0.5.
 bytes[5] = 0xff;
 bytes[6] = 0x02;
 bytes[7] = 0xff;
@@ -498,7 +498,7 @@ Start sending current command and party hard!
              case 4:
         {
     Chg_Phase=0x2;//precharge phase in this state
-    CONT_Ctrl=0x0; //dc contactor mode control required in DC
+  //  CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
   CHG_Status=Status_RdyDC;//0x1 ready dc
@@ -506,10 +506,16 @@ Start sending current command and party hard!
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
 
-        if((Param::GetInt(Param::udc)-Cont_Volts)<20)lim_stateCnt++; //we wait for the contactor voltage to be 20v or less diff to main batt v
-        if(lim_stateCnt>10)
+        if((Param::GetInt(Param::udc)-Cont_Volts)<20)
         {
-           lim_state++; //next state after 2 secs
+           lim_stateCnt++; //we wait for the contactor voltage to be 20v or less diff to main batt v
+           CONT_Ctrl=0x2; //dc contactor to close mode
+
+        }
+
+        if(lim_stateCnt>5)
+        {
+           lim_state++; //next state after 1 secs
            lim_stateCnt=0;
         }
 
