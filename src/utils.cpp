@@ -1,4 +1,7 @@
 #include "utils.h"
+
+namespace utils {
+
 #define CAN_TIMEOUT       50  //500ms
 #define PRECHARGE_TIMEOUT 500 //5s
 
@@ -6,12 +9,12 @@ uint8_t SOCVal=0;
 int32_t NetWh=0;
 
 
-int32_t utils::change(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
+int32_t change(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
 {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-void utils::PostErrorIfRunning(ERROR_MESSAGE_NUM err)
+void PostErrorIfRunning(ERROR_MESSAGE_NUM err)
 {
     if (Param::GetInt(Param::opmode) == MOD_RUN)
     {
@@ -19,7 +22,7 @@ void utils::PostErrorIfRunning(ERROR_MESSAGE_NUM err)
     }
 }
 
-void utils::GetDigInputs(Can* can)
+void GetDigInputs(Can* can)
 {
     static bool canIoActive = false;
     int canio = Param::GetInt(Param::canio);
@@ -41,7 +44,7 @@ void utils::GetDigInputs(Can* can)
     Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0 || (DigIo::bms_in.Get()) );
 }
 
-int utils::GetUserThrottleCommand(Can* can)
+int GetUserThrottleCommand(Can* can)
 {
     int potval, pot2val;
     bool brake = Param::GetBool(Param::din_brake);
@@ -99,7 +102,7 @@ int utils::GetUserThrottleCommand(Can* can)
 }
 
 
-void utils::SelectDirection(_vehmodes targetVehicle, BMW_E65Class E65Vehicle)
+void SelectDirection(_vehmodes targetVehicle, BMW_E65Class E65Vehicle)
 {
     int8_t selectedDir = Param::GetInt(Param::dir);
     int8_t userDirSelection = 0;
@@ -171,7 +174,7 @@ void utils::SelectDirection(_vehmodes targetVehicle, BMW_E65Class E65Vehicle)
     Param::SetInt(Param::dir, selectedDir);
 }
 
-s32fp utils::ProcessUdc(uint32_t oldTime, int motorSpeed)
+s32fp ProcessUdc(uint32_t oldTime, int motorSpeed)
 {
     // FIXME: 32bit integer?
     int32_t udc = FP_FROMINT(ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
@@ -235,7 +238,7 @@ s32fp utils::ProcessUdc(uint32_t oldTime, int motorSpeed)
     return udcfp;
 }
 
-s32fp utils::ProcessThrottle(int speed, Can* can)
+s32fp ProcessThrottle(int speed, Can* can)
 {
     // s32fp throtSpnt;
     s32fp finalSpnt;
@@ -277,7 +280,7 @@ s32fp utils::ProcessThrottle(int speed, Can* can)
 }
 
 
-void utils::displayThrottle()
+void displayThrottle()
 {
 
     uint16_t potdisp = AnaIn::throttle1.Get();
@@ -302,3 +305,5 @@ if(kwh_Used>0) SOCVal=100;
 Param::SetInt(Param::SOC,SOCVal);
 
 }
+
+} // namespace utils
