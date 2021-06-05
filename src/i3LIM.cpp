@@ -6,6 +6,7 @@ static uint8_t lim_state=0;
 static uint8_t lim_stateCnt=0;
 static uint8_t ctr_328=0;
 static uint8_t ctr_2fa=0;
+static uint8_t ctr_3e8=0;
 static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
 static s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
@@ -197,9 +198,6 @@ bytes[5] = 0x55;
 bytes[6] = 0x00;
 Can::GetInterface(0)->Send(0x397, (uint32_t*)bytes,7); //Send on CAN1
 
-bytes[0] = 0xf1;//obd msg
-bytes[1] = 0xff;
-Can::GetInterface(0)->Send(0x3E8, (uint32_t*)bytes,2); //Send on CAN1
 
 bytes[0] = 0xc0;//engine info? rex?
 bytes[1] = 0xf9;
@@ -304,6 +302,15 @@ bytes[4] = 0x87;    //day counter 16 bit.
 bytes[5] = 0x1e;
 Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
 }
+
+ctr_3e8++;
+if(ctr_3e8==5)//only send every 1 second.
+{
+ ctr_3e8=0;
+bytes[0] = 0xf1;//f1=no obd reset. f9=obd reset.
+bytes[1] = 0xff;
+Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 ctr_2fa++;
@@ -332,7 +339,8 @@ void i3LIMClass::Send100msMessages()
 uint8_t bytes[8]; //Wake up message.
 bytes[0] = 0xf5;
 bytes[1] = 0x28;
-bytes[2] = 0x88;
+if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[2] = 0x8a;//ignition on
+if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[2] = 0x88;//ignition off
 bytes[3] = 0x1d;
 bytes[4] = 0xf1;
 bytes[5] = 0x35;
@@ -342,7 +350,7 @@ bytes[7] = 0x80;
 Can::GetInterface(0)->Send(0x12f, (uint32_t*)bytes,8); //Send on CAN1
 
                 //central locking status message.
-bytes[0] = 0x81;
+bytes[0] = 0x81;    //81=flap unlock, 80=flap lock.
 bytes[1] = 0x00;
 bytes[2] = 0x04;
 bytes[3] = 0xff;
