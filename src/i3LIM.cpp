@@ -309,15 +309,17 @@ Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
 ctr_2fa++;
 if(ctr_2fa==5)//only send every 1 second.
 {
+    uint16_t V_Batt=0;
 ctr_2fa=0;       //Lim command 3. Used in DC mode. Needs to go every 1 second
-
+if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
+if(lim_state>=5) V_Batt=398*10;
 bytes[0] = 0x84; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[1] = 0x04; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[2] = Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
                     //more investigation needed here...
                    //Lower nibble seems to be intended for two end charge commands each of 2 bits.
-bytes[3] = 0xff;
-bytes[4] = 0xff;
+bytes[3] = V_Batt & 0xFF;    //lsb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
+bytes[4] = V_Batt >> 8;    //msb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
@@ -351,10 +353,11 @@ bytes[7] = 0xff;
 Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1
 
                 //Lim command 2. Used in DC mode
-
-bytes[0] = 0xA2;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
-bytes[1] = 0x0f;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
-bytes[2] = 0x00;  //Fast charge current limit. Not used in logs from 2014-15 vehicle so far. 8 bit unsigned int. scale 1.so max 254amps in theory...
+uint16_t V_limit=400*10;
+uint8_t I_limit=0;
+bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
+bytes[1] = V_limit >> 8;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
+bytes[2] = I_limit;  //Fast charge current limit. Not used in logs from 2014-15 vehicle so far. 8 bit unsigned int. scale 1.so max 254amps in theory...
 bytes[3] = 0x18;  //time remaining in seconds to hit soc target from byte 7 in AC mode. LSB. 16 bit unsigned int. scale 10.
 bytes[4] = 0x1B;  //time remaining in seconds to hit soc target from byte 7 in AC mode. MSB. 16 bit unsigned int. scale 10.
 bytes[5] = 0xFB;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. LSB. 16 bit unsigned int. scale 10.
