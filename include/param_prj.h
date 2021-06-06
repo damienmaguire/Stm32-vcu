@@ -129,11 +129,13 @@
     VALUE_ENTRY(CCS_ConStat,   ONOFF,   2109 ) \
     VALUE_ENTRY(hvChg,   ONOFF,   2111 ) \
     VALUE_ENTRY(CCS_State,   "S",   2211 ) \
+    VALUE_ENTRY(CP_DOOR,   dmodes,   2212 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 
 //Next value Id: 2080
 
 #define VERSTR STRINGIFY(4=VER)
+#define dmodes     "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleRegen, 1=DualChannel, 2=CAN"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"

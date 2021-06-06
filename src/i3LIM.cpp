@@ -102,6 +102,8 @@ void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state an
 {
 uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 [[maybe_unused]] uint8_t Cont_stat=bytes[2];
+uint8_t drmodes=bytes[2]&0x03;
+Param::SetInt(Param::CP_DOOR,drmodes);
 }
 
 
@@ -526,7 +528,7 @@ Start sending current command and party hard!
 
         }
 
-        if(lim_stateCnt>20)
+        if(lim_stateCnt>35)
         {
            lim_state++; //next state after 4 secs
            lim_stateCnt=0;
