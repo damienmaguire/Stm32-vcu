@@ -361,7 +361,9 @@ bytes[7] = 0xff;
 Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1
 
                 //Lim command 2. Used in DC mode
-uint16_t V_limit=400*10;
+uint16_t V_limit=0;
+if(lim_state==6) V_limit=400*10;//set to 400v in energy transfer state
+if(lim_state!=6) V_limit=Param::GetInt(Param::udc)*10;
 uint8_t I_limit=0;
 bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
 bytes[1] = V_limit >> 8;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
