@@ -7,6 +7,7 @@ static uint8_t lim_stateCnt=0;
 static uint8_t ctr_328=0;
 static uint8_t ctr_2fa=0;
 static uint8_t ctr_3e8=0;
+static uint8_t vin_ctr=0;
 static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
 static s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
@@ -378,6 +379,21 @@ bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=
 
 Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
 
+if(Param::GetInt(Param::opmode)!=MOD_RUN) vin_ctr=0;
+if((Param::GetInt(Param::opmode)==MOD_RUN) && vin_ctr<5)
+{
+
+bytes[0] = 0x56;                //vin in ascii from 2017 i3 : V909042
+bytes[1] = 0x39;
+bytes[2] = 0x30;
+bytes[3] = 0x39;
+bytes[4] = 0x30;
+bytes[5] = 0x34;
+bytes[6] = 0x32;
+Can::GetInterface(0)->Send(0x380, (uint32_t*)bytes,7); //Send on CAN1
+vin_ctr++;
+}
+
 
 
 }
@@ -474,8 +490,8 @@ Start sending current command and party hard!
         break;
 
         case 2:
-        {
-    Chg_Phase=0x9;//weld detect
+        {                       //I don't like this state 9 here. Should it remain in 1 ....
+    Chg_Phase=0x9;//cable test
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
@@ -490,8 +506,8 @@ Start sending current command and party hard!
         break;
 
            case 3:
-        {
-    Chg_Phase=0x9;//weld detect phase in sthis state
+        {                       //I don't like this state 9 here. Should it remain in 1 ....
+    Chg_Phase=0x9;//cable test
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
