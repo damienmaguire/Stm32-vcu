@@ -455,7 +455,7 @@ Start sending current command and party hard!
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Status=Status_RdyDC;//0x1 init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
@@ -475,7 +475,7 @@ Start sending current command and party hard!
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Status=Status_RdyDC;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
@@ -490,12 +490,12 @@ Start sending current command and party hard!
         break;
 
         case 2:
-        {                       //I don't like this state 9 here. Should it remain in 1 ....
+        {                       //
     Chg_Phase=0x9;//cable test
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Status=Status_RdyDC;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -511,7 +511,7 @@ Start sending current command and party hard!
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Status=Status_RdyDC;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -532,7 +532,7 @@ Start sending current command and party hard!
   //  CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Status=Status_RdyDC;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -544,11 +544,11 @@ Start sending current command and party hard!
 
         }
 
-        if(lim_stateCnt>35)
+        if(lim_stateCnt>10)
         {
            lim_state++; //next state after 4 secs
            lim_stateCnt=0;
-           CONT_Ctrl=0x2; //dc contactor to close mode
+         //  CONT_Ctrl=0x2; //dc contactor to close mode
         }
 
     }
@@ -559,7 +559,7 @@ Start sending current command and party hard!
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Status=0x2;//0x2 charging
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
