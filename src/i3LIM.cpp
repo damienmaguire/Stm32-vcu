@@ -383,13 +383,13 @@ if(Param::GetInt(Param::opmode)!=MOD_RUN) vin_ctr=0;
 if((Param::GetInt(Param::opmode)==MOD_RUN) && vin_ctr<5)
 {
 
-bytes[0] = 0x56;                //vin in ascii from 2017 i3 : V909042
-bytes[1] = 0x39;
-bytes[2] = 0x30;
-bytes[3] = 0x39;
-bytes[4] = 0x30;
-bytes[5] = 0x34;
-bytes[6] = 0x32;
+bytes[0] = 0x56;                //vin in ascii from 2017 i3 : VB87926
+bytes[1] = 0x42;
+bytes[2] = 0x38;
+bytes[3] = 0x37;
+bytes[4] = 0x39;
+bytes[5] = 0x32;
+bytes[6] = 0x36;
 Can::GetInterface(0)->Send(0x380, (uint32_t*)bytes,7); //Send on CAN1
 vin_ctr++;
 }
