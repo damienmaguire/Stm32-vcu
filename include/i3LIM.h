@@ -10,6 +10,13 @@
 #include "params.h"
 #include "stm32_can.h"
 
+enum class i3LIMChargingState
+{
+    No_Chg,
+    AC_Chg,
+    DC_Chg
+};
+
 class i3LIMClass
 {
 
@@ -23,9 +30,7 @@ static void handle272(uint32_t data[2]);
 static void Send200msMessages();
 static void Send100msMessages();
 static void Send10msMessages();
-static uint8_t Control_Charge();
-
-
+static i3LIMChargingState Control_Charge();
 private:
 static void CCS_Pwr_Con();
 

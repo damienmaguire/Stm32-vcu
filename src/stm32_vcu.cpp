@@ -44,8 +44,6 @@ static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
 static uint32_t oldTime;
-uint8_t LIMmode=0;
-
 
 // Instantiate Classes
 BMW_E65Class E65Vehicle;
@@ -78,36 +76,35 @@ static void Ms200Task(void)
        if (opmode == MOD_OFF)
     {
         Param::SetInt(Param::chgtyp,OFF);
-      LIMmode=i3LIMClass::Control_Charge();
-      if(LIMmode==0x2)   //DC charge mode
+      auto LIMmode=i3LIMClass::Control_Charge();
+      if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
       {
             chargeMode = true;
             chargeModeDC = true;   //DC charge mode
           Param::SetInt(Param::chgtyp,DCFC);
       }
-      if(LIMmode==0x1)
+      if(LIMmode==i3LIMChargingState::AC_Chg)
       {
           chargeMode = true;   //AC charge mode
           Param::SetInt(Param::chgtyp,AC);
       }
 
-      if(LIMmode==0x0) chargeMode = false;  //no charge mode
+      if(LIMmode==i3LIMChargingState::No_Chg) chargeMode = false;  //no charge mode
     }
 
     if (opmode == MOD_CHARGE)
     {
-        LIMmode=i3LIMClass::Control_Charge();
-
-      if((LIMmode==0x0)&&(Param::GetInt(Param::chgtyp)==AC)&&(chargerClass::HVreq==false))// if we are in AC charge mode,have no hv request and shutdown from the lim then end chg mode
-
+        auto LIMmode=i3LIMClass::Control_Charge();
+        // if we are in AC charge mode,have no hv request and shutdown from the lim then end chg mode
+        if((LIMmode==i3LIMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==AC)&&(chargerClass::HVreq==false))
         {
             chargeMode = false;  //no charge mode
             Param::SetInt(Param::chgtyp,OFF);
 
         }
 
-         if((LIMmode==0x0)&&(Param::GetInt(Param::chgtyp)==DCFC))// if we are in DC charge mode and shutdown from the lim then end chg mode
-
+        // if we are in DC charge mode and shutdown from the lim then end chg mode
+        if((LIMmode==i3LIMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==DCFC))
         {
             chargeMode = false;  //no charge mode
             chargeModeDC = false;   //DC charge mode off
