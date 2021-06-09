@@ -23,8 +23,20 @@ enum class ChargeReady : uint8_t
     Rdy = 0x1
 };
 
+enum class ChargePhase : uint8_t
+{
+    Standby = 0x0,
+    Initialisation = 0x1,
+    Subpoena = 0x2,
+    EnergyTransfer = 0x3,
+    Shutdown = 0x4,
+    CableTest = 0x9,
+    Reserved = 0xE,
+    InvalidSignal = 0xF
+};
+
 static uint8_t CP_Mode=0;
-static uint8_t Chg_Phase=0;
+static ChargePhase Chg_Phase=ChargePhase::Standby;
 static uint8_t lim_state=0;
 static uint8_t lim_stateCnt=0;
 static uint8_t ctr_328=0;
@@ -343,7 +355,7 @@ if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
 if(lim_state>=5) V_Batt=398*10;
 bytes[0] = 0x84; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[1] = 0x04; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
-bytes[2] = Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
+bytes[2] = (uint8_t)Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
                     //more investigation needed here...
                    //Lower nibble seems to be intended for two end charge commands each of 2 bits.
 bytes[3] = V_Batt & 0xFF;    //lsb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
@@ -426,7 +438,7 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have 
 {
     lim_state=0;//return to state 0
      Param::SetInt(Param::CCS_State,lim_state);
-    Chg_Phase=0x0;
+    Chg_Phase=ChargePhase::Standby;
     CONT_Ctrl=0x0; //dc contactor mode 0 in AC
     FC_Cur=0;//ccs current request zero
   EOC_Time=0xFE;
@@ -442,7 +454,7 @@ if(Param::GetBool(Param::Chgctrl))
 {
         lim_state=0;//return to state 0
      Param::SetInt(Param::CCS_State,lim_state);
-    Chg_Phase=0x0;
+    Chg_Phase=ChargePhase::Standby;
     CONT_Ctrl=0x0; //dc contactor mode 0 in off
     FC_Cur=0;//ccs current request zero
   EOC_Time=0x00;
@@ -490,7 +502,7 @@ Charge phase 4,
 
     case 0:
     {
-    Chg_Phase=0x0;//standby phase
+    Chg_Phase=ChargePhase::Standby;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
@@ -511,7 +523,7 @@ Charge phase 4,
 
     case 1:
         {
-    Chg_Phase=0x1;//initilisation phase
+    Chg_Phase=ChargePhase::Initialisation;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
@@ -532,7 +544,7 @@ Charge phase 4,
 
         case 2:
         {                       //
-    Chg_Phase=0x9;//cable test
+    Chg_Phase=ChargePhase::CableTest;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
@@ -547,8 +559,8 @@ Charge phase 4,
         break;
 
            case 3:
-        {                       //I don't like this state 9 here. Should it remain in 1 ....
-    Chg_Phase=0x9;//cable test
+        {                       //I don't like this state CableTest here. Should it remain in Initialisation ....
+    Chg_Phase=ChargePhase::CableTest;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
@@ -570,7 +582,7 @@ Charge phase 4,
 
              case 4:
         {
-    Chg_Phase=0x2;//precharge phase in this state
+    Chg_Phase=ChargePhase::Subpoena;//precharge phase in this state
   //  CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
@@ -598,7 +610,7 @@ Charge phase 4,
         break;
     case 5:
         {
-    Chg_Phase=0x3;//energy transfer phase in this state
+    Chg_Phase=ChargePhase::EnergyTransfer;
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
@@ -620,7 +632,7 @@ Charge phase 4,
 
       case 6:
         {
-    Chg_Phase=0x3;//energy transfer phase in this state
+    Chg_Phase=ChargePhase::EnergyTransfer;
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=CCSI_Spnt;//Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
     CCS_Pwr_Con(); //ccs power control subroutine
@@ -642,7 +654,7 @@ Charge phase 4,
 
          case 7:    //shutdown state
         {
-    Chg_Phase=0x4;//shutdown phase in this state
+    Chg_Phase=ChargePhase::Shutdown;
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//current command to 0
   EOC_Time=0xFE;//end of charge timer
@@ -663,7 +675,7 @@ Charge phase 4,
 
             case 8:    //shutdown state
         {
-    Chg_Phase=0x4;//shutdown phase in this state
+    Chg_Phase=ChargePhase::Shutdown;
     CONT_Ctrl=0x1; //dc contactor to open with diag mode
     FC_Cur=0;//current command to 0
   EOC_Time=0xFE;//end of charge timer
@@ -684,7 +696,7 @@ Charge phase 4,
 
               case 9:    //shutdown state
         {
-    Chg_Phase=0x0;//standby phase in this state
+    Chg_Phase=ChargePhase::Standby;
     CONT_Ctrl=0x0; //dc contactor to open mode
     FC_Cur=0;//current command to 0
   EOC_Time=0xFE;//end of charge timer
@@ -711,7 +723,7 @@ if (!Param::GetBool(Param::PlugDet))  //if we  plug remove shut down
 {
     lim_state=0;//return to state 0
      Param::SetInt(Param::CCS_State,lim_state);
-    Chg_Phase=0x0;
+    Chg_Phase=ChargePhase::Standby;
     CONT_Ctrl=0x0; //dc contactor mode 0 in off
     FC_Cur=0;//ccs current request zero
   EOC_Time=0x00;
