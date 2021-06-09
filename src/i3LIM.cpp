@@ -1,5 +1,16 @@
 #include <i3LIM.h>
 
+enum class ChargeStatus : uint8_t
+{
+    // no led
+    NotRdy = 0x0,
+
+    // dc ccs mode
+    Init = 0x1,
+
+    Rdy = 0x2
+};
+
 static uint8_t CP_Mode=0;
 static uint8_t Chg_Phase=0;
 static uint8_t lim_state=0;
@@ -13,17 +24,13 @@ static uint16_t Cont_Volts=0;
 static s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
 static int16_t  FC_Cur=0; //10 bit signed int with the ccs dc current command.scale of 1.
 static uint8_t  EOC_Time=0x00; //end of charge time in minutes.
-static uint8_t CHG_Status=0;  //observed values 0 when not charging , 1 and transition to 2 when commanded to charge. only 4 bits used.
+static ChargeStatus CHG_Status=ChargeStatus::NotRdy;  //observed values 0 when not charging , 1 and transition to 2 when commanded to charge. only 4 bits used.
                     //seems to control led colour.
 static uint8_t CHG_Req=0;  //observed values 0 when not charging , 1 when requested to charge. only 1 bit used in logs so far.
 static uint8_t CHG_Ready=0;  //indicator to the LIM that we are ready to charge. observed values 0 when not charging , 1 when commanded to charge. only 2 bits used.
 static uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
 static uint8_t CCSI_Spnt=0;
 
-#define Status_NotRdy 0x0 //no led
-#define Status_Rdy 0x2
-#define Status_Init 0x1
-#define Status_Rdy 0x2
 #define Req_Charge 0x1
 #define Req_EndCharge 0x0
 #define Chg_Rdy 0x1
@@ -148,7 +155,7 @@ void i3LIMClass::Send200msMessages()
 uint8_t bytes[8]; //Main LIM control message
 bytes[0] = Wh_Local & 0xFF;  //Battery Wh lowbyte
 bytes[1] = Wh_Local >> 8;  //BAttery Wh high byte
-bytes[2] = ((CHG_Status<<4)|(CHG_Req));  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
+bytes[2] = (((uint8_t)CHG_Status<<4)|(CHG_Req));  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
 bytes[3] = (((CHG_Pwr)<<4)|CHG_Ready);  //charge readiness in bits 0 and 1. 1 = ready to charge.upper nibble is LSB of charge power.Charge power forecast not actual power!
 bytes[4] = CHG_Pwr>>4;   //MSB of charge power.in this case 0x28 = 40x25 = 1000W. Probably net DC power into the Batt.
 bytes[5] = FC_Cur & 0xff;   //LSB of the DC ccs current command
@@ -414,7 +421,7 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have 
     CONT_Ctrl=0x0; //dc contactor mode 0 in AC
     FC_Cur=0;//ccs current request zero
   EOC_Time=0xFE;
-  CHG_Status=Status_Rdy;
+  CHG_Status=ChargeStatus::Rdy;
   CHG_Req=Req_Charge;
   CHG_Ready=Chg_Rdy;
   CHG_Pwr=6500/25;//approx 6.5kw ac
@@ -430,7 +437,7 @@ if(Param::GetBool(Param::Chgctrl))
     CONT_Ctrl=0x0; //dc contactor mode 0 in off
     FC_Cur=0;//ccs current request zero
   EOC_Time=0x00;
-  CHG_Status=Status_NotRdy;
+  CHG_Status=ChargeStatus::NotRdy;
   CHG_Req=Req_EndCharge;
   CHG_Ready=Chg_NotRdy;
   CHG_Pwr=0;
@@ -478,7 +485,7 @@ Charge phase 4,
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=Status_Init;//0x1 init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
@@ -499,7 +506,7 @@ Charge phase 4,
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=Status_Init;//init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
@@ -520,7 +527,7 @@ Charge phase 4,
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_Init;//init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -536,7 +543,7 @@ Charge phase 4,
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_Init;//init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -558,7 +565,7 @@ Charge phase 4,
   //  CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_Init;//init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -586,7 +593,7 @@ Charge phase 4,
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_Init;//0x1 init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -609,7 +616,7 @@ Charge phase 4,
     FC_Cur=CCSI_Spnt;//Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
     CCS_Pwr_Con(); //ccs power control subroutine
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_Rdy;//charge
+  CHG_Status=ChargeStatus::Rdy;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -630,7 +637,7 @@ Charge phase 4,
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//current command to 0
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_Init;//init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //chg not ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -651,7 +658,7 @@ Charge phase 4,
     CONT_Ctrl=0x1; //dc contactor to open with diag mode
     FC_Cur=0;//current command to 0
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_Init;//init
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //chg not ready
   CHG_Pwr=49000/25;//49kw approx power
@@ -672,7 +679,7 @@ Charge phase 4,
     CONT_Ctrl=0x0; //dc contactor to open mode
     FC_Cur=0;//current command to 0
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_NotRdy;//init
+  CHG_Status=ChargeStatus::NotRdy;
   CHG_Req=Req_EndCharge;   //ox0 request end charge
   CHG_Ready=Chg_NotRdy; //chg not ready
   CHG_Pwr=0;//0 power
@@ -699,7 +706,7 @@ if (!Param::GetBool(Param::PlugDet))  //if we  plug remove shut down
     CONT_Ctrl=0x0; //dc contactor mode 0 in off
     FC_Cur=0;//ccs current request zero
   EOC_Time=0x00;
-  CHG_Status=Status_NotRdy;
+  CHG_Status=ChargeStatus::NotRdy;
   CHG_Req=Req_EndCharge;
   CHG_Ready=Chg_NotRdy;
   CHG_Pwr=0;
