@@ -24,7 +24,10 @@ static void Send200msMessages();
 static void Send100msMessages();
 static void Send10msMessages();
 static uint8_t Control_Charge();
+
+
 private:
+static void CCS_Pwr_Con();
 
 };
 

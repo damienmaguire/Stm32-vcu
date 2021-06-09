@@ -18,10 +18,12 @@ static uint8_t CHG_Status=0;  //observed values 0 when not charging , 1 and tran
 static uint8_t CHG_Req=0;  //observed values 0 when not charging , 1 when requested to charge. only 1 bit used in logs so far.
 static uint8_t CHG_Ready=0;  //indicator to the LIM that we are ready to charge. observed values 0 when not charging , 1 when commanded to charge. only 2 bits used.
 static uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
+static uint8_t CCSI_Spnt=0;
 
 #define Status_NotRdy 0x0 //no led
 #define Status_Rdy 0x2
-#define Status_RdyDC 0x1  //dc ccs mode
+#define Status_Init 0x1
+#define Status_Rdy 0x2
 #define Req_Charge 0x1
 #define Req_EndCharge 0x0
 #define Chg_Rdy 0x1
@@ -402,9 +404,9 @@ vin_ctr++;
 uint8_t i3LIMClass::Control_Charge()
 {
     int opmode = Param::GetInt(Param::opmode);
-    if (opmode != MOD_RUN)
+    if (opmode != MOD_RUN)  //only do this if we are not in run mode
     {
-if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
+if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
 {
     lim_state=0;//return to state 0
      Param::SetInt(Param::CCS_State,lim_state);
@@ -416,12 +418,29 @@ if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode=
   CHG_Req=Req_Charge;
   CHG_Ready=Chg_Rdy;
   CHG_Pwr=6500/25;//approx 6.5kw ac
-    return AC_Chg;
+
+
+    if(!Param::GetBool(Param::Chgctrl))return AC_Chg;//set ac charge mode if we are enabled on webui
+
+if(Param::GetBool(Param::Chgctrl))
+{
+        lim_state=0;//return to state 0
+     Param::SetInt(Param::CCS_State,lim_state);
+    Chg_Phase=0x0;
+    CONT_Ctrl=0x0; //dc contactor mode 0 in off
+    FC_Cur=0;//ccs current request zero
+  EOC_Time=0x00;
+  CHG_Status=Status_NotRdy;
+  CHG_Req=Req_EndCharge;
+  CHG_Ready=Chg_NotRdy;
+  CHG_Pwr=0;
+    return No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
+}
 
 }
 
 
-if (Param::GetBool(Param::PlugDet)&&(!Param::GetBool(Param::Chgctrl))&&(CP_Mode==0x4||CP_Mode==0x5))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
+if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
 {
 /*
 DC goes all off, chgstatus=1, chg req=1, contactor=0.then move to chg ready=1.then add eoc time.then add contactor=2.then add current command.
@@ -443,6 +462,9 @@ Voltage ramps down to 0 and afer a few seconds we go target phase Subpoena (prec
 Once contactor measured volts matches batt voltage in 0x112 we go contactor command 2 in 0x3e9 and target phase to energy transfer.
 Start sending current command and party hard!
 
+Shutdown sequence :
+Command zero amps from ccs.
+Charge phase 4,
 
 */
 
@@ -456,10 +478,11 @@ Start sending current command and party hard!
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 init
+  CHG_Status=Status_Init;//0x1 init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
+  CCSI_Spnt=0;//No current
         lim_stateCnt++; //increment state timer counter
         if(lim_stateCnt>10)//2 second delay
         {
@@ -476,10 +499,11 @@ Start sending current command and party hard!
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=Status_RdyDC;//init
+  CHG_Status=Status_Init;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_NotRdy; //0x0 not ready as yet
   CHG_Pwr=0;//0 power
+  CCSI_Spnt=0;//No current
         lim_stateCnt++; //increment state timer counter
         if(lim_stateCnt>40)//8 secs in itialisation as per logs
         {
@@ -496,11 +520,11 @@ Start sending current command and party hard!
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//init
+  CHG_Status=Status_Init;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
-
+    CCSI_Spnt=0;//No current
         if(Cont_Volts>0)lim_state++; //we wait for the contactor voltage to rise before hitting next state.
 
     }
@@ -512,10 +536,11 @@ Start sending current command and party hard!
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//init
+  CHG_Status=Status_Init;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
+    CCSI_Spnt=0;//No current
 
         if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate end of weld detect phase
         if(lim_stateCnt>10)
@@ -533,10 +558,11 @@ Start sending current command and party hard!
   //  CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//init
+  CHG_Status=Status_Init;//init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
+    CCSI_Spnt=0;//No current
 
         if((Param::GetInt(Param::udc)-Cont_Volts)<20)
         {
@@ -560,10 +586,12 @@ Start sending current command and party hard!
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=0x1;//0x1 init
+  CHG_Status=Status_Init;//0x1 init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
+  CCSI_Spnt=0;//No current
+
         lim_stateCnt++;
         if(lim_stateCnt>10) //wait 2 seconds
         {
@@ -578,13 +606,77 @@ Start sending current command and party hard!
         {
     Chg_Phase=0x3;//energy transfer phase in this state
     CONT_Ctrl=0x2; //dc contactor to close mode
-    FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
+    FC_Cur=CCSI_Spnt;//Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
+    CCS_Pwr_Con(); //ccs power control subroutine
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=0x2;//charge
+  CHG_Status=Status_Rdy;//charge
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
    //we chill out here charging.
+
+   if(Param::GetBool(Param::Chgctrl))//if we have a request to terminate from the web ui
+      {
+        FC_Cur=0;//set current to 0
+        lim_state++; //move to state 7 (shutdown)
+      }
+
+    }
+        break;
+
+         case 7:    //shutdown state
+        {
+    Chg_Phase=0x4;//shutdown phase in this state
+    CONT_Ctrl=0x2; //dc contactor to close mode
+    FC_Cur=0;//current command to 0
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_Init;//init
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_NotRdy; //chg not ready
+  CHG_Pwr=49000/25;//49kw approx power
+         lim_stateCnt++;
+        if(lim_stateCnt>10) //wait 2 seconds
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+
+
+    }
+        break;
+
+            case 8:    //shutdown state
+        {
+    Chg_Phase=0x4;//shutdown phase in this state
+    CONT_Ctrl=0x1; //dc contactor to open with diag mode
+    FC_Cur=0;//current command to 0
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_Init;//init
+  CHG_Req=Req_Charge;   //ox1 request charge
+  CHG_Ready=Chg_NotRdy; //chg not ready
+  CHG_Pwr=49000/25;//49kw approx power
+         lim_stateCnt++;
+        if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate contactors open
+        if(lim_stateCnt>10)
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+
+    }
+        break;
+
+              case 9:    //shutdown state
+        {
+    Chg_Phase=0x0;//standby phase in this state
+    CONT_Ctrl=0x0; //dc contactor to open mode
+    FC_Cur=0;//current command to 0
+  EOC_Time=0xFE;//end of charge timer
+  CHG_Status=Status_NotRdy;//init
+  CHG_Req=Req_EndCharge;   //ox0 request end charge
+  CHG_Ready=Chg_NotRdy; //chg not ready
+  CHG_Pwr=0;//0 power
+       return No_Chg;
 
     }
         break;
@@ -592,12 +684,14 @@ Start sending current command and party hard!
 
     }
 
-return DC_Chg;//set dc charge mode then enter state machine
+if(!Param::GetBool(Param::Chgctrl))return DC_Chg;//set dc charge mode if we are enabled on webui
+if(Param::GetBool(Param::Chgctrl)&&lim_state==9)return No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
 
 }
 
 
-if (!Param::GetBool(Param::PlugDet)||(Param::GetBool(Param::Chgctrl)))  //if we a disable or plug remove shut down
+
+if (!Param::GetBool(Param::PlugDet))  //if we  plug remove shut down
 {
     lim_state=0;//return to state 0
      Param::SetInt(Param::CCS_State,lim_state);
@@ -615,3 +709,19 @@ if (!Param::GetBool(Param::PlugDet)||(Param::GetBool(Param::Chgctrl)))  //if we 
     // If nothing matches then we aren't charging
     return No_Chg;
 }
+
+
+void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
+{
+uint16_t Tmp_Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
+uint16_t Tmp_Vbatt_Spnt=Param::GetInt(Param::Voltspnt);
+uint16_t Tmp_ICCS_Lim=Param::GetInt(Param::CCS_ILim);
+uint16_t Tmp_Ibatt=Param::GetInt(Param::idc);
+
+if(CCSI_Spnt>125)CCSI_Spnt=125; //never exceed 125amps for now.
+if(CCSI_Spnt>250)CCSI_Spnt=0; //crude way to prevent rollover
+if((Tmp_Ibatt<=Tmp_ICCS_Lim)&&(Tmp_Vbatt<=Tmp_Vbatt_Spnt))CCSI_Spnt++;
+if(Tmp_Vbatt>=Tmp_Vbatt_Spnt)CCSI_Spnt--;
+}
+
+

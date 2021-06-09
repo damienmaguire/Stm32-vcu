@@ -97,14 +97,24 @@ static void Ms200Task(void)
     if (opmode == MOD_CHARGE)
     {
         LIMmode=i3LIMClass::Control_Charge();
-     // if(LIMmode==0x1) chargeMode = true;
-      if((LIMmode==0x0)&&(chargerClass::HVreq==false))// chargeMode = false;
-      //if (LIMmode==0x0)
+
+      if((LIMmode==0x0)&&(Param::GetInt(Param::chgtyp)==AC)&&(chargerClass::HVreq==false))// if we are in AC charge mode,have no hv request and shutdown from the lim then end chg mode
+
         {
             chargeMode = false;  //no charge mode
-            chargeModeDC = false;
+            Param::SetInt(Param::chgtyp,OFF);
+
+        }
+
+         if((LIMmode==0x0)&&(Param::GetInt(Param::chgtyp)==DCFC))// if we are in DC charge mode and shutdown from the lim then end chg mode
+
+        {
+            chargeMode = false;  //no charge mode
+            chargeModeDC = false;   //DC charge mode off
             Param::SetInt(Param::chgtyp,OFF);
         }
+
+
     }
 
 
