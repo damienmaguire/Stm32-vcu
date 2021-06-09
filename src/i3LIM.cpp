@@ -382,7 +382,7 @@ Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
 if(Param::GetInt(Param::opmode)!=MOD_RUN) vin_ctr=0;
 if((Param::GetInt(Param::opmode)==MOD_RUN) && vin_ctr<5)
 {
-
+/*
 bytes[0] = 0x56;                //vin in ascii from 2017 i3 : VB87926
 bytes[1] = 0x42;
 bytes[2] = 0x38;
@@ -392,6 +392,7 @@ bytes[5] = 0x32;
 bytes[6] = 0x36;
 Can::GetInterface(0)->Send(0x380, (uint32_t*)bytes,7); //Send on CAN1
 vin_ctr++;
+*/
 }
 
 
@@ -559,11 +560,11 @@ Start sending current command and party hard!
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=0x2;//0x2 charging
+  CHG_Status=0x1;//0x1 init
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
-
+        lim_stateCnt++;
         if(lim_stateCnt>10) //wait 2 seconds
         {
            lim_state++; //next state after 2 secs
@@ -579,7 +580,7 @@ Start sending current command and party hard!
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=Status_RdyDC;//0x1 ready dc
+  CHG_Status=0x2;//charge
   CHG_Req=Req_Charge;   //ox1 request charge
   CHG_Ready=Chg_Rdy; //chg ready
   CHG_Pwr=49000/25;//49kw approx power
