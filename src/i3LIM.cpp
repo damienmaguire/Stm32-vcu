@@ -55,12 +55,6 @@ static ChargeReady CHG_Ready=ChargeReady::NotRdy;  //indicator to the LIM that w
 static uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
 static uint8_t CCSI_Spnt=0;
 
-
-
-#define No_Chg 0x0
-#define AC_Chg 0x1
-#define DC_Chg 0x2
-
 void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
 
 {
@@ -429,7 +423,7 @@ vin_ctr++;
 
 }
 
-uint8_t i3LIMClass::Control_Charge()
+i3LIMChargingState i3LIMClass::Control_Charge()
 {
     int opmode = Param::GetInt(Param::opmode);
     if (opmode != MOD_RUN)  //only do this if we are not in run mode
@@ -448,7 +442,7 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have 
   CHG_Pwr=6500/25;//approx 6.5kw ac
 
 
-    if(!Param::GetBool(Param::Chgctrl))return AC_Chg;//set ac charge mode if we are enabled on webui
+    if(!Param::GetBool(Param::Chgctrl))return i3LIMChargingState::AC_Chg;//set ac charge mode if we are enabled on webui
 
 if(Param::GetBool(Param::Chgctrl))
 {
@@ -462,7 +456,7 @@ if(Param::GetBool(Param::Chgctrl))
   CHG_Req=ChargeRequest::EndCharge;
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;
-    return No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
+    return i3LIMChargingState::No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
 }
 
 }
@@ -700,11 +694,11 @@ Charge phase 4,
     CONT_Ctrl=0x0; //dc contactor to open mode
     FC_Cur=0;//current command to 0
   EOC_Time=0xFE;//end of charge timer
-  CHG_Status=ChargeStatus::NotRdy;
+  CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::EndCharge;
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
-       return No_Chg;
+       return i3LIMChargingState::No_Chg;
 
     }
         break;
@@ -712,8 +706,8 @@ Charge phase 4,
 
     }
 
-if(!Param::GetBool(Param::Chgctrl))return DC_Chg;//set dc charge mode if we are enabled on webui
-if(Param::GetBool(Param::Chgctrl)&&lim_state==9)return No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
+if(!Param::GetBool(Param::Chgctrl))return i3LIMChargingState::DC_Chg;//set dc charge mode if we are enabled on webui
+if(Param::GetBool(Param::Chgctrl)&&lim_state==9)return i3LIMChargingState::No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
 
 }
 
@@ -731,11 +725,11 @@ if (!Param::GetBool(Param::PlugDet))  //if we  plug remove shut down
   CHG_Req=ChargeRequest::EndCharge;
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;
-    return No_Chg;
+    return i3LIMChargingState::No_Chg;
 }
 }
     // If nothing matches then we aren't charging
-    return No_Chg;
+    return i3LIMChargingState::No_Chg;
 }
 
 
