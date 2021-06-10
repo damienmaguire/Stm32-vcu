@@ -295,7 +295,7 @@ void CalcSOC()
 {
 int32_t Capacity_Parm = Param::GetInt(Param::BattCap);
 //int32_t kwh_Used = FP_FROMINT(ISA::KWh);    //grab actual Wh from isa shunt
-int32_t kwh_Used = Param::GetInt(Param::KWh)*1000; //convert to Wh
+int32_t kwh_Used = FP_TOINT(Param::Get(Param::KWh)); //convert to Wh
 if(kwh_Used<0)
 {
     NetWh = Capacity_Parm - kwh_Used;
