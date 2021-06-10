@@ -334,7 +334,8 @@ ctr_3e8++;
 if(ctr_3e8==5)//only send every 1 second.
 {
  ctr_3e8=0;
-bytes[0] = 0xf1;//f1=no obd reset. f9=obd reset.
+if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
+if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
 bytes[1] = 0xff;
 Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
 }
@@ -738,7 +739,7 @@ void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
 uint16_t Tmp_Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
 uint16_t Tmp_Vbatt_Spnt=Param::GetInt(Param::Voltspnt);
 uint16_t Tmp_ICCS_Lim=Param::GetInt(Param::CCS_ILim);
-uint16_t Tmp_Ibatt=Param::GetInt(Param::idc);
+int16_t Tmp_Ibatt=Param::GetInt(Param::idc);
 
 if(CCSI_Spnt>125)CCSI_Spnt=125; //never exceed 125amps for now.
 if(CCSI_Spnt>250)CCSI_Spnt=0; //crude way to prevent rollover
