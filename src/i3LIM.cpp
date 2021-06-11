@@ -744,8 +744,8 @@ uint16_t Tmp_ICCS_Lim=Param::GetInt(Param::CCS_ILim);
 if(CCSI_Spnt>Tmp_ICCS_Lim)CCSI_Spnt=Tmp_ICCS_Lim; //clamp setpoint to current lim paramater.
 if(CCSI_Spnt>125)CCSI_Spnt=150; //never exceed 150amps for now.
 if(CCSI_Spnt>250)CCSI_Spnt=0; //crude way to prevent rollover
-if(Tmp_Vbatt<=Tmp_Vbatt_Spnt)CCSI_Spnt++;//increment if voltage lower than setpoint up to max of setpoint current.
-if(Tmp_Vbatt>=Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.
+if(Tmp_Vbatt<Tmp_Vbatt_Spnt)CCSI_Spnt++;//increment if voltage lower than setpoint up to max of setpoint current.
+if(Tmp_Vbatt>Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.
 }
 
 
