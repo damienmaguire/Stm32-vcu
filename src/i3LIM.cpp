@@ -739,12 +739,13 @@ void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
 uint16_t Tmp_Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
 uint16_t Tmp_Vbatt_Spnt=Param::GetInt(Param::Voltspnt);
 uint16_t Tmp_ICCS_Lim=Param::GetInt(Param::CCS_ILim);
-int16_t Tmp_Ibatt=Param::GetInt(Param::idc);
+//int16_t Tmp_Ibatt=Param::GetInt(Param::idc);
 
-if(CCSI_Spnt>125)CCSI_Spnt=125; //never exceed 125amps for now.
+if(CCSI_Spnt>Tmp_ICCS_Lim)CCSI_Spnt=Tmp_ICCS_Lim; //clamp setpoint to current lim paramater.
+if(CCSI_Spnt>125)CCSI_Spnt=150; //never exceed 150amps for now.
 if(CCSI_Spnt>250)CCSI_Spnt=0; //crude way to prevent rollover
-if((Tmp_Ibatt<=Tmp_ICCS_Lim)&&(Tmp_Vbatt<=Tmp_Vbatt_Spnt))CCSI_Spnt++;
-if(Tmp_Vbatt>=Tmp_Vbatt_Spnt)CCSI_Spnt--;
+if(Tmp_Vbatt<=Tmp_Vbatt_Spnt)CCSI_Spnt++;//increment if voltage lower than setpoint up to max of setpoint current.
+if(Tmp_Vbatt>=Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.
 }
 
 
