@@ -35,6 +35,8 @@ enum class ChargePhase : uint8_t
     InvalidSignal = 0xF
 };
 
+
+
 static uint8_t CP_Mode=0;
 static ChargePhase Chg_Phase=ChargePhase::Standby;
 static uint8_t lim_state=0;
@@ -43,6 +45,15 @@ static uint8_t ctr_328=0;
 static uint8_t ctr_2fa=0;
 static uint8_t ctr_3e8=0;
 static uint8_t vin_ctr=0;
+uint8_t CCS_Plim=0;//ccs power limit flag. 0=no,1=yes,3=invalid.
+uint8_t CCS_Ilim=0;//ccs current limit flag. 0=no,1=yes,3=invalid.
+uint8_t CCS_Vlim=0;//ccs voltage limit flag. 0=no,1=yes,3=invalid.
+uint8_t CCS_Stat=0;//ccs charging status. 0=standby,1=charging,3=invalid.
+uint8_t CCS_Malf=0;//ccs malfunction status. 0=normal,1=fail,3=invalid.
+uint8_t CCS_Bmalf=0;//ccs battery malfunction status. 0=no,1=yes,3=invalid.
+uint8_t CCS_Stop=0;//ccs chargeing stop status. 0=tracking,1=supression,3=invalid.
+uint8_t CCS_Iso=0;//ccs isolation status. 0=invalid,1=valid,2=error,3=invalid signal.
+uint8_t CCS_IntStat=0;//ccs charger internal status. 0=not ready,1=ready,2=switch off charger,3=interruption,4=pre charge,5=insulation monitor,6=estop,7=malfunction,0x13=reserved,0x14=reserved,0x15=invlaid signal.
 static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
 static s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
@@ -97,6 +108,11 @@ Param::SetInt(Param::CCS_V_Avail,V_Avail);//available voltage from ccs charger
 uint16_t I_Avail=((bytes[4]<<8)|(bytes[3]));
 I_Avail=FP_TOINT(FP_DIV(I_Avail,10));
 Param::SetInt(Param::CCS_I_Avail,I_Avail);//available current from ccs charger
+
+CCS_Iso = (bytes[0]>>6)&0x03;
+CCS_IntStat = (bytes[0]>>2)&0x0f;
+Param::SetInt(Param::CCS_COND,CCS_IntStat);//update evse condition on webui
+
 }
 
 void i3LIMClass::handle2B2(uint32_t data[2])  //Lim data. Current and Votage as measured by the ccs charger
@@ -110,7 +126,14 @@ Param::SetInt(Param::CCS_V,CCS_Vmeas);//Voltage measurement from ccs charger
 uint16_t CCS_Imeas=((bytes[3]<<8)|(bytes[2]));
 CCS_Imeas=FP_TOINT(FP_DIV(CCS_Imeas,10));
 Param::SetInt(Param::CCS_I,CCS_Imeas);//Current measurement from ccs charger
-[[maybe_unused]] uint8_t Batt_Cmp=bytes[4]&&0xc0;    //battrery compatability flag from charger? upper two bits of byte 4.
+[[maybe_unused]] uint8_t Batt_Cmp=bytes[4]&0xc0;    //battrery compatability flag from charger? upper two bits of byte 4.
+
+CCS_Ilim = (bytes[5]>>4)&0x03;
+CCS_Vlim = (bytes[5]>>6)&0x03;
+CCS_Stat = bytes[4]&0x03;
+CCS_Malf = (bytes[4]>>2)&0x03;
+CCS_Bmalf = bytes[5]&0x03;
+CCS_Stop = (bytes[5]>>2)&0x03;
 }
 
 void i3LIMClass::handle2EF(uint32_t data[2])  //Lim data. Min available voltage from the ccs charger.
@@ -121,9 +144,8 @@ uint16_t minV_Avail=((bytes[1]<<8)|(bytes[0]));
 minV_Avail=FP_TOINT(FP_DIV(minV_Avail,10));
 Param::SetInt(Param::CCS_V_Min,minV_Avail);//minimum available voltage from ccs charger
 
-uint16_t minI_Avail=(((bytes[3]<<8)|(bytes[2]))&&0x0fff);//12 bit unsigned int min i from ccs charger
-minI_Avail=FP_TOINT(FP_DIV(minI_Avail,10));
-Param::SetInt(Param::CCS_I_Min,minI_Avail);//minimum available current from ccs charger
+CCS_Plim = (bytes[6]>>4)&0x03;
+
 }
 
 void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state and charge flap open/close status.
@@ -495,7 +517,7 @@ Charge phase 4,
 
 */
 
-   Param::SetInt(Param::CCS_State,lim_state);
+   Param::SetInt(Param::CCS_State,lim_state);//update state machine level on webui
     switch(lim_state)
     {
 
@@ -748,10 +770,12 @@ uint16_t Tmp_ICCS_Lim=Param::GetInt(Param::CCS_ILim);
 //int16_t Tmp_Ibatt=Param::GetInt(Param::idc);
 
 if(CCSI_Spnt>Tmp_ICCS_Lim)CCSI_Spnt=Tmp_ICCS_Lim; //clamp setpoint to current lim paramater.
-if(CCSI_Spnt>125)CCSI_Spnt=150; //never exceed 150amps for now.
+if(CCSI_Spnt>150)CCSI_Spnt=150; //never exceed 150amps for now.
 if(CCSI_Spnt>250)CCSI_Spnt=0; //crude way to prevent rollover
-if(Tmp_Vbatt<Tmp_Vbatt_Spnt)CCSI_Spnt++;//increment if voltage lower than setpoint up to max of setpoint current.
+if((Tmp_Vbatt<Tmp_Vbatt_Spnt)&&(CCS_Ilim==0x0)&&(CCS_Plim==0x0))CCSI_Spnt++;//increment if voltage lower than setpoint and power and current limts not set from charger.
 if(Tmp_Vbatt>Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.
+if(CCS_Ilim==0x1)CCSI_Spnt--;//decrement if current limit flag is set
+if(CCS_Plim==0x1)CCSI_Spnt--;//decrement if Power limit flag is set
 }
 
 

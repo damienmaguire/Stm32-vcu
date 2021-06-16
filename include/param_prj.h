@@ -65,7 +65,6 @@
     PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \
     PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_ICmd,       "A",       0,      150,   0,    120  ) \
-    PARAM_ENTRY(CAT_CHARGER, CCS_VLim,       "V",       0,      1000,   400,    79  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_ILim,       "A",       0,      350,   100,    80  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_SOCLim,       "%",       0,      100,   80,    81  ) \
     PARAM_ENTRY(CAT_CHARGER, Chgctrl,  CHGCTRL,0,      1,      0,      77  ) \
@@ -125,11 +124,10 @@
     VALUE_ENTRY(CCS_I,     "A",   2106 ) \
     VALUE_ENTRY(CCS_V,     "V",   2107 ) \
     VALUE_ENTRY(CCS_V_Min, "V",   2108 ) \
-    VALUE_ENTRY(CCS_I_Min, "A",   2208 ) \
     VALUE_ENTRY(CCS_V_Con, "V",   2114 ) \
-    VALUE_ENTRY(CCS_ConStat,   ONOFF,   2109 ) \
     VALUE_ENTRY(hvChg,   ONOFF,   2111 ) \
-    VALUE_ENTRY(CCS_State,   "S",   2211 ) \
+    VALUE_ENTRY(CCS_COND,      CCS_STATUS,  2211 ) \
+    VALUE_ENTRY(CCS_State,      "s",  2213 ) \
     VALUE_ENTRY(CP_DOOR,   dmodes,   2212 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 
@@ -147,6 +145,7 @@
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
 #define CHGTYPS      "0=Off, 1=AC, 2=DCFC"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
+#define CCS_STATUS   "0=NotRdy, 1=ready, 2=SWoff, 3=interruption, 4=Prech, 5=insulmon, 6=estop, 7=malfunction, 15=invalid"
 #define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
 #define ONOFF        "0=Off, 1=On, 2=na"
 #define LOWHIGH        "0=LOW, 1=HIGH, 2=AUTO"
@@ -291,6 +290,19 @@ enum status
     STAT_POTPRESSED = 64,
     STAT_TMPHS = 128,
     STAT_WAITSTART = 256
+};
+
+enum ccs_status
+{
+    CCS_NOTREADY = 0,
+    CCS_READY = 1,
+    CCS_SWITCHOFF = 2,
+    CCS_INTERRUPTION = 3,
+    CCS_PRECHARGE = 4,
+    CCS_INSULATION = 5,
+    CCS_ESTOP = 6,
+    CCS_MALFUNCTION = 7,
+    CCS_INVAID = 15
 };
 
 extern const char* errorListString;
