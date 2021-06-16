@@ -120,6 +120,10 @@ uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array in
 uint16_t minV_Avail=((bytes[1]<<8)|(bytes[0]));
 minV_Avail=FP_TOINT(FP_DIV(minV_Avail,10));
 Param::SetInt(Param::CCS_V_Min,minV_Avail);//minimum available voltage from ccs charger
+
+uint16_t minI_Avail=(((bytes[3]<<8)|(bytes[2]))&&0x0fff);//12 bit unsigned int min i from ccs charger
+minI_Avail=FP_TOINT(FP_DIV(minI_Avail,10));
+Param::SetInt(Param::CCS_I_Min,minI_Avail);//minimum available current from ccs charger
 }
 
 void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state and charge flap open/close status.
@@ -392,7 +396,7 @@ Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1
 uint16_t V_limit=0;
 if(lim_state==6) V_limit=400*10;//set to 400v in energy transfer state
 if(lim_state!=6) V_limit=Param::GetInt(Param::udc)*10;
-uint8_t I_limit=0;
+uint8_t I_limit=110;//110A limit. may not work
 bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
 bytes[1] = V_limit >> 8;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
 bytes[2] = I_limit;  //Fast charge current limit. Not used in logs from 2014-15 vehicle so far. 8 bit unsigned int. scale 1.so max 254amps in theory...
@@ -546,7 +550,7 @@ Charge phase 4,
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
-  CHG_Pwr=49000/25;//49kw approx power
+  CHG_Pwr=44000/25;//39kw approx power
     CCSI_Spnt=0;//No current
         if(Cont_Volts>0)lim_state++; //we wait for the contactor voltage to rise before hitting next state.
 
@@ -562,7 +566,7 @@ Charge phase 4,
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
-  CHG_Pwr=49000/25;//49kw approx power
+  CHG_Pwr=44000/25;//39kw approx power
     CCSI_Spnt=0;//No current
 
         if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate end of weld detect phase
@@ -578,13 +582,13 @@ Charge phase 4,
              case 4:
         {
     Chg_Phase=ChargePhase::Subpoena;//precharge phase in this state
-  //  CONT_Ctrl=0x0; //dc contactor mode control required in DC
+    CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
-  CHG_Pwr=49000/25;//49kw approx power
+  CHG_Pwr=44000/25;//49kw approx power
     CCSI_Spnt=0;//No current
 
         if((Param::GetInt(Param::udc)-Cont_Volts)<20)
@@ -598,7 +602,7 @@ Charge phase 4,
         {
            lim_state++; //next state after 4 secs
            lim_stateCnt=0;
-         //  CONT_Ctrl=0x2; //dc contactor to close mode
+           //CONT_Ctrl=0x2; //dc contactor to close mode
         }
 
     }
@@ -610,9 +614,10 @@ Charge phase 4,
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0xFE;//end of charge timer
   CHG_Status=ChargeStatus::Init;
+ // CHG_Status=ChargeStatus::Rdy; //test here
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
-  CHG_Pwr=49000/25;//49kw approx power
+  CHG_Pwr=44000/25;//49kw approx power
   CCSI_Spnt=0;//No current
 
         lim_stateCnt++;
@@ -629,13 +634,14 @@ Charge phase 4,
         {
     Chg_Phase=ChargePhase::EnergyTransfer;
     CONT_Ctrl=0x2; //dc contactor to close mode
-    FC_Cur=CCSI_Spnt;//Param::GetInt(Param::CCS_ICmd);//ccs current request from web ui for now.
+    //FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs manual control
+    FC_Cur=CCSI_Spnt;//Param::GetInt(Param::CCS_ICmd);//ccs auto ramp
     CCS_Pwr_Con(); //ccs power control subroutine
   EOC_Time=0xFE;//end of charge timer
   CHG_Status=ChargeStatus::Rdy;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
-  CHG_Pwr=49000/25;//49kw approx power
+  CHG_Pwr=44000/25;//49kw approx power
    //we chill out here charging.
 
    if(Param::GetBool(Param::Chgctrl))//if we have a request to terminate from the web ui
@@ -656,7 +662,7 @@ Charge phase 4,
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::NotRdy;
-  CHG_Pwr=49000/25;//49kw approx power
+  CHG_Pwr=44000/25;//49kw approx power
          lim_stateCnt++;
         if(lim_stateCnt>10) //wait 2 seconds
         {
@@ -677,7 +683,7 @@ Charge phase 4,
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::NotRdy;
-  CHG_Pwr=49000/25;//49kw approx power
+  CHG_Pwr=44000/25;//49kw approx power
          lim_stateCnt++;
         if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate contactors open
         if(lim_stateCnt>10)

@@ -125,6 +125,7 @@
     VALUE_ENTRY(CCS_I,     "A",   2106 ) \
     VALUE_ENTRY(CCS_V,     "V",   2107 ) \
     VALUE_ENTRY(CCS_V_Min, "V",   2108 ) \
+    VALUE_ENTRY(CCS_I_Min, "A",   2208 ) \
     VALUE_ENTRY(CCS_V_Con, "V",   2114 ) \
     VALUE_ENTRY(CCS_ConStat,   ONOFF,   2109 ) \
     VALUE_ENTRY(hvChg,   ONOFF,   2111 ) \
