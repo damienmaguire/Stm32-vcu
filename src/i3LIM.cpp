@@ -374,8 +374,8 @@ if(ctr_2fa==5)//only send every 1 second.
 ctr_2fa=0;       //Lim command 3. Used in DC mode. Needs to go every 1 second
 if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
 if(lim_state>=5) V_Batt=398*10;
-bytes[0] = 0x84; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
-bytes[1] = 0x04; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
+bytes[0] = 0x20; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
+bytes[1] = 0x00; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[2] = (uint8_t)Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
                     //more investigation needed here...
                    //Lower nibble seems to be intended for two end charge commands each of 2 bits.
@@ -394,7 +394,7 @@ uint8_t bytes[8]; //Wake up message.
 bytes[0] = 0xf5;
 bytes[1] = 0x28;
 if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[2] = 0x8a;//ignition on
-if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[2] = 0x88;//ignition off
+if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[2] = 0x86;//ignition off 86
 bytes[3] = 0x1d;
 bytes[4] = 0xf1;
 bytes[5] = 0x35;
