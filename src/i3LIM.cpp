@@ -565,7 +565,7 @@ Charge phase 4,
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
     if(CP_Mode==0x5) lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
-        if(lim_stateCnt>40)//8 secs in itialisation as per logs
+        if(lim_stateCnt>10)//2 secs
         {
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
@@ -605,7 +605,7 @@ Charge phase 4,
         if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate end of cable test
         if(lim_stateCnt>10)
         {
-           lim_state++; //next state after 2 secs
+        if(CCS_Iso==0x1) lim_state++; //next state after 2 secs if we have valid iso test
            lim_stateCnt=0;
         }
 
@@ -631,7 +631,7 @@ Charge phase 4,
 
         }
 
-        if(lim_stateCnt>10)
+        if(lim_stateCnt>10)//need to close con at pch stage
         {
            lim_state++; //next state after 4 secs
            lim_stateCnt=0;
@@ -642,6 +642,8 @@ Charge phase 4,
         break;
     case 5:
         {
+        lim_state++; //just go to 6.
+        /*
     Chg_Phase=ChargePhase::EnergyTransfer;
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//ccs current request from web ui for now.
@@ -659,7 +661,7 @@ Charge phase 4,
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
         }
-
+*/
     }
         break;
 
