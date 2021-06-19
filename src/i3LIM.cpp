@@ -370,17 +370,17 @@ Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
 ctr_2fa++;
 if(ctr_2fa==5)//only send every 1 second.
 {
-//    uint16_t V_Batt=0;
+    uint16_t V_Batt=0;
 ctr_2fa=0;       //Lim command 3. Used in DC mode. Needs to go every 1 second
-//if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
-//if(lim_state>=5) V_Batt=398*10;
-bytes[0] = 0xFD; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
-bytes[1] = 0xFF; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
+if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
+if(lim_state>=5) V_Batt=398*10;
+bytes[0] = 0x20; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
+bytes[1] = 0x00; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[2] = (uint8_t)Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
                     //more investigation needed here...
                    //Lower nibble seems to be intended for two end charge commands each of 2 bits.
-bytes[3] = 0xff;//V_Batt & 0xFF;    //lsb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
-bytes[4] = 0xff;//V_Batt >> 8;    //msb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
+bytes[3] = V_Batt & 0xFF;    //lsb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
+bytes[4] = V_Batt >> 8;    //msb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
@@ -418,25 +418,14 @@ Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1
 uint16_t V_limit=0;
 if(lim_state==6) V_limit=400*10;//set to 400v in energy transfer state
 if(lim_state!=6) V_limit=Param::GetInt(Param::udc)*10;
-uint8_t I_limit=0;//110A limit. may not work
+uint8_t I_limit=110;//110A limit. may not work
 bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
 bytes[1] = V_limit >> 8;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
 bytes[2] = I_limit;  //Fast charge current limit. Not used in logs from 2014-15 vehicle so far. 8 bit unsigned int. scale 1.so max 254amps in theory...
-if(lim_state!=6)
-{
-bytes[3] = 0x00;  //time remaining in seconds to hit soc target from byte 7 in AC mode. LSB. 16 bit unsigned int. scale 10.
-bytes[4] = 0x00;  //time remaining in seconds to hit soc target from byte 7 in AC mode. MSB. 16 bit unsigned int. scale 10.
-bytes[5] = 0x00;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. LSB. 16 bit unsigned int. scale 10.
-bytes[6] = 0x00;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.
-}
-if(lim_state==6)
-{
-bytes[3] = 0x1C;  //time remaining in seconds to hit soc target from byte 7 in AC mode. LSB. 16 bit unsigned int. scale 10.
-bytes[4] = 0x02;  //time remaining in seconds to hit soc target from byte 7 in AC mode. MSB. 16 bit unsigned int. scale 10.
-bytes[5] = 0x65;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. LSB. 16 bit unsigned int. scale 10.
-bytes[6] = 0x00;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.
-}
-
+bytes[3] = 0x18;  //time remaining in seconds to hit soc target from byte 7 in AC mode. LSB. 16 bit unsigned int. scale 10.
+bytes[4] = 0x1b;  //time remaining in seconds to hit soc target from byte 7 in AC mode. MSB. 16 bit unsigned int. scale 10.
+bytes[5] = 0xfb;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. LSB. 16 bit unsigned int. scale 10.
+bytes[6] = 0x06;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.
 bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=160*0.5=80%
 
 Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
@@ -564,8 +553,9 @@ Charge phase 4,
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-    if(CP_Mode==0x5) lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
-        if(lim_stateCnt>10)//2 secs
+   // if(CP_Mode==0x5)
+        lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
+        if(lim_stateCnt>40)//2 secs
         {
            lim_state++; //next state after 2 secs
            lim_stateCnt=0;
