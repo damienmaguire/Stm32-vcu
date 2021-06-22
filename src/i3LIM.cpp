@@ -569,7 +569,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::CableTest;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
-  EOC_Time=0xFE;//end of charge timer
+  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
@@ -585,7 +585,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::CableTest;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
-  EOC_Time=0xFE;//end of charge timer
+  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
@@ -607,7 +607,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::Subpoena;//precharge phase in this state
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
-  EOC_Time=0xFE;//end of charge timer
+  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
@@ -662,7 +662,7 @@ Charge phase 4,
     //FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs manual control
     FC_Cur=CCSI_Spnt;//Param::GetInt(Param::CCS_ICmd);//ccs auto ramp
     CCS_Pwr_Con(); //ccs power control subroutine
-  EOC_Time=0xFE;//end of charge timer
+  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Rdy;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
@@ -683,7 +683,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::Shutdown;
     CONT_Ctrl=0x2; //dc contactor to close mode
     FC_Cur=0;//current command to 0
-  EOC_Time=0xFE;//end of charge timer
+  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::NotRdy;
@@ -704,7 +704,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::Shutdown;
     CONT_Ctrl=0x1; //dc contactor to open with diag mode
     FC_Cur=0;//current command to 0
-  EOC_Time=0xFE;//end of charge timer
+  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::NotRdy;
@@ -725,7 +725,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::Standby;
     CONT_Ctrl=0x0; //dc contactor to open mode
     FC_Cur=0;//current command to 0
-  EOC_Time=0xFE;//end of charge timer
+  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::EndCharge;
   CHG_Ready=ChargeReady::NotRdy;
