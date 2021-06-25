@@ -372,8 +372,9 @@ if(ctr_2fa==5)//only send every 1 second.
 {
     uint16_t V_Batt=0;
 ctr_2fa=0;       //Lim command 3. Used in DC mode. Needs to go every 1 second
-if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
-if(lim_state>=5) V_Batt=398*10;
+//if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
+//if(lim_state>=5) V_Batt=398*10;
+V_Batt=398*10;//CV phase target. Unknown if this works or not.
 bytes[0] = 0x20; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[1] = 0x00; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
 bytes[2] = (uint8_t)Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
@@ -416,9 +417,11 @@ Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1
 
                 //Lim command 2. Used in DC mode
 uint16_t V_limit=0;
-if(lim_state==6) V_limit=400*10;//set to 400v in energy transfer state
-if(lim_state!=6) V_limit=Param::GetInt(Param::udc)*10;
-uint8_t I_limit=110;//110A limit. may not work
+//if(lim_state==6) V_limit=401*10;//set to 400v in energy transfer state
+//if(lim_state!=6) V_limit=Param::GetInt(Param::udc)*10;
+if(lim_state==4) V_limit=Param::GetInt(Param::udc)*10;// drop vlim only during precharge
+else V_limit=402*10;//set to 402v in all other states
+uint8_t I_limit=125;//125A limit. may not work
 bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
 bytes[1] = V_limit >> 8;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
 bytes[2] = I_limit;  //Fast charge current limit. Not used in logs from 2014-15 vehicle so far. 8 bit unsigned int. scale 1.so max 254amps in theory...
