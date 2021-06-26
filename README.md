@@ -9,6 +9,7 @@ Video on progress : https://vimeo.com/506480876
 
 # Features
 
+-CCS DC Fast Charge via i3 LIM 
 - Nissan Leaf Gen1 inverter via CAN
 - Lexus GS450H inverter / gearbox via sync serial
 - Toyota Prius/Yaris/Auris Gen 3 inverters via sync serial
