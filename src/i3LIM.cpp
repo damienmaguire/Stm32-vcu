@@ -45,6 +45,8 @@ static uint8_t ctr_328=0;
 static uint8_t ctr_2fa=0;
 static uint8_t ctr_3e8=0;
 static uint8_t vin_ctr=0;
+static uint8_t Timer_1Sec=0;
+static uint8_t Timer_60Sec=0;
 uint8_t CCS_Plim=0;//ccs power limit flag. 0=no,1=yes,3=invalid.
 uint8_t CCS_Ilim=0;//ccs current limit flag. 0=no,1=yes,3=invalid.
 uint8_t CCS_Vlim=0;//ccs voltage limit flag. 0=no,1=yes,3=invalid.
@@ -56,6 +58,8 @@ uint8_t CCS_Iso=0;//ccs isolation status. 0=invalid,1=valid,2=error,3=invalid si
 uint8_t CCS_IntStat=0;//ccs charger internal status. 0=not ready,1=ready,2=switch off charger,3=interruption,4=pre charge,5=insulation monitor,6=estop,7=malfunction,0x13=reserved,0x14=reserved,0x15=invlaid signal.
 static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
+static uint16_t Bulk_SOCt=0;//Time to bulk soc target.
+static uint16_t Full_SOCt=0;//Time to full SOC target.
 static s32fp CHG_Pwr=0; //calculated charge power. 12 bit value scale x25. Values based on 50kw DC fc and 1kw and 3kw ac logs. From bms???
 static int16_t  FC_Cur=0; //10 bit signed int with the ccs dc current command.scale of 1.
 static uint8_t  EOC_Time=0x00; //end of charge time in minutes.
@@ -426,10 +430,10 @@ uint8_t I_limit=125;//125A limit. may not work
 bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
 bytes[1] = V_limit >> 8;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
 bytes[2] = I_limit;  //Fast charge current limit. Not used in logs from 2014-15 vehicle so far. 8 bit unsigned int. scale 1.so max 254amps in theory...
-bytes[3] = 0x18;  //time remaining in seconds to hit soc target from byte 7 in AC mode. LSB. 16 bit unsigned int. scale 10.
-bytes[4] = 0x1b;  //time remaining in seconds to hit soc target from byte 7 in AC mode. MSB. 16 bit unsigned int. scale 10.
-bytes[5] = 0xfb;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. LSB. 16 bit unsigned int. scale 10.
-bytes[6] = 0x06;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.
+bytes[3] = Full_SOCt & 0xFF;  //time remaining in seconds to hit soc target from byte 7 in AC mode. LSB. 16 bit unsigned int. scale 10.Full SOC.
+bytes[4] = Full_SOCt >> 8;  //time remaining in seconds to hit soc target from byte 7 in AC mode. MSB. 16 bit unsigned int. scale 10.Full SOC.
+bytes[5] = Bulk_SOCt & 0xFF;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. LSB. 16 bit unsigned int. scale 10.Bulk SOC.
+bytes[6] = Bulk_SOCt >> 8;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.Bulk SOC.
 bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=160*0.5=80%
 
 Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
@@ -557,7 +561,7 @@ Charge phase 4,
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-   // if(CP_Mode==0x5)
+
         lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
         if(lim_stateCnt>40)//2 secs
         {
@@ -573,11 +577,15 @@ Charge phase 4,
     Chg_Phase=ChargePhase::CableTest;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
-  EOC_Time=0x1E;//end of charge timer
+    EOC_Time=0x1E;//end of charge timer 30 mins
+    Bulk_SOCt=1800; //Set bulk SOC timer to 30 minutes.
+    Full_SOCt=2400; //Set full SOC timer to 40 minutes.
+    Timer_1Sec=5;   //Load the 1 second loop counter. 5 loops=1sec.
+    Timer_60Sec=60;   //Load the 60 second loop counter. 5 loops=1sec.
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
-  CHG_Pwr=44000/25;//39kw approx power
+  CHG_Pwr=44000/25;//44kw approx power
     CCSI_Spnt=0;//No current
         if(Cont_Volts>0)lim_state++; //we wait for the contactor voltage to rise before hitting next state.
 
@@ -589,7 +597,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::CableTest;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
-  EOC_Time=0x1E;//end of charge timer
+ // EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
@@ -611,7 +619,7 @@ Charge phase 4,
     Chg_Phase=ChargePhase::Subpoena;//precharge phase in this state
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
-  EOC_Time=0x1E;//end of charge timer
+ // EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
@@ -621,7 +629,6 @@ Charge phase 4,
         if((Param::GetInt(Param::udc)-Cont_Volts)<20)
         {
            lim_stateCnt++; //we wait for the contactor voltage to be 20v or less diff to main batt v
-          // CONT_Ctrl=0x2; //dc contactor to close mode
 
         }
 
@@ -666,7 +673,8 @@ Charge phase 4,
     //FC_Cur=Param::GetInt(Param::CCS_ICmd);//ccs manual control
     FC_Cur=CCSI_Spnt;//Param::GetInt(Param::CCS_ICmd);//ccs auto ramp
     CCS_Pwr_Con(); //ccs power control subroutine
-  EOC_Time=0x1E;//end of charge timer
+    Chg_Timers();   //Handle remaining time timers.
+//  EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Rdy;
   CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::Rdy;
@@ -785,4 +793,22 @@ if(CCS_Ilim==0x1)CCSI_Spnt--;//decrement if current limit flag is set
 if(CCS_Plim==0x1)CCSI_Spnt--;//decrement if Power limit flag is set
 }
 
+void i3LIMClass::Chg_Timers()
+{
+    Timer_1Sec--;   //decrement the loop counter
+
+    if(Timer_1Sec==0)   //1 second has elapsed
+    {
+        Timer_1Sec=5;
+        Bulk_SOCt--;    //Decrement timers. Just on time for now will be current based in final version
+        Full_SOCt--;
+        Timer_60Sec--;  //decrement the 1 minute counter
+        if(Timer_60Sec==0)
+        {
+            Timer_60Sec=60;
+             EOC_Time--;    //decrement end of charge minutes timer
+        }
+
+    }
+}
 

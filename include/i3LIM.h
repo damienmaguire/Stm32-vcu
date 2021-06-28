@@ -33,7 +33,7 @@ static void Send10msMessages();
 static i3LIMChargingState Control_Charge();
 private:
 static void CCS_Pwr_Con();
-
+static void Chg_Timers();
 };
 
 #endif /* i3LIM_h */
