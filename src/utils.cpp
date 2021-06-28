@@ -5,7 +5,7 @@ namespace utils {
 #define CAN_TIMEOUT       50  //500ms
 #define PRECHARGE_TIMEOUT 500 //5s
 
-uint8_t SOCVal=0;
+uint32_t SOCVal=0;
 int32_t NetWh=0;
 
 
@@ -293,16 +293,14 @@ void displayThrottle()
 
 void CalcSOC()
 {
-int32_t Capacity_Parm = Param::GetInt(Param::BattCap);
-//int32_t kwh_Used = FP_FROMINT(ISA::KWh);    //grab actual Wh from isa shunt
-int32_t kwh_Used = FP_TOINT(Param::Get(Param::KWh)); //convert to Wh
-if(kwh_Used<0)
-{
-    NetWh = Capacity_Parm - kwh_Used;
-    SOCVal = (kwh_Used/Capacity_Parm)*100;
-}
+uint32_t Capacity_Parm = FP_FROMINT(Param::Get(Param::BattCap));
+uint32_t kwh_Used = FP_FROMFLT(ABS(Param::Get(Param::KWh)));
 
-if(kwh_Used>0) SOCVal=100;
+
+    SOCVal = 100-(FP_MUL(FP_DIV(kwh_Used,Capacity_Parm),100));
+
+
+if(SOCVal>100) SOCVal=100;
 Param::SetInt(Param::SOC,SOCVal);
 
 }

@@ -164,7 +164,8 @@ void i3LIMClass::Send10msMessages()
    uint8_t V_Batt2=(Param::GetInt(Param::udc))/4;
    int32_t I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
    //I_Batt=0xa0a0;
-   uint16_t SOC_Local=25*10;//(Param::GetInt(Param::SOC))*10;
+   //uint16_t SOC_Local=25*10;//(Param::GetInt(Param::SOC))*10;
+   uint16_t SOC_Local=(Param::GetInt(Param::SOC))*10;
 uint8_t bytes[8]; //seems to be from i3 BMS.
 bytes[0] = I_Batt & 0xFF;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
 bytes[1] = I_Batt >> 8;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
