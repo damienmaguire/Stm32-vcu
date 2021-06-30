@@ -37,6 +37,7 @@ enum class ChargePhase : uint8_t
 
 
 
+
 static uint8_t CP_Mode=0;
 static ChargePhase Chg_Phase=ChargePhase::Standby;
 static uint8_t lim_state=0;
@@ -47,6 +48,7 @@ static uint8_t ctr_3e8=0;
 static uint8_t vin_ctr=0;
 static uint8_t Timer_1Sec=0;
 static uint8_t Timer_60Sec=0;
+uint8_t ChargeType=0;
 uint8_t CCS_Plim=0;//ccs power limit flag. 0=no,1=yes,3=invalid.
 uint8_t CCS_Ilim=0;//ccs current limit flag. 0=no,1=yes,3=invalid.
 uint8_t CCS_Vlim=0;//ccs voltage limit flag. 0=no,1=yes,3=invalid.
@@ -98,6 +100,7 @@ void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
     Cont_Volts=bytes[7]*2;
    // Cont_Volts=FP_MUL(Cont_Volts,2);
     Param::SetInt(Param::CCS_V_Con,Cont_Volts);//voltage measured on the charger side of the hv ccs contactors in the car
+    ChargeType=bytes[6];
 
 }
 
@@ -365,8 +368,9 @@ ctr_3e8++;
 if(ctr_3e8==5)//only send every 1 second.
 {
  ctr_3e8=0;
-if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
-if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
+//if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
+//if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
+bytes[0] = 0xf1;
 bytes[1] = 0xff;
 Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
 }
@@ -531,7 +535,8 @@ Charge phase 4,
 
     case 0:
     {
-    Chg_Phase=ChargePhase::Standby;
+ //   Chg_Phase=ChargePhase::Standby;
+ Chg_Phase=ChargePhase::Initialisation;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
@@ -561,13 +566,13 @@ Charge phase 4,
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-
-        lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
-        if(lim_stateCnt>40)//2 secs
-        {
-           lim_state++; //next state after 2 secs
-           lim_stateCnt=0;
-        }
+    if(ChargeType==0x09) lim_state++; //Go to next state once we detect CCS type 2 charger type
+      //  lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
+      //  if(lim_stateCnt>40)//2 secs
+        //{
+       //    lim_state++; //next state after 2 secs
+       //    lim_stateCnt=0;
+      //  }
 
     }
         break;
