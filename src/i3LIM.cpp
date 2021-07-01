@@ -290,11 +290,13 @@ bytes[6] = 0xac;
 bytes[7] = 0x03;
 Can::GetInterface(0)->Send(0x330, (uint32_t*)bytes,8); //Send on CAN1
 
+uint16_t SOC_Local=(Param::GetInt(Param::SOC))*2;
 bytes[0] = 0x2c;//BMS soc msg. May need to be dynamic
 bytes[1] = 0xe2;
 bytes[2] = 0x10;
 bytes[3] = 0xa3;
-bytes[4] = 0x30;    //display soc. scale 0.5.
+//bytes[4] = 0x30;    //display soc. scale 0.5.
+bytes[4] = SOC_Local;    //display soc. scale 0.5.
 bytes[5] = 0xff;
 bytes[6] = 0x02;
 bytes[7] = 0xff;
@@ -686,7 +688,7 @@ Charge phase 4,
   CHG_Pwr=44000/25;//49kw approx power
    //we chill out here charging.
 
-   if(Param::GetBool(Param::Chgctrl))//if we have a request to terminate from the web ui
+   if(Param::GetBool(Param::Chgctrl)||CCS_IntStat==0x02)//if we have a request to terminate from the web ui or the evse then move to next state.
       {
         FC_Cur=0;//set current to 0
         lim_state++; //move to state 7 (shutdown)
@@ -703,7 +705,7 @@ Charge phase 4,
   EOC_Time=0x1E;//end of charge timer
   CHG_Status=ChargeStatus::Init;
   CHG_Req=ChargeRequest::Charge;
-  CHG_Ready=ChargeReady::NotRdy;
+  CHG_Ready=ChargeReady::Rdy;
   CHG_Pwr=44000/25;//49kw approx power
          lim_stateCnt++;
         if(lim_stateCnt>10) //wait 2 seconds
