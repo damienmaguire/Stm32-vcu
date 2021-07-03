@@ -156,10 +156,12 @@ CCS_Plim = (bytes[6]>>4)&0x03;
 }
 
 void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state and charge flap open/close status.
-
 {
 uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-[[maybe_unused]] uint8_t Cont_stat=bytes[2];
+// Only the top 6-bits indicate the contactor state
+uint8_t Cont_stat=bytes[2] >> 2;
+Param::SetInt(Param::CCS_Contactor,Cont_stat);
+
 uint8_t drmodes=bytes[2]&0x03;
 Param::SetInt(Param::CP_DOOR,drmodes);
 }
@@ -664,11 +666,10 @@ Charge phase 4,
             CHG_Pwr = 44000 / 25; //49kw approx power
             CCSI_Spnt = 0;        //No current
 
-            // Contactors closed for 4 seconds before proceeding
-            if (lim_stateCnt > 10)
+            // Once the contactors report as closed we're OK to proceed to energy transfer
+            if (Param::GetBool(Param::CCS_Contactor))
             {
-                lim_state++; //next state after 4 secs
-                lim_stateCnt = 0;
+                lim_state++;
             }
         }
         break;
