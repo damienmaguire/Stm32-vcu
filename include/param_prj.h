@@ -129,6 +129,7 @@
     VALUE_ENTRY(CCS_COND,      CCS_STATUS,  2211 ) \
     VALUE_ENTRY(CCS_State,      "s",  2213 ) \
     VALUE_ENTRY(CP_DOOR,   dmodes,   2212 ) \
+    VALUE_ENTRY(CCS_Contactor,   ONOFF,   2214 ) \
     VALUE_ENTRY(cpuload,      "%",     2035 ) \
 
 //Next value Id: 2080
