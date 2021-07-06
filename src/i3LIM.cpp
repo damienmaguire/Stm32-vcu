@@ -539,8 +539,8 @@ Charge phase 4,
 
     case 0:
     {
- //   Chg_Phase=ChargePhase::Standby;
- Chg_Phase=ChargePhase::Initialisation;
+    Chg_Phase=ChargePhase::Standby;
+ //Chg_Phase=ChargePhase::Initialisation;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
