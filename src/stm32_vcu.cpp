@@ -399,7 +399,7 @@ static void Ms10Task(void)
     if (newMode != MOD_OFF)
     {
         DigIo::dcsw_out.Set();
-        DigIo::err_out.Clear();
+//        DigIo::err_out.Clear();
         Param::SetInt(Param::opmode, newMode);
         ErrorMessage::UnpostAll();
 
@@ -409,7 +409,7 @@ static void Ms10Task(void)
     if (opmode == MOD_OFF)
     {
         DigIo::dcsw_out.Clear();
-        DigIo::err_out.Clear();
+//        DigIo::err_out.Clear();
         DigIo::prec_out.Clear();
         DigIo::inv_out.Clear();//inverter power off
         Param::SetInt(Param::opmode, newMode);
