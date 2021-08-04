@@ -52,7 +52,7 @@ void Can_E46::Msg316(uint16_t speed_input)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Can_E46::Msg329([[maybe_unused]] uint16_t tempValue)
+void Can_E46::Msg329(uint16_t tempValue)
 {
     //********************temp sense  *******************************
     //  tempValue=analogRead(tempIN); //read Analog pin voltage
@@ -87,7 +87,7 @@ void Can_E46::Msg329([[maybe_unused]] uint16_t tempValue)
     // Byte 0 - Bits 6-7 Multiplexer ID, Bits 0-5 Data
     bytes[0]=ABSMsg;  //needs to cycle 11,86,d9
     // Byte 1 - Coolant Temperature
-    bytes[1]=0x00;//tempValue; //temp bit tdata
+    bytes[1]=tempValue; //temp bit tdata
     // Byte 2 - Atmospheric Pressure in mbar
     bytes[2]=0xc5;
     // Byte 3 - Status bits - 0x10 Engine running,

@@ -287,8 +287,11 @@ static void Ms10Task(void)
     // Send CAN 2 (Vehicle CAN) messages if necessary for vehicle integration.
     if (targetVehicle == BMW_E39)
     {
-        // FIXME: Note this is essentially the same as E46. 0x545 should be slightly different. Refactor.
-        Can_E39::SendE39(speed, Param::Get(Param::tmphs)); //send rpm and heatsink temp to e39 cluster
+        uint16_t tempGauge = utils::change(Param::Get(Param::tmphs),15,80,88,254); //Map to e39 temp gauge
+       //Messages required for E39
+        Can_E39::Msg316(speed);//send rpm to e39 dash
+        Can_E39::Msg329(tempGauge);//send heatsink temp to E39 dash temp gauge
+        Can_E39::Msg545();
     }
     else if (targetVehicle == BMW_E46)
     {
