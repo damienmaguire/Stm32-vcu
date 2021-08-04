@@ -318,8 +318,10 @@ static void Ms10Task(void)
     {
       if(chargeMode==false)
       {
-        DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
+        //DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
       }
+        DigIo::gp_out2.Set();//Negative contactors on
+        DigIo::gp_out1.Set();//Coolant pump on
         DigIo::prec_out.Set();//commence precharge
         opmode = MOD_PRECHARGE;
         Param::SetInt(Param::opmode, opmode);
@@ -382,7 +384,7 @@ static void Ms10Task(void)
 
     if(opmode == MOD_RUN) //only shut off via ign command if not in charge mode
     {
-
+    DigIo::inv_out.Set();//inverter power on.
     if(targetVehicle == _vehmodes::BMW_E65)
     {
         if(!E65Vehicle.getTerminal15()) opmode = MOD_OFF; //switch to off mode via CAS command in an E65
@@ -408,10 +410,12 @@ static void Ms10Task(void)
 
     if (opmode == MOD_OFF)
     {
+        DigIo::inv_out.Clear();//inverter power off
         DigIo::dcsw_out.Clear();
+        DigIo::gp_out2.Clear();//Negative contactors off
+        DigIo::gp_out1.Clear();//Coolant pump off
 //        DigIo::err_out.Clear();
         DigIo::prec_out.Clear();
-        DigIo::inv_out.Clear();//inverter power off
         Param::SetInt(Param::opmode, newMode);
         if(targetVehicle == _vehmodes::BMW_E65) E65Vehicle.DashOff();
     }
