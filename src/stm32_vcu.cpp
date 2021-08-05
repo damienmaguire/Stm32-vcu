@@ -23,7 +23,6 @@
 #define RMS_SAMPLES 256
 #define SQRT2OV1 0.707106781187
 #define  UserCAN  2
-#define  Zombie  3
 #define  BMW_E46  0
 #define  User  2
 #define  None  4
@@ -157,10 +156,18 @@ static void Ms100Task(void)
     s32fp cpuLoad = FP_FROMINT(scheduler->GetCpuLoad());
     Param::SetFlt(Param::cpuload, cpuLoad / 10);
     Param::SetInt(Param::lasterr, ErrorMessage::GetLastError());
-
+    int opmode = Param::GetInt(Param::opmode);
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
     utils::CalcSOC();
+
+        if(targetInverter == _invmodes::OpenI)
+    {
+      if (opmode == MOD_RUN) Can_OI::Send100msMessages();
+
+    }
+
+
 
         if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
@@ -279,6 +286,13 @@ static void Ms10Task(void)
     {
         gs450Inverter.setTorqueTarget(torquePercent);//map throttle for GS450HClass inverter
         speed = GS450HClass::mg2_speed;//return MG2 rpm as speed param
+    }
+
+            if(targetInverter == _invmodes::OpenI)
+    {
+        torquePercent = utils::change(torquePercent, 0, 3040, 0, 1000); //map throttle for OI
+        Can_OI::SetThrottle(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
+
     }
 
     Param::SetInt(Param::speed, speed);

@@ -139,7 +139,7 @@
 #define POTMODES     "0=SingleRegen, 1=DualChannel, 2=CAN"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
-#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=Zombie, 4=Prius_Gen3"
+#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3"
 #define PLTMODES     "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=User, 3=None , 5=BMW_E39 , 6=VAG"
 //#define OPMODES      "0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat, 7=ChargeStart, 8=ConnectorLock, 9=Charge, 10=ChargeStop"
@@ -218,7 +218,7 @@ enum _invmodes
     Leaf_Gen1 = 0,
     GS450H = 1,
     UserCAN = 2,
-    Zombie = 3,
+    OpenI = 3,
     Prius_Gen3 = 4
 };
 
