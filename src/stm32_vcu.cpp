@@ -202,6 +202,14 @@ static void Ms100Task(void)
         Param::SetInt(Param::INVudc,(LeafINV::voltage/2));//display inverter derived dc link voltage on web interface
     }
 
+        if (targetInverter == _invmodes::OpenI)
+    {
+        Param::SetInt(Param::tmphs,Can_OI::inv_temp);//send leaf temps to web interface
+        Param::SetInt(Param::tmpm,Can_OI::motor_temp);
+        Param::SetInt(Param::InvStat, Can_OI::error); //update inverter status on web interface
+        Param::SetInt(Param::INVudc,Can_OI::voltage);//display inverter derived dc link voltage on web interface
+    }
+
     if(targetVehicle == _vehmodes::BMW_E65)
     {
         if (E65Vehicle.getTerminal15())
@@ -252,7 +260,7 @@ static void Ms10Task(void)
 
     if (Param::GetInt(Param::opmode) == MOD_RUN)
     {
-        torquePercent = utils::ProcessThrottle(previousSpeed, can);
+        torquePercent = utils::ProcessThrottle(previousSpeed);
         FP_TOINT(torquePercent);
         if(ABS(previousSpeed)>=maxRevs) torquePercent=0;//Hard cut limiter:)
     }
@@ -292,7 +300,7 @@ static void Ms10Task(void)
     {
         torquePercent = utils::change(torquePercent, 0, 3040, 0, 1000); //map throttle for OI
         Can_OI::SetThrottle(Param::Get(Param::dir),torquePercent);//send direction and torque request to inverter
-
+        speed = ABS(Can_OI::speed);//set motor rpm on interface
     }
 
     Param::SetInt(Param::speed, speed);
@@ -548,6 +556,11 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
             // process BMW E65 CAN Gear Stalk messages
             E65Vehicle.Gear(id, data);
         }
+        if (targetInverter == _invmodes::OpenI)
+        {
+            // process leaf inverter return messages
+            Can_OI::DecodeCAN(id, data);
+        }
 
         break;
     }
@@ -594,6 +607,9 @@ extern "C" int main(void)
     c.SetReceiveCallback(CanCallback);
     c.RegisterUserMessage(0x1DA);//Leaf inv msg
     c.RegisterUserMessage(0x55A);//Leaf inv msg
+    c.RegisterUserMessage(0x190);//Open Inv Msg
+    c.RegisterUserMessage(0x19A);//Open Inv Msg
+    c.RegisterUserMessage(0x1A4);//Open Inv Msg
     c.RegisterUserMessage(0x521);//ISA MSG
     c.RegisterUserMessage(0x522);//ISA MSG
     c.RegisterUserMessage(0x523);//ISA MSG

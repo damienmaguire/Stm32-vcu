@@ -33,7 +33,7 @@
     PARAM_ENTRY(CAT_THROTTLE,potmax,      "dig",     0,      4095,   4095,   18  ) \
     PARAM_ENTRY(CAT_THROTTLE,pot2min,     "dig",     0,      4095,   4095,   63  ) \
     PARAM_ENTRY(CAT_THROTTLE,pot2max,     "dig",     0,      4095,   4095,   64  ) \
-    PARAM_ENTRY(CAT_THROTTLE,potmode,     POTMODES,  0,      2,      0,      82  ) \
+    PARAM_ENTRY(CAT_THROTTLE,potmode,     POTMODES,  0,      1,      0,      82  ) \
     PARAM_ENTRY(CAT_THROTTLE,dirmode,     DIRMODES,  0,      4,      1,      95  ) \
     PARAM_ENTRY(CAT_THROTTLE,throtramp,   "%/10ms",  0.1,    100,    100,    81  ) \
     PARAM_ENTRY(CAT_THROTTLE,throtramprpm,"rpm",     0,      20000,  20000,  85  )  \
@@ -60,7 +60,7 @@
     PARAM_ENTRY(CAT_COMM,     canspeed,    CANSPEEDS, 0,      3,      1,      83  ) \
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
     PARAM_ENTRY(CAT_CHARGER, chargemodes,  CHGMODS,0,      4,      0,      74  ) \
-    PARAM_ENTRY(CAT_CHARGER, BattCap,       "kWh",       0,      250,   22,    82  ) \
+    PARAM_ENTRY(CAT_CHARGER, BattCap,       "kWh",       0,      250,   22,    182  ) \
     PARAM_ENTRY(CAT_CHARGER, interface,  CHGint,0,      2,      0,      78  ) \
     PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \
     PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
@@ -136,7 +136,7 @@
 
 #define VERSTR STRINGIFY(4=VER)
 #define dmodes     "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
-#define POTMODES     "0=SingleRegen, 1=DualChannel, 2=CAN"
+#define POTMODES     "0=Single, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3"
@@ -266,7 +266,6 @@ enum _potmodes
 {
     POTMODE_REGENADJ = 0,
     POTMODE_DUALCHANNEL,
-    POTMODE_CAN
 };
 
 enum _canio

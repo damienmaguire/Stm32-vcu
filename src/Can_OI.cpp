@@ -41,17 +41,23 @@ int16_t Can_OI::final_torque_request;
 
 void Can_OI::DecodeCAN(int id, uint32_t data[2])
 {
+//0x1A4 bits 0-15 inverter voltage x10
+//0x190 bits 0-15 motor rpm x1
+//0x19A bits 0-15 heatsink temp x10
 
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
-    if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
+    if (id == 0x1A4)// THIS MSG CONTAINS INV VOLTAGE
     {
-    uint8_t test=bytes[0];
-    test++;
+        voltage=((bytes[1]<<8)|(bytes[0]))/10;
     }
-    else if (id == 0x55A)// THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
+    else if (id == 0x190)// THIS MSG CONTAINS MOTOR RPM
     {
-        inv_temp = 0;//INVERTER TEMP
+    speed=((bytes[1]<<8)|(bytes[0]));
+    }
+        else if (id == 0x19A)// THIS MSG CONTAINS INVERTER HEATSINK TEMP
+    {
+        inv_temp = ((bytes[1]<<8)|(bytes[0]))/10;//INVERTER TEMP
         motor_temp = 0;//MOTOR TEMP
     }
 

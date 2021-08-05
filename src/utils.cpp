@@ -44,34 +44,17 @@ void GetDigInputs(Can* can)
     Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0 || (DigIo::bms_in.Get()) );
 }
 
-int GetUserThrottleCommand(Can* can)
+int GetUserThrottleCommand()
 {
     int potval, pot2val;
     bool brake = Param::GetBool(Param::din_brake);
     int potmode = Param::GetInt(Param::potmode);
 
-    if (potmode == POTMODE_CAN)
-    {
-        //500ms timeout
-        if ((rtc_get_counter_val() - can->GetLastRxTimestamp()) < CAN_TIMEOUT)
-        {
-            potval = Param::GetInt(Param::pot);
-            pot2val = Param::GetInt(Param::pot2);
-        }
-        else
-        {
-//            DigIo::err_out.Set();
-            utils::PostErrorIfRunning(ERR_CANTIMEOUT);
-            return 0;
-        }
-    }
-    else
-    {
         potval = AnaIn::throttle1.Get();
         pot2val = AnaIn::throttle2.Get();
         Param::SetInt(Param::pot, potval);
         Param::SetInt(Param::pot2, pot2val);
-    }
+
 
     /* Error light on implausible value */
     if (!Throttle::CheckAndLimitRange(&potval, 0))
@@ -238,7 +221,7 @@ s32fp ProcessUdc(uint32_t oldTime, int motorSpeed)
     return udcfp;
 }
 
-s32fp ProcessThrottle(int speed, Can* can)
+s32fp ProcessThrottle(int speed)
 {
     // s32fp throtSpnt;
     s32fp finalSpnt;
@@ -248,7 +231,7 @@ s32fp ProcessThrottle(int speed, Can* can)
     else
         Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
 
-    finalSpnt = utils::GetUserThrottleCommand(can);
+    finalSpnt = utils::GetUserThrottleCommand();
 
 //   GetCruiseCreepCommand(finalSpnt, throtSpnt);
     finalSpnt = Throttle::RampThrottle(finalSpnt);
