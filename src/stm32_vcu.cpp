@@ -134,9 +134,8 @@ static void Ms200Task(void)
 
     if(targetCharger == _chgmodes::EXT_DIGI)
     {
-        chargeMode = DigIo::HV_req.Get();//false;             //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
-                                                                //response with a 12v output signal on a digital output.
-
+   if(opmode != MOD_RUN)  chargeMode = DigIo::HV_req.Get();//false; //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
+                                                                    //response with a 12v output signal on a digital output.
 
     }
 
