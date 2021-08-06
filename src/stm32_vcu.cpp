@@ -26,7 +26,7 @@
 #define  BMW_E46  0
 #define  User  2
 #define  None  4
-#define  BMW_E39  5
+//#define  BMW_E39  5
 #define  VAG  6
 
 
@@ -566,6 +566,11 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
             Can_OI::DecodeCAN(id, data);
         }
 
+        if(targetVehicle == _vehmodes::BMW_E39)
+        {
+            Can_E39::DecodeCAN(id, data);
+        }
+
         break;
     }
 }
@@ -632,8 +637,8 @@ extern "C" int main(void)
     c2.SetReceiveCallback(CanCallback);
     c2.RegisterUserMessage(0x130);//E65 CAS
     c2.RegisterUserMessage(0x192);//E65 Shifter
-   c2.RegisterUserMessage(0x108);//Charger HV request
-
+    c2.RegisterUserMessage(0x108);//Charger HV request
+    c2.RegisterUserMessage(0x153);//E39/E46 ASC1 message
 
     can = &c; // FIXME: What about CAN2?
 

@@ -13,7 +13,7 @@ class Can_E39
 {
 
 public:
-
+    static      void DecodeCAN(int id, uint32_t data[2]);
     static		void Msg316(uint16_t outRPM);
     static		void Msg329(uint16_t tempValue);
     static		void Msg545();

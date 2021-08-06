@@ -85,6 +85,7 @@
     VALUE_ENTRY(AMPh,          "Ah",   2049 ) \
     VALUE_ENTRY(SOC,          "%",   2110 ) \
     VALUE_ENTRY(speed,        "rpm",   2012 ) \
+    VALUE_ENTRY(Veh_Speed,     "kph",   2305 ) \
     VALUE_ENTRY(torque,       "dig",   2013 ) \
     VALUE_ENTRY(pot,          "dig",   2015 ) \
     VALUE_ENTRY(pot2,         "dig",   2016 ) \

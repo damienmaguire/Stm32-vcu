@@ -224,5 +224,70 @@ void Can_E39::Msg545()  //DME4
     Can::GetInterface(1)->Send(0x545, (uint32_t*)bytes,8); //Send on CAN2
 }
 
+void Can_E39::DecodeCAN(int id, uint32_t data[2])
+{
+    //ASC1 message data 0x153
+    /*
+        Byte 0 - Bitfield
+        Bit 0 - LV_ASC_REQ
+        Bit 1 - LV_MSR_REQ
+        Bit 2 - LV_ASC_PASV
+        Bit 3 - LV_ASC_SW_INT
+        Bit 4 - LV_BLS
+        Bit 5 - LV_
+        Bit 6 - LV_
+        Bit 7 - LV_ABS_LED
+    Byte 1 - VSS [LSB]
+        Bit 0 - LV_ASC_REQ
+        Bit 1 - LV_MSR_REQ
+        Bit 2 - LV_ASC_PASV
+        Bit 3 - VSS [0]
+        Bit 4 - VSS [1]
+        Bit 5 - VSS [2]
+        Bit 6 - VSS [3]
+        Bit 7 - VSS [4]
+    Byte 2 - VSS [MSB]
 
+        Vehicle speed signal in Km/h
+        Calculation = ( (HEX[MSB] * 256) + HEX[LSB]) * 0.0625
+        Min: 0x160 (0 Km/h)
+
+    Byte 3 - MD_IND_ASC
+
+        Torque intervention for ASC function
+        Calculation = HEX * 0.390625
+        Min: 0x00 (0.0%) max. reductiuon
+        Max: 0xFF (99.6094%) no reduction
+
+    Byte 4 - MD_IND_MSR
+
+        Torque intervention for MSR function
+        Calculation = HEX * 0.390625
+        Min: 0x00 (0.0%) no engine torque increase
+        Max: 0xFF (99.6094%) max engine torque increase
+
+    Byte 5 - Unused
+    Byte 6 - MD_IND_ASC_LM
+
+        Torque intervention for MSR function
+        Calculation = HEX * 0.390625
+        Min: 0x00 (0.0%) max. reductiuon
+        Max: 0xFF (99.6094%) no reduction
+
+    Byte 7 - ASC ALIVE
+    */
+
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+    if (id == 0x153)// ASC1 contains road speed signal.
+    {
+        //Vehicle speed signal in Km/h
+        //Calculation = ( (HEX[MSB] * 256) + HEX[LSB]) * 0.0625
+        //Min: 0x160 (0 Km/h)
+
+        uint16_t road_speed=((bytes[2]*256)+bytes[1])*0.0625;
+        Param::SetInt(Param::Veh_Speed,road_speed);
+    }
+
+}
 
