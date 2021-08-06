@@ -102,6 +102,8 @@ void Can_OI::Send100msMessages()
    // Bit 5: bms
    //1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms
 if(Param::GetBool(Param::din_forward))tempIO+=8;
+if(Param::GetBool(Param::din_reverse))tempIO+=16;
+if(Param::GetBool(Param::din_brake))tempIO+=4;
 if(Param::GetBool(Param::din_start))tempIO+=2;
 bytes[0] = tempIO;
 

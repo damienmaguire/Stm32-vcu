@@ -134,9 +134,10 @@ static void Ms200Task(void)
 
     if(targetCharger == _chgmodes::EXT_DIGI)
     {
-        chargeMode = false;             //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
-                                        //response with a 12v output signal on a digital output.
-                                        //will be implemented on release HW.
+        chargeMode = DigIo::HV_req.Get();//false;             //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
+                                                                //response with a 12v output signal on a digital output.
+
+
     }
 
 
@@ -227,6 +228,10 @@ static void Ms100Task(void)
         E65Vehicle.DashOff();
     }
 
+    if(targetVehicle != _vehmodes::BMW_E65) //if not E65 then T15 via digital input.
+    {
+      Param::SetInt(Param::T15Stat,DigIo::t15_digi.Get());
+    }
 
     if(targetVehicle==VAG) Can_VAG::SendVAG100msMessage();
 
@@ -416,8 +421,8 @@ static void Ms10Task(void)
     }
     else
     {
-        //switch to off mode via igntition digital input. To be implemented in release HW
-        if(!Param::GetBool(Param::din_forward)) opmode = MOD_OFF; //using the forward input to test in the E46
+        //switch to off mode via igntition digital input.
+        if(!Param::GetBool(Param::T15Stat)) opmode = MOD_OFF;
     }
     }
 

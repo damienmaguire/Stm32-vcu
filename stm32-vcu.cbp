@@ -50,6 +50,7 @@
 		<Unit filename="include/BMW_E65.h" />
 		<Unit filename="include/Can_E39.h" />
 		<Unit filename="include/Can_E46.h" />
+		<Unit filename="include/Can_OI.h" />
 		<Unit filename="include/Can_VAG.h" />
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/anain_prj.h" />
@@ -101,6 +102,7 @@
 		<Unit filename="src/BMW_E65.cpp" />
 		<Unit filename="src/Can_E39.cpp" />
 		<Unit filename="src/Can_E46.cpp" />
+		<Unit filename="src/Can_OI.cpp" />
 		<Unit filename="src/Can_VAG.cpp" />
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/chademo.cpp" />

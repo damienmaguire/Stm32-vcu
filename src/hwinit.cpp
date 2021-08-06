@@ -28,6 +28,7 @@
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/rtc.h>
+#include <libopencm3/stm32/spi.h>
 #include "hwdefs.h"
 #include "hwinit.h"
 
@@ -62,6 +63,36 @@ void clock_setup(void)
     rcc_periph_clock_enable(RCC_AFIO); //CAN AND USART3
     rcc_periph_clock_enable(RCC_CAN1); //CAN1
     rcc_periph_clock_enable(RCC_CAN2); //CAN2
+    rcc_periph_clock_enable(RCC_SPI2);  //CAN3
+    rcc_periph_clock_enable(RCC_SPI3);  //Digital POTS
+}
+
+
+void spi2_setup()   //spi 2 used for CAN3
+{
+
+   spi_init_master(SPI2, SPI_CR1_BAUDRATE_FPCLK_DIV_32, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
+                  SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_DFF_16BIT, SPI_CR1_MSBFIRST);
+
+ //  spi_enable_software_slave_management(SPI2);
+   spi_set_nss_high(SPI2);
+   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO15 | GPIO13);//MOSI , CLK
+   gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO14);//MISO
+   spi_enable(SPI2);
+}
+
+void spi3_setup()   //spi3 used for digi pots (fuel gauge etc)
+{
+   gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, AFIO_MAPR_SPI3_REMAP);
+
+   spi_init_master(SPI3, SPI_CR1_BAUDRATE_FPCLK_DIV_32, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
+                  SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_DFF_16BIT, SPI_CR1_MSBFIRST);
+
+   spi_enable_software_slave_management(SPI3);
+   spi_set_nss_high(SPI3);
+   gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO12 | GPIO10);//MOSI , CLK
+   gpio_set_mode(GPIOC, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO11);//MISO
+   spi_enable(SPI3);
 }
 
 static bool is_floating(uint32_t port, uint16_t pin)
