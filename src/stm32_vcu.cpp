@@ -113,7 +113,7 @@ static void Ms200Task(void)
 
     }
 
-
+}
 
     if(targetCharger == _chgmodes::Off)
     {
@@ -141,7 +141,7 @@ static void Ms200Task(void)
 
 
 
-}
+
 }
 
 
