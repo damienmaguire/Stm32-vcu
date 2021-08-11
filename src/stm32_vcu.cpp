@@ -173,7 +173,7 @@ static void Ms100Task(void)
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
     utils::CalcSOC();
 
-    spi_write(SPI2,0xAA);//test
+    //spi_write(SPI2,0xAA);//test
 
 
         if(targetInverter == _invmodes::OpenI)

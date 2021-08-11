@@ -3,6 +3,7 @@
 
 static uint8_t counter_329 = 0;
 static uint8_t ABSMsg = 0;
+static uint16_t Consumption = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -200,6 +201,7 @@ void Can_E39::Msg545()  //DME4
 //4500   6   110   #110####
 //4000   7   111   #111####
 
+Consumption++;  //just inc this as a test
     //MSG 0x545
     //Can bus data packet values to be sent
     uint8_t bytes[8];
@@ -207,9 +209,9 @@ void Can_E39::Msg545()  //DME4
     // Byte 0 - 2 Check Engine, 8 Cruise Enabled , 0x10 EML, 0x40 Gas Cap
     bytes[0]=0x00;
     // Byte 1 - Fuel consumption LSB
-    bytes[1]=0x00;
+    bytes[1]=Consumption & 0xFF;//0x00;
     // Byte 2 - Fuel consumption MSB
-    bytes[2]=0x00;
+    bytes[2]=Consumption >> 8;//0x00;
     // Byte 3 - 0x08 Overheat, Yellow Oil Level 0x02, M3 cluster shift lights
     bytes[3]=0x00;
     // Byte 4 - Oil Temperature
