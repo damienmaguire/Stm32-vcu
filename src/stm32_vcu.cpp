@@ -43,6 +43,8 @@ static uint8_t Lexus_Gear;
 static uint16_t Lexus_Oil;
 static uint16_t maxRevs;
 static uint32_t oldTime;
+uint8_t pot_test;
+uint8_t count_one=0;
 
 // Instantiate Classes
 BMW_E65Class E65Vehicle;
@@ -138,9 +140,19 @@ static void Ms200Task(void)
                                                                     //response with a 12v output signal on a digital output.
 
     }
-
-
-
+    count_one++;
+if(count_one==1)
+{
+    pot_test++;
+   // spi_write(SPI2,0xAA);//test
+    DigIo::pot1_cs.Clear();
+    DigIo::pot2_cs.Clear();
+    uint8_t dummy=spi_xfer(SPI3,pot_test);//test
+    dummy=dummy;
+    DigIo::pot1_cs.Set();
+    DigIo::pot2_cs.Set();
+    count_one=0;
+}
 
 }
 
@@ -160,6 +172,9 @@ static void Ms100Task(void)
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
     utils::CalcSOC();
+
+    spi_write(SPI2,0xAA);//test
+
 
         if(targetInverter == _invmodes::OpenI)
     {
@@ -606,6 +621,8 @@ extern "C" int main(void)
     nvic_setup();
     term_Init();
     parm_load();
+    spi2_setup();
+    spi3_setup();
     parm_Change(Param::PARAM_LAST);
     DigIo::inv_out.Clear();//inverter power off during bootup
 
