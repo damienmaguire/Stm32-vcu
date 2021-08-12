@@ -46,7 +46,16 @@ void MCP2515_Initialize(void){
 //Set CAN contoller to config mode
 void MCP2515_SetTo_ConfigMode(void){
     MCP2515_Write_Byte(MCP2515_CANCTRL, 0x80);
-    while(0x80 != (MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0)); // Wait until MCP2515 is in config mode
+   // while(0x80 != (MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0)); // Wait until MCP2515 is in config mode
+     uint8_t loop = 10;
+     do {
+     loop--;
+    if((MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0) == 0x80) loop=0;
+
+
+  } while(loop > 0);
+
+
 }
 
 //Set CAN controller to normal mode
