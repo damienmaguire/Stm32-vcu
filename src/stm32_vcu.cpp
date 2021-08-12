@@ -675,6 +675,8 @@ extern "C" int main(void)
 
     can = &c; // FIXME: What about CAN2?
 
+    CANSPI_Initialize();// init the MCP25625 on CAN3
+
     Stm32Scheduler s(TIM3); //We never exit main so it's ok to put it on stack
     scheduler = &s;
 
