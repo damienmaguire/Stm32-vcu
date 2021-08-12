@@ -190,7 +190,7 @@ static void Ms100Task(void)
     txMessage.frame.data7 = 7;
     CANSPI_Transmit(&txMessage);
     /////////////////////////////////////////////////////////////////
-
+    //seems to work but config is the issue...
 
         if(targetInverter == _invmodes::OpenI)
     {
