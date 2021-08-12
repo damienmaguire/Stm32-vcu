@@ -48,11 +48,13 @@
 			<Option target="STM32F103" />
 		</Unit>
 		<Unit filename="include/BMW_E65.h" />
+		<Unit filename="include/CANSPI.h" />
 		<Unit filename="include/Can_E39.h" />
 		<Unit filename="include/Can_E46.h" />
 		<Unit filename="include/Can_OI.h" />
 		<Unit filename="include/Can_VAG.h" />
 		<Unit filename="include/GS450H.h" />
+		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/chademo.h" />
 		<Unit filename="include/charger.h" />
@@ -100,11 +102,13 @@
 		<Unit filename="libopeninv/src/terminal.cpp" />
 		<Unit filename="libopeninv/src/terminalcommands.cpp" />
 		<Unit filename="src/BMW_E65.cpp" />
+		<Unit filename="src/CANSPI.cpp" />
 		<Unit filename="src/Can_E39.cpp" />
 		<Unit filename="src/Can_E46.cpp" />
 		<Unit filename="src/Can_OI.cpp" />
 		<Unit filename="src/Can_VAG.cpp" />
 		<Unit filename="src/GS450H.cpp" />
+		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/chademo.cpp" />
 		<Unit filename="src/charger.cpp" />
 		<Unit filename="src/hwinit.cpp" />

@@ -30,3 +30,4 @@
 #include "utils.h"
 #include "charger.h"
 #include "i3LIM.h"
+#include "CANSPI.h"

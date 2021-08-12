@@ -29,6 +29,8 @@
 //#define  BMW_E39  5
 #define  VAG  6
 
+uCAN_MSG txMessage;
+uCAN_MSG rxMessage;
 
 HWREV hwRev; // Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
@@ -141,10 +143,9 @@ static void Ms200Task(void)
 
     }
     count_one++;
-if(count_one==1)
+if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
 {
     pot_test++;
-   // spi_write(SPI2,0xAA);//test
     DigIo::pot1_cs.Clear();
     DigIo::pot2_cs.Clear();
     uint8_t dummy=spi_xfer(SPI3,pot_test);//test
@@ -173,7 +174,22 @@ static void Ms100Task(void)
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
     utils::CalcSOC();
 
-    //spi_write(SPI2,0xAA);//test
+    /////////////////////////////////////////////////////////////////
+    //CAN SPI Test
+    /////////////////////////////////////////////////////////////////
+    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    txMessage.frame.id = 0x0A;
+    txMessage.frame.dlc = 8;
+    txMessage.frame.data0 = 0;
+    txMessage.frame.data1 = 1;
+    txMessage.frame.data2 = 2;
+    txMessage.frame.data3 = 3;
+    txMessage.frame.data4 = 4;
+    txMessage.frame.data5 = 5;
+    txMessage.frame.data6 = 6;
+    txMessage.frame.data7 = 7;
+    CANSPI_Transmit(&txMessage);
+    /////////////////////////////////////////////////////////////////
 
 
         if(targetInverter == _invmodes::OpenI)
