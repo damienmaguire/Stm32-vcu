@@ -73,6 +73,7 @@ void spi2_setup()   //spi 2 used for CAN3
 
    spi_init_master(SPI2, SPI_CR1_BAUDRATE_FPCLK_DIV_32, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
                   SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
+   spi_set_standard_mode(SPI2,0);//set mode 0
 
    spi_enable_software_slave_management(SPI2);
    //spi_enable_ss_output(SPI2);

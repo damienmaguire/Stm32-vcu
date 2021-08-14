@@ -178,7 +178,7 @@ static void Ms100Task(void)
     //CAN SPI Test
     /////////////////////////////////////////////////////////////////
     txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-    txMessage.frame.id = 0x0A;
+    txMessage.frame.id = 0x100;
     txMessage.frame.dlc = 8;
     txMessage.frame.data0 = 0;
     txMessage.frame.data1 = 1;
@@ -484,6 +484,7 @@ static void Ms10Task(void)
 
 static void Ms1Task(void)
 {
+//gpio_toggle(GPIOB,GPIO12);
     if(targetInverter == _invmodes::GS450H)
     {
         // Send direction from this context.
@@ -641,6 +642,7 @@ extern "C" int main(void)
     spi3_setup();
     parm_Change(Param::PARAM_LAST);
     DigIo::inv_out.Clear();//inverter power off during bootup
+    DigIo::mcp_sby.Clear();//enable can3
 
     Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt/LIM.
     Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2 vehicle side.

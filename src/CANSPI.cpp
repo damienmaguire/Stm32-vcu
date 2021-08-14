@@ -135,9 +135,13 @@ CAN ID		Mask				Filter		Buffer
 	*/
 
 
-    MCP2515_Write_Byte(MCP2515_CNF1, 0x04);
-    MCP2515_Write_Byte(MCP2515_CNF2, 0x99);
-    MCP2515_Write_Byte(MCP2515_CNF3, 0x02);
+    //MCP2515_Write_Byte(MCP2515_CNF1, 0x04);
+    //MCP2515_Write_Byte(MCP2515_CNF2, 0x99);
+    //MCP2515_Write_Byte(MCP2515_CNF3, 0x02);
+
+    MCP2515_Write_Byte(MCP2515_CNF1, 0x40);
+    MCP2515_Write_Byte(MCP2515_CNF2, 0xe5);
+    MCP2515_Write_Byte(MCP2515_CNF3, 0x83);
 
     MCP2515_SetTo_NormalMode();
 }

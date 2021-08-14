@@ -114,14 +114,14 @@
 
 typedef union{
     struct {
-        unsigned RX0IF      : 1;
-        unsigned RX1IF      : 1;
-        unsigned TXB0REQ    : 1;
-        unsigned TX0IF      : 1;
-        unsigned TXB1REQ    : 1;
-        unsigned TX1IF      : 1;
-        unsigned TXB2REQ    : 1;
-        unsigned TX2IF      : 1;
+        bool RX0IF;
+        bool RX1IF;
+        bool TXB0REQ;
+        bool TX0IF;
+        bool TXB1REQ;
+        bool TX1IF;
+        bool TXB2REQ;
+        bool TX2IF;
     }ctrl;
     uint8_t ctrl_status;
 }ctrl_status_t;
