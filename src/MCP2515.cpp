@@ -39,8 +39,8 @@ static uint8_t writeDummy = 0x00;
 
 //Set CAN controller to config mode
 void MCP2515_Initialize(void){
-    MCP2515_CS_HIGH();
-
+    //MCP2515_CS_HIGH();
+spi_enable(SPI2);
 }
 
 //Set CAN contoller to config mode
