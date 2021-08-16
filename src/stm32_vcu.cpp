@@ -173,7 +173,7 @@ static void Ms100Task(void)
     utils::SelectDirection(targetVehicle, E65Vehicle);
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
     utils::CalcSOC();
-/*
+
     /////////////////////////////////////////////////////////////////
     //CAN SPI Test
     /////////////////////////////////////////////////////////////////
@@ -191,7 +191,7 @@ static void Ms100Task(void)
     CANSPI_Transmit(&txMessage);
     /////////////////////////////////////////////////////////////////
     //seems to work but config is the issue...
-*/
+
         if(targetInverter == _invmodes::OpenI)
     {
       if (opmode == MOD_RUN) Can_OI::Send100msMessages();
@@ -677,7 +677,7 @@ extern "C" int main(void)
 
     can = &c; // FIXME: What about CAN2?
 
-    //CANSPI_Initialize();// init the MCP25625 on CAN3
+    CANSPI_Initialize();// init the MCP25625 on CAN3
 
     Stm32Scheduler s(TIM3); //We never exit main so it's ok to put it on stack
     scheduler = &s;
