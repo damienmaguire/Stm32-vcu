@@ -42,6 +42,17 @@ id_reg_t idReg;
  CAN SPI APIs
 */
 
+void CANSPI_ENRx_IRQ(void){
+    MCP2515_Bit_Modify(MCP2515_CANINTF, 0x43, 0x00);        //clear irqs
+    MCP2515_Bit_Modify(MCP2515_CANINTE, 0x43, 0x43);        //Enable Receive and wake interrupts
+
+}
+
+void CANSPI_CLR_IRQ(void){
+    MCP2515_Bit_Modify(MCP2515_CANINTF, 0x43, 0x00);        //clear irqs
+
+}
+
 void CANSPI_Sleep(void){
     MCP2515_Bit_Modify(MCP2515_CANINTF, 0x40, 0x00);        //clear CAN bus wakeup interrupt
     MCP2515_Bit_Modify(MCP2515_CANINTE, 0x40, 0x40);        //enable CAN bus activity wakeup
@@ -126,20 +137,8 @@ CAN ID		Mask				Filter		Buffer
 
     // Initialize CAN Timings
 
-    	/**
-	Baud rate: 100kbps
-	System frequency: 10MHz
-	Time quanta: 10
-	Sample point: 1-2-4-3
-	Sample point: 70.00%
-	*/
 
-
-    //MCP2515_Write_Byte(MCP2515_CNF1, 0x04);
-    //MCP2515_Write_Byte(MCP2515_CNF2, 0x99);
-    //MCP2515_Write_Byte(MCP2515_CNF3, 0x02);
-
-    MCP2515_Write_Byte(MCP2515_CNF1, 0x40);
+    MCP2515_Write_Byte(MCP2515_CNF1, 0x40);//500kbps at 16HMz xtal.
     MCP2515_Write_Byte(MCP2515_CNF2, 0xe5);
     MCP2515_Write_Byte(MCP2515_CNF3, 0x83);
 

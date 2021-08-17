@@ -626,6 +626,12 @@ extern "C" void tim3_isr(void)
 }
 
 
+extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
+{
+    CANSPI_CLR_IRQ();   //Clear Rx irqs in mcp25625
+  exti_reset_request(EXTI15); // clear irq
+}
+
 extern "C" int main(void)
 {
     clock_setup();
@@ -678,6 +684,7 @@ extern "C" int main(void)
     can = &c; // FIXME: What about CAN2?
 
     CANSPI_Initialize();// init the MCP25625 on CAN3
+    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
 
     Stm32Scheduler s(TIM3); //We never exit main so it's ok to put it on stack
     scheduler = &s;

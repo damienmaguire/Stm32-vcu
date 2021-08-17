@@ -29,6 +29,7 @@
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/rtc.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/exti.h>
 #include "hwdefs.h"
 #include "hwinit.h"
 
@@ -202,6 +203,13 @@ void nvic_setup(void)
 
     nvic_enable_irq(NVIC_USB_HP_CAN_TX_IRQ); //CAN TX
     nvic_set_priority(NVIC_USB_HP_CAN_TX_IRQ, 0xe << 4); //second lowest priority
+
+      /* Enable MCP2526 IRQ on PE15 */
+  nvic_enable_irq(NVIC_EXTI15_10_IRQ);
+  exti_enable_request(EXTI15);
+  exti_set_trigger(EXTI15, EXTI_TRIGGER_FALLING);
+  exti_select_source(EXTI15,GPIOE);
+
 }
 
 void rtc_setup()

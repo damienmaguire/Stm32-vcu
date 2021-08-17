@@ -5,6 +5,7 @@
 #include <libopencm3/stm32/can.h>
 #include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/exti.h>
 #include "stm32_can.h"
 #include "terminal.h"
 #include "params.h"

@@ -48,6 +48,8 @@ typedef union {
 
 void CANSPI_Initialize(void);
 void CANSPI_Sleep(void);
+void CANSPI_ENRx_IRQ(void);
+void CANSPI_CLR_IRQ(void);
 uint8_t CANSPI_Transmit(uCAN_MSG *tempCanMsg);
 uint8_t CANSPI_receive(uCAN_MSG *tempCanMsg);
 uint8_t CANSPI_messagesInBuffer(void);
