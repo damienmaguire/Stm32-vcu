@@ -47,7 +47,7 @@ void CANSPI_ENRx_IRQ(void){
     MCP2515_Bit_Modify(MCP2515_CANINTE, 0x43, 0x43);        //Enable Receive and wake interrupts
 
 }
-
+//test
 void CANSPI_CLR_IRQ(void){
     MCP2515_Bit_Modify(MCP2515_CANINTF, 0x43, 0x00);        //clear irqs
 
