@@ -29,8 +29,7 @@
 //#define  BMW_E39  5
 #define  VAG  6
 
-uCAN_MSG txMessage;
-uCAN_MSG rxMessage;
+
 
 HWREV hwRev; // Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
@@ -52,7 +51,8 @@ uint8_t count_one=0;
 BMW_E65Class E65Vehicle;
 GS450HClass gs450Inverter;
 chargerClass chgtype;
-
+uCAN_MSG txMessage;
+uCAN_MSG rxMessage;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

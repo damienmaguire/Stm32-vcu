@@ -15,7 +15,7 @@
 			<SilentBuild command="$make -s -f $makefile $target" />
 		</MakeCommands>
 		<Build>
-			<Target title="STM32F103">
+			<Target title="STM32F107">
 				<Option output="stm32_sine" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
@@ -45,7 +45,7 @@
 			</Target>
 		</Build>
 		<Unit filename="Makefile">
-			<Option target="STM32F103" />
+			<Option target="STM32F107" />
 		</Unit>
 		<Unit filename="include/BMW_E65.h" />
 		<Unit filename="include/CANSPI.h" />
