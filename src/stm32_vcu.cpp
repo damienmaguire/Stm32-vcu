@@ -127,11 +127,11 @@ static void Ms200Task(void)
     if(targetCharger == _chgmodes::HV_ON)
     {
       if(opmode != MOD_RUN)  chargeMode = true;
+
     }
 
     if(targetCharger == _chgmodes::EXT_CAN)
     {
-
 
 
     }
@@ -142,6 +142,10 @@ static void Ms200Task(void)
                                                                     //response with a 12v output signal on a digital output.
 
     }
+
+        if(opmode==MOD_CHARGE) DigIo::gp_out3.Set();//Chademo relay on for testing
+        if(opmode!=MOD_CHARGE) DigIo::gp_out3.Clear();//Chademo relay off for testing
+
     count_one++;
 if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
 {
