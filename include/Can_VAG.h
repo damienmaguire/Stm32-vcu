@@ -14,6 +14,7 @@ class Can_VAG
 
 public:
     static void SendVAG100msMessage();
+    static void SendVAG10msMessage(int rpm);
 
 private:
 
