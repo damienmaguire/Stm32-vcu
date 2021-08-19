@@ -53,7 +53,7 @@ GS450HClass gs450Inverter;
 chargerClass chgtype;
 uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
-
+CAN3_Msg CAN3;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
@@ -184,7 +184,7 @@ static void Ms100Task(void)
     txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
     txMessage.frame.id = 0x100;
     txMessage.frame.dlc = 8;
-    txMessage.frame.data0 = 0;
+    txMessage.frame.data0 = CAN3.frame.data0;
     txMessage.frame.data1 = 1;
     txMessage.frame.data2 = 2;
     txMessage.frame.data3 = 3;
@@ -193,6 +193,7 @@ static void Ms100Task(void)
     txMessage.frame.data6 = 6;
     txMessage.frame.data7 = 7;
     CANSPI_Transmit(&txMessage);
+
     /////////////////////////////////////////////////////////////////
     //seems to work but config is the issue...
 
@@ -632,8 +633,23 @@ extern "C" void tim3_isr(void)
 
 extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
 {
+   if(CANSPI_receive(&rxMessage))
+    {
+      CAN3.frame.idType = rxMessage.frame.idType;
+      CAN3.frame.id = rxMessage.frame.id;
+      CAN3.frame.dlc = rxMessage.frame.dlc;
+      CAN3.frame.data0 = rxMessage.frame.data0;
+      CAN3.frame.data1 = rxMessage.frame.data1;
+      CAN3.frame.data2 = rxMessage.frame.data2;
+      CAN3.frame.data3 = rxMessage.frame.data3;
+      CAN3.frame.data4 = rxMessage.frame.data4;
+      CAN3.frame.data5 = rxMessage.frame.data5;
+      CAN3.frame.data6 = rxMessage.frame.data6;
+      CAN3.frame.data7 = rxMessage.frame.data7;
+    }
     CANSPI_CLR_IRQ();   //Clear Rx irqs in mcp25625
-  exti_reset_request(EXTI15); // clear irq
+    exti_reset_request(EXTI15); // clear irq
+  //DigIo::led_out.Toggle();
 }
 
 extern "C" int main(void)
