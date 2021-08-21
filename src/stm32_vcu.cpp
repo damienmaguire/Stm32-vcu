@@ -370,6 +370,11 @@ static void Ms10Task(void)
             BMW_E65Class::Tacho(Param::GetInt(Param::speed));//only send tach message if we are starting
     }
 
+       else if (targetVehicle == VAG)
+    {
+        Can_VAG::SendVAG10msMessage(Param::GetInt(Param::speed));
+    }
+
     //////////////////////////////////////////////////
     //            MODE CONTROL SECTION              //
     //////////////////////////////////////////////////

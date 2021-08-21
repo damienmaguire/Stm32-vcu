@@ -17,3 +17,21 @@ void Can_VAG::SendVAG100msMessage()
     seqCtr = (seqCtr + 1) & 0x3;
     ctr = (ctr + 1) & 0xF;
 }
+
+void Can_VAG::SendVAG10msMessage(uint16_t rpm)
+{
+    rpm = (rpm < 750) ? 750 : rpm;
+    rpm = (rpm > 7000) ? 7000 : rpm;
+
+   uint8_t byte3 = ((rpm * 4) >> 8) & 0xFF;
+   uint8_t byte4 = (rpm * 4) & 0xFF;
+   uint8_t canData[8] = { 0, 0, 0, byte3, byte4, 0, 0, 0 };
+   Can::GetInterface(1)->Send(0x280, (uint32_t*)canData, 8); //Send on CAN2
+
+   //contains temperature, traction control light was on without the message, content doesnt
+   //seem to matter.
+   canData[3] = 0;
+   canData[4] = 0;
+   Can::GetInterface(1)->Send(0x288, (uint32_t*)canData, 8); //Send on CAN2
+
+}

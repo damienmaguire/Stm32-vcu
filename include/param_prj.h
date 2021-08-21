@@ -170,7 +170,7 @@
 #define CAT_CHARGER  "Charger Control"
 #define CHGMODS   "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera"
 #define CHGCTRL   "0=Enable, 1=Disable"
-#define CHGint   "0=Unused, 1=i3LIM"
+#define CHGint   "0=Unused, 1=i3LIM, 2=Chademo"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 
