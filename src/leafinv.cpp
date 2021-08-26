@@ -37,8 +37,11 @@ int16_t LeafINV::inv_temp;
 int16_t LeafINV::motor_temp;
 int16_t LeafINV::final_torque_request;
 static uint8_t counter_1db=0;
+static uint8_t counter_1dc=0;
 static uint8_t counter_11a_d6=0;
 static uint8_t counter_1d4=0;
+static uint8_t counter_1f2=0;
+static uint8_t counter_55b=0;
 
 
 /*Info on running Leaf Gen 2 PDM
@@ -314,12 +317,21 @@ void LeafINV::Send10msMessages()
 //We need to send 0x1db here with voltage measured by inverter
 //Zero seems to work also on my gen1
 ////////////////////////////////////////////////////////////////
-
-    bytes[0]=0x00;
-    bytes[1]=0x00;
-    bytes[2]=0x00;
-    bytes[3]=0x00;
-    bytes[4]=0x00;
+//Byte 1 bits 8-10 LB Failsafe Status
+//0x00 Normal start req. seems to stay on this value most of the time
+//0x01 Normal stop req
+//0x02 Charge stop req
+//0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
+//bits 11-12 LB relay cut req
+//0x00 no req
+//0x01,0x02,0x03 main relay off req
+    s16fp TMP_battI=(Param::Get(Param::idc))*4;
+    s16fp TMP_battV=(Param::Get(Param::udc))*4;
+    bytes[0]=TMP_battI>>8;//MSB current. 11 bit signed MSBit first
+    bytes[1]=TMP_battI & 0xE0;//LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
+    bytes[2]=TMP_battV>>8;
+    bytes[3]=((TMP_battV & 0xC0)|(0x2b));//0x2b should give no cut req, main rly on permission,normal p limit.
+    bytes[4]=0x40;//SOC for dash in Leaf. fixed val.
     bytes[5]=0x00;
     bytes[6]=counter_1db;
     // Extra CRC in byte 7
@@ -353,20 +365,97 @@ void LeafINV::Send10msMessages()
     //Need to add 0x1f2 for charge mode
     //Byte 2 bits 5 and 5 charge status transition request. 0x00 other,0x01 Normal charge,0x02 DCFC,0x03 Stop request.
     //Byte 2 bit 1. Connector detect. 0=other,1=v2h.
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //SPECIFIC MSGS NEEDED FOR CHARGE
+    //////////////////////////////////////////
+    //0x1dc from lbc. Contains chg power lims and disch power lims.
+    //Disch power lim in byte 0 and byte 1 bits 6-7. Just set to max for now.
+    //Max charging power in bits 13-20. 10 bit unsigned scale 0.25.Byte 1 limit in kw.
+    bytes[0]=0x6E;
+    bytes[1]=0x0A;
+    bytes[2]=0x05;
+    bytes[3]=0xD5;
+    bytes[4]=0x00;//may not need pairing code crap here...
+    bytes[5]=0x00;
+    bytes[6]=counter_1dc;
+    // Extra CRC in byte 7
+    nissan_crc(bytes, 0x85);
+
+        counter_1dc++;
+    if(counter_1dc >= 4) counter_1dc = 0;
+
+    Can::GetInterface(0)->Send(0x1DC, (uint32_t*)bytes,8);
+
+    //0x1f2 from vcm has commanded chg power
+
+    bytes[0]=0x30;
+    bytes[1]=0xA0;
+    bytes[2]=0x20;
+    bytes[3]=0xAC;
+    bytes[4]=0x00;
+    bytes[5]=0x3C;
+    bytes[6]=counter_1f2;
+    bytes[7]=0x8F;//may not need checksum here?
+
+        counter_1f2++;
+    if(counter_1f2 >= 4) counter_1f2 = 0;
+
+    Can::GetInterface(0)->Send(0x1F2, (uint32_t*)bytes,8);
+
+
+
+
+    /////////////////////////////////////////////
+
+
+
 }
 
 void LeafINV::Send100msMessages()
-{
-    // FIXME: Temporarily commenting out to suppress warnings while data send is commented out.
-    // FIXME: uint32_t canData[2] = { 0, 0 };
+{   //MSGS for charging with pdm
+    uint8_t bytes[8];
 
-    // Can::GetInterface(0)->Send(0x390, canData);
+    bytes[0]=0xA4;
+    bytes[1]=0x40;
+    bytes[2]=0xAA;
+    bytes[3]=0x00;
+    bytes[4]=0xDF;
+    bytes[5]=0xC0;
+    bytes[6]=((0x1<<4)|(counter_55b));
+     // Extra CRC in byte 7
+    nissan_crc(bytes, 0x85);
+
+        counter_55b++;
+    if(counter_55b >= 4) counter_55b = 0;
+
+    Can::GetInterface(0)->Send(0x55b, (uint32_t*)bytes,8);
+
+    bytes[0]=0x00;
+    bytes[1]=0x00;//Batt capacity for chg and qc.
+    bytes[2]=0x0c;
+    bytes[3]=0x76;
+    bytes[4]=0x18;
+    bytes[5]=0x00;
+    bytes[6]=0x00;
+    bytes[7]=0x00;
+
+    Can::GetInterface(0)->Send(0x59e, (uint32_t*)bytes,8);
+
+        //muxed msg with info for gids etc. Will try static for a test.
+    bytes[0]=0x3D;
+    bytes[1]=0x80;
+    bytes[2]=0xF0;
+    bytes[3]=0x64;
+    bytes[4]=0xB0;
+    bytes[5]=0x01;
+    bytes[6]=0x00;
+    bytes[7]=0x32;
+
+    Can::GetInterface(0)->Send(0x5bc, (uint32_t*)bytes,8);
 
 
-    // Can::GetInterface(0)->Send(0x50C, canData);
-
-
-    // Can::GetInterface(0)->Send(0x54C, canData);
 
     run100ms = (run100ms + 1) & 3;
 }

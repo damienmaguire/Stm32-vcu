@@ -231,7 +231,7 @@ static void Ms100Task(void)
 
     if (targetInverter == _invmodes::Leaf_Gen1)
     {
-        LeafINV::Send100msMessages();
+        if (opmode == MOD_RUN) LeafINV::Send100msMessages();
         Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
         Param::SetInt(Param::tmpm,LeafINV::motor_temp);
         Param::SetInt(Param::InvStat, LeafINV::error); //update inverter status on web interface
