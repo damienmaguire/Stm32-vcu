@@ -36,7 +36,28 @@ bool LeafINV::error=false;
 int16_t LeafINV::inv_temp;
 int16_t LeafINV::motor_temp;
 int16_t LeafINV::final_torque_request;
+static uint8_t counter_1db=0;
+static uint8_t counter_11a_d6=0;
+static uint8_t counter_1d4=0;
 
+
+/*Info on running Leaf Gen 2 PDM
+IDs required :
+0x1D4
+0x1DB
+0x1DC
+0x1F2
+0x50B
+0x55B
+0x59E
+0x5BC
+
+PDM sends:
+0x390
+0x393
+0x679 on evse plug insert
+
+*/
 
 
 void LeafINV::DecodeCAN(int id, uint32_t data[2])
@@ -83,7 +104,7 @@ void LeafINV::Send10msMessages()
 
 
     uint8_t bytes[8];
-    static uint8_t counter_11a_d6;//why am i zeroing this all the time?
+
 
     // Data taken from a gen1 inFrame where the car is starting to
     // move at about 10% throttle: 4E400055 0000017D
@@ -150,7 +171,7 @@ void LeafINV::Send10msMessages()
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //Send target motor torque signal
     ////////////////////////////////////////////////////
-    static uint8_t counter_1d4;
+
     // Data taken from a gen1 inFrame where the car is starting to
     // move at about 10% throttle: F70700E0C74430D4
 
@@ -195,8 +216,7 @@ void LeafINV::Send10msMessages()
     //Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
 
     counter_1d4++;
-    if(counter_1d4 >= 4)
-        counter_1d4 = 0;
+    if(counter_1d4 >= 4) counter_1d4 = 0;
 
     // MSB nibble:
     //   0: 35-40ms at startup when gear is 0, then at shutdown 40ms
@@ -294,7 +314,7 @@ void LeafINV::Send10msMessages()
 //We need to send 0x1db here with voltage measured by inverter
 //Zero seems to work also on my gen1
 ////////////////////////////////////////////////////////////////
-    static uint8_t counter_1db;
+
     bytes[0]=0x00;
     bytes[1]=0x00;
     bytes[2]=0x00;
@@ -302,13 +322,13 @@ void LeafINV::Send10msMessages()
     bytes[4]=0x00;
     bytes[5]=0x00;
     bytes[6]=counter_1db;
-    bytes[7]=0x00;
+    // Extra CRC in byte 7
+    nissan_crc(bytes, 0x85);
 
 
     counter_1db++;
-    if(counter_1db >= 4)
-        counter_1db = 0;
-    // uint32_t canData_1DB[2] = {*bytes};//??? hopefully....
+    if(counter_1db >= 4) counter_1db = 0;
+
     Can::GetInterface(0)->Send(0x1DB, (uint32_t*)bytes,8);
 //////////////////////////////////////////////////////////////////////////////////////////
     // Statistics from 2016 capture:
