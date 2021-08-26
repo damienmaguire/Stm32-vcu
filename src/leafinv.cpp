@@ -91,6 +91,7 @@ void LeafINV::Send10msMessages()
     // All possible gen1 values: 00 01 0D 11 1D 2D 2E 3D 3E 4D 4E
     // MSB nibble: Selected gear (gen1/LeafLogs)
     //   0: some kind of non-gear before driving
+    //      0: Park in Gen 2. byte 0 = 0x01 when in park and charging
     //   1: some kind of non-gear after driving
     //   2: R
     //   3: N
@@ -107,7 +108,7 @@ void LeafINV::Send10msMessages()
 //byte 0 determines motor rotation direction
     bytes[0] = 0x4E;//this will need to be pulled from the for/rev pins on the vcu but just leave as fwd for testing
 
-    // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO
+    // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
     bytes[1] = 0x40;
 
     // Usually 0x00, sometimes 0x80 (LeafLogs), 0x04 seen by canmsgs
@@ -191,6 +192,7 @@ void LeafINV::Send10msMessages()
     //   7: Precharged (93%)
     bytes[4] = 0x07 | (counter_1d4 << 6);
     //bytes[4] = 0x02 | (counter_1d4 << 6);
+    //Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
 
     counter_1d4++;
     if(counter_1d4 >= 4)
@@ -214,6 +216,7 @@ void LeafINV::Send10msMessages()
     //outFrame.data.bytes[5] = 0x46;
     // 0x44 requires ~8 torque to start
     bytes[5] = 0x44;
+    //bit 6 is Main contactor status. 0x00 Not on, 0x01 on.
 
     // MSB nibble:
     //   In a drive cycle, this slowly changes between values (gen1):
@@ -271,6 +274,9 @@ void LeafINV::Send10msMessages()
     // pull, in
     //   LeafLogs/leaf_on_wotind_off.txt
     bytes[6] = 0x30;    //brake applied heavilly.
+    //In Gen 2 byte 6 is Charge status.
+    //0x8C Charging interrupted
+    //0xE0 Charging
 
     // Value chosen from a 2016 log
     //outFrame.data.bytes[6] = 0x61;
@@ -312,7 +318,7 @@ void LeafINV::Send10msMessages()
     //    513 000006c0000000
 
     // Let's just send the most common one all the time
-    // FIXME: This is a very sloppy implementation
+    // FIXME: This is a very sloppy implementation. Thanks. I try:)
     //  hex_to_data(outFrame.data.bytes, "00,00,06,c0,00,00,00");
     bytes[0]=0x00;
     bytes[1]=0x00;
@@ -323,6 +329,10 @@ void LeafINV::Send10msMessages()
     bytes[6]=0x00;
 
     Can::GetInterface(0)->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
+
+    //Need to add 0x1f2 for charge mode
+    //Byte 2 bits 5 and 5 charge status transition request. 0x00 other,0x01 Normal charge,0x02 DCFC,0x03 Stop request.
+    //Byte 2 bit 1. Connector detect. 0=other,1=v2h.
 }
 
 void LeafINV::Send100msMessages()
