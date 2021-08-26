@@ -377,7 +377,7 @@ void LeafINV::Send10msMessages()
     bytes[1]=0x0A;
     bytes[2]=0x05;
     bytes[3]=0xD5;
-    bytes[4]=0x00;//may not need pairing code crap here...
+    bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
     bytes[5]=0x00;
     bytes[6]=counter_1dc;
     // Extra CRC in byte 7
@@ -389,8 +389,9 @@ void LeafINV::Send10msMessages()
     Can::GetInterface(0)->Send(0x1DC, (uint32_t*)bytes,8);
 
     //0x1f2 from vcm has commanded chg power
-
-    bytes[0]=0x30;
+    //Commanded chg power in byte 1 and byte 0 bits 0-1. 10 bit number.
+    //byte 1=0x64 and byte 0=0x00 at 0 power.
+    bytes[0]=0x30;//msg is muxed but pdm doesn't seem to care.
     bytes[1]=0xA0;
     bytes[2]=0x20;
     bytes[3]=0xAC;
@@ -432,7 +433,7 @@ void LeafINV::Send100msMessages()
 
     Can::GetInterface(0)->Send(0x55b, (uint32_t*)bytes,8);
 
-    bytes[0]=0x00;
+    bytes[0]=0x00;//Static msg works fine here
     bytes[1]=0x00;//Batt capacity for chg and qc.
     bytes[2]=0x0c;
     bytes[3]=0x76;
@@ -444,7 +445,7 @@ void LeafINV::Send100msMessages()
     Can::GetInterface(0)->Send(0x59e, (uint32_t*)bytes,8);
 
         //muxed msg with info for gids etc. Will try static for a test.
-    bytes[0]=0x3D;
+    bytes[0]=0x3D;//Static msg works fine here
     bytes[1]=0x80;
     bytes[2]=0xF0;
     bytes[3]=0x64;
