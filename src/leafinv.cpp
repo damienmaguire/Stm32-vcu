@@ -328,7 +328,7 @@ if (opmode != MOD_CHARGE) bytes[0] = 0x40;
 //bits 11-12 LB relay cut req
 //0x00 no req
 //0x01,0x02,0x03 main relay off req
-    s16fp TMP_battI=(Param::Get(Param::idc))*4;
+    s16fp TMP_battI=(Param::Get(Param::idc))*2;
     s16fp TMP_battV=(Param::Get(Param::udc))*4;
     bytes[0]=TMP_battI>>8;//MSB current. 11 bit signed MSBit first
     bytes[1]=TMP_battI & 0xE0;//LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
@@ -389,12 +389,20 @@ if (opmode == MOD_CHARGE)
     if(counter_1dc >= 4) counter_1dc = 0;
 
     Can::GetInterface(0)->Send(0x1DC, (uint32_t*)bytes,8);
-
+////////////////////////////////////////////////////////////////////////////////////////////////
+uint8_t OBCpwr=(Param::GetInt(Param::Pwrspnt)/100)+0x64;
     //0x1f2 from vcm has commanded chg power
     //Commanded chg power in byte 1 and byte 0 bits 0-1. 10 bit number.
     //byte 1=0x64 and byte 0=0x00 at 0 power.
+    //0x00 chg 0ff dcdc on.
     bytes[0]=0x30;//msg is muxed but pdm doesn't seem to care.
-    bytes[1]=0xA0;
+    //no chg at 0x64
+    //3 amps ish at 0x70
+    //0x6a = 1.4A
+    //0x66=0.5A
+    //0x65=0.3A
+    //so 0x64=100. 0xA0=160. so 60 decimal steps. 1 step=100W???
+    bytes[1]=OBCpwr;//0xA0;
     bytes[2]=0x20;
     bytes[3]=0xAC;
     bytes[4]=0x00;
