@@ -72,6 +72,37 @@ static void Ms200Task(void)
 
     }
 
+    if(targetChgint == _interface::Chademo) //Chademo on CAN3
+    {
+    /////////////////////////////////////////////////////////////////
+    //CAN SPI Test
+    /////////////////////////////////////////////////////////////////
+    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    txMessage.frame.id = 0x100;
+    txMessage.frame.dlc = 8;
+    txMessage.frame.data0 = CAN3.frame.data0;
+    txMessage.frame.data1 = 1;
+    txMessage.frame.data2 = 2;
+    txMessage.frame.data3 = 3;
+    txMessage.frame.data4 = 4;
+    txMessage.frame.data5 = 5;
+    txMessage.frame.data6 = 6;
+    txMessage.frame.data7 = 7;
+    CANSPI_Transmit(&txMessage);
+
+    /////////////////////////////////////////////////////////////////
+    //seems to work but config is the issue...
+
+
+    }
+
+    if(targetChgint == _interface::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+    {
+
+    }
+
+
+
     if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send200msMessages();
@@ -178,24 +209,6 @@ static void Ms100Task(void)
     utils::ProcessUdc(oldTime, GetInt(Param::speed));
     utils::CalcSOC();
 
-    /////////////////////////////////////////////////////////////////
-    //CAN SPI Test
-    /////////////////////////////////////////////////////////////////
-    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-    txMessage.frame.id = 0x100;
-    txMessage.frame.dlc = 8;
-    txMessage.frame.data0 = CAN3.frame.data0;
-    txMessage.frame.data1 = 1;
-    txMessage.frame.data2 = 2;
-    txMessage.frame.data3 = 3;
-    txMessage.frame.data4 = 4;
-    txMessage.frame.data5 = 5;
-    txMessage.frame.data6 = 6;
-    txMessage.frame.data7 = 7;
-    CANSPI_Transmit(&txMessage);
-
-    /////////////////////////////////////////////////////////////////
-    //seems to work but config is the issue...
 
         if(targetInverter == _invmodes::OpenI)
     {
@@ -203,7 +216,13 @@ static void Ms100Task(void)
 
     }
 
-
+    if(targetChgint == _interface::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+    {
+        if (opmode == MOD_CHARGE)
+            {
+               LeafINV::Send100msMessages();//send leaf 100ms msgs if we are using the pdm and in charge mode
+            }
+    }
 
         if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
@@ -231,7 +250,8 @@ static void Ms100Task(void)
 
     if (targetInverter == _invmodes::Leaf_Gen1)
     {
-        if (opmode == MOD_RUN) LeafINV::Send100msMessages();
+       // if (opmode == MOD_RUN) LeafINV::Send100msMessages();
+       //No 100ms required for Leaf inverter to run only charge.
         Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
         Param::SetInt(Param::tmpm,LeafINV::motor_temp);
         Param::SetInt(Param::InvStat, LeafINV::error); //update inverter status on web interface
@@ -292,6 +312,17 @@ static void Ms10Task(void)
     int newMode = MOD_OFF;
     int stt = STAT_NONE;
     ErrorMessage::SetTime(rtc_get_counter_val());
+
+
+        if(targetChgint == _interface::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+            {
+
+            if (opmode == MOD_CHARGE)
+                {
+               LeafINV::Send10msMessages();//send leaf 10ms msgs if we are using the pdm and in charge mode
+                }
+
+            }
 
     if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {

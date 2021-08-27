@@ -104,7 +104,7 @@ void LeafINV::SetTorque(int8_t gear, int16_t torque)
 
 void LeafINV::Send10msMessages()
 {
-
+int opmode = Param::GetInt(Param::opmode);
 
     uint8_t bytes[8];
 
@@ -130,11 +130,11 @@ void LeafINV::Send10msMessages()
 
 
 //byte 0 determines motor rotation direction
-    bytes[0] = 0x4E;//this will need to be pulled from the for/rev pins on the vcu but just leave as fwd for testing
-
+if (opmode == MOD_CHARGE) bytes[0] = 0x01;//Car in park when charging
+if (opmode != MOD_CHARGE) bytes[0] = 0x4E;
     // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
-    bytes[1] = 0x40;
-
+if (opmode == MOD_CHARGE) bytes[1] = 0x80;
+if (opmode != MOD_CHARGE) bytes[0] = 0x40;
     // Usually 0x00, sometimes 0x80 (LeafLogs), 0x04 seen by canmsgs
     bytes[2] = 0x00;
 
@@ -189,6 +189,7 @@ void LeafINV::Send10msMessages()
     //outFrame.data.bytes[1] = 0x6E;
 
     // Requested torque (signed 12-bit value + always 0x0 in low nibble)
+    if (opmode != MOD_RUN) final_torque_request=0;//override any torque commands if not in run mode.
     static int16_t last_logged_final_torque_request = 0;
     if(final_torque_request != last_logged_final_torque_request)
     {
@@ -296,7 +297,9 @@ void LeafINV::Send10msMessages()
     // when, and before, applying throttle in the wide-open-throttle
     // pull, in
     //   LeafLogs/leaf_on_wotind_off.txt
-    bytes[6] = 0x30;    //brake applied heavilly.
+
+  if (opmode != MOD_CHARGE)  bytes[6] = 0x30;    //brake applied heavilly.
+  if (opmode == MOD_CHARGE)  bytes[6] = 0xE0;   //charging mode
     //In Gen 2 byte 6 is Charge status.
     //0x8C Charging interrupted
     //0xE0 Charging
@@ -362,10 +365,9 @@ void LeafINV::Send10msMessages()
 
     Can::GetInterface(0)->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
 
-    //Need to add 0x1f2 for charge mode
-    //Byte 2 bits 5 and 5 charge status transition request. 0x00 other,0x01 Normal charge,0x02 DCFC,0x03 Stop request.
-    //Byte 2 bit 1. Connector detect. 0=other,1=v2h.
 
+if (opmode == MOD_CHARGE)
+{
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //SPECIFIC MSGS NEEDED FOR CHARGE
@@ -410,7 +412,7 @@ void LeafINV::Send10msMessages()
 
     /////////////////////////////////////////////
 
-
+}
 
 }
 

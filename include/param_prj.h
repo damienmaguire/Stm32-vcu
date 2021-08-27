@@ -61,7 +61,7 @@
     PARAM_ENTRY(CAT_COMM,     canperiod,   CANPERIODS,0,      1,      1,      88  ) \
     PARAM_ENTRY(CAT_CHARGER, chargemodes,  CHGMODS,0,      4,      0,      74  ) \
     PARAM_ENTRY(CAT_CHARGER, BattCap,       "kWh",       0,      250,   22,    182  ) \
-    PARAM_ENTRY(CAT_CHARGER, interface,  CHGint,0,      2,      0,      78  ) \
+    PARAM_ENTRY(CAT_CHARGER, interface,  CHGint,0,      3,      0,      78  ) \
     PARAM_ENTRY(CAT_CHARGER, Voltspnt,       "V",       0,      1000,   395,    75  ) \
     PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_ICmd,       "A",       0,      150,   0,    120  ) \
@@ -170,7 +170,7 @@
 #define CAT_CHARGER  "Charger Control"
 #define CHGMODS   "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera"
 #define CHGCTRL   "0=Enable, 1=Disable"
-#define CHGint   "0=Unused, 1=i3LIM, 2=Chademo"
+#define CHGint   "0=Unused, 1=i3LIM, 2=Chademo, 3=Leaf_PDM"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
 
@@ -235,7 +235,9 @@ enum _chgmodes
 enum _interface
 {
     Unused = 0,
-    i3LIM =1
+    i3LIM =1,
+    Chademo =2,
+    Leaf_PDM =3
 
 };
 
