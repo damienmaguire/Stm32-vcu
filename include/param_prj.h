@@ -66,7 +66,7 @@
     PARAM_ENTRY(CAT_CHARGER, Pwrspnt,       "W",       0,      12000,   1500,    76  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_ICmd,       "A",       0,      150,   0,    120  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_ILim,       "A",       0,      350,   100,    80  ) \
-    PARAM_ENTRY(CAT_CHARGER, CCS_SOCLim,       "%",       0,      100,   80,    81  ) \
+    PARAM_ENTRY(CAT_CHARGER, CCS_SOCLim,       "%",       0,      100,   80,    181  ) \
     PARAM_ENTRY(CAT_CHARGER, Chgctrl,  CHGCTRL,0,      1,      0,      77  ) \
     VALUE_ENTRY(version,      VERSTR,  2039 ) \
     VALUE_ENTRY(hwver,        HWREVS,  2036 ) \
