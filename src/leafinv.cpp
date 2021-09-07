@@ -36,13 +36,16 @@ bool LeafINV::error=false;
 int16_t LeafINV::inv_temp;
 int16_t LeafINV::motor_temp;
 int16_t LeafINV::final_torque_request;
+static uint16_t Vbatt=0;
+static uint16_t VbattSP=0;
 static uint8_t counter_1db=0;
 static uint8_t counter_1dc=0;
 static uint8_t counter_11a_d6=0;
 static uint8_t counter_1d4=0;
 static uint8_t counter_1f2=0;
 static uint8_t counter_55b=0;
-
+static uint8_t OBCpwrSP=0;
+static uint8_t OBCpwr=0;
 
 /*Info on running Leaf Gen 2 PDM
 IDs required :
@@ -390,7 +393,22 @@ if (opmode == MOD_CHARGE)
 
     Can::GetInterface(0)->Send(0x1DC, (uint32_t*)bytes,8);
 ////////////////////////////////////////////////////////////////////////////////////////////////
-uint8_t OBCpwr=(Param::GetInt(Param::Pwrspnt)/100)+0x64;
+    OBCpwrSP=(Param::GetInt(Param::Pwrspnt)/100)+0x64;//grab setpoint power from webui and convert to pdm format
+    Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
+    VbattSP=Param::GetInt(Param::Voltspnt);
+    if(!Param::GetBool(Param::Chgctrl))
+    {
+    if(OBCpwrSP>160) OBCpwrSP=160;//clamp max value
+    if(OBCpwrSP<100) OBCpwrSP=100;//clamp min value
+    if(Vbatt<VbattSP) OBCpwr=OBCpwrSP;//if measured vbatt is less than setoint got to max power from web ui
+    if(Vbatt>=VbattSP) OBCpwr--;//decrement charger power if volt setpoint is reached.
+    }
+    else
+    {
+        OBCpwr=100;//power to 0 if charge control set to off.
+    }
+
+
     //0x1f2 from vcm has commanded chg power
     //Commanded chg power in byte 1 and byte 0 bits 0-1. 10 bit number.
     //byte 1=0x64 and byte 0=0x00 at 0 power.

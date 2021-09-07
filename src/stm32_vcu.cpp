@@ -175,6 +175,18 @@ static void Ms200Task(void)
 
     }
 
+    ///////////////////////////////////////
+    //Charge term logic
+    ///////////////////////////////////////
+    /*
+    if we are in charge mode and battV >= setpoint and power is <= termination setpoint
+        Then we end charge.
+    */
+
+    ///////////////////////////////////////
+
+
+
         if(opmode==MOD_CHARGE) DigIo::gp_out3.Set();//Chademo relay on for testing
         if(opmode!=MOD_CHARGE) DigIo::gp_out3.Clear();//Chademo relay off for testing
 
