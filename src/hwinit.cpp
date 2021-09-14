@@ -30,6 +30,7 @@
 #include <libopencm3/stm32/rtc.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/exti.h>
+#include <libopencm3/stm32/rtc.h>
 #include "hwdefs.h"
 #include "hwinit.h"
 
@@ -209,6 +210,9 @@ void nvic_setup(void)
   exti_enable_request(EXTI15);
   exti_set_trigger(EXTI15, EXTI_TRIGGER_FALLING);
   exti_select_source(EXTI15,GPIOE);
+  /* Without this the RTC interrupt routine will never be called. */
+	nvic_enable_irq(NVIC_RTC_IRQ);
+	nvic_set_priority(NVIC_RTC_IRQ, 0x20);
 
 }
 

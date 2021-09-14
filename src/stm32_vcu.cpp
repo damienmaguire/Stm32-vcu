@@ -46,6 +46,17 @@ static uint16_t maxRevs;
 static uint32_t oldTime;
 uint8_t pot_test;
 uint8_t count_one=0;
+uint8_t ChgSet;
+bool RunChg;
+uint8_t ChgHrs_tmp;
+uint8_t ChgMins_tmp;
+uint16_t ChgDur_tmp;
+
+
+static volatile unsigned
+	days=0,
+	hours=0, minutes=0, seconds=0,
+	alarm=0;			// != 0 when alarm is pending
 
 // Instantiate Classes
 BMW_E65Class E65Vehicle;
@@ -61,6 +72,17 @@ static void Ms200Task(void)
     if(chargerClass::HVreq==true) Param::SetInt(Param::hvChg,1);
     if(chargerClass::HVreq==false) Param::SetInt(Param::hvChg,0);
     int opmode = Param::GetInt(Param::opmode);
+    ChgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
+    Param::SetInt(Param::Day,days);
+    Param::SetInt(Param::Hour,hours);
+    Param::SetInt(Param::Min,minutes);
+    Param::SetInt(Param::Sec,seconds);
+    if(ChgSet==2){
+    if((ChgHrs_tmp==hours)&&(ChgMins_tmp==minutes)&&(ChgDur_tmp!=0))RunChg=true;
+
+    }
+    if(ChgSet==0) RunChg=true;
+    if(ChgSet==1) RunChg=false;
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
     if(targetCharger == _chgmodes::Volt_Ampera)
     {
@@ -111,7 +133,7 @@ static void Ms200Task(void)
        if (opmode == MOD_OFF)
     {
         Param::SetInt(Param::chgtyp,OFF);
-      auto LIMmode=i3LIMClass::Control_Charge();
+      auto LIMmode=i3LIMClass::Control_Charge(RunChg);
       if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
       {
             chargeMode = true;
@@ -129,7 +151,7 @@ static void Ms200Task(void)
 
     if (opmode == MOD_CHARGE)
     {
-        auto LIMmode=i3LIMClass::Control_Charge();
+        auto LIMmode=i3LIMClass::Control_Charge(RunChg);
         // if we are in AC charge mode,have no hv request and shutdown from the lim then end chg mode
         if((LIMmode==i3LIMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==AC)&&(chargerClass::HVreq==false))
         {
@@ -170,8 +192,8 @@ static void Ms200Task(void)
 
     if(targetCharger == _chgmodes::EXT_DIGI)
     {
-   if(opmode != MOD_RUN)  chargeMode = DigIo::HV_req.Get();//false; //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
-                                                                    //response with a 12v output signal on a digital output.
+   if((opmode != MOD_RUN) && (RunChg))  chargeMode = DigIo::HV_req.Get();//false; //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
+    if(!RunChg) chargeMode = false;                                                                //response with a 12v output signal on a digital output.
 
     }
 
@@ -312,7 +334,7 @@ static void Ms100Task(void)
     int16_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
 
-    chargerClass::Send100msMessages();
+    chargerClass::Send100msMessages(RunChg);
 }
 
 
@@ -582,6 +604,13 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
     Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
     maxRevs=Param::GetInt(Param::revlim);//get revlimiter value
+    seconds=Param::GetInt(Param::Set_Sec);
+    minutes=Param::GetInt(Param::Set_Min);
+    hours=Param::GetInt(Param::Set_Hour);
+    days=Param::GetInt(Param::Set_Day);
+    ChgHrs_tmp=GetInt(Param::Chg_Hrs);
+    ChgMins_tmp=GetInt(Param::Chg_Min);
+    ChgDur_tmp=GetInt(Param::Chg_Dur);
 
 }
 
@@ -701,6 +730,32 @@ extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
   //DigIo::led_out.Toggle();
 }
 
+extern "C" void rtc_isr(void)
+{
+	/* The interrupt flag isn't cleared by hardware, we have to do it. */
+	rtc_clear_flag(RTC_SEC);
+
+	/* Visual output. */
+	//DigIo::led_out.Toggle();
+
+		if ( ++seconds >= 60 ) {
+			++minutes;
+			seconds -= 60;
+		}
+		if ( minutes >= 60 ) {
+			++hours;
+			minutes -= 60;
+		}
+		if ( hours >= 24 ) {
+			++days;
+			hours -= 24;
+		}
+
+
+}
+
+
+
 extern "C" int main(void)
 {
     clock_setup();
@@ -718,6 +773,11 @@ extern "C" int main(void)
     parm_Change(Param::PARAM_LAST);
     DigIo::inv_out.Clear();//inverter power off during bootup
     DigIo::mcp_sby.Clear();//enable can3
+    rtc_awake_from_off(RCC_HSE);
+	rtc_set_prescale_val(62500);
+    	/* Enable the RTC interrupt to occur off the SEC flag. */
+    rtc_clear_flag(RTC_SEC);
+	rtc_interrupt_enable(RTC_SEC);
 
     Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt/LIM.
     Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2 vehicle side.

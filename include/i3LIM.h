@@ -30,7 +30,7 @@ static void handle272(uint32_t data[2]);
 static void Send200msMessages();
 static void Send100msMessages();
 static void Send10msMessages();
-static i3LIMChargingState Control_Charge();
+static i3LIMChargingState Control_Charge(bool RunCh);
 private:
 static void CCS_Pwr_Con();
 static void Chg_Timers();

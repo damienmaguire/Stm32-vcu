@@ -466,7 +466,7 @@ vin_ctr++;
 
 }
 
-i3LIMChargingState i3LIMClass::Control_Charge()
+i3LIMChargingState i3LIMClass::Control_Charge(bool RunCh)
 {
     int opmode = Param::GetInt(Param::opmode);
     if (opmode != MOD_RUN)  //only do this if we are not in run mode
@@ -485,9 +485,9 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have 
   CHG_Pwr=6500/25;//approx 6.5kw ac
 
 
-    if(!Param::GetBool(Param::Chgctrl))return i3LIMChargingState::AC_Chg;//set ac charge mode if we are enabled on webui
+    if(RunCh)return i3LIMChargingState::AC_Chg;//set ac charge mode if we are enabled on webui
 
-if(Param::GetBool(Param::Chgctrl))
+if(!RunCh)
 {
         lim_state=0;//return to state 0
      Param::SetInt(Param::CCS_State,lim_state);
@@ -689,7 +689,7 @@ Charge phase 4,
   CHG_Pwr=44000/25;//49kw approx power
    //we chill out here charging.
 
-   if(Param::GetBool(Param::Chgctrl)||CCS_IntStat==0x02)//if we have a request to terminate from the web ui or the evse then move to next state.
+   if((!RunCh)||CCS_IntStat==0x02)//if we have a request to terminate from the web ui or the evse then move to next state.
       {
         FC_Cur=0;//set current to 0
         lim_state++; //move to state 7 (shutdown)
@@ -758,8 +758,8 @@ Charge phase 4,
 
     }
 
-if(!Param::GetBool(Param::Chgctrl))return i3LIMChargingState::DC_Chg;//set dc charge mode if we are enabled on webui
-if(Param::GetBool(Param::Chgctrl)&&lim_state==9)return i3LIMChargingState::No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
+if(RunCh)return i3LIMChargingState::DC_Chg;//set dc charge mode if we are enabled on webui
+if((!RunCh)&&lim_state==9)return i3LIMChargingState::No_Chg;//set no charge mode if we are disabled on webui and in state 9 of dc machine
 
 }
 
