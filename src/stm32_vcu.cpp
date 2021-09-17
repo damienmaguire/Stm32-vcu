@@ -35,6 +35,7 @@ HWREV hwRev; // Hardware variant of board we are running on
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
 static bool chargeModeDC = false;
+static bool ChgLck = false;
 static Can* can;
 static _invmodes targetInverter;
 static _vehmodes targetVehicle;
@@ -51,6 +52,8 @@ bool RunChg;
 uint8_t ChgHrs_tmp;
 uint8_t ChgMins_tmp;
 uint16_t ChgDur_tmp;
+uint8_t RTC_1Sec=0;
+uint32_t ChgTicks=0,ChgTicks_1Min=0;
 
 
 static volatile unsigned
@@ -62,9 +65,72 @@ static volatile unsigned
 BMW_E65Class E65Vehicle;
 GS450HClass gs450Inverter;
 chargerClass chgtype;
-uCAN_MSG txMessage;
+//uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
 CAN3_Msg CAN3;
+
+
+static void RunChaDeMo()
+{
+   static uint32_t connectorLockTime = 0;
+
+             chargeMode = true;
+
+
+   /* 1s after entering charge mode, enable charge permission */
+   if (Param::GetInt(Param::opmode) == MOD_CHARGE && rtc_get_counter_val() > 200)
+   {
+      ChaDeMo::SetEnabled(true);
+        //here we will need a gpio output to pull the chademo enable signal low
+   }
+
+   if (connectorLockTime == 0 && ChaDeMo::ConnectorLocked())
+   {
+      connectorLockTime = rtc_get_counter_val();
+
+   }
+   //10s after locking tell EVSE that we closed the contactor (in fact we have no control). Oh yes we do! Muhahahahaha
+   if (Param::GetInt(Param::opmode) == MOD_CHARGE && (rtc_get_counter_val() - connectorLockTime) > 1000)
+   {
+       DigIo::gp_out3.Set();//Chademo relay on
+      ChaDeMo::SetContactor(true);
+        chargeModeDC = true;   //DC charge mode
+        Param::SetInt(Param::chgtyp,DCFC);
+   }
+
+   if (Param::GetInt(Param::chgtyp) == DCFC)
+   {
+      int chargeCur = Param::GetInt(Param::CCS_ICmd);
+      int chargeLim = Param::GetInt(Param::CCS_ILim);
+      chargeCur = MIN(MIN(255, chargeLim), chargeCur);
+      ChaDeMo::SetChargeCurrent(chargeCur);
+      ChaDeMo::CheckSensorDeviation(Param::GetInt(Param::udc));
+   }
+
+
+
+   ChaDeMo::SetTargetBatteryVoltage(Param::GetInt(Param::Voltspnt));
+   ChaDeMo::SetSoC(Param::Get(Param::CCS_SOCLim));
+   Param::SetInt(Param::CCS_Ireq, ChaDeMo::GetRampedCurrentRequest());
+
+   if (chargeMode)
+   {
+      if (Param::Get(Param::SOC) >= Param::Get(Param::CCS_SOCLim) ||
+          Param::GetInt(Param::CCS_ILim) == 0)
+      {
+
+         ChaDeMo::SetEnabled(false);
+         DigIo::gp_out3.Clear();//Chademo relay off
+         chargeMode = false;
+      }
+
+      Param::SetInt(Param::CCS_V, ChaDeMo::GetChargerOutputVoltage());
+      Param::SetInt(Param::CCS_I, ChaDeMo::GetChargerOutputCurrent());
+      ChaDeMo::SendMessages();
+   }
+   Param::SetInt(Param::CCS_State, ChaDeMo::GetChargerStatus());
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
@@ -72,17 +138,42 @@ static void Ms200Task(void)
     if(chargerClass::HVreq==true) Param::SetInt(Param::hvChg,1);
     if(chargerClass::HVreq==false) Param::SetInt(Param::hvChg,0);
     int opmode = Param::GetInt(Param::opmode);
-    ChgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
     Param::SetInt(Param::Day,days);
     Param::SetInt(Param::Hour,hours);
     Param::SetInt(Param::Min,minutes);
     Param::SetInt(Param::Sec,seconds);
-    if(ChgSet==2){
-    if((ChgHrs_tmp==hours)&&(ChgMins_tmp==minutes)&&(ChgDur_tmp!=0))RunChg=true;
+    Param::SetInt(Param::ChgT,ChgDur_tmp);
+    if(ChgSet==2 && !ChgLck){ //if in timer mode and not locked out from a previous full charge.
+        if(opmode!=MOD_CHARGE)
+            {
+            if((ChgHrs_tmp==hours)&&(ChgMins_tmp==minutes)&&(ChgDur_tmp!=0))RunChg=true;//if we arrive at set charge time and duration is non zero then initiate charge
+            else RunChg=false;
+            }
+
+        if(opmode==MOD_CHARGE)
+        {
+           if(ChgTicks!=0)
+           {
+             ChgTicks--; //decrement charge timer ticks
+             ChgTicks_1Min++;
+           }
+
+           if(ChgTicks==0)
+           {
+              RunChg=false; //end charge if still charging once timer expires.
+              ChgTicks = (GetInt(Param::Chg_Dur)*300);//recharge the tick timer
+           }
+
+            if (ChgTicks_1Min==300)
+            {
+               ChgTicks_1Min=0;
+                ChgDur_tmp--; //countdown minutes of charge time remaining.
+            }
+        }
 
     }
-    if(ChgSet==0) RunChg=true;
-    if(ChgSet==1) RunChg=false;
+    if(ChgSet==0 && !ChgLck) RunChg=true;//enable from webui if we are not locked out from an auto termination
+    if(ChgSet==1) RunChg=false;//disable from webui
     if(targetVehicle == _vehmodes::BMW_E65) BMW_E65Class::GDis();//needs to be every 200ms
     if(targetCharger == _chgmodes::Volt_Ampera)
     {
@@ -94,29 +185,7 @@ static void Ms200Task(void)
 
     }
 
-    if(targetChgint == _interface::Chademo) //Chademo on CAN3
-    {
-    /////////////////////////////////////////////////////////////////
-    //CAN SPI Test
-    /////////////////////////////////////////////////////////////////
-    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-    txMessage.frame.id = 0x100;
-    txMessage.frame.dlc = 8;
-    txMessage.frame.data0 = CAN3.frame.data0;
-    txMessage.frame.data1 = 1;
-    txMessage.frame.data2 = 2;
-    txMessage.frame.data3 = 3;
-    txMessage.frame.data4 = 4;
-    txMessage.frame.data5 = 5;
-    txMessage.frame.data6 = 6;
-    txMessage.frame.data7 = 7;
-    CANSPI_Transmit(&txMessage);
 
-    /////////////////////////////////////////////////////////////////
-    //seems to work but config is the issue...
-
-
-    }
 
     if(targetChgint == _interface::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
     {
@@ -204,6 +273,15 @@ static void Ms200Task(void)
     if we are in charge mode and battV >= setpoint and power is <= termination setpoint
         Then we end charge.
     */
+    if(opmode==MOD_CHARGE)
+    {
+      if(Param::GetInt(Param::udc)>=Param::GetInt(Param::Voltspnt) && Param::GetInt(Param::idc)<=Param::GetInt(Param::IdcTerm))
+      {
+        RunChg=false;//end charge
+        ChgLck=true;//set charge lockout flag
+      }
+    }
+    if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
 
     ///////////////////////////////////////
 
@@ -335,6 +413,15 @@ static void Ms100Task(void)
     Param::SetInt(Param::tmpaux,IsaTemp);
 
     chargerClass::Send100msMessages(RunChg);
+
+    if(targetChgint == _interface::Chademo) //Chademo on CAN3
+    {
+        if(!DigIo::gp_12Vin.Get()) RunChaDeMo(); //if we detect chademo plug inserted off we go ...
+
+
+    }
+
+
 }
 
 
@@ -578,6 +665,8 @@ static void Ms1Task(void)
 
 
 
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 extern void parm_Change(Param::PARAM_NUM paramNum)
 {
@@ -611,7 +700,8 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     ChgHrs_tmp=GetInt(Param::Chg_Hrs);
     ChgMins_tmp=GetInt(Param::Chg_Min);
     ChgDur_tmp=GetInt(Param::Chg_Dur);
-
+    ChgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
+    ChgTicks = (GetInt(Param::Chg_Dur)*300);//number of 200ms ticks that equates to charge timer in minutes
 }
 
 
@@ -711,33 +801,29 @@ extern "C" void tim3_isr(void)
 
 extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
 {
+    uint32_t canData[2];
    if(CANSPI_receive(&rxMessage))
     {
-      CAN3.frame.idType = rxMessage.frame.idType;
-      CAN3.frame.id = rxMessage.frame.id;
-      CAN3.frame.dlc = rxMessage.frame.dlc;
-      CAN3.frame.data0 = rxMessage.frame.data0;
-      CAN3.frame.data1 = rxMessage.frame.data1;
-      CAN3.frame.data2 = rxMessage.frame.data2;
-      CAN3.frame.data3 = rxMessage.frame.data3;
-      CAN3.frame.data4 = rxMessage.frame.data4;
-      CAN3.frame.data5 = rxMessage.frame.data5;
-      CAN3.frame.data6 = rxMessage.frame.data6;
-      CAN3.frame.data7 = rxMessage.frame.data7;
+        canData[0]=(rxMessage.frame.data0 | rxMessage.frame.data1<<8 | rxMessage.frame.data2<<16 | rxMessage.frame.data3<<24);
+        canData[1]=(rxMessage.frame.data4 | rxMessage.frame.data5<<8 | rxMessage.frame.data6<<16 | rxMessage.frame.data7<<24);
     }
     CANSPI_CLR_IRQ();   //Clear Rx irqs in mcp25625
     exti_reset_request(EXTI15); // clear irq
+
+    if(rxMessage.frame.id==0x108) ChaDeMo::Process108Message(canData);
+    if(rxMessage.frame.id==0x109) ChaDeMo::Process109Message(canData);
   //DigIo::led_out.Toggle();
 }
 
 extern "C" void rtc_isr(void)
 {
 	/* The interrupt flag isn't cleared by hardware, we have to do it. */
-	rtc_clear_flag(RTC_SEC);
+	rtc_clear_flag(RTC_SEC);    //This will fire every 10ms so we need to count to 100 to get a 1 sec tick.
+    RTC_1Sec++;
 
-	/* Visual output. */
-	//DigIo::led_out.Toggle();
-
+        if(RTC_1Sec==100)
+        {
+            RTC_1Sec=0;
 		if ( ++seconds >= 60 ) {
 			++minutes;
 			seconds -= 60;
@@ -751,7 +837,7 @@ extern "C" void rtc_isr(void)
 			hours -= 24;
 		}
 
-
+        }
 }
 
 
@@ -773,11 +859,7 @@ extern "C" int main(void)
     parm_Change(Param::PARAM_LAST);
     DigIo::inv_out.Clear();//inverter power off during bootup
     DigIo::mcp_sby.Clear();//enable can3
-    rtc_awake_from_off(RCC_HSE);
-	rtc_set_prescale_val(62500);
-    	/* Enable the RTC interrupt to occur off the SEC flag. */
-    rtc_clear_flag(RTC_SEC);
-	rtc_interrupt_enable(RTC_SEC);
+
 
     Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt/LIM.
     Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2 vehicle side.

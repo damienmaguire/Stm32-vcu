@@ -799,6 +799,7 @@ if((Tmp_Vbatt<Tmp_Vbatt_Spnt)&&(CCS_Ilim==0x0)&&(CCS_Plim==0x0))CCSI_Spnt++;//in
 if(Tmp_Vbatt>Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.
 if(CCS_Ilim==0x1)CCSI_Spnt--;//decrement if current limit flag is set
 if(CCS_Plim==0x1)CCSI_Spnt--;//decrement if Power limit flag is set
+Param::SetInt(Param::CCS_Ireq,CCSI_Spnt);
 }
 
 void i3LIMClass::Chg_Timers()

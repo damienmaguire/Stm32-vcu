@@ -32,8 +32,9 @@
 #include "charger.h"
 #include "i3LIM.h"
 #include "CANSPI.h"
+#include "chademo.h"
 
-
+/*
 typedef union {
     struct {
         uint8_t idType;
@@ -49,4 +50,14 @@ typedef union {
         uint8_t data7;
     } frame;
     uint8_t array[14];
+} CAN3_Msg;
+*/
+
+typedef union {
+    struct {
+        uint32_t data[2];
+        uint8_t datab[8];
+
+    } frame;
+    //uint8_t array[14];
 } CAN3_Msg;

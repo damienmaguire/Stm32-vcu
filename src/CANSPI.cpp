@@ -155,21 +155,21 @@ uint8_t CANSPI_Transmit(uCAN_MSG *tempCanMsg) {
 
     ctrlStatus.ctrl_status = MCP2515_Read_Status();
 
-    if (ctrlStatus.ctrl.TXB0REQ != 1){
+    if (ctrlStatus.ctrl.TXB0REQ ==0){
         convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
 
         MCP2515_Load_TxSequence(MCP2515_LOAD_TXB0SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data0));
         MCP2515_RequestToSend(MCP2515_RTS_TX0);
 
         returnValue = 1;
-    }else if (ctrlStatus.ctrl.TXB1REQ != 1){
+    }else if (ctrlStatus.ctrl.TXB1REQ ==0){
         convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
 
         MCP2515_Load_TxSequence(MCP2515_LOAD_TXB1SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data0));
         MCP2515_RequestToSend(MCP2515_RTS_TX1);
 
         returnValue = 1;
-    }else if (ctrlStatus.ctrl.TXB2REQ != 1){
+    }else if (ctrlStatus.ctrl.TXB2REQ ==0){
         convertCANid2Reg(tempCanMsg->frame.id, tempCanMsg->frame.idType, &idReg);
 
         MCP2515_Load_TxSequence(MCP2515_LOAD_TXB2SIDH, &(idReg.tempSIDH), tempCanMsg->frame.dlc, &(tempCanMsg->frame.data0));

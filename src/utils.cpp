@@ -238,7 +238,7 @@ s32fp ProcessThrottle(int speed)
 
 
     Throttle::UdcLimitCommand(finalSpnt, Param::Get(Param::udc));
-
+    Throttle::IdcLimitCommand(finalSpnt, Param::Get(Param::idc));
 
     if (Throttle::TemperatureDerate(Param::Get(Param::tmphs), Param::Get(Param::tmphsmax), finalSpnt))
     {

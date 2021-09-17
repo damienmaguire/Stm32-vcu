@@ -1,3 +1,4 @@
+
 /*
  * This file is part of the tumanako_vc project.
  *
@@ -34,6 +35,16 @@ uint8_t ChaDeMo::soc;
 uint32_t ChaDeMo::vtgTimeout = 0;
 uint32_t ChaDeMo::curTimeout = 0;
 
+uCAN_MSG txMessage;
+
+#define FLASH_DELAY 8000
+static void delay(void)
+{
+    int i;
+    for (i = 0; i < FLASH_DELAY; i++)       /* Wait a bit. */
+        __asm__("nop");
+}
+
 void ChaDeMo::Process108Message(uint32_t data[2])
 {
    chargerMaxCurrent = data[0] >> 24;
@@ -53,6 +64,8 @@ void ChaDeMo::SetEnabled(bool enabled)
    if (!chargeEnabled)
    {
       rampedCurReq = 0;
+      vtgTimeout = 0;
+      curTimeout = 0;
    }
 }
 
@@ -72,7 +85,7 @@ void ChaDeMo::CheckSensorDeviation(uint16_t internalVoltage)
 
    vtgDev = ABS(vtgDev);
 
-   if (vtgDev > 10)
+   if (vtgDev > 10 && chargerOutputVoltage > 50)
    {
       vtgTimeout++;
    }
@@ -91,7 +104,7 @@ void ChaDeMo::CheckSensorDeviation(uint16_t internalVoltage)
    }
 }
 
-void ChaDeMo::SendMessages(Can* can)
+void ChaDeMo::SendMessages()
 {
    uint32_t data[2];
    bool curSensFault = curTimeout > 10;
@@ -101,12 +114,37 @@ void ChaDeMo::SendMessages(Can* can)
    data[0] = 0;
    data[1] = (targetBatteryVoltage + 10) | 200 << 16;
 
-   can->Send(0x100, data);
+    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    txMessage.frame.id = 0x100;
+    txMessage.frame.dlc = 8;
+    txMessage.frame.data0 = (data[0] & 0xFF);
+    txMessage.frame.data1 = (data[0]>>8 & 0xFF);
+    txMessage.frame.data2 = (data[0]>>16 & 0xFF);
+    txMessage.frame.data3 = (data[0]>>24 & 0xFF);
+    txMessage.frame.data4 = (data[1] & 0xFF);
+    txMessage.frame.data5 = (data[1]>>8 & 0xFF);
+    txMessage.frame.data6 = (data[1]>>16 & 0xFF);
+    txMessage.frame.data7 = (data[1]>>24 & 0xFF);
+    CANSPI_Transmit(&txMessage);
+    delay();
 
    data[0] = 0x00FEFF00;
    data[1] = 0;
 
-   can->Send(0x101, data);
+    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    txMessage.frame.id = 0x101;
+    txMessage.frame.dlc = 8;
+    txMessage.frame.data0 = (data[0] & 0xFF);
+    txMessage.frame.data1 = (data[0]>>8 & 0xFF);
+    txMessage.frame.data2 = (data[0]>>16 & 0xFF);
+    txMessage.frame.data3 = (data[0]>>24 & 0xFF);
+    txMessage.frame.data4 = (data[1] & 0xFF);
+    txMessage.frame.data5 = (data[1]>>8 & 0xFF);
+    txMessage.frame.data6 = (data[1]>>16 & 0xFF);
+    txMessage.frame.data7 = (data[1]>>24 & 0xFF);
+    CANSPI_Transmit(&txMessage);
+    delay();
+
 
    data[0] = 1 | ((uint32_t)targetBatteryVoltage << 8) | ((uint32_t)rampedCurReq << 24);
    data[1] = (uint32_t)curSensFault << 2 |
@@ -117,5 +155,19 @@ void ChaDeMo::SendMessages(Can* can)
              (uint32_t)contactorOpen << 11 |
              (uint32_t)soc << 16;
 
-   can->Send(0x102, data);
+    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    txMessage.frame.id = 0x102;
+    txMessage.frame.dlc = 8;
+    txMessage.frame.data0 = (data[0] & 0xFF);
+    txMessage.frame.data1 = (data[0]>>8 & 0xFF);
+    txMessage.frame.data2 = (data[0]>>16 & 0xFF);
+    txMessage.frame.data3 = (data[0]>>24 & 0xFF);
+    txMessage.frame.data4 = (data[1] & 0xFF);
+    txMessage.frame.data5 = (data[1]>>8 & 0xFF);
+    txMessage.frame.data6 = (data[1]>>16 & 0xFF);
+    txMessage.frame.data7 = (data[1]>>24 & 0xFF);
+    CANSPI_Transmit(&txMessage);
+
+
 }
+

@@ -35,6 +35,7 @@
     DIG_IO_ENTRY(mcp_cs,     GPIOB, GPIO12,  PinMode::OUTPUT)      \
     DIG_IO_ENTRY(mcp_sby,     GPIOE, GPIO14,  PinMode::OUTPUT)      \
     DIG_IO_ENTRY(t15_digi,     GPIOD, GPIO6,  PinMode::INPUT_FLT)      \
+    DIG_IO_ENTRY(gp_12Vin,     GPIOD, GPIO4,  PinMode::INPUT_FLT)      \
 
 
 

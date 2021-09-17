@@ -222,8 +222,10 @@ void rtc_setup()
     //62.5kHz / (624 + 1) = 100Hz
     rtc_auto_awake(RCC_HSE, 624); //10ms tick
     rtc_set_counter_val(0);
+    //* Enable the RTC interrupt to occur off the SEC flag.
+    rtc_clear_flag(RTC_SEC);
+	rtc_interrupt_enable(RTC_SEC);
 }
-
 
 void tim_setup()
 {
