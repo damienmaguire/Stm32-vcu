@@ -4,6 +4,12 @@
 
 /*
 Ampera heater info from : https://leafdriveblog.wordpress.com/2018/12/05/5kw-electric-heater/
+http://s80ev.blogspot.com/2016/12/the-heat-is-on.html
+https://github.com/neuweiler/GEVCUExtension/blob/develop/EberspaecherHeater.cpp
+
+ * The heater communicates using J1939 protocol. It has to be "woken up" one time with a 0x100 message and then
+ * must see a "keep alive" to stay active, which is the 0x621 message. The message repetition rate is between
+ * 25 and 100ms intervals.
 
 LV connector has SW CAN, ENABLE and GND pins.
 
@@ -29,7 +35,7 @@ ID,Extended,Bus,LEN,D0,D1,D2,D3,D4,D5,D6,D7
 0x102CC040,True,1,8,1,1,CF,0F,0,51,46,60
 0x102740CB,True,1,3,2D,0,0,0,0,0,0,0
 0x102740CB,True,1,3,19,0,0,0,0,0,0,0
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 Info on VW heater from : https://openinverter.org/forum/viewtopic.php?f=24&p=31718&sid=37fd4c47b77d59aa95c9af42f46d8b31#p31718
 
 I found the LIN messages for the water heater. The feedback comes on ID48. Byte 0 is power. 13 for 770W, 26 for 1540W.
@@ -54,5 +60,33 @@ tmp = 255-tmp;
 return tmp;
 }
 
-
 */
+
+uCAN_MSG txMessage_Ampera;
+
+/*
+ * Wake up all SW-CAN devices by switching the transceiver to HV mode and
+ * sending the command 0x100 and switching the HV mode off again.
+ */
+void AmperaHeater::sendWakeup()
+{
+    DigIo::sw_mode0.Clear();
+    DigIo::sw_mode1.Set();  // set HV mode
+
+    // 0x100, False, 0, 00,00,00,00,00,00,00,00
+    txMessage_Ampera.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x100;
+    txMessage_Ampera.frame.dlc = 8;
+    txMessage_Ampera.frame.data0 = 0x00;
+    txMessage_Ampera.frame.data1 = 0x00;
+    txMessage_Ampera.frame.data2 = 0x00;
+    txMessage_Ampera.frame.data3 = 0x00;
+    txMessage_Ampera.frame.data4 = 0x00;
+    txMessage_Ampera.frame.data5 = 0x00;
+    txMessage_Ampera.frame.data6 = 0x00;
+    txMessage_Ampera.frame.data7 = 0x00;
+    CANSPI_Transmit(&txMessage_Ampera);
+    //may need dealy here
+    DigIo::sw_mode0.Set();
+    DigIo::sw_mode1.Set();  // set normal mode
+}

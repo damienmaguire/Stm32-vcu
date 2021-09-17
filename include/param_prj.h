@@ -24,7 +24,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 57
+//Next param id (increase when adding new parameter!): 60
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,Inverter,     INVMODES    ,  0,      5,      0,      5  ) \
@@ -69,6 +69,9 @@
     PARAM_ENTRY(CAT_CHARGER, CCS_ILim,       "A",       0,      350,   100,    43  ) \
     PARAM_ENTRY(CAT_CHARGER, CCS_SOCLim,       "%",       0,      100,   80,    44  ) \
     PARAM_ENTRY(CAT_CHARGER, Chgctrl,  CHGCTRL,0,      2,      0,      45  ) \
+    PARAM_ENTRY(CAT_Heater,   Heater,       HtType,       0,      2,   0,    57  ) \
+    PARAM_ENTRY(CAT_Heater,   Control,       HtCtrl,       0,      2,   0,    58  ) \
+    PARAM_ENTRY(CAT_Heater,   HeatPwr,       "W",       0,      6500,   0,    59  ) \
     PARAM_ENTRY(CAT_CLOCK,   Set_Day,       Days,       0,      6,   0,    46  ) \
     PARAM_ENTRY(CAT_CLOCK,   Set_Hour,      "Hours",       0,      23,   0,    47  ) \
     PARAM_ENTRY(CAT_CLOCK,   Set_Min,      "Mins",       0,      59,   0,    48  ) \
@@ -179,6 +182,8 @@
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"
 #define CRUISESTATES "0=None, 1=On, 2=Disable, 4=SetN, 8=SetP"
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
+#define HtType      "0=None, 1=Ampera, 2=VW"
+#define HtCtrl      "0=Disable, 1=Enable, 2=Timer"
 #define CAT_THROTTLE "Throttle"
 #define CAT_POWER    "Power Limit"
 #define CAT_CONTACT  "Contactor Control"
@@ -186,6 +191,7 @@
 #define CAT_COMM     "Communication"
 #define CAT_SETUP      "Vehicle Module"
 #define CAT_CLOCK      "RTC Module"
+#define CAT_Heater      "Heater Module"
 #define CAT_CRUISE   "Cruise Control"
 #define CAT_LEXUS   "Gearbox Control"
 #define CAT_CHARGER  "Charger Control"
