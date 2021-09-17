@@ -33,6 +33,7 @@
 #include "i3LIM.h"
 #include "CANSPI.h"
 #include "chademo.h"
+#include "heater.h"
 
 /*
 typedef union {
