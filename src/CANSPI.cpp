@@ -137,8 +137,12 @@ CAN ID		Mask				Filter		Buffer
 
     // Initialize CAN Timings
 
-
+/*
     MCP2515_Write_Byte(MCP2515_CNF1, 0x40);//500kbps at 16HMz xtal.
+    MCP2515_Write_Byte(MCP2515_CNF2, 0xe5);
+    MCP2515_Write_Byte(MCP2515_CNF3, 0x83);
+*/
+    MCP2515_Write_Byte(MCP2515_CNF1, 0x4E);//33kbps at 16HMz xtal.
     MCP2515_Write_Byte(MCP2515_CNF2, 0xe5);
     MCP2515_Write_Byte(MCP2515_CNF3, 0x83);
 
