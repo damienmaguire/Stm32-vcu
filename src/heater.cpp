@@ -64,6 +64,14 @@ return tmp;
 
 uCAN_MSG txMessage_Ampera;
 
+#define FLASH_DELAY 8000
+static void delay(void)
+{
+    int i;
+    for (i = 0; i < FLASH_DELAY; i++)       /* Wait a bit. */
+        __asm__("nop");
+}
+
 /*
  * Wake up all SW-CAN devices by switching the transceiver to HV mode and
  * sending the command 0x100 and switching the HV mode off again.
@@ -72,7 +80,7 @@ void AmperaHeater::sendWakeup()
 {
     DigIo::sw_mode0.Clear();
     DigIo::sw_mode1.Set();  // set HV mode
-
+    delay();
     // 0x100, False, 0, 00,00,00,00,00,00,00,00
     txMessage_Ampera.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
     txMessage_Ampera.frame.id = 0x100;
@@ -87,6 +95,112 @@ void AmperaHeater::sendWakeup()
     txMessage_Ampera.frame.data7 = 0x00;
     CANSPI_Transmit(&txMessage_Ampera);
     //may need dealy here
+    delay();
     DigIo::sw_mode0.Set();
     DigIo::sw_mode1.Set();  // set normal mode
+}
+
+void AmperaHeater::controlPower(uint16_t heatPwr)
+{
+    //0x621,False,1,8,0,40,0,0,0,0,0,0
+    //keep alive msg
+    txMessage_Ampera.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x621;
+    txMessage_Ampera.frame.dlc = 8;
+    txMessage_Ampera.frame.data0 = 0x00;
+    txMessage_Ampera.frame.data1 = 0x40;
+    txMessage_Ampera.frame.data2 = 0x00;
+    txMessage_Ampera.frame.data3 = 0x00;
+    txMessage_Ampera.frame.data4 = 0x00;
+    txMessage_Ampera.frame.data5 = 0x00;
+    txMessage_Ampera.frame.data6 = 0x00;
+    txMessage_Ampera.frame.data7 = 0x00;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
+
+    //0x13FFE060, True,  0, 00,00,00,00,00,00,00,00 - cmd1
+    txMessage_Ampera.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x13FFE060;
+    txMessage_Ampera.frame.dlc = 0;
+    txMessage_Ampera.frame.data0 = 0x00;
+    txMessage_Ampera.frame.data1 = 0x00;
+    txMessage_Ampera.frame.data2 = 0x00;
+    txMessage_Ampera.frame.data3 = 0x00;
+    txMessage_Ampera.frame.data4 = 0x00;
+    txMessage_Ampera.frame.data5 = 0x00;
+    txMessage_Ampera.frame.data6 = 0x00;
+    txMessage_Ampera.frame.data7 = 0x00;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
+
+    //0x10720099, True,  5, 02,3E,00,00,00,00,00,00 - control
+    txMessage_Ampera.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x10720099;
+    txMessage_Ampera.frame.dlc = 5;
+    txMessage_Ampera.frame.data0 = 0x02;
+    // map requested power to valid range of heater (0 - 0x85)
+    txMessage_Ampera.frame.data1 = utils::change(heatPwr, 0, 6500, 0, 133);
+    txMessage_Ampera.frame.data2 = 0x00;
+    txMessage_Ampera.frame.data3 = 0x00;
+    txMessage_Ampera.frame.data4 = 0x00;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
+
+    //0x102CC040, True,  8, 01,01,CF,0F,00,51,46,60 - cmd2
+    txMessage_Ampera.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x102CC040;
+    txMessage_Ampera.frame.dlc = 0;
+    txMessage_Ampera.frame.data0 = 0x01;
+    txMessage_Ampera.frame.data1 = 0x01;
+    txMessage_Ampera.frame.data2 = 0xcf;
+    txMessage_Ampera.frame.data3 = 0x0f;
+    txMessage_Ampera.frame.data4 = 0x00;
+    txMessage_Ampera.frame.data5 = 0x51;
+    txMessage_Ampera.frame.data6 = 0x46;
+    txMessage_Ampera.frame.data7 = 0x60;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
+
+    //0x102CC040, True,  8, 01,01,CF,0F,00,51,46,60 - cmd2
+    txMessage_Ampera.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x13FFE060;
+    txMessage_Ampera.frame.dlc = 0;
+    txMessage_Ampera.frame.data0 = 0x01;
+    txMessage_Ampera.frame.data1 = 0x01;
+    txMessage_Ampera.frame.data2 = 0xcf;
+    txMessage_Ampera.frame.data3 = 0x0f;
+    txMessage_Ampera.frame.data4 = 0x00;
+    txMessage_Ampera.frame.data5 = 0x51;
+    txMessage_Ampera.frame.data6 = 0x46;
+    txMessage_Ampera.frame.data7 = 0x60;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
+
+    //0x10242040, True,  1, 00,00,00,00,00,00,00,00 - cmd3
+    txMessage_Ampera.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x10242040;
+    txMessage_Ampera.frame.dlc = 1;
+    txMessage_Ampera.frame.data0 = 0x00;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
+
+    //0x102740CB, True,  3, 2D,00,00,00,00,00,00,00 - cmd4
+    txMessage_Ampera.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x102740CB;
+    txMessage_Ampera.frame.dlc = 3;
+    txMessage_Ampera.frame.data0 = 0x2d;
+    txMessage_Ampera.frame.data1 = 0x00;
+    txMessage_Ampera.frame.data2 = 0x00;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
+
+    // 0x102740CB, True,  3, 19,00,00,00,00,00,00,00 - cmd5
+    txMessage_Ampera.frame.idType = dEXTENDED_CAN_MSG_ID_2_0B;
+    txMessage_Ampera.frame.id = 0x102740CB;
+    txMessage_Ampera.frame.dlc = 3;
+    txMessage_Ampera.frame.data0 = 0x19;
+    txMessage_Ampera.frame.data1 = 0x00;
+    txMessage_Ampera.frame.data2 = 0x00;
+    CANSPI_Transmit(&txMessage_Ampera);
+    delay();
 }

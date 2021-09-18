@@ -49,6 +49,7 @@ uint8_t pot_test;
 uint8_t count_one=0;
 uint8_t ChgSet;
 bool RunChg;
+bool Ampera_Not_Awake=true;
 uint8_t ChgHrs_tmp;
 uint8_t ChgMins_tmp;
 uint16_t ChgDur_tmp;
@@ -306,6 +307,8 @@ if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
     count_one=0;
 }
 
+
+
 }
 
 
@@ -424,6 +427,27 @@ static void Ms100Task(void)
 
     }
 
+    //Cabin heat control
+
+    if(opmode==MOD_RUN && Param::GetInt(Param::Heater)==1 && Param::GetInt(Param::Control)==1)//If we have selected an ampera heater are in run mode and heater not diabled...
+    {
+        DigIo::gp_out3.Set();//Heater enable and coolant pump on
+        if(Ampera_Not_Awake)
+        {
+            AmperaHeater::sendWakeup();
+            Ampera_Not_Awake=false;
+        }
+
+        if(!Ampera_Not_Awake)
+        {
+            AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr));
+        }
+    }
+    else
+    {
+      Ampera_Not_Awake=true;
+        DigIo::gp_out3.Clear();//Heater enable and coolant pump off
+    };
 
 }
 
@@ -696,13 +720,16 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
     Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
     maxRevs=Param::GetInt(Param::revlim);//get revlimiter value
-    seconds=Param::GetInt(Param::Set_Sec);
+    if(ChgSet==1)
+    {
+    seconds=Param::GetInt(Param::Set_Sec);//only update these params if charge command is set to disable
     minutes=Param::GetInt(Param::Set_Min);
     hours=Param::GetInt(Param::Set_Hour);
     days=Param::GetInt(Param::Set_Day);
     ChgHrs_tmp=GetInt(Param::Chg_Hrs);
     ChgMins_tmp=GetInt(Param::Chg_Min);
     ChgDur_tmp=GetInt(Param::Chg_Dur);
+    }
     ChgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
     ChgTicks = (GetInt(Param::Chg_Dur)*300);//number of 200ms ticks that equates to charge timer in minutes
 }
