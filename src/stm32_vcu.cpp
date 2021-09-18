@@ -264,8 +264,8 @@ static void Ms200Task(void)
    if((opmode != MOD_RUN) && (RunChg))  chargeMode = DigIo::HV_req.Get();//false; //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
     if(!RunChg) chargeMode = false;
 
-    if((opmode == MOD_OFF) && (RunChg)) DigIo::SP_out.Set();//enable charger digital line. using sp out from gs450h as not used when in charge
-    if((opmode == MOD_CHARGE) && (!RunChg)) DigIo::SP_out.Clear();//disable charger digital line when requested by timer or webui.
+    if(RunChg) DigIo::SP_out.Set();//enable charger digital line. using sp out from gs450h as not used when in charge
+    if(!RunChg) DigIo::SP_out.Clear();//disable charger digital line when requested by timer or webui.
 
     }
 
