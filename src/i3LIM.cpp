@@ -570,13 +570,13 @@ Charge phase 4,
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-    if(ChargeType==0x09) lim_state++; //Go to next state once we detect CCS type 2 charger type
-      //  lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
-      //  if(lim_stateCnt>40)//2 secs
-        //{
-       //    lim_state++; //next state after 2 secs
-       //    lim_stateCnt=0;
-      //  }
+    //if(ChargeType==0x09) lim_state++; //Go to next state once we detect CCS type 2 charger type
+        lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
+        if(lim_stateCnt>40)//2 secs
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
 
     }
         break;
@@ -790,10 +790,12 @@ void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
 uint16_t Tmp_Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
 uint16_t Tmp_Vbatt_Spnt=Param::GetInt(Param::Voltspnt);
 uint16_t Tmp_ICCS_Lim=Param::GetInt(Param::CCS_ILim);
+uint16_t Tmp_ICCS_Avail=Param::GetInt(Param::CCS_I_Avail);
 //int16_t Tmp_Ibatt=Param::GetInt(Param::idc);
 
 if(CCSI_Spnt>Tmp_ICCS_Lim)CCSI_Spnt=Tmp_ICCS_Lim; //clamp setpoint to current lim paramater.
 if(CCSI_Spnt>150)CCSI_Spnt=150; //never exceed 150amps for now.
+if(CCSI_Spnt>=Tmp_ICCS_Avail)CCSI_Spnt=Tmp_ICCS_Avail; //never exceed available current
 if(CCSI_Spnt>250)CCSI_Spnt=0; //crude way to prevent rollover
 if((Tmp_Vbatt<Tmp_Vbatt_Spnt)&&(CCS_Ilim==0x0)&&(CCS_Plim==0x0))CCSI_Spnt++;//increment if voltage lower than setpoint and power and current limts not set from charger.
 if(Tmp_Vbatt>Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.

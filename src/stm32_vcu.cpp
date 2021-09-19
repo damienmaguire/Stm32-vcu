@@ -55,6 +55,7 @@ uint8_t ChgMins_tmp;
 uint16_t ChgDur_tmp;
 uint8_t RTC_1Sec=0;
 uint32_t ChgTicks=0,ChgTicks_1Min=0;
+uint8_t CabHeater,CabHeater_ctrl;
 
 
 static volatile unsigned
@@ -93,6 +94,7 @@ static void RunChaDeMo()
    //10s after locking tell EVSE that we closed the contactor (in fact we have no control). Oh yes we do! Muhahahahaha
    if (Param::GetInt(Param::opmode) == MOD_CHARGE && (rtc_get_counter_val() - connectorLockTime) > 1000)
    {
+       //do not do 10 seconds!
        DigIo::gp_out3.Set();//Chademo relay on
       ChaDeMo::SetContactor(true);
         chargeModeDC = true;   //DC charge mode
@@ -428,26 +430,20 @@ static void Ms100Task(void)
     }
 
     //Cabin heat control
-
-    if(opmode==MOD_RUN && Param::GetInt(Param::Heater)==1 && Param::GetInt(Param::Control)==1)//If we have selected an ampera heater are in run mode and heater not diabled...
+    if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN))//If we have selected an ampera heater are in run mode and heater not diabled...
     {
         DigIo::gp_out3.Set();//Heater enable and coolant pump on
-        if(Ampera_Not_Awake)
-        {
-            AmperaHeater::sendWakeup();
-            Ampera_Not_Awake=false;
-        }
 
-        if(!Ampera_Not_Awake)
-        {
-            AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr));
-        }
-    }
-    else
-    {
-      Ampera_Not_Awake=true;
-        DigIo::gp_out3.Clear();//Heater enable and coolant pump off
+      if(Ampera_Not_Awake)
+      {
+         AmperaHeater::sendWakeup();
+         Ampera_Not_Awake=false;
+      }
+
+        if(!Ampera_Not_Awake) AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr));
+
     };
+
 
 }
 
@@ -720,6 +716,8 @@ extern void parm_Change(Param::PARAM_NUM paramNum)
     Lexus_Gear=Param::GetInt(Param::GEAR);//get gear selection from Menu
     Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
     maxRevs=Param::GetInt(Param::revlim);//get revlimiter value
+    CabHeater=Param::GetInt(Param::Heater);//get cabin heater type
+    CabHeater_ctrl=Param::GetInt(Param::Control);//get cabin heater control mode
     if(ChgSet==1)
     {
     seconds=Param::GetInt(Param::Set_Sec);//only update these params if charge command is set to disable
@@ -837,6 +835,7 @@ extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
         canData[0]=(rxMessage.frame.data0 | rxMessage.frame.data1<<8 | rxMessage.frame.data2<<16 | rxMessage.frame.data3<<24);
         canData[1]=(rxMessage.frame.data4 | rxMessage.frame.data5<<8 | rxMessage.frame.data6<<16 | rxMessage.frame.data7<<24);
     }
+    //can cast this to uint32_t[2]. dont be an idiot! * pointer
     CANSPI_CLR_IRQ();   //Clear Rx irqs in mcp25625
     exti_reset_request(EXTI15); // clear irq
 

@@ -102,6 +102,8 @@ void AmperaHeater::sendWakeup()
 
 void AmperaHeater::controlPower(uint16_t heatPwr)
 {
+    DigIo::sw_mode0.Set();
+    DigIo::sw_mode1.Set();  // set normal mode
     //0x621,False,1,8,0,40,0,0,0,0,0,0
     //keep alive msg
     txMessage_Ampera.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
