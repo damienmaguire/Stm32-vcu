@@ -293,8 +293,8 @@ static void Ms200Task(void)
 
 
 
-        if(opmode==MOD_CHARGE) DigIo::gp_out3.Set();//Chademo relay on for testing
-        if(opmode!=MOD_CHARGE) DigIo::gp_out3.Clear();//Chademo relay off for testing
+       // if(opmode==MOD_CHARGE) DigIo::gp_out3.Set();//Chademo relay on for testing
+       // if(opmode!=MOD_CHARGE) DigIo::gp_out3.Clear();//Chademo relay off for testing
 
     count_one++;
 if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
@@ -444,6 +444,7 @@ static void Ms100Task(void)
 
     };
 
+    if(CabHeater_ctrl==0) DigIo::gp_out3.Clear();//Heater enable and coolant pump off
 
 }
 
@@ -533,7 +534,7 @@ static void Ms10Task(void)
     }
     else if (targetVehicle == BMW_E46)
     {
-        uint16_t tempGauge = utils::change(Param::Get(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
+        uint16_t tempGauge = utils::change(Param::GetInt(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
         //Messages required for E46
         Can_E46::Msg316(speed);//send rpm to e46 dash
         Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
@@ -564,7 +565,7 @@ static void Ms10Task(void)
     {
       if(chargeMode==false)
       {
-        //DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
+        DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
       }
         DigIo::gp_out2.Set();//Negative contactors on
         DigIo::gp_out1.Set();//Coolant pump on
@@ -630,7 +631,7 @@ static void Ms10Task(void)
 
     if(opmode == MOD_RUN) //only shut off via ign command if not in charge mode
     {
-    DigIo::inv_out.Set();//inverter power on.
+    //DigIo::inv_out.Set();//inverter power on.
     if(targetVehicle == _vehmodes::BMW_E65)
     {
         if(!E65Vehicle.getTerminal15()) opmode = MOD_OFF; //switch to off mode via CAS command in an E65

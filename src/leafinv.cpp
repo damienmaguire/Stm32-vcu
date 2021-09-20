@@ -340,6 +340,9 @@ if (opmode != MOD_CHARGE) bytes[0] = 0x40;
     bytes[4]=0x40;//SOC for dash in Leaf. fixed val.
     bytes[5]=0x00;
     bytes[6]=counter_1db;
+
+
+
     // Extra CRC in byte 7
     nissan_crc(bytes, 0x85);
 
