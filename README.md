@@ -17,6 +17,7 @@ Video on progress : https://vimeo.com/506480876
 - BMW E39 CAN support
 - BMW E65 CAN Support
 - Mid 2000s VAG Can support
+- Opel Ampera / Chevy Volt 6.5kw cabin heater
 
 # Compiling
 You will need the arm-none-eabi toolchain: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
@@ -29,3 +30,7 @@ Now you can compile stm32-vcu by typing
 `make`
 
 And upload it to your board using a JTAG/SWD adapter, the updater.py script or the esp8266 web interface
+
+I use CodeBlocks IDE :  https://www.codeblocks.org/
+
+Sept 21 : V1 hardware and firmware from "Master" branch now running in my E46 Touring and E39 vehicles.
