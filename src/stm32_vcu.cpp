@@ -429,22 +429,7 @@ static void Ms100Task(void)
 
     }
 
-    //Cabin heat control
-    if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN))//If we have selected an ampera heater are in run mode and heater not diabled...
-    {
-        DigIo::gp_out3.Set();//Heater enable and coolant pump on
 
-      if(Ampera_Not_Awake)
-      {
-         AmperaHeater::sendWakeup();
-         Ampera_Not_Awake=false;
-      }
-
-        if(!Ampera_Not_Awake) AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr));
-
-    };
-
-    if(CabHeater_ctrl==0) DigIo::gp_out3.Clear();//Heater enable and coolant pump off
 
 }
 
@@ -666,6 +651,26 @@ static void Ms10Task(void)
         Param::SetInt(Param::opmode, newMode);
         if(targetVehicle == _vehmodes::BMW_E65) E65Vehicle.DashOff();
     }
+
+      //Cabin heat control
+    if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN))//If we have selected an ampera heater are in run mode and heater not diabled...
+    {
+        DigIo::gp_out3.Set();//Heater enable and coolant pump on
+
+      if(Ampera_Not_Awake)
+      {
+         AmperaHeater::sendWakeup();
+         Ampera_Not_Awake=false;
+      }
+
+        if(!Ampera_Not_Awake) AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr));
+
+    };
+
+    if(CabHeater_ctrl==0) DigIo::gp_out3.Clear();//Heater enable and coolant pump off
+
+
+
 }
 
 
