@@ -36,7 +36,34 @@ bool LeafINV::error=false;
 int16_t LeafINV::inv_temp;
 int16_t LeafINV::motor_temp;
 int16_t LeafINV::final_torque_request;
+static uint16_t Vbatt=0;
+static uint16_t VbattSP=0;
+static uint8_t counter_1db=0;
+static uint8_t counter_1dc=0;
+static uint8_t counter_11a_d6=0;
+static uint8_t counter_1d4=0;
+static uint8_t counter_1f2=0;
+static uint8_t counter_55b=0;
+static uint8_t OBCpwrSP=0;
+static uint8_t OBCpwr=0;
 
+/*Info on running Leaf Gen 2 PDM
+IDs required :
+0x1D4
+0x1DB
+0x1DC
+0x1F2
+0x50B
+0x55B
+0x59E
+0x5BC
+
+PDM sends:
+0x390
+0x393
+0x679 on evse plug insert
+
+*/
 
 
 void LeafINV::DecodeCAN(int id, uint32_t data[2])
@@ -80,10 +107,10 @@ void LeafINV::SetTorque(int8_t gear, int16_t torque)
 
 void LeafINV::Send10msMessages()
 {
-
+int opmode = Param::GetInt(Param::opmode);
 
     uint8_t bytes[8];
-    static uint8_t counter_11a_d6;//why am i zeroing this all the time?
+
 
     // Data taken from a gen1 inFrame where the car is starting to
     // move at about 10% throttle: 4E400055 0000017D
@@ -91,6 +118,7 @@ void LeafINV::Send10msMessages()
     // All possible gen1 values: 00 01 0D 11 1D 2D 2E 3D 3E 4D 4E
     // MSB nibble: Selected gear (gen1/LeafLogs)
     //   0: some kind of non-gear before driving
+    //      0: Park in Gen 2. byte 0 = 0x01 when in park and charging
     //   1: some kind of non-gear after driving
     //   2: R
     //   3: N
@@ -105,11 +133,11 @@ void LeafINV::Send10msMessages()
 
 
 //byte 0 determines motor rotation direction
-    bytes[0] = 0x4E;//this will need to be pulled from the for/rev pins on the vcu but just leave as fwd for testing
-
-    // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO
-    bytes[1] = 0x40;
-
+if (opmode == MOD_CHARGE) bytes[0] = 0x01;//Car in park when charging
+if (opmode != MOD_CHARGE) bytes[0] = 0x4E;
+    // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
+if (opmode == MOD_CHARGE) bytes[1] = 0x80;
+if (opmode != MOD_CHARGE) bytes[0] = 0x40;
     // Usually 0x00, sometimes 0x80 (LeafLogs), 0x04 seen by canmsgs
     bytes[2] = 0x00;
 
@@ -149,7 +177,7 @@ void LeafINV::Send10msMessages()
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //Send target motor torque signal
     ////////////////////////////////////////////////////
-    static uint8_t counter_1d4;
+
     // Data taken from a gen1 inFrame where the car is starting to
     // move at about 10% throttle: F70700E0C74430D4
 
@@ -164,6 +192,7 @@ void LeafINV::Send10msMessages()
     //outFrame.data.bytes[1] = 0x6E;
 
     // Requested torque (signed 12-bit value + always 0x0 in low nibble)
+    if (opmode != MOD_RUN) final_torque_request=0;//override any torque commands if not in run mode.
     static int16_t last_logged_final_torque_request = 0;
     if(final_torque_request != last_logged_final_torque_request)
     {
@@ -191,10 +220,10 @@ void LeafINV::Send10msMessages()
     //   7: Precharged (93%)
     bytes[4] = 0x07 | (counter_1d4 << 6);
     //bytes[4] = 0x02 | (counter_1d4 << 6);
+    //Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
 
     counter_1d4++;
-    if(counter_1d4 >= 4)
-        counter_1d4 = 0;
+    if(counter_1d4 >= 4) counter_1d4 = 0;
 
     // MSB nibble:
     //   0: 35-40ms at startup when gear is 0, then at shutdown 40ms
@@ -214,6 +243,7 @@ void LeafINV::Send10msMessages()
     //outFrame.data.bytes[5] = 0x46;
     // 0x44 requires ~8 torque to start
     bytes[5] = 0x44;
+    //bit 6 is Main contactor status. 0x00 Not on, 0x01 on.
 
     // MSB nibble:
     //   In a drive cycle, this slowly changes between values (gen1):
@@ -270,7 +300,12 @@ void LeafINV::Send10msMessages()
     // when, and before, applying throttle in the wide-open-throttle
     // pull, in
     //   LeafLogs/leaf_on_wotind_off.txt
-    bytes[6] = 0x30;    //brake applied heavilly.
+
+  if (opmode != MOD_CHARGE)  bytes[6] = 0x30;    //brake applied heavilly.
+  if (opmode == MOD_CHARGE)  bytes[6] = 0xE0;   //charging mode
+    //In Gen 2 byte 6 is Charge status.
+    //0x8C Charging interrupted
+    //0xE0 Charging
 
     // Value chosen from a 2016 log
     //outFrame.data.bytes[6] = 0x61;
@@ -288,21 +323,33 @@ void LeafINV::Send10msMessages()
 //We need to send 0x1db here with voltage measured by inverter
 //Zero seems to work also on my gen1
 ////////////////////////////////////////////////////////////////
-    static uint8_t counter_1db;
-    bytes[0]=0x00;
-    bytes[1]=0x00;
-    bytes[2]=0x00;
-    bytes[3]=0x00;
-    bytes[4]=0x00;
+//Byte 1 bits 8-10 LB Failsafe Status
+//0x00 Normal start req. seems to stay on this value most of the time
+//0x01 Normal stop req
+//0x02 Charge stop req
+//0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
+//bits 11-12 LB relay cut req
+//0x00 no req
+//0x01,0x02,0x03 main relay off req
+    s16fp TMP_battI=(Param::Get(Param::idc))*2;
+    s16fp TMP_battV=(Param::Get(Param::udc))*4;
+    bytes[0]=TMP_battI>>8;//MSB current. 11 bit signed MSBit first
+    bytes[1]=TMP_battI & 0xE0;//LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
+    bytes[2]=TMP_battV>>8;
+    bytes[3]=((TMP_battV & 0xC0)|(0x2b));//0x2b should give no cut req, main rly on permission,normal p limit.
+    bytes[4]=0x40;//SOC for dash in Leaf. fixed val.
     bytes[5]=0x00;
     bytes[6]=counter_1db;
-    bytes[7]=0x00;
+
+
+
+    // Extra CRC in byte 7
+    nissan_crc(bytes, 0x85);
 
 
     counter_1db++;
-    if(counter_1db >= 4)
-        counter_1db = 0;
-    // uint32_t canData_1DB[2] = {*bytes};//??? hopefully....
+    if(counter_1db >= 4) counter_1db = 0;
+
     Can::GetInterface(0)->Send(0x1DB, (uint32_t*)bytes,8);
 //////////////////////////////////////////////////////////////////////////////////////////
     // Statistics from 2016 capture:
@@ -312,7 +359,7 @@ void LeafINV::Send10msMessages()
     //    513 000006c0000000
 
     // Let's just send the most common one all the time
-    // FIXME: This is a very sloppy implementation
+    // FIXME: This is a very sloppy implementation. Thanks. I try:)
     //  hex_to_data(outFrame.data.bytes, "00,00,06,c0,00,00,00");
     bytes[0]=0x00;
     bytes[1]=0x00;
@@ -323,20 +370,124 @@ void LeafINV::Send10msMessages()
     bytes[6]=0x00;
 
     Can::GetInterface(0)->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
+
+
+if (opmode == MOD_CHARGE)
+{
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //SPECIFIC MSGS NEEDED FOR CHARGE
+    //////////////////////////////////////////
+    //0x1dc from lbc. Contains chg power lims and disch power lims.
+    //Disch power lim in byte 0 and byte 1 bits 6-7. Just set to max for now.
+    //Max charging power in bits 13-20. 10 bit unsigned scale 0.25.Byte 1 limit in kw.
+    bytes[0]=0x6E;
+    bytes[1]=0x0A;
+    bytes[2]=0x05;
+    bytes[3]=0xD5;
+    bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
+    bytes[5]=0x00;
+    bytes[6]=counter_1dc;
+    // Extra CRC in byte 7
+    nissan_crc(bytes, 0x85);
+
+        counter_1dc++;
+    if(counter_1dc >= 4) counter_1dc = 0;
+
+    Can::GetInterface(0)->Send(0x1DC, (uint32_t*)bytes,8);
+////////////////////////////////////////////////////////////////////////////////////////////////
+    OBCpwrSP=(Param::GetInt(Param::Pwrspnt)/100)+0x64;//grab setpoint power from webui and convert to pdm format
+    Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
+    VbattSP=Param::GetInt(Param::Voltspnt);
+    if(!Param::GetBool(Param::Chgctrl))
+    {
+    if(OBCpwrSP>160) OBCpwrSP=160;//clamp max value
+    if(OBCpwrSP<100) OBCpwrSP=100;//clamp min value
+    if(Vbatt<VbattSP) OBCpwr=OBCpwrSP;//if measured vbatt is less than setoint got to max power from web ui
+    if(Vbatt>=VbattSP) OBCpwr--;//decrement charger power if volt setpoint is reached.
+    }
+    else
+    {
+        OBCpwr=100;//power to 0 if charge control set to off.
+    }
+
+
+    //0x1f2 from vcm has commanded chg power
+    //Commanded chg power in byte 1 and byte 0 bits 0-1. 10 bit number.
+    //byte 1=0x64 and byte 0=0x00 at 0 power.
+    //0x00 chg 0ff dcdc on.
+    bytes[0]=0x30;//msg is muxed but pdm doesn't seem to care.
+    //no chg at 0x64
+    //3 amps ish at 0x70
+    //0x6a = 1.4A
+    //0x66=0.5A
+    //0x65=0.3A
+    //so 0x64=100. 0xA0=160. so 60 decimal steps. 1 step=100W???
+    bytes[1]=OBCpwr;//0xA0;
+    bytes[2]=0x20;
+    bytes[3]=0xAC;
+    bytes[4]=0x00;
+    bytes[5]=0x3C;
+    bytes[6]=counter_1f2;
+    bytes[7]=0x8F;//may not need checksum here?
+
+        counter_1f2++;
+    if(counter_1f2 >= 4) counter_1f2 = 0;
+
+    Can::GetInterface(0)->Send(0x1F2, (uint32_t*)bytes,8);
+
+
+
+
+    /////////////////////////////////////////////
+
+}
+
 }
 
 void LeafINV::Send100msMessages()
-{
-    // FIXME: Temporarily commenting out to suppress warnings while data send is commented out.
-    // FIXME: uint32_t canData[2] = { 0, 0 };
+{   //MSGS for charging with pdm
+    uint8_t bytes[8];
 
-    // Can::GetInterface(0)->Send(0x390, canData);
+    bytes[0]=0xA4;
+    bytes[1]=0x40;
+    bytes[2]=0xAA;
+    bytes[3]=0x00;
+    bytes[4]=0xDF;
+    bytes[5]=0xC0;
+    bytes[6]=((0x1<<4)|(counter_55b));
+     // Extra CRC in byte 7
+    nissan_crc(bytes, 0x85);
+
+        counter_55b++;
+    if(counter_55b >= 4) counter_55b = 0;
+
+    Can::GetInterface(0)->Send(0x55b, (uint32_t*)bytes,8);
+
+    bytes[0]=0x00;//Static msg works fine here
+    bytes[1]=0x00;//Batt capacity for chg and qc.
+    bytes[2]=0x0c;
+    bytes[3]=0x76;
+    bytes[4]=0x18;
+    bytes[5]=0x00;
+    bytes[6]=0x00;
+    bytes[7]=0x00;
+
+    Can::GetInterface(0)->Send(0x59e, (uint32_t*)bytes,8);
+
+        //muxed msg with info for gids etc. Will try static for a test.
+    bytes[0]=0x3D;//Static msg works fine here
+    bytes[1]=0x80;
+    bytes[2]=0xF0;
+    bytes[3]=0x64;
+    bytes[4]=0xB0;
+    bytes[5]=0x01;
+    bytes[6]=0x00;
+    bytes[7]=0x32;
+
+    Can::GetInterface(0)->Send(0x5bc, (uint32_t*)bytes,8);
 
 
-    // Can::GetInterface(0)->Send(0x50C, canData);
-
-
-    // Can::GetInterface(0)->Send(0x54C, canData);
 
     run100ms = (run100ms + 1) & 3;
 }

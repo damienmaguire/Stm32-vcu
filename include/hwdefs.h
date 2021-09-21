@@ -26,7 +26,8 @@
 
 #define TERM_USART         USART3
 #define TERM_USART_TXPIN   GPIO_USART3_PR_TX
-#define TERM_USART_TXPORT  GPIOC
+//#define TERM_USART_TXPORT  GPIOC
+#define TERM_USART_TXPORT  GPIOB    //gpio B for usart 3 on 32F107 Zombie
 #define TERM_USART_DMARX   DMA_CHANNEL3
 #define TERM_USART_DMATX   DMA_CHANNEL2 //this means we can not use it on rev1 hardware (TIM3_CH3)
 #define TERM_USART_DR      USART3_DR

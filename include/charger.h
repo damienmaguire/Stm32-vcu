@@ -17,7 +17,7 @@ public:
 
 static void handle108(uint32_t data[2]);
 static bool HVreq;
-static void Send100msMessages();
+static void Send100msMessages(bool ChRun);
 private:
 
 };

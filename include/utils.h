@@ -17,7 +17,7 @@ namespace utils
 {
     int32_t change(int32_t, int32_t, int32_t, int32_t, int32_t);
     int GetUserThrottleCommand(Can*);
-    s32fp ProcessThrottle(int, Can*);
+    s32fp ProcessThrottle(int);
     s32fp ProcessUdc(uint32_t, int);
     void CalcSOC();
     void GetDigInputs(Can*);

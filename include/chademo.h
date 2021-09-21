@@ -23,6 +23,7 @@
 #include "my_math.h"
 #include "my_fp.h"
 #include "stm32_can.h"
+#include "CANSPI.h"
 
 class ChaDeMo
 {
@@ -30,7 +31,7 @@ class ChaDeMo
       static void Process108Message(uint32_t data[2]);
       static void Process109Message(uint32_t data[2]);
       /** Must be called every 100ms */
-      static void SendMessages(Can* can);
+      static void SendMessages();
 
       static void SetTargetBatteryVoltage(uint16_t vtg) { targetBatteryVoltage = vtg; }
       static void SetChargeCurrent(uint8_t cur);

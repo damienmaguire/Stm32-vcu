@@ -3,19 +3,20 @@ Project based on the OpenInverter System by Johannes Huebner to provide a univer
 
 Please visit the development thread on the Openinverter Forum for more information : https://openinverter.org/forum/viewtopic.php?f=3&t=1277
 
-NOTE : Not for use in a car as of this commit. Alpha status for bench testing only!
 
 Video on progress : https://vimeo.com/506480876
 
 # Features
 
-  CCS DC Fast Charge via i3 LIM 
-- Nissan Leaf Gen1 inverter via CAN
+- Nissan Leaf Gen1/2/3 inverter via CAN
+- Nissan Leaf Gen2 PDM (Charger and DCDC)
+- CCS DC fast charge via BMW i3 LIM
 - Lexus GS450H inverter / gearbox via sync serial
 - Toyota Prius/Yaris/Auris Gen 3 inverters via sync serial
 - BMW E46 CAN support
 - BMW E39 CAN support
 - BMW E65 CAN Support
+- Mid 2000s VAG Can support
 
 # Compiling
 You will need the arm-none-eabi toolchain: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
