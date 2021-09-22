@@ -429,7 +429,10 @@ static void Ms100Task(void)
 
     }
 
-
+if(targetChgint != _interface::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
+{
+    Param::SetInt(Param::HeatReq,DigIo::gp_12Vin.Get());
+}
 
 }
 
@@ -530,7 +533,7 @@ static void Ms10Task(void)
         BMW_E65Class::absdsc(Param::Get(Param::din_brake));
         if(E65Vehicle.getTerminal15())
             BMW_E65Class::Tacho(Param::GetInt(Param::speed));//only send tach message if we are starting
-    } 
+    }
     else if (targetVehicle == VAG)
     {
         Can_VAG::SendVAG10msMessage(Param::GetInt(Param::speed));
@@ -666,8 +669,8 @@ static void Ms10Task(void)
          AmperaHeater::sendWakeup();
          Ampera_Not_Awake=false;
       }
-
-        if(!Ampera_Not_Awake) AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr));
+        //gp in used as heat request from car (E46 in case of testing). May be poss via CAN also...
+        if(!Ampera_Not_Awake) AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr),Param::GetBool(Param::HeatReq));
 
     };
 

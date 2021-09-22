@@ -101,7 +101,7 @@ void AmperaHeater::sendWakeup()
     DigIo::sw_mode1.Set();  // set normal mode
 }
 
-void AmperaHeater::controlPower(uint16_t heatPwr)
+void AmperaHeater::controlPower(uint16_t heatPwr, bool heatReq)
 {
         switch(ampera_msg_cnt)
     {
@@ -155,7 +155,8 @@ void AmperaHeater::controlPower(uint16_t heatPwr)
     txMessage_Ampera.frame.dlc = 5;
     txMessage_Ampera.frame.data0 = 0x02;
     // map requested power to valid range of heater (0 - 0x85)
-    txMessage_Ampera.frame.data1 = utils::change(heatPwr, 0, 6500, 0, 133);
+   if(heatReq) txMessage_Ampera.frame.data1 = utils::change(heatPwr, 0, 6500, 0, 133);//transmitt heater power command when requested
+   if(!heatReq) txMessage_Ampera.frame.data1 = 0x00;//else send 0 power request.
     txMessage_Ampera.frame.data2 = 0x00;
     txMessage_Ampera.frame.data3 = 0x00;
     txMessage_Ampera.frame.data4 = 0x00;

@@ -13,7 +13,7 @@ class AmperaHeater
 {
    public:
     static void sendWakeup();
-    static void controlPower(uint16_t heatPwr);
+    static void controlPower(uint16_t heatPwr, bool heatReq);
     protected:
 
     private:

@@ -151,10 +151,11 @@
     VALUE_ENTRY(Min,          "M",   2066 ) \
     VALUE_ENTRY(Sec,          "S",   2067 ) \
     VALUE_ENTRY(ChgT,          "M",   2068 ) \
+    VALUE_ENTRY(HeatReq,   ONOFF,   2069 ) \
     VALUE_ENTRY(cpuload,      "%",     2063 ) \
 
 
-//Next value Id: 2069
+//Next value Id: 2070
 
 #define VERSTR STRINGIFY(4=VER)
 #define dmodes     "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
