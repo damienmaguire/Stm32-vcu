@@ -674,7 +674,7 @@ static void Ms10Task(void)
 
     };
 
-    if(CabHeater_ctrl==0)
+    if(CabHeater_ctrl==0 || opmode!=MOD_RUN)
     {
         DigIo::gp_out3.Clear();//Heater enable and coolant pump off
         Ampera_Not_Awake=true;
