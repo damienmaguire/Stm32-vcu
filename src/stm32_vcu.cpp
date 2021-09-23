@@ -514,7 +514,7 @@ static void Ms10Task(void)
     // Send CAN 2 (Vehicle CAN) messages if necessary for vehicle integration.
     if (targetVehicle == BMW_E39)
     {
-        uint16_t tempGauge = utils::change(Param::Get(Param::tmphs),15,80,88,254); //Map to e39 temp gauge
+        uint16_t tempGauge = utils::change(Param::GetInt(Param::tmphs),15,80,88,254); //Map to e39 temp gauge
        //Messages required for E39
         Can_E39::Msg316(speed);//send rpm to e39 dash
         Can_E39::Msg329(tempGauge);//send heatsink temp to E39 dash temp gauge
@@ -557,7 +557,8 @@ static void Ms10Task(void)
     {
       if(chargeMode==false)
       {
-        DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
+          //activate inv during precharge if not oi.
+      if(targetInverter != _invmodes::OpenI) DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
       }
         DigIo::gp_out2.Set();//Negative contactors on
         DigIo::gp_out1.Set();//Coolant pump on
@@ -623,7 +624,7 @@ static void Ms10Task(void)
 
     if(opmode == MOD_RUN) //only shut off via ign command if not in charge mode
     {
-    //DigIo::inv_out.Set();//inverter power on.
+    if(targetInverter == _invmodes::OpenI) DigIo::inv_out.Set();//inverter power on in run only if openi.
     if(targetVehicle == _vehmodes::BMW_E65)
     {
         if(!E65Vehicle.getTerminal15()) opmode = MOD_OFF; //switch to off mode via CAS command in an E65
