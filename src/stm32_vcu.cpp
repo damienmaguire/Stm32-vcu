@@ -76,14 +76,15 @@ static void RunChaDeMo()
 {
    static uint32_t connectorLockTime = 0;
 
-             chargeMode = true;
+             chargeMode = true;//General chg boolean. Sets vcu into charge startup.
 
 
    /* 1s after entering charge mode, enable charge permission */
-   if (Param::GetInt(Param::opmode) == MOD_CHARGE && rtc_get_counter_val() > 200)
+   if (Param::GetInt(Param::opmode) == MOD_CHARGE)
    {
       ChaDeMo::SetEnabled(true);
         //here we will need a gpio output to pull the chademo enable signal low
+        //main contactor close?
    }
 
    if (connectorLockTime == 0 && ChaDeMo::ConnectorLocked())
