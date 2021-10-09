@@ -46,6 +46,10 @@ static uint8_t counter_1f2=0;
 static uint8_t counter_55b=0;
 static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
+static bool OBCwake = false;
+static bool DCchgMode = false;
+static uint8_t OBCVoltStat=0;
+static uint8_t PlugStat=0;
 
 /*Info on running Leaf Gen 2 PDM
 IDs required :
@@ -88,6 +92,49 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2])
     }
 
 }
+
+void LeafINV::DecodePDM679(uint32_t data[2])
+{
+
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+    uint8_t dummyVar = bytes[0];
+    dummyVar = dummyVar;
+    OBCwake = true;             //0x679 is received once when we plug in if pdm is asleep so wake wakey...
+
+
+}
+
+void LeafINV::DecodePDM390(uint32_t data[2])
+{
+
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+    OBCVoltStat = (bytes[3] >> 3) & 0x03;
+    PlugStat = bytes[5] & 0x0F;
+
+}
+
+PDMChargingState LeafINV::ControlCharge(bool RunCh)
+{
+    int opmode = Param::GetInt(Param::opmode);
+    if (opmode == MOD_OFF)  //only do this if we are not in run mode
+    {
+        if((RunCh)&&(OBCwake))   return PDMChargingState::AC_Chg;//set ac charge mode if we are enabled on webui and detect a plug in
+    }
+    if (opmode == MOD_CHARGE)  //only do this if we are not in run mode
+    {
+if((!RunCh)||(PlugStat != 0x08))
+{
+    OBCwake=false;
+    return PDMChargingState::No_Chg;
+}
+if(DCchgMode)   return PDMChargingState::DC_Chg;
+    }
+    // If nothing matches then we aren't charging
+    return PDMChargingState::No_Chg;
+}
+
 
 
 
