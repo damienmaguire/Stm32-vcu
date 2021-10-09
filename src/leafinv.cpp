@@ -47,7 +47,6 @@ static uint8_t counter_55b=0;
 static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
 static bool OBCwake = false;
-static bool DCchgMode = false;
 static uint8_t OBCVoltStat=0;
 static uint8_t PlugStat=0;
 
@@ -115,24 +114,15 @@ void LeafINV::DecodePDM390(uint32_t data[2])
 
 }
 
-PDMChargingState LeafINV::ControlCharge(bool RunCh)
+bool LeafINV::ControlCharge(bool RunCh)
 {
-    int opmode = Param::GetInt(Param::opmode);
-    if (opmode == MOD_OFF)  //only do this if we are not in run mode
-    {
-        if((RunCh)&&(OBCwake))   return PDMChargingState::AC_Chg;//set ac charge mode if we are enabled on webui and detect a plug in
-    }
-    if (opmode == MOD_CHARGE)  //only do this if we are not in run mode
-    {
-if((!RunCh)||(PlugStat != 0x08))
-{
-    OBCwake=false;
-    return PDMChargingState::No_Chg;
-}
-if(DCchgMode)   return PDMChargingState::DC_Chg;
-    }
-    // If nothing matches then we aren't charging
-    return PDMChargingState::No_Chg;
+    if(RunCh && OBCwake)return true;//if charge is enabled and we plug in then enable charge mode
+    if(!RunCh)
+        {
+            OBCwake = false;
+            return false;
+        }
+return false;
 }
 
 

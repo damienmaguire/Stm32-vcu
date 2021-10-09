@@ -196,51 +196,21 @@ static void Ms200Task(void)
       if (opmode == MOD_CHARGE || opmode == MOD_RUN)  DigIo::inv_out.Set();//inverter and PDM power on if using pdm and in chg mode or in run mode
       if (opmode == MOD_OFF)  DigIo::inv_out.Clear();//inverter and pdm off in off mode. Duh!
 
-        if (opmode == MOD_OFF)
+        if(LeafINV::ControlCharge(RunChg))
             {
-            Param::SetInt(Param::chgtyp,OFF);
-            auto PDMmode = LeafINV::ControlCharge(RunChg);
-        if(PDMmode==PDMChargingState::DC_Chg)   //DC charge mode
-            {
-            chargeMode = true;
-            chargeModeDC = true;   //DC charge mode
-          Param::SetInt(Param::chgtyp,DCFC);
+            chargeMode = true;   //AC charge mode
+            Param::SetInt(Param::chgtyp,AC);
             }
-        if(PDMmode==PDMChargingState::AC_Chg)
+            else
             {
-          chargeMode = true;   //AC charge mode
-          Param::SetInt(Param::chgtyp,AC);
-            }
-
-        if(PDMmode==PDMChargingState::No_Chg) chargeMode = false;  //no charge mode
-            }
-
-        if (opmode == MOD_CHARGE)
-            {
-        auto PDMmode = LeafINV::ControlCharge(RunChg);
-        // if we are in AC charge mode,have no hv request and shutdown from the PDM then end chg mode
-        if((PDMmode==PDMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==AC)&&(chargerClass::HVreq==false))
-        {
             chargeMode = false;  //no charge mode
             Param::SetInt(Param::chgtyp,OFF);
 
-        }
-
-        // if we are in DC charge mode and shutdown from the PDM then end chg mode
-        if((PDMmode==PDMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==DCFC))
-        {
-            chargeMode = false;  //no charge mode
-            chargeModeDC = false;   //DC charge mode off
-            Param::SetInt(Param::chgtyp,OFF);
-        }
-
-
+            }
     }
 
 
 
-
-    }
 
 
 
