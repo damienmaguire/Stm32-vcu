@@ -47,6 +47,7 @@ static uint8_t counter_55b=0;
 static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
 static bool OBCwake = false;
+static bool PPStat = false;
 static uint8_t OBCVoltStat=0;
 static uint8_t PlugStat=0;
 
@@ -111,13 +112,15 @@ void LeafINV::DecodePDM390(uint32_t data[2])
 
     OBCVoltStat = (bytes[3] >> 3) & 0x03;
     PlugStat = bytes[5] & 0x0F;
+    if(PlugStat == 0x08) PPStat = true; //plug inserted
+    if(PlugStat == 0x00) PPStat = false; //plug not inserted
 
 }
 
 bool LeafINV::ControlCharge(bool RunCh)
 {
     if(RunCh && OBCwake)return true;//if charge is enabled and we plug in then enable charge mode
-    if(!RunCh)
+    if(!RunCh || !PPStat)
         {
             OBCwake = false;
             return false;
