@@ -196,19 +196,20 @@ static void Ms200Task(void)
       if (opmode == MOD_CHARGE || opmode == MOD_RUN)  DigIo::inv_out.Set();//inverter and PDM power on if using pdm and in chg mode or in run mode
       if (opmode == MOD_OFF)  DigIo::inv_out.Clear();//inverter and pdm off in off mode. Duh!
 
-        if(LeafINV::ControlCharge(RunChg))
+            if(opmode != MOD_RUN)                   //only run charge logic if not in run mode.
             {
-            chargeMode = true;   //AC charge mode
-            Param::SetInt(Param::chgtyp,AC);
-            }
-            else
-            {
-            chargeMode = false;  //no charge mode
-            Param::SetInt(Param::chgtyp,OFF);
-
+                if(LeafINV::ControlCharge(RunChg))
+                {
+                chargeMode = true;   //AC charge mode
+                Param::SetInt(Param::chgtyp,AC);
+                }
+                else
+                {
+                chargeMode = false;  //no charge mode
+                Param::SetInt(Param::chgtyp,OFF);
+                }
             }
     }
-
 
 
 
