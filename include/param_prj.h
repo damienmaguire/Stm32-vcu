@@ -152,6 +152,7 @@
     VALUE_ENTRY(Sec,          "S",   2067 ) \
     VALUE_ENTRY(ChgT,          "M",   2068 ) \
     VALUE_ENTRY(HeatReq,   ONOFF,   2069 ) \
+    VALUE_ENTRY(Test,   ONOFF,   2070 ) \
     VALUE_ENTRY(cpuload,      "%",     2063 ) \
 
 

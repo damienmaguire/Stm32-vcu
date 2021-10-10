@@ -202,9 +202,11 @@ static void Ms200Task(void)
                 {
                 chargeMode = true;   //AC charge mode
                 Param::SetInt(Param::chgtyp,AC);
+                 Param::SetInt(Param::Test,chargeMode);
                 }
-                else
+                else if(!LeafINV::ControlCharge(RunChg))
                 {
+                    Param::SetInt(Param::Test,chargeMode);
                 chargeMode = false;  //no charge mode
                 Param::SetInt(Param::chgtyp,OFF);
                 }
@@ -609,8 +611,8 @@ static void Ms10Task(void)
 
         if(opmode==MOD_PCHFAIL && chargeMode)
         {
-        //    opmode = MOD_OFF;
-        //    Param::SetInt(Param::opmode, opmode);
+            opmode = MOD_OFF;
+            Param::SetInt(Param::opmode, opmode);
         }
 
 
@@ -967,8 +969,8 @@ extern "C" int main(void)
 
     can = &c; // FIXME: What about CAN2?
 
-    CANSPI_Initialize();// init the MCP25625 on CAN3
-    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
+//    CANSPI_Initialize();// init the MCP25625 on CAN3
+//    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
 
     Stm32Scheduler s(TIM3); //We never exit main so it's ok to put it on stack
     scheduler = &s;
