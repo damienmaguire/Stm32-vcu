@@ -220,47 +220,22 @@ static void Ms200Task(void)
     if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send200msMessages();
+        auto LIMmode=i3LIMClass::Control_Charge(RunChg);
+        if(RunChg && (Param::GetInt(Param::CP_DOOR)==1)) chargeMode = true;// activate charge mode if enabled and cp door open
 
-       if (opmode == MOD_OFF)
-    {
-        Param::SetInt(Param::chgtyp,OFF);
-      auto LIMmode=i3LIMClass::Control_Charge(RunChg);
       if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
       {
-            chargeMode = true;
-            chargeModeDC = true;   //DC charge mode
+          chargeModeDC = true;   //DC charge mode
           Param::SetInt(Param::chgtyp,DCFC);
       }
-      if(LIMmode==i3LIMChargingState::AC_Chg)
+
+      if(LIMmode==i3LIMChargingState::AC_Chg) Param::SetInt(Param::chgtyp,AC);
+      if(LIMmode==i3LIMChargingState::No_Chg)
       {
-          chargeMode = true;   //AC charge mode
-          Param::SetInt(Param::chgtyp,AC);
+         Param::SetInt(Param::chgtyp,OFF);
+         if((!RunChg || (Param::GetInt(Param::CP_DOOR)==0))&&(chargerClass::HVreq==false)) chargeMode = false;// deactivate charge mode if disabled or cp door closed.
       }
 
-      if(LIMmode==i3LIMChargingState::No_Chg) chargeMode = false;  //no charge mode
-    }
-
-    if (opmode == MOD_CHARGE)
-    {
-        auto LIMmode=i3LIMClass::Control_Charge(RunChg);
-        // if we are in AC charge mode,have no hv request and shutdown from the lim then end chg mode
-        if((LIMmode==i3LIMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==AC)&&(chargerClass::HVreq==false))
-        {
-            chargeMode = false;  //no charge mode
-            Param::SetInt(Param::chgtyp,OFF);
-
-        }
-
-        // if we are in DC charge mode and shutdown from the lim then end chg mode
-        if((LIMmode==i3LIMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==DCFC))
-        {
-            chargeMode = false;  //no charge mode
-            chargeModeDC = false;   //DC charge mode off
-            Param::SetInt(Param::chgtyp,OFF);
-        }
-
-
-    }
 
 }
 

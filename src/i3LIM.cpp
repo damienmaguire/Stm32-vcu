@@ -268,7 +268,7 @@ bytes[2] = 0x80;
 bytes[3] = 0xe0;
 bytes[4] = 0x43;
 bytes[5] = 0x3c;
-bytes[6] = 0xc3;
+bytes[6] = 0xc3;//0x3=park
 bytes[7] = 0xff;
 Can::GetInterface(0)->Send(0x3f9, (uint32_t*)bytes,8); //Send on CAN1
 
@@ -505,31 +505,17 @@ if(!RunCh)
 }
 
 
-if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
+if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6))  //if we have an enable and a plug in and a 5% pilot or a static pilot lets go DC charge mode.
 {
 /*
-DC goes all off, chgstatus=1, chg req=1, contactor=0.then move to chg ready=1.then add eoc time.then add contactor=2.then add current command.
-phase 0 at start. then phase 1 when chg status and chg req go to 1. phase 9 when chg readiness goes to 1 then to 2 and onto 3 and send current req.
-0x0 Standby
-0x1 Initialisation
-0x2 Subpoena
-0x3 Energy transfer
-0x4 Turn off
-0xF Reserved
-0xE Reserved
-0xF Invalid signal
 
-DC Sequence : On detect 5% pilot Chg status goes to 1 and Chg req goes to 1. Target phase standby.
-Next step : Target phase initialisation
-Set chg power forecast (49050W in logs). Target phase to 9 (unknown?). At this point we switch from 5% to greenphy. Chg readiness to 1.
-Contactor weld test begins.Set end of charge timer. V ramps to 410v and holds for a few seconds.
-Voltage ramps down to 0 and afer a few seconds we go target phase Subpoena (precharge).
-Once contactor measured volts matches batt voltage in 0x112 we go contactor command 2 in 0x3e9 and target phase to energy transfer.
-Start sending current command and party hard!
-
-Shutdown sequence :
-Command zero amps from ccs.
-Charge phase 4,
+0=no pilot
+1=10-96%PWM not charge ready
+2=10-96%PWM charge ready
+3=error
+4=5% not charge ready
+5=5% charge ready
+6=pilot static
 
 */
 
@@ -540,22 +526,15 @@ Charge phase 4,
     case 0:
     {
     Chg_Phase=ChargePhase::Standby;
- //Chg_Phase=ChargePhase::Initialisation;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
   CHG_Status=ChargeStatus::Init;
-  CHG_Req=ChargeRequest::Charge;
+  CHG_Req=ChargeRequest::EndCharge;
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-        lim_stateCnt++; //increment state timer counter
-        if(lim_stateCnt>10)//2 second delay
-        {
-           lim_state++; //next state after 2 secs
-           lim_stateCnt=0;
-        }
-
+  if(CP_Mode==0x4 && opmode==MOD_CHARGE) lim_state++;//move onto state 1 (init) on 5% pwm detected and charge mode entered.
     }
     break;
 
@@ -570,14 +549,8 @@ Charge phase 4,
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-    //if(ChargeType==0x09) lim_state++; //Go to next state once we detect CCS type 2 charger type
-        lim_stateCnt++; //increment state timer counter if we are in 5% ready mode
-        if(lim_stateCnt>40)//2 secs
-        {
-           lim_state++; //next state after 2 secs
-           lim_stateCnt=0;
-        }
-
+  if(ChargeType==0x09) lim_state++; //Go to next state once we detect CCS type 2 charger type
+  if(CP_Mode==0x6) lim_state=0; //Reset to state 0 if we get a static pilot
     }
         break;
 
