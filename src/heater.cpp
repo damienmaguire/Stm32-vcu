@@ -241,5 +241,6 @@ void AmperaHeater::controlPower(uint16_t heatPwr, bool heatReq)
     CANSPI_Transmit(&txMessage_Ampera);
     ampera_msg_cnt=0;
     }
+    break;
 }
 }
