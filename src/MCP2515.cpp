@@ -48,20 +48,13 @@ void MCP2515_SetTo_ConfigMode(void){
 
       MCP2515_Write_Byte(MCP2515_CANCTRL, 0x80);
 
-    for (int i = 0; i <= 10; i++)
+    for (uint8_t i = 0; i <= 10; i++)
         {
     if (0x80 != (MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0)) // Wait until MCP2515 is in config mode
     {
        MCP2515_Write_Byte(MCP2515_CANCTRL, 0x80);
     }
         }
-  //   uint8_t loop = 10;
-  //   do {
-  //   loop--;
-  //  if((MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0) == 0x80) loop=0;
-
-
- // } while(loop > 0);
 
 
 }
@@ -69,13 +62,28 @@ void MCP2515_SetTo_ConfigMode(void){
 //Set CAN controller to normal mode
 void MCP2515_SetTo_NormalMode(void){
     MCP2515_Write_Byte(MCP2515_CANCTRL, 0x00);
-    while(0x00 != (MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0)); // Wait until MCP2515  is in normal mode
+
+       for (uint8_t i = 0; i <= 10; i++)
+        {
+    if(0x00 != (MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0)) // Wait until MCP2515  is in normal mode
+    {
+       MCP2515_Write_Byte(MCP2515_CANCTRL, 0x00);
+    }
+
+        }
 }
 
 //Set CAN controller to sleep mode
 void MCP2515_SetTo_Sleep_Mode(void){
     MCP2515_Write_Byte(MCP2515_CANCTRL, 0x20);
-    while(0x20 != (MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0)); // Wait until MCP2515  is in normal mode
+
+        for (uint8_t i = 0; i <= 10; i++)
+        {
+    if(0x20 != (MCP2515_Read_Byte(MCP2515_CANSTAT) & 0xE0)) // Wait until MCP2515  is in normal mode
+    {
+       MCP2515_Write_Byte(MCP2515_CANCTRL, 0x20);
+    }
+        }
 }
 
 //Reset CAN controller
