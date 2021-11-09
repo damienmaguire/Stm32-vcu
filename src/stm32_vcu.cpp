@@ -220,22 +220,6 @@ static void Ms200Task(void)
     if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send200msMessages();
-        auto LIMmode=i3LIMClass::Control_Charge(RunChg);
-        if(RunChg && (Param::GetInt(Param::CP_DOOR)==1)) chargeMode = true;// activate charge mode if enabled and cp door open
-
-      if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
-      {
-          chargeModeDC = true;   //DC charge mode
-          Param::SetInt(Param::chgtyp,DCFC);
-      }
-
-      if(LIMmode==i3LIMChargingState::AC_Chg) Param::SetInt(Param::chgtyp,AC);
-      if(LIMmode==i3LIMChargingState::No_Chg)
-      {
-         Param::SetInt(Param::chgtyp,OFF);
-         if((!RunChg || (Param::GetInt(Param::CP_DOOR)==0))&&(chargerClass::HVreq==false) && (!Param::GetBool(Param::PlugDet))) chargeMode = false;// deactivate charge mode if disabled or cp door closed.
-      }
-
 
     }
 
@@ -342,6 +326,23 @@ static void Ms100Task(void)
         if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send100msMessages();
+
+        auto LIMmode=i3LIMClass::Control_Charge(RunChg);
+        if(RunChg && (Param::GetInt(Param::CP_DOOR)==1)) chargeMode = true;// activate charge mode if enabled and cp door open
+
+      if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
+      {
+          chargeModeDC = true;   //DC charge mode
+          Param::SetInt(Param::chgtyp,DCFC);
+      }
+
+      if(LIMmode==i3LIMChargingState::AC_Chg) Param::SetInt(Param::chgtyp,AC);
+      if(LIMmode==i3LIMChargingState::No_Chg)
+      {
+         Param::SetInt(Param::chgtyp,OFF);
+         if((!RunChg || (Param::GetInt(Param::CP_DOOR)==0))&&(chargerClass::HVreq==false) && (!Param::GetBool(Param::PlugDet))) chargeMode = false;// deactivate charge mode if disabled or cp door closed.
+      }
+
     }
 
     if (targetInverter == _invmodes::Prius_Gen3)
