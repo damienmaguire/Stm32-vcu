@@ -42,9 +42,9 @@ static uint8_t CP_Mode=0;
 static ChargePhase Chg_Phase=ChargePhase::Standby;
 static uint8_t lim_state=0;
 static uint8_t lim_stateCnt=0;
-static uint8_t ctr_328=0;
-static uint8_t ctr_2fa=0;
-static uint8_t ctr_3e8=0;
+static uint8_t ctr_1second=0;
+static uint8_t ctr_5second=0;
+static uint8_t ctr_20ms=0;
 static uint8_t vin_ctr=0;
 static uint8_t Timer_1Sec=0;
 static uint8_t Timer_60Sec=0;
@@ -187,204 +187,29 @@ bytes[7] = V_Batt2;  //zwischenkreis. Battery voltage. Scale 4. 8 bit unsigned i
 
 Can::GetInterface(0)->Send(0x112, (uint32_t*)bytes,8); //Send on CAN1
 
+ctr_20ms++;
+if(ctr_20ms==2)
+{
+ ctr_20ms=0;
+
                 //Vehicle speed msg should be 20ms. Lets try 10...
 bytes[0] = 0x7c;
 bytes[1] = 0xcb;
 bytes[2] = 0x00;
 bytes[3] = 0x00;
 bytes[4] = 0x8a;
-Can::GetInterface(0)->Send(0x1a1, (uint32_t*)bytes,5); //Send on CAN1
-
+Can::GetInterface(0)->Send(0x1a1, (uint32_t*)bytes,5); //Send on CAN1. average 20ms
+}
 
 }
 
 
 void i3LIMClass::Send200msMessages()
 {
-    uint16_t Wh_Local=Param::GetInt(Param::BattCap);
-    CHG_Pwr=(CHG_Pwr & 0xFFF);
-uint8_t bytes[8]; //Main LIM control message
-bytes[0] = Wh_Local & 0xFF;  //Battery Wh lowbyte
-bytes[1] = Wh_Local >> 8;  //BAttery Wh high byte
-bytes[2] = (((uint8_t)CHG_Status<<4)|((uint8_t)CHG_Req));  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
-bytes[3] = (((CHG_Pwr)<<4)|(uint8_t)CHG_Ready);  //charge readiness in bits 0 and 1. 1 = ready to charge.upper nibble is LSB of charge power.Charge power forecast not actual power!
-bytes[4] = CHG_Pwr>>4;   //MSB of charge power.in this case 0x28 = 40x25 = 1000W. Probably net DC power into the Batt.
-bytes[5] = FC_Cur & 0xff;   //LSB of the DC ccs current command
-bytes[6] = ((CONT_Ctrl<<4)|(FC_Cur>>12));   //bits 0 and 1 MSB of the DC ccs current command.Upper nibble is DC ccs contactor control. Observed in DC fc logs only.
-                    //transitions from 0 to 2 and start of charge but 2 to 1 to 0 at end. Status and Ready operate the same as in AC logs.
-bytes[7] = EOC_Time;    // end of charge timer.
 
-
-Can::GetInterface(0)->Send(0x3E9, (uint32_t*)bytes,8); //Send on CAN1
-
-                //LIM needs to see this but doesnt control anything...
-bytes[0] = 0xca;
-bytes[1] = 0xff;
-bytes[2] = 0x0b;
-bytes[3] = 0x02;
-bytes[4] = 0x69;
-bytes[5] = 0x26;
-bytes[6] = 0xf3;
-bytes[7] = 0x4b;
-Can::GetInterface(0)->Send(0x431, (uint32_t*)bytes,8); //Send on CAN1
-
-
-//////////////////////////////////////////////////////////////////////////////
-//Possibly needed for dc ccs.
-////////////////////////////////////
-bytes[0] = 0xff;//vehicle status msg
-bytes[1] = 0x5f;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0xff;
-bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x03c, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0x88;//central locking
-bytes[1] = 0x88;
-bytes[2] = 0xf8;
-bytes[3] = 0x0f;
-bytes[4] = 0xff;
-bytes[5] = 0xff;
-bytes[6] = 0xff;
-bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x2a0, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0x00;//obd msg
-bytes[1] = 0x2a;
-bytes[2] = 0x00;
-bytes[3] = 0x6c;
-bytes[4] = 0x0f;
-bytes[5] = 0x55;
-bytes[6] = 0x00;
-Can::GetInterface(0)->Send(0x397, (uint32_t*)bytes,7); //Send on CAN1
-
-
-bytes[0] = 0xc0;//engine info? rex?
-bytes[1] = 0xf9;
-bytes[2] = 0x80;
-bytes[3] = 0xe0;
-bytes[4] = 0x43;
-bytes[5] = 0x3c;
-bytes[6] = 0xc3;//0x3=park
-bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x3f9, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0xff;//vehicle condition
-bytes[1] = 0xff;
-bytes[2] = 0xc0;
-bytes[3] = 0xff;
-bytes[4] = 0xff;
-bytes[5] = 0xff;
-bytes[6] = 0xff;
-bytes[7] = 0xfc;
-Can::GetInterface(0)->Send(0x3a0, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0xa8;//range info, milage display
-bytes[1] = 0x86;
-bytes[2] = 0x01;
-bytes[3] = 0x02;
-bytes[4] = 0x00;
-bytes[5] = 0x05;
-bytes[6] = 0xac;
-bytes[7] = 0x03;
-Can::GetInterface(0)->Send(0x330, (uint32_t*)bytes,8); //Send on CAN1
-
-uint16_t SOC_Local=(Param::GetInt(Param::SOC))*2;
-bytes[0] = 0x2c;//BMS soc msg. May need to be dynamic
-bytes[1] = 0xe2;
-bytes[2] = 0x10;
-bytes[3] = 0xa3;
-//bytes[4] = 0x30;    //display soc. scale 0.5.
-bytes[4] = SOC_Local;    //display soc. scale 0.5.
-bytes[5] = 0xff;
-bytes[6] = 0x02;
-bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x432, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0x00;//network management
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x50;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x1a;
-Can::GetInterface(0)->Send(0x51a, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0x00;//network management.May need to be dynamic
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0xfd;
-bytes[5] = 0x3c;
-bytes[6] = 0xff;
-bytes[7] = 0x40;
-Can::GetInterface(0)->Send(0x540, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0x00;//network management edme
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x12;
-Can::GetInterface(0)->Send(0x512, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0x00;//network management kombi
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0xfe;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x60;
-Can::GetInterface(0)->Send(0x560, (uint32_t*)bytes,8); //Send on CAN1
-
-bytes[0] = 0x40;//network management zgw
-bytes[1] = 0x10;
-bytes[2] = 0x20;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-Can::GetInterface(0)->Send(0x510, (uint32_t*)bytes,8); //Send on CAN1
-
-ctr_328++;
-if(ctr_328==5)//only send every 1 second.
-{
- ctr_328=0;
- sec_328++; //increment seconds counter.
-bytes[0] = sec_328;//rtc msg. needs to be every 1 sec. first 32 bits are 1 second wrap counter
-bytes[1] = sec_328<<8;
-bytes[2] = sec_328<<16;
-bytes[3] = sec_328<<24;
-bytes[4] = 0x87;    //day counter 16 bit.
-bytes[5] = 0x1e;
-Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
-}
-
-ctr_3e8++;
-if(ctr_3e8==5)//only send every 1 second.
-{
- ctr_3e8=0;
-//if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
-//if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
-bytes[0] = 0xf1;
-bytes[1] = 0xff;
-Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
-}
-////////////////////////////////////////////////////////////////////////////////
-
-ctr_2fa++;
-if(ctr_2fa==5)//only send every 1 second.
-{
-    uint16_t V_Batt=0;
-ctr_2fa=0;       //Lim command 3. Used in DC mode. Needs to go every 1 second
+uint16_t V_Batt=0;
+uint8_t bytes[8];
+//Lim command 3. Used in DC mode.
 //if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
 //if(lim_state>=5) V_Batt=398*10;
 V_Batt=398*10;//CV phase target. Unknown if this works or not.
@@ -398,14 +223,216 @@ bytes[4] = V_Batt >> 8;    //msb of cv target voltage for post 2017/26 lims. 14 
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x2fa, (uint32_t*)bytes,8); //Send on CAN1
+Can::GetInterface(0)->Send(0x2fa, (uint32_t*)bytes,8); //Send on CAN1. this msg varies from 82ms to 1s intervals.
+
+
+//////////////////////////////////////////////////////////////////////////////
+//Possibly needed for dc ccs.
+////////////////////////////////////
+
+uint16_t SOC_Local=(Param::GetInt(Param::SOC))*2;
+bytes[0] = 0x2c;//BMS soc msg. May need to be dynamic
+bytes[1] = 0xe2;
+bytes[2] = 0x10;
+bytes[3] = 0xa3;
+//bytes[4] = 0x30;    //display soc. scale 0.5.
+bytes[4] = SOC_Local;    //display soc. scale 0.5.
+bytes[5] = 0xff;
+bytes[6] = 0x02;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x432, (uint32_t*)bytes,8); //Send on CAN1. average 190ms
+
+bytes[0] = 0x00;//network management
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0x50;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x1a;
+Can::GetInterface(0)->Send(0x51a, (uint32_t*)bytes,8); //Send on CAN1. average 640ms
+
+bytes[0] = 0x00;//network management.May need to be dynamic
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0xfd;
+bytes[5] = 0x3c;
+bytes[6] = 0xff;
+bytes[7] = 0x40;
+Can::GetInterface(0)->Send(0x540, (uint32_t*)bytes,8); //Send on CAN1. average 640ms
+
+bytes[0] = 0x40;//network management zgw
+bytes[1] = 0x10;
+bytes[2] = 0x20;
+bytes[3] = 0x00;
+bytes[4] = 0x00;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x00;
+Can::GetInterface(0)->Send(0x510, (uint32_t*)bytes,8); //Send on CAN1. average 640ms
+
+ctr_1second++;
+if(ctr_1second==5)//only send every 1 second.
+{
+ ctr_1second=0;
+ sec_328++; //increment seconds counter.
+bytes[0] = sec_328;//rtc msg. needs to be every 1 sec. first 32 bits are 1 second wrap counter
+bytes[1] = sec_328<<8;
+bytes[2] = sec_328<<16;
+bytes[3] = sec_328<<24;
+bytes[4] = 0x87;    //day counter 16 bit.
+bytes[5] = 0x1e;
+Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
+
+
+
+if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
+if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
+//bytes[0] = 0xf1;
+bytes[1] = 0xff;
+Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
+
+bytes[0] = 0xc0;//engine info? rex?
+bytes[1] = 0xf9;
+bytes[2] = 0x80;
+bytes[3] = 0xe0;
+bytes[4] = 0x43;
+bytes[5] = 0x3c;
+bytes[6] = 0xc3;//0x3=park
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x3f9, (uint32_t*)bytes,8); //Send on CAN1.average 1s
+
+ctr_5second++;
+if(ctr_5second==4)//only send every 4 second.
+{
+ ctr_5second=0;
+
+                 //central locking status message.
+bytes[0] = 0x81;    //81=flap unlock, 80=flap lock.
+bytes[1] = 0x00;
+bytes[2] = 0x04;
+bytes[3] = 0xff;
+bytes[4] = 0xff;
+bytes[5] = 0xff;
+bytes[6] = 0xff;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1. average 5s.
+
+bytes[0] = 0x88;//central locking
+bytes[1] = 0x88;
+bytes[2] = 0xf8;
+bytes[3] = 0x0f;
+bytes[4] = 0xff;
+bytes[5] = 0xff;
+bytes[6] = 0xff;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x2a0, (uint32_t*)bytes,8); //Send on CAN1. average 5s.
+
+bytes[0] = 0xff;//vehicle condition
+bytes[1] = 0xff;
+bytes[2] = 0xc0;
+bytes[3] = 0xff;
+bytes[4] = 0xff;
+bytes[5] = 0xff;
+bytes[6] = 0xff;
+bytes[7] = 0xfc;
+Can::GetInterface(0)->Send(0x3a0, (uint32_t*)bytes,8); //Send on CAN1. average 4s.
 }
 }
 
+/*
+bytes[0] = 0x00;//network management edme
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0x00;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x12;
+Can::GetInterface(0)->Send(0x512, (uint32_t*)bytes,8); //Send on CAN1. only sent once on 19 log.
+
+bytes[0] = 0x00;//network management kombi
+bytes[1] = 0x00;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0xfe;
+bytes[5] = 0x00;
+bytes[6] = 0x00;
+bytes[7] = 0x60;
+Can::GetInterface(0)->Send(0x560, (uint32_t*)bytes,8); //Send on CAN1. not on is 2019 log
+
+bytes[0] = 0xa8;//range info, milage display
+bytes[1] = 0x86;
+bytes[2] = 0x01;
+bytes[3] = 0x02;
+bytes[4] = 0x00;
+bytes[5] = 0x05;
+bytes[6] = 0xac;
+bytes[7] = 0x03;
+Can::GetInterface(0)->Send(0x330, (uint32_t*)bytes,8); //Send on CAN1. not on is 2019 log
+
+bytes[0] = 0x00;//obd msg
+bytes[1] = 0x2a;
+bytes[2] = 0x00;
+bytes[3] = 0x6c;
+bytes[4] = 0x0f;
+bytes[5] = 0x55;
+bytes[6] = 0x00;
+Can::GetInterface(0)->Send(0x397, (uint32_t*)bytes,7); //Send on CAN1. not on 19 log
+*/
+
+
+}
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
 void i3LIMClass::Send100msMessages()
 {
-uint8_t bytes[8]; //Wake up message.
-bytes[0] = 0xf5;
+uint8_t bytes[8];
+bytes[0] = 0xff;//vehicle status msg
+bytes[1] = 0x5f;
+bytes[2] = 0x00;
+bytes[3] = 0x00;
+bytes[4] = 0x00;
+bytes[5] = 0x00;
+bytes[6] = 0xff;
+bytes[7] = 0xff;
+Can::GetInterface(0)->Send(0x03c, (uint32_t*)bytes,8); //Send on CAN1. average 100ms
+
+uint16_t Wh_Local=Param::GetInt(Param::BattCap);
+CHG_Pwr=(CHG_Pwr & 0xFFF);
+bytes[0] = Wh_Local & 0xFF;  //Battery Wh lowbyte
+bytes[1] = Wh_Local >> 8;  //BAttery Wh high byte
+bytes[2] = (((uint8_t)CHG_Status<<4)|((uint8_t)CHG_Req));  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
+bytes[3] = (((CHG_Pwr)<<4)|(uint8_t)CHG_Ready);  //charge readiness in bits 0 and 1. 1 = ready to charge.upper nibble is LSB of charge power.Charge power forecast not actual power!
+bytes[4] = CHG_Pwr>>4;   //MSB of charge power.in this case 0x28 = 40x25 = 1000W. Probably net DC power into the Batt.
+bytes[5] = FC_Cur & 0xff;   //LSB of the DC ccs current command
+bytes[6] = ((CONT_Ctrl<<4)|(FC_Cur>>12));   //bits 0 and 1 MSB of the DC ccs current command.Upper nibble is DC ccs contactor control. Observed in DC fc logs only.
+                    //transitions from 0 to 2 and start of charge but 2 to 1 to 0 at end. Status and Ready operate the same as in AC logs.
+bytes[7] = EOC_Time;    // end of charge timer.
+
+
+Can::GetInterface(0)->Send(0x3E9, (uint32_t*)bytes,8); //Send on CAN1. average 128ms
+
+                //LIM needs to see this but doesnt control anything...
+bytes[0] = 0xca;
+bytes[1] = 0xff;
+bytes[2] = 0x0b;
+bytes[3] = 0x02;
+bytes[4] = 0x69;
+bytes[5] = 0x26;
+bytes[6] = 0xf3;
+bytes[7] = 0x4b;
+Can::GetInterface(0)->Send(0x431, (uint32_t*)bytes,8); //Send on CAN1.average 197ms but as low as 49ms.
+
+bytes[0] = 0xf5;//Wake up message.
 bytes[1] = 0x28;
 if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[2] = 0x8a;//ignition on
 if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[2] = 0x86;//ignition off 86
@@ -415,18 +442,9 @@ bytes[5] = 0x35;
 bytes[6] = 0x30;
 bytes[7] = 0x80;
 
-Can::GetInterface(0)->Send(0x12f, (uint32_t*)bytes,8); //Send on CAN1
+Can::GetInterface(0)->Send(0x12f, (uint32_t*)bytes,8); //Send on CAN1. average 100ms
 
-                //central locking status message.
-bytes[0] = 0x81;    //81=flap unlock, 80=flap lock.
-bytes[1] = 0x00;
-bytes[2] = 0x04;
-bytes[3] = 0xff;
-bytes[4] = 0xff;
-bytes[5] = 0xff;
-bytes[6] = 0xff;
-bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1
+
 
                 //Lim command 2. Used in DC mode
 uint16_t V_limit=0;
@@ -444,7 +462,7 @@ bytes[5] = Bulk_SOCt & 0xFF;  //time remaining in seconds to hit soc target from
 bytes[6] = Bulk_SOCt >> 8;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.Bulk SOC.
 bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=160*0.5=80%
 
-Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1
+Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1. average 100ms
 
 if(Param::GetInt(Param::opmode)!=MOD_RUN) vin_ctr=0;
 if((Param::GetInt(Param::opmode)==MOD_RUN) && vin_ctr<5)
@@ -529,7 +547,7 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6)) 
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=ChargeStatus::Init;
+  CHG_Status=ChargeStatus::NotRdy;
   CHG_Req=ChargeRequest::EndCharge;
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
