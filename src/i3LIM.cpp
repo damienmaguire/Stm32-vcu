@@ -547,12 +547,19 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6)) 
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
   EOC_Time=0x00;//end of charge timer
-  CHG_Status=ChargeStatus::NotRdy;
-  CHG_Req=ChargeRequest::EndCharge;
+  CHG_Status=ChargeStatus::Init;
+  CHG_Req=ChargeRequest::Charge;
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-  if(CP_Mode==0x4 && opmode==MOD_CHARGE) lim_state++;//move onto state 1 (init) on 5% pwm detected and charge mode entered.
+  //if(CP_Mode==0x4 && opmode==MOD_CHARGE) lim_state++;
+          lim_stateCnt++; //increment state timer counter
+        if(lim_stateCnt>20)//2 second delay
+        {
+           lim_state++; //next state after 2 secs
+           lim_stateCnt=0;
+        }
+
     }
     break;
 
@@ -567,8 +574,14 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6)) 
   CHG_Ready=ChargeReady::NotRdy;
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
-  if(ChargeType==0x09) lim_state++; //Go to next state once we detect CCS type 2 charger type
-  if(CP_Mode==0x6) lim_state=0; //Reset to state 0 if we get a static pilot
+    if(CP_Mode==0x6) lim_state=0; //Reset to state 0 if we get a static pilot
+  if(ChargeType==0x09) lim_stateCnt++;
+          if(lim_stateCnt>40)//4 secs
+        {
+           lim_state++; //next state after 4 secs
+           lim_stateCnt=0;
+        }
+
     }
         break;
 
@@ -605,7 +618,7 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6)) 
     CCSI_Spnt=0;//No current
 
         if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate end of cable test
-        if(lim_stateCnt>10)
+        if(lim_stateCnt>20)
         {
         if(CCS_Iso==0x1) lim_state++; //next state after 2 secs if we have valid iso test
            lim_stateCnt=0;
@@ -636,10 +649,10 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6)) 
                 lim_stateCnt = 0;
             }
 
-            // Wait for contactor voltage to be stable for 4 seconds
-            if (lim_stateCnt > 10)
+            // Wait for contactor voltage to be stable for 2 seconds
+            if (lim_stateCnt > 20)
             {
-                lim_state++; //next state after 4 secs
+                lim_state++; //next state after 2 secs
                 lim_stateCnt = 0;
             }
         }

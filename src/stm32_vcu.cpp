@@ -328,19 +328,25 @@ static void Ms100Task(void)
         i3LIMClass::Send100msMessages();
 
         auto LIMmode=i3LIMClass::Control_Charge(RunChg);
-        if(RunChg && (Param::GetInt(Param::CP_DOOR)==1)) chargeMode = true;// activate charge mode if enabled and cp door open
+
 
       if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
       {
+           if(RunChg) chargeMode = true;// activate charge mode
           chargeModeDC = true;   //DC charge mode
           Param::SetInt(Param::chgtyp,DCFC);
       }
 
-      if(LIMmode==i3LIMChargingState::AC_Chg) Param::SetInt(Param::chgtyp,AC);
+      if(LIMmode==i3LIMChargingState::AC_Chg)
+      {
+          Param::SetInt(Param::chgtyp,AC);
+         if(RunChg) chargeMode = true;// activate charge mode
+      }
+
       if(LIMmode==i3LIMChargingState::No_Chg)
       {
          Param::SetInt(Param::chgtyp,OFF);
-         if((!RunChg || (Param::GetInt(Param::CP_DOOR)==0))&&(chargerClass::HVreq==false) && (!Param::GetBool(Param::PlugDet))) chargeMode = false;// deactivate charge mode if disabled or cp door closed.
+         if(!RunChg && (chargerClass::HVreq==false)) chargeMode = false;// deactivate charge mode if disabled or cp door closed.
       }
 
     }
