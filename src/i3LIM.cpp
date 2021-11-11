@@ -207,19 +207,17 @@ Can::GetInterface(0)->Send(0x1a1, (uint32_t*)bytes,5); //Send on CAN1. average 2
 void i3LIMClass::Send200msMessages()
 {
 
-uint16_t V_Batt=0;
 uint8_t bytes[8];
 //Lim command 3. Used in DC mode.
-//if(lim_state<5) V_Batt=Param::GetInt(Param::udc)*10;
-//if(lim_state>=5) V_Batt=398*10;
-V_Batt=398*10;//CV phase target. Unknown if this works or not.
-bytes[0] = 0x20; //Time to go in minutes LSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
-bytes[1] = 0x00; //Time to go in minutes MSB. 16 bit unsigned int. scale 1. May be used for the ccs station display of charge remaining time...
+if(CP_Mode==0x4||CP_Mode==0x5) bytes[0] = 0xFC;
+else bytes[0] = 0xFD;
+//bytes[0] = 0xFD;// FD at standby, change to FC on 5% pilot. Change back to FD during energy transfer
+bytes[1] = 0xFF;//these bytes are used as a timer during energy transfer but not at setup
 bytes[2] = (uint8_t)Chg_Phase<<4;  //upper nibble seems to be a mode command to the ccs station. 0 when off, 9 when in constant current phase of cycle.
                     //more investigation needed here...
                    //Lower nibble seems to be intended for two end charge commands each of 2 bits.
-bytes[3] = V_Batt & 0xFF;    //lsb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
-bytes[4] = V_Batt >> 8;    //msb of cv target voltage for post 2017/26 lims. 14 bit unsigned. scale 0.1
+
+bytes[4] = 0xff;
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
