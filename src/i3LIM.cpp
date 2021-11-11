@@ -341,7 +341,7 @@ Can::GetInterface(0)->Send(0x3a0, (uint32_t*)bytes,8); //Send on CAN1. average 4
 }
 }
 
-/*
+/*not needed msgs at least on efacec
 bytes[0] = 0x00;//network management edme
 bytes[1] = 0x00;
 bytes[2] = 0x00;
@@ -380,8 +380,8 @@ bytes[4] = 0x0f;
 bytes[5] = 0x55;
 bytes[6] = 0x00;
 Can::GetInterface(0)->Send(0x397, (uint32_t*)bytes,7); //Send on CAN1. not on 19 log
-*/
 
+*/
 
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -565,6 +565,7 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6)) 
 
     case 1:
         {
+     //uint16_t I_avail_tmp=Param::GetInt(Param::CCS_I_Avail);
     Chg_Phase=ChargePhase::Initialisation;
     CONT_Ctrl=0x0; //dc contactor mode control required in DC
     FC_Cur=0;//ccs current request from web ui for now.
@@ -575,8 +576,10 @@ if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6)) 
   CHG_Pwr=0;//0 power
   CCSI_Spnt=0;//No current
     if(CP_Mode==0x6) lim_state=0; //Reset to state 0 if we get a static pilot
+    //if(I_avail_tmp>10 && I_avail_tmp<500) lim_stateCnt++;
+
   if(ChargeType==0x09) lim_stateCnt++;
-          if(lim_stateCnt>40)//4 secs
+          if(lim_stateCnt>25)//2 secs efacec critical! 20 works. 50 does not.
         {
            lim_state++; //next state after 4 secs
            lim_stateCnt=0;
