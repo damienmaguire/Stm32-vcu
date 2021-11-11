@@ -287,9 +287,9 @@ Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
 
 
 
-if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
-if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
-//bytes[0] = 0xf1;
+//if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
+//if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
+bytes[0] = 0xf1;
 bytes[1] = 0xff;
 Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
 
@@ -451,7 +451,7 @@ uint16_t V_limit=0;
 //if(lim_state==6) V_limit=401*10;//set to 400v in energy transfer state
 //if(lim_state!=6) V_limit=Param::GetInt(Param::udc)*10;
 if(lim_state==4) V_limit=Param::GetInt(Param::udc)*10;// drop vlim only during precharge
-else V_limit=402*10;//set to 402v in all other states
+else V_limit=415*10;//set to 415v in all other states
 uint8_t I_limit=125;//125A limit. may not work
 bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
 bytes[1] = V_limit >> 8;  //Charge voltage limit MSB. 14 bit signed int.scale 0.1
