@@ -346,8 +346,7 @@ static void Ms100Task(void)
       if(LIMmode==i3LIMChargingState::No_Chg)
       {
          Param::SetInt(Param::chgtyp,OFF);
-        // if(!RunChg && (chargerClass::HVreq==false))
-            chargeMode = false;// deactivate charge mode if disabled or cp door closed.
+         if(chargerClass::HVreq==false) chargeMode = false;//
       }
 
     }
