@@ -23,12 +23,17 @@
 #include <stdint.h>
 #include "my_fp.h"
 
+
+
 class LeafINV
 {
 public:
     static void DecodeCAN(int id, uint32_t data[2]);
+    static void DecodePDM679(uint32_t data[2]);
+    static void DecodePDM390(uint32_t data[2]);
     static void Send10msMessages();
     static void Send100msMessages();
+    static bool ControlCharge(bool RunCh);
     static int16_t speed;
     static void SetTorque(int8_t gear, int16_t torque);
     static int16_t inv_temp;

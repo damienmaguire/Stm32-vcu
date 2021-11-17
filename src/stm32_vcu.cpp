@@ -191,11 +191,29 @@ static void Ms200Task(void)
 
 
 
-    if(targetChgint == _interface::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+    if(targetChgint == _interface::Leaf_PDM) //Leaf Gen2/3 PDM charger/DCDC/Chademo
     {
       if (opmode == MOD_CHARGE || opmode == MOD_RUN)  DigIo::inv_out.Set();//inverter and PDM power on if using pdm and in chg mode or in run mode
       if (opmode == MOD_OFF)  DigIo::inv_out.Clear();//inverter and pdm off in off mode. Duh!
+
+            if(opmode != MOD_RUN)                   //only run charge logic if not in run mode.
+            {
+                if(LeafINV::ControlCharge(RunChg))
+                {
+                chargeMode = true;   //AC charge mode
+                Param::SetInt(Param::chgtyp,AC);
+                 Param::SetInt(Param::Test,chargeMode);
+                }
+                else if(!LeafINV::ControlCharge(RunChg))
+                {
+                    Param::SetInt(Param::Test,chargeMode);
+                chargeMode = false;  //no charge mode
+                Param::SetInt(Param::chgtyp,OFF);
+                }
+            }
     }
+
+
 
 
 
@@ -203,48 +221,7 @@ static void Ms200Task(void)
     {
         i3LIMClass::Send200msMessages();
 
-       if (opmode == MOD_OFF)
-    {
-        Param::SetInt(Param::chgtyp,OFF);
-      auto LIMmode=i3LIMClass::Control_Charge(RunChg);
-      if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
-      {
-            chargeMode = true;
-            chargeModeDC = true;   //DC charge mode
-          Param::SetInt(Param::chgtyp,DCFC);
-      }
-      if(LIMmode==i3LIMChargingState::AC_Chg)
-      {
-          chargeMode = true;   //AC charge mode
-          Param::SetInt(Param::chgtyp,AC);
-      }
-
-      if(LIMmode==i3LIMChargingState::No_Chg) chargeMode = false;  //no charge mode
     }
-
-    if (opmode == MOD_CHARGE)
-    {
-        auto LIMmode=i3LIMClass::Control_Charge(RunChg);
-        // if we are in AC charge mode,have no hv request and shutdown from the lim then end chg mode
-        if((LIMmode==i3LIMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==AC)&&(chargerClass::HVreq==false))
-        {
-            chargeMode = false;  //no charge mode
-            Param::SetInt(Param::chgtyp,OFF);
-
-        }
-
-        // if we are in DC charge mode and shutdown from the lim then end chg mode
-        if((LIMmode==i3LIMChargingState::No_Chg)&&(Param::GetInt(Param::chgtyp)==DCFC))
-        {
-            chargeMode = false;  //no charge mode
-            chargeModeDC = false;   //DC charge mode off
-            Param::SetInt(Param::chgtyp,OFF);
-        }
-
-
-    }
-
-}
 
     if(targetCharger == _chgmodes::Off)
     {
@@ -349,6 +326,29 @@ static void Ms100Task(void)
         if(targetChgint == _interface::i3LIM) //BMW i3 LIM
     {
         i3LIMClass::Send100msMessages();
+
+        auto LIMmode=i3LIMClass::Control_Charge(RunChg);
+
+
+      if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
+      {
+           if(RunChg) chargeMode = true;// activate charge mode
+          chargeModeDC = true;   //DC charge mode
+          Param::SetInt(Param::chgtyp,DCFC);
+      }
+
+      if(LIMmode==i3LIMChargingState::AC_Chg)
+      {
+          Param::SetInt(Param::chgtyp,AC);
+         if(RunChg) chargeMode = true;// activate charge mode
+      }
+
+      if(LIMmode==i3LIMChargingState::No_Chg)
+      {
+         Param::SetInt(Param::chgtyp,OFF);
+         if(chargerClass::HVreq==false) chargeMode = false;//
+      }
+
     }
 
     if (targetInverter == _invmodes::Prius_Gen3)
@@ -593,8 +593,8 @@ static void Ms10Task(void)
 
         if(opmode==MOD_PCHFAIL && chargeMode)
         {
-        //    opmode = MOD_OFF;
-        //    Param::SetInt(Param::opmode, opmode);
+            opmode = MOD_OFF;
+            Param::SetInt(Param::opmode, opmode);
         }
 
 
@@ -799,6 +799,12 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
     case 0x2ef:
         i3LIMClass::handle2EF(data);// Data msg from LIM
         break;
+    case 0x679:
+        LeafINV::DecodePDM679(data);// Data msg from Leaf PDM
+        break;
+    case 0x390:
+        LeafINV::DecodePDM390(data);// Data msg from Leaf PDM
+        break;
 
     default:
         if (targetInverter == _invmodes::Leaf_Gen1)
@@ -917,6 +923,8 @@ extern "C" int main(void)
     c.SetReceiveCallback(CanCallback);
     c.RegisterUserMessage(0x1DA);//Leaf inv msg
     c.RegisterUserMessage(0x55A);//Leaf inv msg
+    c.RegisterUserMessage(0x679);//Leaf obc msg
+    c.RegisterUserMessage(0x390);//Leaf obc msg
     c.RegisterUserMessage(0x190);//Open Inv Msg
     c.RegisterUserMessage(0x19A);//Open Inv Msg
     c.RegisterUserMessage(0x1A4);//Open Inv Msg

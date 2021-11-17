@@ -46,6 +46,11 @@ static uint8_t counter_1f2=0;
 static uint8_t counter_55b=0;
 static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
+static bool OBCwake = false;
+static bool PPStat = false;
+//static bool PDMWake = false;
+static uint8_t OBCVoltStat=0;
+static uint8_t PlugStat=0;
 
 /*Info on running Leaf Gen 2 PDM
 IDs required :
@@ -88,6 +93,53 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2])
     }
 
 }
+
+void LeafINV::DecodePDM679(uint32_t data[2])
+{
+
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+    uint8_t dummyVar = bytes[0];
+    dummyVar = dummyVar;
+    OBCwake = true;             //0x679 is received once when we plug in if pdm is asleep so wake wakey...
+
+
+}
+
+void LeafINV::DecodePDM390(uint32_t data[2])
+{
+
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+
+    OBCVoltStat = (bytes[3] >> 3) & 0x03;
+    PlugStat = bytes[5] & 0x0F;
+    if(PlugStat == 0x08) PPStat = true; //plug inserted
+    if(PlugStat == 0x00) PPStat = false; //plug not inserted
+
+
+}
+
+bool LeafINV::ControlCharge(bool RunCh)
+{
+    int opmode = Param::GetInt(Param::opmode);
+    if(opmode != MOD_CHARGE)
+    {
+    if(RunCh && OBCwake)
+    {
+        //OBCwake = false;//reset obc wake for next time
+        return true;
+    }
+    }
+
+    if(PPStat) return true;
+    if(!PPStat)
+        {
+            OBCwake = false;
+            return false;
+        }
+return false;
+}
+
 
 
 
