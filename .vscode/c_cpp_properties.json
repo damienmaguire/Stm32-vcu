@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Linux", //no big deal but shouldn't this reflect project name? Like "STM32-VCU"
             "includePath": [
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/libopeninv/include",
@@ -10,9 +10,9 @@
             "defines": [
                 "STM32F1"
             ],
-            "compilerPath": "/usr/lib64/ccache/arm-none-eabi-gcc",
+            "compilerPath": "${env:ARMGCC_DIR}/arm-none-eabi-gcc.exe", //"/usr/lib64/ccache/arm-none-eabi-gcc" use env variable to specify compiler path, hopefully this will work on Linux as well 
             "cStandard": "c11",
-            "intelliSenseMode": "linux-gcc-arm",
+            "intelliSenseMode": "gcc-arm", //"linux-gcc-arm" is not acceptable value on Windows, hopefully this will work on Linux as well
             "cppStandard": "c++17",
             "configurationProvider": "ms-vscode.cmake-tools"
         }

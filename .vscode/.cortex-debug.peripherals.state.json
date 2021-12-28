@@ -1,0 +1,1 @@
+[{"node":"SPI2","expanded":false,"format":0,"pinned":true},{"node":"DMA1","expanded":true,"format":0,"pinned":false},{"node":"DMA1.CNDTR4","expanded":true,"format":0},{"node":"RCC.CR","expanded":true,"format":0},{"node":"RCC.CFGR","expanded":true,"format":0},{"node":"SPI1.CR1","expanded":true,"format":0}]

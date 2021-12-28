@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "array": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "ranges": "cpp",
+        "lld3377x.h": "c",
+        "spi.h": "c",
+        "spi_common_v1.h": "c",
+        "spi_common_all.h": "c",
+        "mc3377x.h": "c",
+        "utils.h": "c",
+        "digio.h": "c",
+        "digio_prj.h": "c",
+        "hwdefs.h": "c",
+        "flash.h": "c",
+        "common.h": "c",
+        "stdio.h": "c",
+        "typeinfo": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "Enabled"
+}
