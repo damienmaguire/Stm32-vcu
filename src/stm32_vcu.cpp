@@ -527,6 +527,7 @@ static void Ms10Task(void)
         //Messages required for E46
         Can_E46::Msg316(speed);//send rpm to e46 dash
         Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
+        Can_E46::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
         Can_E46::Msg545();
     }
     else if (targetVehicle == _vehmodes::BMW_E65)
