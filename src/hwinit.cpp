@@ -233,8 +233,8 @@ void tim_setup()
     //Code for timer 1 to create oil pump control pwm for Toyota hybrid gearbox
     //Needs to be 1khz
     ////////////////////////////////////////////////////////////////////////
-    gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_50_MHZ,	// High speed
-                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO8);	// GPIOA8=TIM1.CH1
+    gpio_set_mode(GPIOE,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
+                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO9);	// GPIOE9=TIM1.CH1 Alt
 
     timer_disable_counter(TIM1);
     timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_CENTER_1,
