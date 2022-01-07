@@ -5,20 +5,37 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Cortex Debug",            
-            "cwd": "${workspaceRoot}",
-            "executable": "./stm32_bgtw",
+            "name": "Debug VCU",
+            "type": "cppdbg",
             "request": "launch",
-            "type": "cortex-debug",            
-            "servertype": "openocd",
-            "preLaunchTask": "make_clean",
-            "device": "STM32F107xC",
-            "configFiles": [
-                "interface/stlink.cfg",
-                "target/stm32f1x.cfg"
+            "miDebuggerPath": "arm-none-eabi-gdb",
+            "targetArchitecture": "arm",
+            "program": "${workspaceFolder}/stm32_vcu",
+            "setupCommands": [
+                {
+                    "text": "set target-async off"
+                },
+                {
+                    "text": "file ${workspaceFolder}/stm32_vcu"
+                },
+                {
+                    "text": "set remote hardware-breakpoint-limit 6"
+                },
+                {
+                    "text": "set remote hardware-watchpoint-limit 4"
+                },
+                {
+                    "text": "target extended-remote localhost:3333"
+                },
+                {
+                    "text": "monitor arm semihosting enable"
+                },
+                {
+                    "text": "load ${workspaceFolder}/stm32_vcu"
+                }
             ],
-            "svdFile": "./STM32F107.svd"           
-
+            "externalConsole": false,
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

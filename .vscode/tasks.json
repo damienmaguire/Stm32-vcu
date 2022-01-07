@@ -1,22 +1,69 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "make",
+            "label": "Build stm32 VCU",
             "type": "shell",
             "command": "make",
-            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "args": [
+                "all"
+            ],
+            // Use the standard less compilation problem matcher.
+            "problemMatcher": "$gcc",
+        },
+        {
+            "label": "Rebuild stm32 VCU",
+            "type": "shell",
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "args": [
+                "clean",
+                "all"
+            ],
+            // Use the standard less compilation problem matcher.
+            "problemMatcher": "$gcc",
         },
         {
-            "label": "make_clean",
+            "label": "Clean stm32 VCU",
             "type": "shell",
-            "command": "make clean ; make",
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
         },      
+            "args": [
+                "clean"
+            ],
+            // Use the standard less compilation problem matcher.
+            "problemMatcher": "$gcc",
+        }
     ]
 }
