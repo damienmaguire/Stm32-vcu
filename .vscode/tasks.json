@@ -58,7 +58,7 @@
                 "reveal": "always",
                 "focus": false,
                 "panel": "shared"
-            },
+        },      
             "args": [
                 "clean"
             ],
