@@ -38,7 +38,6 @@
     PARAM_ENTRY(CAT_THROTTLE,throtramp,   "%/10ms",  0.1,    100,    100,    13  ) \
     PARAM_ENTRY(CAT_THROTTLE,throtramprpm,"rpm",     0,      20000,  20000,  14  )  \
     PARAM_ENTRY(CAT_THROTTLE,revlim,        "rpm",      0,     20000,   6000,  15   ) \
-    PARAM_ENTRY(CAT_THROTTLE,brkout,      "%",       -100,   -1,     -50,    16  ) \
     PARAM_ENTRY(CAT_THROTTLE,  bmslimhigh,  "%",       0,      100,    50,     17  ) \
     PARAM_ENTRY(CAT_THROTTLE,  bmslimlow,   "%",       -100,   0,      -1,     18  ) \
     PARAM_ENTRY(CAT_THROTTLE,  udcmin,      "V",       0,      1000,   450,    19  ) \
