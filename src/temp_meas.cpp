@@ -20,6 +20,7 @@
  */
 #define __TEMP_LU_TABLES
 #include "temp_meas.h"
+#include "my_math.h"
 #include <stdint.h>
 
 #define TABLEN(a) sizeof(a) / sizeof(a[0])
@@ -119,7 +120,7 @@ s32fp TempMeas::Lookup(int digit, Sensors sensorId)
         {
             s32fp a = FP_FROMINT(sensor->coeff == NTC?cur - digit:digit - cur);
             s32fp b = FP_FROMINT(sensor->coeff == NTC?cur - last:last - cur);
-            return FP_FROMINT(sensor->step * i + sensor->tempMin) - sensor->step * FP_DIV(a, b);
+            return MIN(MAX(FP_FROMINT(sensor->step * i + sensor->tempMin) - sensor->step * FP_DIV(a, b),FP_FROMINT(sensor->tempMin)),sensor->tempMax);
         }
         last = cur;
     }
