@@ -36,12 +36,12 @@ void GetDigInputs(Can* can)
         ErrorMessage::Post(ERR_CANTIMEOUT);
     }
 
-    Param::SetInt(Param::din_cruise, DigIo::cruise_in.Get() | ((canio & CAN_IO_CRUISE) != 0));
+    Param::SetInt(Param::din_cruise, ((canio & CAN_IO_CRUISE) != 0));
     Param::SetInt(Param::din_start, DigIo::start_in.Get() | ((canio & CAN_IO_START) != 0));
     Param::SetInt(Param::din_brake, DigIo::brake_in.Get() | ((canio & CAN_IO_BRAKE) != 0));
     Param::SetInt(Param::din_forward, DigIo::fwd_in.Get() | ((canio & CAN_IO_FWD) != 0));
     Param::SetInt(Param::din_reverse, DigIo::rev_in.Get() | ((canio & CAN_IO_REV) != 0));
-    Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0 || (DigIo::bms_in.Get()) );
+    Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0);
 }
 
 int GetUserThrottleCommand()
@@ -253,11 +253,6 @@ s32fp ProcessThrottle(int speed)
     }
 
     Param::SetFlt(Param::potnom, finalSpnt);
-
-    if (finalSpnt < Param::Get(Param::brkout))
-        DigIo::brk_out.Set();
-    else
-        DigIo::brk_out.Clear();
 
     return finalSpnt;
 }
