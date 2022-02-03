@@ -106,8 +106,8 @@ void GS450HClass::run100msTask(uint8_t Lexus_Gear, uint16_t Lexus_Oil)
 
     Param::SetInt(Param::tmphs,GS450HClass::temp_inv_water);//send GS450H inverter temp to web interface
 
-    static int16_t mTemps[2];
-    static int16_t tmpm;
+    static s32fp mTemps[2];
+    static s32fp tmpm;
 
     int tmpmg1 = AnaIn::MG1_Temp.Get();//in the gs450h case we must read the analog temp values from sensors in the gearbox
     int tmpmg2 = AnaIn::MG2_Temp.Get();
@@ -116,7 +116,7 @@ void GS450HClass::run100msTask(uint8_t Lexus_Gear, uint16_t Lexus_Oil)
     mTemps[1] = TempMeas::Lookup(tmpmg2, TempMeas::TEMP_TOYOTA);
 
     tmpm = MAX(mTemps[0], mTemps[1]);//which ever is the hottest gets displayed
-    Param::SetInt(Param::tmpm,tmpm);
+    Param::SetFlt(Param::tmpm,tmpm);
 }
 
 
