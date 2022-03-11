@@ -658,6 +658,7 @@ static void Ms10Task(void)
         DigIo::gp_out1.Clear();//Coolant pump off
 //        DigIo::err_out.Clear();
         DigIo::prec_out.Clear();
+        Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown
         Param::SetInt(Param::opmode, newMode);
         if(targetVehicle == _vehmodes::BMW_E65) E65Vehicle.DashOff();
     }
