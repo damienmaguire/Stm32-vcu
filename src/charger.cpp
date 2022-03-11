@@ -33,7 +33,7 @@ if(counter_109 >= 0xF) counter_109 = 0;
 
 
 
-Can::GetInterface(1)->Send(0x109, (uint32_t*)bytes,8); //Send on CAN2
+Can::GetInterface(Param::GetInt(Param::charger_can))->Send(0x109, (uint32_t*)bytes,8);
 
 }
 

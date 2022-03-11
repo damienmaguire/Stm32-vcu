@@ -131,7 +131,7 @@ void ISA::initialize()
         bytes[6]=0x00;
         bytes[7]=0x00;
 
-        Can::GetInterface(0)->Send(0x411, (uint32_t*)bytes, 8);
+        Can::GetInterface(Param::GetInt(Param::shunt_can))->Send(0x411, (uint32_t*)bytes, 8);
         delay();
 
         sendSTORE();
@@ -157,7 +157,7 @@ void ISA::STOP()
     bytes[6]=0x00;
     bytes[7]=0x00;
 
-    Can::GetInterface(0)->Send(0x411, (uint32_t*)bytes,8);
+    Can::GetInterface(Param::GetInt(Param::shunt_can))->Send(0x411, (uint32_t*)bytes,8);
 
 }
 void ISA::sendSTORE()
@@ -174,7 +174,7 @@ void ISA::sendSTORE()
     bytes[6]=0x00;
     bytes[7]=0x00;
 
-    Can::GetInterface(0)->Send(0x411, (uint32_t*)bytes,8);
+    Can::GetInterface(Param::GetInt(Param::shunt_can))->Send(0x411, (uint32_t*)bytes,8);
 
 
 }
@@ -192,7 +192,7 @@ void ISA::START()
     bytes[5]=0x00;
     bytes[6]=0x00;
     bytes[7]=0x00;
-    Can::GetInterface(0)->Send(0x411, (uint32_t*)bytes,8);
+    Can::GetInterface(Param::GetInt(Param::shunt_can))->Send(0x411, (uint32_t*)bytes,8);
 
 
 }
@@ -210,7 +210,7 @@ void ISA::RESTART()
     bytes[5]=0x00;
     bytes[6]=0x00;
     bytes[7]=0x00;
-    Can::GetInterface(0)->Send(0x411, (uint32_t*)bytes,8);
+    Can::GetInterface(Param::GetInt(Param::shunt_can))->Send(0x411, (uint32_t*)bytes,8);
 
 
 }
@@ -229,7 +229,7 @@ void ISA::deFAULT()
     bytes[5]=0x00;
     bytes[6]=0x00;
     bytes[7]=0x00;
-    Can::GetInterface(0)->Send(0x411, (uint32_t*)bytes,8);
+    Can::GetInterface(Param::GetInt(Param::shunt_can))->Send(0x411, (uint32_t*)bytes,8);
 
 
 }
@@ -249,7 +249,7 @@ void ISA::initCurrent()
     bytes[6]=0x00;
     bytes[7]=0x00;
 
-    Can::GetInterface(0)->Send(0x411, (uint32_t*)bytes,8);
+    Can::GetInterface(Param::GetInt(Param::shunt_can))->Send(0x411, (uint32_t*)bytes,8);
 
     delay();
     sendSTORE();

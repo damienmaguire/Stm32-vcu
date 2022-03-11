@@ -76,7 +76,7 @@ void Can_OI::SetThrottle(int8_t gear, int16_t torque)
 bytes[0]=final_torque_request & 0xFF;//throttle lsb
 bytes[1]=final_torque_request >> 8;//throttle msb
 
-Can::GetInterface(0)->Send(0x64, (uint32_t*)bytes,2);//send 0x64 (100 decimal)
+Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x64, (uint32_t*)bytes,2);//send 0x64 (100 decimal)
 
 
     Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
@@ -107,7 +107,7 @@ if(Param::GetBool(Param::din_brake))tempIO+=4;
 if(Param::GetBool(Param::din_start))tempIO+=2;
 bytes[0] = tempIO;
 
-Can::GetInterface(0)->Send(0x12C, (uint32_t*)bytes,1);//send 0x12C (300 decimal)
+Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x12C, (uint32_t*)bytes,1);//send 0x12C (300 decimal)
     run100ms = (run100ms + 1) & 3;
 
 

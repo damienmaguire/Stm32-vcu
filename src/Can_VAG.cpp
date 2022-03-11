@@ -13,7 +13,7 @@ void Can_VAG::SendVAG100msMessage()
 
     uint8_t canData[8] = { (uint8_t)(0x80 | ctr), 0, 0, seq1[seqCtr], seq2[seqCtr], seq3[seqCtr], seq4[seqCtr], seq5[seqCtr] };
 
-    Can::GetInterface(1)->Send(0x580, (uint32_t*)canData,8); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x580, (uint32_t*)canData,8);
     seqCtr = (seqCtr + 1) & 0x3;
     ctr = (ctr + 1) & 0xF;
 }
@@ -26,12 +26,12 @@ void Can_VAG::SendVAG10msMessage(uint16_t rpm)
    uint8_t byte3 = ((rpm * 4) >> 8) & 0xFF;
    uint8_t byte4 = (rpm * 4) & 0xFF;
    uint8_t canData[8] = { 0, 0, 0, byte3, byte4, 0, 0, 0 };
-   Can::GetInterface(1)->Send(0x280, (uint32_t*)canData, 8); //Send on CAN2
+   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x280, (uint32_t*)canData, 8);
 
    //contains temperature, traction control light was on without the message, content doesnt
    //seem to matter.
    canData[3] = 0;
    canData[4] = 0;
-   Can::GetInterface(1)->Send(0x288, (uint32_t*)canData, 8); //Send on CAN2
+   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x288, (uint32_t*)canData, 8);
 
 }

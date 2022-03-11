@@ -65,7 +65,7 @@ void Can_E39::Msg316(uint16_t speed_input)  //DME1
     // Byte 7 - Torque with internal interventions only
     bytes[7]=0x00;
 
-    Can::GetInterface(1)->Send(0x316, (uint32_t*)bytes,8); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x316, (uint32_t*)bytes,8);
 }
 
 
@@ -157,7 +157,7 @@ void Can_E39::Msg329(uint16_t tempValue)   //DME2
     if(counter_329==8) ABSMsg=0x86;
     if(counter_329==15) ABSMsg=0xd9;
 
-    Can::GetInterface(1)->Send(0x329, (uint32_t*)bytes,8); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x329, (uint32_t*)bytes,8);
 }
 
 void Can_E39::Msg545()  //DME4
@@ -223,7 +223,7 @@ Consumption++;  //just inc this as a test
     // Byte 7 - 0x80 Oil Pressure (Red Oil light), Idle set speed
     bytes[7]=0x18;
 
-    Can::GetInterface(1)->Send(0x545, (uint32_t*)bytes,8); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x545, (uint32_t*)bytes,8);
 }
 
 void Can_E39::DecodeCAN(int id, uint32_t data[2])

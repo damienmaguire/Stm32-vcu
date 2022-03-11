@@ -24,11 +24,16 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 60
+//Next param id (increase when adding new parameter!): 65
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,Inverter,     INVMODES    ,  0,      5,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,Vehicle,      VEHMODES    ,  0,      6,      0,      6  ) \
+    PARAM_ENTRY(CAT_SETUP,Inverter_CAN, CAN_DEV,       0,      1,      0,      60 ) \
+    PARAM_ENTRY(CAT_SETUP,Vehicle_CAN,  CAN_DEV,       0,      1,      1,      61 ) \
+    PARAM_ENTRY(CAT_SETUP,Shunt_CAN,    CAN_DEV,       0,      1,      0,      62 ) \
+    PARAM_ENTRY(CAT_SETUP,LIM_CAN,      CAN_DEV,       0,      1,      0,      63 ) \
+    PARAM_ENTRY(CAT_SETUP,Charger_CAN,  CAN_DEV,       0,      1,      1,      64 ) \
     PARAM_ENTRY(CAT_THROTTLE,potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -108,6 +113,11 @@
     VALUE_ENTRY(dir,         DIRS,    2024 ) \
     VALUE_ENTRY(inv,         INVMODES,    2025 ) \
     VALUE_ENTRY(veh,         VEHMODES,    2026 ) \
+    VALUE_ENTRY(inv_can,     CAN_DEV, 2071) \
+    VALUE_ENTRY(veh_can,     CAN_DEV, 2072) \
+    VALUE_ENTRY(shunt_can,   CAN_DEV, 2073) \
+    VALUE_ENTRY(lim_can,     CAN_DEV, 2074) \
+    VALUE_ENTRY(charger_can,     CAN_DEV, 2075) \
     VALUE_ENTRY(Charger,     CHGMODS,    2027 ) \
     VALUE_ENTRY(tmphs,        "°C",    2028 ) \
     VALUE_ENTRY(tmpm,         "°C",    2029 ) \
@@ -155,7 +165,7 @@
     VALUE_ENTRY(cpuload,      "%",     2063 ) \
 
 
-//Next value Id: 2070
+//Next value Id: 2076
 
 #define VERSTR STRINGIFY(4=VER)
 #define dmodes     "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
@@ -201,7 +211,7 @@
 #define CHGint   "0=Unused, 1=i3LIM, 2=Chademo, 3=Leaf_PDM"
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
-
+#define CAN_DEV "0=CAN1, 1=CAN2"
 
 
 enum modes
@@ -337,6 +347,12 @@ enum ccs_status
     CCS_ESTOP = 6,
     CCS_MALFUNCTION = 7,
     CCS_INVAID = 15
+};
+
+enum can_devices 
+{
+    CAN_DEV1 = 0,
+    CAN_DEV2 = 1
 };
 
 
