@@ -117,7 +117,7 @@ void BMW_E65Class::DashOn()
     {
         for (int i = 0; i < 3; i++)
         {
-            Can::GetInterface(1)->Send(0x332, (uint32_t*)bytes,2); //Send on CAN2
+            Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x332, (uint32_t*)bytes,2);
         }
     }
     this->dashInit=true;
@@ -166,7 +166,7 @@ void BMW_E65Class::Tacho(int16_t speed)
     bytes[5]=outRPMhi;
     bytes[6]=0x80;
     bytes[7]=0x99;
-    Can::GetInterface(1)->Send(0x0AA, (uint32_t*)bytes,8); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x0AA, (uint32_t*)bytes,8);
 
 
 
@@ -214,7 +214,7 @@ void BMW_E65Class::absdsc(bool Brake_In)
     bytes[6]=0x0f;
     bytes[7]=a8_brake;  //brake off =0x04 , brake on = 0x64.
 
-    Can::GetInterface(1)->Send(0x0A8, (uint32_t*)bytes,8); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x0A8, (uint32_t*)bytes,8);
 
 
 
@@ -227,7 +227,7 @@ void BMW_E65Class::absdsc(bool Brake_In)
     bytes[6]=0xe0;
     bytes[7]=0x21;
 
-    Can::GetInterface(1)->Send(0x0A9, (uint32_t*)bytes,8); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x0A9, (uint32_t*)bytes,8);
 
     int16_t check_BA = (gear_BA+0xff+0x0f+BA6+0x0ba);
     check_BA = (check_BA / 0x100)+ (check_BA & 0xff);
@@ -242,7 +242,7 @@ void BMW_E65Class::absdsc(bool Brake_In)
     bytes[5]=check_BA; //BA5; //counter byte 5
     bytes[6]=BA6; //counter byte 6
 
-    Can::GetInterface(1)->Send(0x0BA, (uint32_t*)bytes,7); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x0BA, (uint32_t*)bytes,7);
 
 
 
@@ -298,7 +298,7 @@ void BMW_E65Class::GDis()
     bytes[4]=0xf0;
 
 
-    Can::GetInterface(1)->Send(0x1D2, (uint32_t*)bytes,5); //Send on CAN2
+    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x1D2, (uint32_t*)bytes,5);
     ///////////////////////////
     //Byte 3 is a counter running from 0D through to ED and then back to 0D///
     //////////////////////////////////////////////

@@ -37,6 +37,7 @@ static bool chargeMode = false;
 static bool chargeModeDC = false;
 static bool ChgLck = false;
 static Can* can;
+static Can* can2;
 static _invmodes targetInverter;
 static _vehmodes targetVehicle;
 static _chgmodes targetCharger;
@@ -71,6 +72,7 @@ chargerClass chgtype;
 uCAN_MSG rxMessage;
 CAN3_Msg CAN3;
 
+void setCanFilters();
 
 static void RunChaDeMo()
 {
@@ -416,7 +418,7 @@ static void Ms100Task(void)
     if (!chargeMode && rtc_get_counter_val() > 100)
     {
         if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
-            can->SendAll();
+            Can::GetInterface(Param::GetInt(Param::inv_can))->SendAll();
     }
     int16_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
@@ -510,7 +512,7 @@ static void Ms10Task(void)
     }
 
     Param::SetInt(Param::speed, speed);
-    utils::GetDigInputs(can);
+    utils::GetDigInputs(Can::GetInterface(Param::GetInt(Param::inv_can)));
 
     // Send CAN 2 (Vehicle CAN) messages if necessary for vehicle integration.
     if (targetVehicle == BMW_E39)
@@ -715,8 +717,25 @@ static void Ms1Task(void)
 extern void parm_Change(Param::PARAM_NUM paramNum)
 {
     // This function is called when the user changes a parameter
-    if (Param::canspeed == paramNum)
-        can->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
+    switch (paramNum) {
+        case Param::Inverter_CAN:
+        case Param::Vehicle_CAN:
+        case Param::Shunt_CAN:
+        case Param::LIM_CAN:
+        case Param::Charger_CAN:
+          setCanFilters();
+          break;
+        case Param::canspeed:
+          can->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
+          can2->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
+        default:
+          break;
+    }
+    Param::SetInt(Param::inv_can,Param::GetInt(Param::Inverter_CAN));
+    Param::SetInt(Param::veh_can,Param::GetInt(Param::Vehicle_CAN));
+    Param::SetInt(Param::shunt_can,Param::GetInt(Param::Shunt_CAN));
+    Param::SetInt(Param::lim_can,Param::GetInt(Param::LIM_CAN));
+    Param::SetInt(Param::charger_can,Param::GetInt(Param::Charger_CAN));
 
     Throttle::potmin[0] = Param::GetInt(Param::potmin);
     Throttle::potmax[0] = Param::GetInt(Param::potmax);
@@ -896,7 +915,39 @@ extern "C" void rtc_isr(void)
         }
 }
 
+void setCanFilters() {
+    Can* inverter_can = Can::GetInterface(Param::GetInt(Param::inv_can));
+    Can* vehicle_can = Can::GetInterface(Param::GetInt(Param::veh_can));
+    Can* shunt_can = Can::GetInterface(Param::GetInt(Param::shunt_can));
+    Can* lim_can = Can::GetInterface(Param::GetInt(Param::lim_can));
+    Can* charger_can = Can::GetInterface(Param::GetInt(Param::charger_can));
+    inverter_can->RegisterUserMessage(0x1DA);//Leaf inv msg
+    inverter_can->RegisterUserMessage(0x55A);//Leaf inv msg
+    inverter_can->RegisterUserMessage(0x679);//Leaf obc msg
+    inverter_can->RegisterUserMessage(0x390);//Leaf obc msg
+    inverter_can->RegisterUserMessage(0x190);//Open Inv Msg
+    inverter_can->RegisterUserMessage(0x19A);//Open Inv Msg
+    inverter_can->RegisterUserMessage(0x1A4);//Open Inv Msg
+    shunt_can->RegisterUserMessage(0x521);//ISA MSG
+    shunt_can->RegisterUserMessage(0x522);//ISA MSG
+    shunt_can->RegisterUserMessage(0x523);//ISA MSG
+    shunt_can->RegisterUserMessage(0x524);//ISA MSG
+    shunt_can->RegisterUserMessage(0x525);//ISA MSG
+    shunt_can->RegisterUserMessage(0x526);//ISA MSG
+    shunt_can->RegisterUserMessage(0x527);//ISA MSG
+    shunt_can->RegisterUserMessage(0x528);//ISA MSG
+    lim_can->RegisterUserMessage(0x3b4);//LIM MSG
+    lim_can->RegisterUserMessage(0x29e);//LIM MSG
+    lim_can->RegisterUserMessage(0x2b2);//LIM MSG
+    lim_can->RegisterUserMessage(0x2ef);//LIM MSG
+    lim_can->RegisterUserMessage(0x272);//LIM MSG
 
+    // Set up CAN 2 (Vehicle CAN) callback and messages to listen for.
+    vehicle_can->RegisterUserMessage(0x130);//E65 CAS
+    vehicle_can->RegisterUserMessage(0x192);//E65 Shifter
+    charger_can->RegisterUserMessage(0x108);//Charger HV request
+    vehicle_can->RegisterUserMessage(0x153);//E39/E46 ASC1 message    
+}
 
 extern "C" int main(void)
 {
@@ -917,40 +968,17 @@ extern "C" int main(void)
     DigIo::mcp_sby.Clear();//enable can3
 
 
-    Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));//can1 Inverter / isa shunt/LIM.
-    Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));//can2 vehicle side.
+    Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));
+    Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));
 
     // Set up CAN 1 callback and messages to listen for
     c.SetReceiveCallback(CanCallback);
-    c.RegisterUserMessage(0x1DA);//Leaf inv msg
-    c.RegisterUserMessage(0x55A);//Leaf inv msg
-    c.RegisterUserMessage(0x679);//Leaf obc msg
-    c.RegisterUserMessage(0x390);//Leaf obc msg
-    c.RegisterUserMessage(0x190);//Open Inv Msg
-    c.RegisterUserMessage(0x19A);//Open Inv Msg
-    c.RegisterUserMessage(0x1A4);//Open Inv Msg
-    c.RegisterUserMessage(0x521);//ISA MSG
-    c.RegisterUserMessage(0x522);//ISA MSG
-    c.RegisterUserMessage(0x523);//ISA MSG
-    c.RegisterUserMessage(0x524);//ISA MSG
-    c.RegisterUserMessage(0x525);//ISA MSG
-    c.RegisterUserMessage(0x526);//ISA MSG
-    c.RegisterUserMessage(0x527);//ISA MSG
-    c.RegisterUserMessage(0x528);//ISA MSG
-    c.RegisterUserMessage(0x3b4);//LIM MSG
-    c.RegisterUserMessage(0x29e);//LIM MSG
-    c.RegisterUserMessage(0x2b2);//LIM MSG
-    c.RegisterUserMessage(0x2ef);//LIM MSG
-    c.RegisterUserMessage(0x272);//LIM MSG
-
-    // Set up CAN 2 (Vehicle CAN) callback and messages to listen for.
     c2.SetReceiveCallback(CanCallback);
-    c2.RegisterUserMessage(0x130);//E65 CAS
-    c2.RegisterUserMessage(0x192);//E65 Shifter
-    c2.RegisterUserMessage(0x108);//Charger HV request
-    c2.RegisterUserMessage(0x153);//E39/E46 ASC1 message
+    setCanFilters();
 
-    can = &c; // FIXME: What about CAN2?
+
+    can = &c;
+    can2 = &c2;
 
     CANSPI_Initialize();// init the MCP25625 on CAN3
     CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ

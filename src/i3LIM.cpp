@@ -185,7 +185,7 @@ bytes[5] = SOC_Local >> 8;  //Battery SOC MSB. 12 bit unsigned int. Scale 0.1. 0
 bytes[6] = 0x65;  //Low nibble battery status. Seem to need to be 0x5.
 bytes[7] = V_Batt2;  //zwischenkreis. Battery voltage. Scale 4. 8 bit unsigned int.
 
-Can::GetInterface(0)->Send(0x112, (uint32_t*)bytes,8); //Send on CAN1
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x112, (uint32_t*)bytes,8); //
 
 ctr_20ms++;
 if(ctr_20ms==2)
@@ -198,7 +198,7 @@ bytes[1] = 0xcb;
 bytes[2] = 0x00;
 bytes[3] = 0x00;
 bytes[4] = 0x8a;
-Can::GetInterface(0)->Send(0x1a1, (uint32_t*)bytes,5); //Send on CAN1. average 20ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x1a1, (uint32_t*)bytes,5); // average 20ms
 }
 
 }
@@ -221,7 +221,7 @@ bytes[4] = 0xff;
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x2fa, (uint32_t*)bytes,8); //Send on CAN1. this msg varies from 82ms to 1s intervals.
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2fa, (uint32_t*)bytes,8); // this msg varies from 82ms to 1s intervals.
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -238,7 +238,7 @@ bytes[4] = SOC_Local;    //display soc. scale 0.5.
 bytes[5] = 0xff;
 bytes[6] = 0x02;
 bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x432, (uint32_t*)bytes,8); //Send on CAN1. average 190ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x432, (uint32_t*)bytes,8); // average 190ms
 
 bytes[0] = 0x00;//network management
 bytes[1] = 0x00;
@@ -248,7 +248,7 @@ bytes[4] = 0x50;
 bytes[5] = 0x00;
 bytes[6] = 0x00;
 bytes[7] = 0x1a;
-Can::GetInterface(0)->Send(0x51a, (uint32_t*)bytes,8); //Send on CAN1. average 640ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x51a, (uint32_t*)bytes,8); // average 640ms
 
 bytes[0] = 0x00;//network management.May need to be dynamic
 bytes[1] = 0x00;
@@ -258,7 +258,7 @@ bytes[4] = 0xfd;
 bytes[5] = 0x3c;
 bytes[6] = 0xff;
 bytes[7] = 0x40;
-Can::GetInterface(0)->Send(0x540, (uint32_t*)bytes,8); //Send on CAN1. average 640ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x540, (uint32_t*)bytes,8); // average 640ms
 
 bytes[0] = 0x40;//network management zgw
 bytes[1] = 0x10;
@@ -268,7 +268,7 @@ bytes[4] = 0x00;
 bytes[5] = 0x00;
 bytes[6] = 0x00;
 bytes[7] = 0x00;
-Can::GetInterface(0)->Send(0x510, (uint32_t*)bytes,8); //Send on CAN1. average 640ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x510, (uint32_t*)bytes,8); // average 640ms
 
 ctr_1second++;
 if(ctr_1second==5)//only send every 1 second.
@@ -281,7 +281,7 @@ bytes[2] = sec_328<<16;
 bytes[3] = sec_328<<24;
 bytes[4] = 0x87;    //day counter 16 bit.
 bytes[5] = 0x1e;
-Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x328, (uint32_t*)bytes,6); 
 
 
 
@@ -289,7 +289,7 @@ Can::GetInterface(0)->Send(0x328, (uint32_t*)bytes,6); //Send on CAN1
 //if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
 bytes[0] = 0xf1;
 bytes[1] = 0xff;
-Can::GetInterface(0)->Send(0x3e8, (uint32_t*)bytes,2); //Send on CAN1
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3e8, (uint32_t*)bytes,2);
 
 bytes[0] = 0xc0;//engine info? rex?
 bytes[1] = 0xf9;
@@ -299,7 +299,7 @@ bytes[4] = 0x43;
 bytes[5] = 0x3c;
 bytes[6] = 0xc3;//0x3=park
 bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x3f9, (uint32_t*)bytes,8); //Send on CAN1.average 1s
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3f9, (uint32_t*)bytes,8); //average 1s
 
 ctr_5second++;
 if(ctr_5second==4)//only send every 4 second.
@@ -315,7 +315,7 @@ bytes[4] = 0xff;
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x2fc, (uint32_t*)bytes,8); //Send on CAN1. average 5s.
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2fc, (uint32_t*)bytes,8); // average 5s.
 
 bytes[0] = 0x88;//central locking
 bytes[1] = 0x88;
@@ -325,7 +325,7 @@ bytes[4] = 0xff;
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x2a0, (uint32_t*)bytes,8); //Send on CAN1. average 5s.
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2a0, (uint32_t*)bytes,8); // average 5s.
 
 bytes[0] = 0xff;//vehicle condition
 bytes[1] = 0xff;
@@ -335,7 +335,7 @@ bytes[4] = 0xff;
 bytes[5] = 0xff;
 bytes[6] = 0xff;
 bytes[7] = 0xfc;
-Can::GetInterface(0)->Send(0x3a0, (uint32_t*)bytes,8); //Send on CAN1. average 4s.
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3a0, (uint32_t*)bytes,8); // average 4s.
 }
 }
 
@@ -348,7 +348,7 @@ bytes[4] = 0x00;
 bytes[5] = 0x00;
 bytes[6] = 0x00;
 bytes[7] = 0x12;
-Can::GetInterface(0)->Send(0x512, (uint32_t*)bytes,8); //Send on CAN1. only sent once on 19 log.
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x512, (uint32_t*)bytes,8); // only sent once on 19 log.
 
 bytes[0] = 0x00;//network management kombi
 bytes[1] = 0x00;
@@ -358,7 +358,7 @@ bytes[4] = 0xfe;
 bytes[5] = 0x00;
 bytes[6] = 0x00;
 bytes[7] = 0x60;
-Can::GetInterface(0)->Send(0x560, (uint32_t*)bytes,8); //Send on CAN1. not on is 2019 log
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x560, (uint32_t*)bytes,8); // not on is 2019 log
 
 bytes[0] = 0xa8;//range info, milage display
 bytes[1] = 0x86;
@@ -368,7 +368,7 @@ bytes[4] = 0x00;
 bytes[5] = 0x05;
 bytes[6] = 0xac;
 bytes[7] = 0x03;
-Can::GetInterface(0)->Send(0x330, (uint32_t*)bytes,8); //Send on CAN1. not on is 2019 log
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x330, (uint32_t*)bytes,8); // not on is 2019 log
 
 bytes[0] = 0x00;//obd msg
 bytes[1] = 0x2a;
@@ -377,7 +377,7 @@ bytes[3] = 0x6c;
 bytes[4] = 0x0f;
 bytes[5] = 0x55;
 bytes[6] = 0x00;
-Can::GetInterface(0)->Send(0x397, (uint32_t*)bytes,7); //Send on CAN1. not on 19 log
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x397, (uint32_t*)bytes,7); // not on 19 log
 
 */
 
@@ -402,7 +402,7 @@ bytes[4] = 0x00;
 bytes[5] = 0x00;
 bytes[6] = 0xff;
 bytes[7] = 0xff;
-Can::GetInterface(0)->Send(0x03c, (uint32_t*)bytes,8); //Send on CAN1. average 100ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x03c, (uint32_t*)bytes,8); //average 100ms
 
 uint16_t Wh_Local=Param::GetInt(Param::BattCap);
 CHG_Pwr=(CHG_Pwr & 0xFFF);
@@ -417,7 +417,7 @@ bytes[6] = ((CONT_Ctrl<<4)|(FC_Cur>>12));   //bits 0 and 1 MSB of the DC ccs cur
 bytes[7] = EOC_Time;    // end of charge timer.
 
 
-Can::GetInterface(0)->Send(0x3E9, (uint32_t*)bytes,8); //Send on CAN1. average 128ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3E9, (uint32_t*)bytes,8); //average 128ms
 
                 //LIM needs to see this but doesnt control anything...
 bytes[0] = 0xca;
@@ -428,7 +428,7 @@ bytes[4] = 0x69;
 bytes[5] = 0x26;
 bytes[6] = 0xf3;
 bytes[7] = 0x4b;
-Can::GetInterface(0)->Send(0x431, (uint32_t*)bytes,8); //Send on CAN1.average 197ms but as low as 49ms.
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x431, (uint32_t*)bytes,8); //.average 197ms but as low as 49ms.
 
 bytes[0] = 0xf5;//Wake up message.
 bytes[1] = 0x28;
@@ -440,7 +440,7 @@ bytes[5] = 0x35;
 bytes[6] = 0x30;
 bytes[7] = 0x80;
 
-Can::GetInterface(0)->Send(0x12f, (uint32_t*)bytes,8); //Send on CAN1. average 100ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x12f, (uint32_t*)bytes,8); //. average 100ms
 
 
 
@@ -460,7 +460,7 @@ bytes[5] = Bulk_SOCt & 0xFF;  //time remaining in seconds to hit soc target from
 bytes[6] = Bulk_SOCt >> 8;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.Bulk SOC.
 bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=160*0.5=80%
 
-Can::GetInterface(0)->Send(0x2f1, (uint32_t*)bytes,8); //Send on CAN1. average 100ms
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2f1, (uint32_t*)bytes,8); //. average 100ms
 
 if(Param::GetInt(Param::opmode)!=MOD_RUN) vin_ctr=0;
 if((Param::GetInt(Param::opmode)==MOD_RUN) && vin_ctr<5)
@@ -473,7 +473,7 @@ bytes[3] = 0x37;
 bytes[4] = 0x39;
 bytes[5] = 0x32;
 bytes[6] = 0x36;
-Can::GetInterface(0)->Send(0x380, (uint32_t*)bytes,7); //Send on CAN1
+Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x380, (uint32_t*)bytes,7); //
 vin_ctr++;
 */
 }
