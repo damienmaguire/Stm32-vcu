@@ -30,107 +30,99 @@
 #include "stm32_can.h"
 #include "terminalcommands.h"
 
-static void LoadDefaults(char *arg);
-static void GetAll(char *arg);
-static void PrintList(char *arg);
-static void PrintAtr(char *arg);
-static void Help(char *arg);
-static void PrintSerial(char *arg);
-static void PrintErrors(char *arg);
+static void LoadDefaults(Terminal* t, char *arg);
+static void GetAll(Terminal* t, char *arg);
+static void PrintList(Terminal* t, char *arg);
+static void PrintAtr(Terminal* t, char *arg);
+static void PrintSerial(Terminal* t, char *arg);
+static void PrintErrors(Terminal* t, char *arg);
 
-extern "C" const TERM_CMD TermCmds[] =
+extern const TERM_CMD TermCmds[] =
 {
-
-    { "set", TerminalCommands::ParamSet },
-    { "get", TerminalCommands::ParamGet },
-    { "flag", TerminalCommands::ParamFlag },
-    { "stream", TerminalCommands::ParamStream },
-    { "defaults", LoadDefaults },
-    { "all", GetAll },
-    { "list", PrintList },
-    { "atr",  PrintAtr },
-    { "save", TerminalCommands::SaveParameters },
-    { "load", TerminalCommands::LoadParameters },
-    { "help", Help },
-    { "json", TerminalCommands::PrintParamsJson },
-    { "can", TerminalCommands::MapCan },
-    { "serial", PrintSerial },
-    { "errors", PrintErrors },
-    { "reset", TerminalCommands::Reset },
-    //{ "fastuart", FastUart },
-    { NULL, NULL }
+   { "set", TerminalCommands::ParamSet },
+   { "get", TerminalCommands::ParamGet },
+   { "flag", TerminalCommands::ParamFlag },
+   { "stream", TerminalCommands::ParamStream },
+   { "defaults", LoadDefaults },
+   { "all", GetAll },
+   { "list", PrintList },
+   { "atr",  PrintAtr },
+   { "save", TerminalCommands::SaveParameters },
+   { "load", TerminalCommands::LoadParameters },
+   { "json", TerminalCommands::PrintParamsJson },
+   { "can", TerminalCommands::MapCan },
+   { "serial", PrintSerial },
+   { "errors", PrintErrors },
+   { "reset", TerminalCommands::Reset },
+   { NULL, NULL }
 };
 
-static void PrintList(char *arg)
+static void PrintList(Terminal* t, char *arg)
 {
-    const Param::Attributes *pAtr;
+   const Param::Attributes *pAtr;
 
-    arg = arg;
+   arg = arg;
 
-    printf("Available parameters and values\r\n");
+   fprintf(t, "Available parameters and values\r\n");
 
-    for (uint32_t idx = 0; idx < Param::PARAM_LAST; idx++)
-    {
-        pAtr = Param::GetAttrib((Param::PARAM_NUM)idx);
+   for (uint32_t idx = 0; idx < Param::PARAM_LAST; idx++)
+   {
+      pAtr = Param::GetAttrib((Param::PARAM_NUM)idx);
 
-        if ((Param::GetFlag((Param::PARAM_NUM)idx) & Param::FLAG_HIDDEN) == 0)
-            printf("%s [%s]\r\n", pAtr->name, pAtr->unit);
-    }
+      if ((Param::GetFlag((Param::PARAM_NUM)idx) & Param::FLAG_HIDDEN) == 0)
+         printf("%s [%s]\r\n", pAtr->name, pAtr->unit);
+   }
 }
 
-static void PrintAtr(char *arg)
+static void PrintAtr(Terminal* t, char *arg)
 {
-    const Param::Attributes *pAtr;
+   const Param::Attributes *pAtr;
 
-    arg = arg;
+   arg = arg;
 
-    printf("Parameter attributes\r\n");
-    printf("Name\t\tmin - max [default]\r\n");
+   fprintf(t, "Parameter attributes\r\n");
+   fprintf(t, "Name\t\tmin - max [default]\r\n");
 
-    for (uint32_t idx = 0; idx < Param::PARAM_LAST; idx++)
-    {
-        pAtr = Param::GetAttrib((Param::PARAM_NUM)idx);
-        /* Only display for params */
-        if (Param::IsParam((Param::PARAM_NUM)idx) && (Param::GetFlag((Param::PARAM_NUM)idx) & Param::FLAG_HIDDEN) == 0)
-        {
-            printf("%s\t\t%f - %f [%f]\r\n", pAtr->name,pAtr->min,pAtr->max,pAtr->def);
-        }
-    }
+   for (uint32_t idx = 0; idx < Param::PARAM_LAST; idx++)
+   {
+      pAtr = Param::GetAttrib((Param::PARAM_NUM)idx);
+      /* Only display for params */
+      if (Param::IsParam((Param::PARAM_NUM)idx) && (Param::GetFlag((Param::PARAM_NUM)idx) & Param::FLAG_HIDDEN) == 0)
+      {
+         fprintf(t, "%s\t\t%f - %f [%f]\r\n", pAtr->name,pAtr->min,pAtr->max,pAtr->def);
+      }
+   }
 }
 
-static void LoadDefaults(char *arg)
+static void LoadDefaults(Terminal* t, char *arg)
 {
-    arg = arg;
-    Param::LoadDefaults();
-    printf("Defaults loaded\r\n");
+   arg = arg;
+   Param::LoadDefaults();
+   fprintf(t, "Defaults loaded\r\n");
 }
 
-static void GetAll(char *arg)
+static void GetAll(Terminal* t, char *arg)
 {
-    const Param::Attributes *pAtr;
+   const Param::Attributes *pAtr;
 
-    arg = arg;
+   arg = arg;
 
-    for (uint32_t  idx = 0; idx < Param::PARAM_LAST; idx++)
-    {
-        pAtr = Param::GetAttrib((Param::PARAM_NUM)idx);
-        printf("%s\t\t%f\r\n", pAtr->name, Param::Get((Param::PARAM_NUM)idx));
-    }
+   for (uint32_t  idx = 0; idx < Param::PARAM_LAST; idx++)
+   {
+      pAtr = Param::GetAttrib((Param::PARAM_NUM)idx);
+      fprintf(t, "%s\t\t%f\r\n", pAtr->name, Param::Get((Param::PARAM_NUM)idx));
+   }
 }
 
-static void PrintErrors(char *arg)
+static void PrintErrors(Terminal* t, char *arg)
 {
-    arg = arg;
-    ErrorMessage::PrintAllErrors();
+   t = t;
+   arg = arg;
+   ErrorMessage::PrintAllErrors();
 }
 
-static void PrintSerial(char *arg)
+static void PrintSerial(Terminal* t, char *arg)
 {
-    arg = arg;
-    printf("%X%X%X\r\n", DESIG_UNIQUE_ID2, DESIG_UNIQUE_ID1, DESIG_UNIQUE_ID0);
-}
-
-static void Help(char *arg)
-{
-    arg = arg;
+   arg = arg;
+   fprintf(t, "%X%X%X\r\n", DESIG_UNIQUE_ID2, DESIG_UNIQUE_ID1, DESIG_UNIQUE_ID0);
 }

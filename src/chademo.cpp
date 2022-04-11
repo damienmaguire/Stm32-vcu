@@ -1,4 +1,3 @@
-
 /*
  * This file is part of the tumanako_vc project.
  *
@@ -40,9 +39,9 @@ uCAN_MSG txMessage;
 #define FLASH_DELAY 8000
 static void delay(void)
 {
-    int i;
-    for (i = 0; i < FLASH_DELAY; i++)       /* Wait a bit. */
-        __asm__("nop");
+   int i;
+   for (i = 0; i < FLASH_DELAY; i++)       /* Wait a bit. */
+      __asm__("nop");
 }
 
 void ChaDeMo::Process108Message(uint32_t data[2])
@@ -114,36 +113,36 @@ void ChaDeMo::SendMessages()
    data[0] = 0;
    data[1] = (targetBatteryVoltage + 10) | 200 << 16;
 
-    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-    txMessage.frame.id = 0x100;
-    txMessage.frame.dlc = 8;
-    txMessage.frame.data0 = (data[0] & 0xFF);
-    txMessage.frame.data1 = (data[0]>>8 & 0xFF);
-    txMessage.frame.data2 = (data[0]>>16 & 0xFF);
-    txMessage.frame.data3 = (data[0]>>24 & 0xFF);
-    txMessage.frame.data4 = (data[1] & 0xFF);
-    txMessage.frame.data5 = (data[1]>>8 & 0xFF);
-    txMessage.frame.data6 = (data[1]>>16 & 0xFF);
-    txMessage.frame.data7 = (data[1]>>24 & 0xFF);
-    CANSPI_Transmit(&txMessage);
-    delay();
+   txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+   txMessage.frame.id = 0x100;
+   txMessage.frame.dlc = 8;
+   txMessage.frame.data0 = (data[0] & 0xFF);
+   txMessage.frame.data1 = (data[0]>>8 & 0xFF);
+   txMessage.frame.data2 = (data[0]>>16 & 0xFF);
+   txMessage.frame.data3 = (data[0]>>24 & 0xFF);
+   txMessage.frame.data4 = (data[1] & 0xFF);
+   txMessage.frame.data5 = (data[1]>>8 & 0xFF);
+   txMessage.frame.data6 = (data[1]>>16 & 0xFF);
+   txMessage.frame.data7 = (data[1]>>24 & 0xFF);
+   CANSPI_Transmit(&txMessage);
+   delay();
 
    data[0] = 0x00FEFF00;
    data[1] = 0;
 
-    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-    txMessage.frame.id = 0x101;
-    txMessage.frame.dlc = 8;
-    txMessage.frame.data0 = (data[0] & 0xFF);
-    txMessage.frame.data1 = (data[0]>>8 & 0xFF);
-    txMessage.frame.data2 = (data[0]>>16 & 0xFF);
-    txMessage.frame.data3 = (data[0]>>24 & 0xFF);
-    txMessage.frame.data4 = (data[1] & 0xFF);
-    txMessage.frame.data5 = (data[1]>>8 & 0xFF);
-    txMessage.frame.data6 = (data[1]>>16 & 0xFF);
-    txMessage.frame.data7 = (data[1]>>24 & 0xFF);
-    CANSPI_Transmit(&txMessage);
-    delay();
+   txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+   txMessage.frame.id = 0x101;
+   txMessage.frame.dlc = 8;
+   txMessage.frame.data0 = (data[0] & 0xFF);
+   txMessage.frame.data1 = (data[0]>>8 & 0xFF);
+   txMessage.frame.data2 = (data[0]>>16 & 0xFF);
+   txMessage.frame.data3 = (data[0]>>24 & 0xFF);
+   txMessage.frame.data4 = (data[1] & 0xFF);
+   txMessage.frame.data5 = (data[1]>>8 & 0xFF);
+   txMessage.frame.data6 = (data[1]>>16 & 0xFF);
+   txMessage.frame.data7 = (data[1]>>24 & 0xFF);
+   CANSPI_Transmit(&txMessage);
+   delay();
 
 
    data[0] = 1 | ((uint32_t)targetBatteryVoltage << 8) | ((uint32_t)rampedCurReq << 24);
@@ -155,18 +154,18 @@ void ChaDeMo::SendMessages()
              (uint32_t)contactorOpen << 11 |
              (uint32_t)soc << 16;
 
-    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-    txMessage.frame.id = 0x102;
-    txMessage.frame.dlc = 8;
-    txMessage.frame.data0 = (data[0] & 0xFF);
-    txMessage.frame.data1 = (data[0]>>8 & 0xFF);
-    txMessage.frame.data2 = (data[0]>>16 & 0xFF);
-    txMessage.frame.data3 = (data[0]>>24 & 0xFF);
-    txMessage.frame.data4 = (data[1] & 0xFF);
-    txMessage.frame.data5 = (data[1]>>8 & 0xFF);
-    txMessage.frame.data6 = (data[1]>>16 & 0xFF);
-    txMessage.frame.data7 = (data[1]>>24 & 0xFF);
-    CANSPI_Transmit(&txMessage);
+   txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+   txMessage.frame.id = 0x102;
+   txMessage.frame.dlc = 8;
+   txMessage.frame.data0 = (data[0] & 0xFF);
+   txMessage.frame.data1 = (data[0]>>8 & 0xFF);
+   txMessage.frame.data2 = (data[0]>>16 & 0xFF);
+   txMessage.frame.data3 = (data[0]>>24 & 0xFF);
+   txMessage.frame.data4 = (data[1] & 0xFF);
+   txMessage.frame.data5 = (data[1]>>8 & 0xFF);
+   txMessage.frame.data6 = (data[1]>>16 & 0xFF);
+   txMessage.frame.data7 = (data[1]>>24 & 0xFF);
+   CANSPI_Transmit(&txMessage);
 
 
 }
