@@ -28,15 +28,15 @@ OBJCOPY		= $(PREFIX)-objcopy
 OBJDUMP		= $(PREFIX)-objdump
 MKDIR_P     = mkdir -p
 TERMINAL_DEBUG ?= 0
-CFLAGS		= -Os -Wall -Wextra -Werror -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
+CFLAGS		= -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
              -fno-common -fno-builtin -pedantic -DSTM32F1 -DT_DEBUG=$(TERMINAL_DEBUG)  \
 				 -mcpu=cortex-m3 -mthumb -std=gnu99 -ffunction-sections -fdata-sections -ggdb3
-CPPFLAGS    = -Os -Wall -Wextra -Werror -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
+CPPFLAGS    = -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
             -fno-common -std=c++17 -pedantic -DSTM32F1 -DT_DEBUG=$(TERMINAL_DEBUG)  \
 		 -ffunction-sections -fdata-sections -fno-builtin -fno-rtti -fno-exceptions \
 		 -fno-unwind-tables -mcpu=cortex-m3 -mthumb -ggdb3
 LDSCRIPT	= $(BINARY).ld
-LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections,-Map,linker.map
+LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) -march=armv7 -nostartfiles -Wl,--gc-sections,-Map,linker.map
 OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
            my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o Can_E46.o BMW_E65.o GS450H.o temp_meas.o Can_E39.o Can_VAG.o Can_OI.o MCP2515.o CANSPI.o \
            param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o charger.o i3LIM.o chademo.o heater.o
@@ -60,7 +60,7 @@ all: directories images
 Debug:images
 Release: images
 cleanDebug:clean
-images: get-deps $(BINARY) 
+images: get-deps $(BINARY)
 	@printf "  OBJCOPY $(BINARY).bin\n"
 	$(Q)$(OBJCOPY) -Obinary $(BINARY) $(BINARY).bin
 	@printf "  OBJCOPY $(BINARY).hex\n"

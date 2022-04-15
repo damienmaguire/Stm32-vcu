@@ -105,7 +105,7 @@ static const TEMP_SENSOR sensors[] =
    { -20, 190, 5,  TABLEN(Tesla10k),  PTC, Tesla10k   },
 };
 
-s32fp TempMeas::Lookup(int digit, Sensors sensorId)
+float TempMeas::Lookup(int digit, Sensors sensorId)
 {
    if (sensorId >= TEMP_LAST) return 0;
    int index = sensorId >= TEMP_KTY83 ? sensorId - TEMP_KTY83 + NUM_HS_SENSORS : sensorId;
@@ -118,11 +118,12 @@ s32fp TempMeas::Lookup(int digit, Sensors sensorId)
       uint16_t cur = sensor->lookup[i];
       if ((sensor->coeff == NTC && cur >= digit) || (sensor->coeff == PTC && cur <= digit))
       {
-         s32fp a = FP_FROMINT(sensor->coeff == NTC?cur - digit:digit - cur);
-         s32fp b = FP_FROMINT(sensor->coeff == NTC?cur - last:last - cur);
-         return MIN(MAX(FP_FROMINT(sensor->step * i + sensor->tempMin) - sensor->step * FP_DIV(a, b),FP_FROMINT(sensor->tempMin)),sensor->tempMax);
+         float a = sensor->coeff == NTC?cur - digit:digit - cur;
+         float b = sensor->coeff == NTC?cur - last:last - cur;
+         float interpolated = sensor->step * i + sensor->tempMin - sensor->step * a / b;
+         return MIN(MAX(interpolated, sensor->tempMin),sensor->tempMax);
       }
       last = cur;
    }
-   return FP_FROMINT(sensor->tempMax);
+   return sensor->tempMax;
 }

@@ -145,9 +145,9 @@ bool LeafINV::ControlCharge(bool RunCh)
 
 void LeafINV::SetTorque(int8_t gear, int16_t torque)
 {
-   if(gear==0) final_torque_request=0;//Neutral
-   if(gear==32) final_torque_request=torque;//Drive
-   if(gear==-32) final_torque_request=torque*-1;;//Reverse
+   if(gear == 0) final_torque_request=0;//Neutral
+   if(gear > 0) final_torque_request=torque;//Drive
+   if(gear < 0) final_torque_request=torque*-1;//Reverse
 
    Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
 

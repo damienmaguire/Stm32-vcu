@@ -45,7 +45,7 @@ void GetDigInputs(Can* can)
    Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0);
 }
 
-int GetUserThrottleCommand()
+float GetUserThrottleCommand()
 {
    int potval, pot2val;
    bool brake = Param::GetBool(Param::din_brake);
@@ -86,13 +86,13 @@ int GetUserThrottleCommand()
 }
 
 
-void SelectDirection(_vehmodes targetVehicle, BMW_E65Class E65Vehicle)
+void SelectDirection(vehicles targetVehicle, BMW_E65Class E65Vehicle)
 {
    int8_t selectedDir = Param::GetInt(Param::dir);
    int8_t userDirSelection = 0;
    int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
 
-   if (targetVehicle == _vehmodes::BMW_E65)
+   if (targetVehicle == vehicles::BMW_E65)
    {
       // if in an E65 we get direction from the shift stalk via CAN
       switch (E65Vehicle.getGear())
@@ -158,29 +158,28 @@ void SelectDirection(_vehmodes targetVehicle, BMW_E65Class E65Vehicle)
    Param::SetInt(Param::dir, selectedDir);
 }
 
-s32fp ProcessUdc(uint32_t oldTime, int motorSpeed)
+float ProcessUdc(uint32_t oldTime, int motorSpeed)
 {
-   // FIXME: 32bit integer?
-   int32_t udc = FP_FROMINT(ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
-   Param::SetFixed(Param::udc, udc);
-   int32_t udc2 = FP_FROMINT(ISA::Voltage2)/1000;//get voltage from isa sensor and post to parameter database
-   Param::SetFixed(Param::udc2, udc2);
-   int32_t udc3 = FP_FROMINT(ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
-   Param::SetFixed(Param::udc3, udc3);
-   int32_t idc = FP_FROMINT(ISA::Amperes)/1000;//get current from isa sensor and post to parameter database
-   Param::SetFixed(Param::idc, idc);
-   int32_t kw = FP_FROMINT(ISA::KW)/1000;//get power from isa sensor and post to parameter database
-   Param::SetFixed(Param::power, kw);
-   int32_t kwh = FP_FROMINT(ISA::KWh)/1000;//get kwh from isa sensor and post to parameter database
-   Param::SetFixed(Param::KWh, kwh);
-   int32_t Amph = FP_FROMINT(ISA::Ah)/3600;//get Ah from isa sensor and post to parameter database
-   Param::SetFixed(Param::AMPh, Amph);
-   s32fp udclim = Param::Get(Param::udclim);
-   s32fp udcsw = Param::Get(Param::udcsw);
+   float udc = ((float)ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
+   Param::SetFloat(Param::udc, udc);
+   float udc2 = ((float)ISA::Voltage2)/1000;//get voltage from isa sensor and post to parameter database
+   Param::SetFloat(Param::udc2, udc2);
+   float udc3 = ((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
+   Param::SetFloat(Param::udc3, udc3);
+   float idc = ((float)ISA::Amperes)/1000;//get current from isa sensor and post to parameter database
+   Param::SetFloat(Param::idc, idc);
+   float kw = ((float)ISA::KW)/1000;//get power from isa sensor and post to parameter database
+   Param::SetFloat(Param::power, kw);
+   float kwh = ((float)ISA::KWh)/1000;//get kwh from isa sensor and post to parameter database
+   Param::SetFloat(Param::KWh, kwh);
+   float Amph = ((float)ISA::Ah)/3600;//get Ah from isa sensor and post to parameter database
+   Param::SetFloat(Param::AMPh, Amph);
+   float udclim = Param::GetFloat(Param::udclim);
+   float udcsw = Param::GetFloat(Param::udcsw);
 
-   s32fp deltaVolts1 = ABS((udc3/2)-udc2);
-   s32fp deltaVolts2 = ABS((udc2+udc3)-udc);
-   Param::SetFixed(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
+   float deltaVolts1 = ABS((udc3/2)-udc2);
+   float deltaVolts2 = ABS((udc2+udc3)-udc);
+   Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
 
    // Currently unused parameters:
    // s32fp udcmin = Param::Get(Param::udcmin);
@@ -190,11 +189,9 @@ s32fp ProcessUdc(uint32_t oldTime, int motorSpeed)
    //Calculate "12V" supply voltage from voltage divider on mprot pin
    //1.2/(4.7+1.2)/3.33*4095 = 250 -> make it a bit less for pin losses etc
    //HW_REV1 had 3.9k resistors
-   int uauxGain = 289;
-   Param::SetFixed(Param::uaux, FP_DIV(AnaIn::uaux.Get(), uauxGain));
-   udc = Param::Get(Param::udc);
-   s32fp  udcfp = udc;
-
+   int uauxGain = 210;
+   Param::SetFloat(Param::uaux, ((float)AnaIn::uaux.Get()) / uauxGain);
+   float udcfp = Param::GetFloat(Param::udc);
 
    if (udcfp > udclim)
    {
@@ -222,10 +219,10 @@ s32fp ProcessUdc(uint32_t oldTime, int motorSpeed)
    return udcfp;
 }
 
-s32fp ProcessThrottle(int speed)
+float ProcessThrottle(int speed)
 {
    // s32fp throtSpnt;
-   s32fp finalSpnt;
+   float finalSpnt;
 
    if (speed < Param::GetInt(Param::throtramprpm))
       Throttle::throttleRamp = Param::Get(Param::throtramp);
@@ -234,26 +231,23 @@ s32fp ProcessThrottle(int speed)
 
    finalSpnt = utils::GetUserThrottleCommand();
 
-//   GetCruiseCreepCommand(finalSpnt, throtSpnt);
    finalSpnt = Throttle::RampThrottle(finalSpnt);
-
 
    Throttle::UdcLimitCommand(finalSpnt, Param::Get(Param::udc));
    Throttle::IdcLimitCommand(finalSpnt, Param::Get(Param::idc));
+   Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));
 
    if (Throttle::TemperatureDerate(Param::Get(Param::tmphs), Param::Get(Param::tmphsmax), finalSpnt))
    {
-//        DigIo::err_out.Set();
       ErrorMessage::Post(ERR_TMPHSMAX);
    }
 
    if (Throttle::TemperatureDerate(Param::Get(Param::tmpm), Param::Get(Param::tmpmmax), finalSpnt))
    {
-//        DigIo::err_out.Set();
       ErrorMessage::Post(ERR_TMPMMAX);
    }
 
-   Param::SetFixed(Param::potnom, finalSpnt);
+   Param::SetFloat(Param::potnom, finalSpnt);
 
    return finalSpnt;
 }
@@ -261,12 +255,10 @@ s32fp ProcessThrottle(int speed)
 
 void displayThrottle()
 {
-
    uint16_t potdisp = AnaIn::throttle1.Get();
    uint16_t pot2disp = AnaIn::throttle2.Get();
    Param::SetInt(Param::pot, potdisp);
    Param::SetInt(Param::pot2, pot2disp);
-
 }
 
 
@@ -275,13 +267,10 @@ void CalcSOC()
    uint32_t Capacity_Parm = FP_FROMINT(Param::Get(Param::BattCap));
    uint32_t kwh_Used = FP_FROMFLT(ABS(Param::Get(Param::KWh)));
 
-
    SOCVal = 100-(FP_MUL(FP_DIV(kwh_Used,Capacity_Parm),100));
 
-
-   if(SOCVal>100) SOCVal=100;
+   if(SOCVal > 100) SOCVal = 100;
    Param::SetInt(Param::SOC,SOCVal);
-
 }
 
 } // namespace utils

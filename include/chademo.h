@@ -41,7 +41,7 @@ class ChaDeMo
       static void SetContactor(bool state) { contactorOpen = !state; }
       static void SetGeneralFault() { fault = true; }
       /** Set current state of charge */
-      static void SetSoC(s32fp soC) { soc = soC >> (FRAC_DIGITS - 1); }
+      static void SetSoC(float soC) { soc = soC * 2; }
       static int GetChargerOutputVoltage() { return chargerOutputVoltage; }
       static int GetChargerOutputCurrent() { return chargerOutputCurrent; }
       static int GetChargerMaxCurrent() { return chargerMaxCurrent; }

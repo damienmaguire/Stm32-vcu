@@ -64,6 +64,7 @@
 		<Unit filename="include/hwdefs.h" />
 		<Unit filename="include/hwinit.h" />
 		<Unit filename="include/i3LIM.h" />
+		<Unit filename="include/inverter.h" />
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/leafinv.h" />
 		<Unit filename="include/param_prj.h" />
@@ -71,6 +72,7 @@
 		<Unit filename="include/temp_meas.h" />
 		<Unit filename="include/throttle.h" />
 		<Unit filename="include/utils.h" />
+		<Unit filename="include/vehicle.h" />
 		<Unit filename="libopeninv/include/anain.h" />
 		<Unit filename="libopeninv/include/digio.h" />
 		<Unit filename="libopeninv/include/errormessage.h" />
@@ -122,27 +124,6 @@
 		<Unit filename="src/terminal_prj.cpp" />
 		<Unit filename="src/throttle.cpp" />
 		<Unit filename="src/utils.cpp" />
-		<Unit filename="test/Makefile">
-			<Option target="Test" />
-		</Unit>
-		<Unit filename="test/test.h">
-			<Option target="Test" />
-		</Unit>
-		<Unit filename="test/test_fp.cpp">
-			<Option target="Test" />
-		</Unit>
-		<Unit filename="test/test_fu.cpp">
-			<Option target="Test" />
-		</Unit>
-		<Unit filename="test/test_list.h">
-			<Option target="Test" />
-		</Unit>
-		<Unit filename="test/test_main.cpp">
-			<Option target="Test" />
-		</Unit>
-		<Unit filename="test/test_throttle.cpp">
-			<Option target="Test" />
-		</Unit>
 		<Extensions>
 			<DoxyBlocks>
 				<comment_style block="0" line="0" />

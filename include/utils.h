@@ -16,13 +16,13 @@
 namespace utils
 {
     int32_t change(int32_t, int32_t, int32_t, int32_t, int32_t);
-    int GetUserThrottleCommand(Can*);
-    s32fp ProcessThrottle(int);
-    s32fp ProcessUdc(uint32_t, int);
+    float GetUserThrottleCommand(Can*);
+    float ProcessThrottle(int);
+    float ProcessUdc(uint32_t, int);
     void CalcSOC();
     void GetDigInputs(Can*);
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
-    void SelectDirection(_vehmodes, BMW_E65Class);
+    void SelectDirection(vehicles, BMW_E65Class);
     void displayThrottle();
 }
 
