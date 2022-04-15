@@ -97,9 +97,7 @@
 		</Unit>
 		<Unit filename="libopeninv/src/param_save.cpp" />
 		<Unit filename="libopeninv/src/params.cpp" />
-		<Unit filename="libopeninv/src/printf.c">
-			<Option compilerVar="CC" />
-		</Unit>
+		<Unit filename="libopeninv/src/printf.cpp" />
 		<Unit filename="libopeninv/src/stm32_can.cpp" />
 		<Unit filename="libopeninv/src/stm32scheduler.cpp" />
 		<Unit filename="libopeninv/src/terminal.cpp" />

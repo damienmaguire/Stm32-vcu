@@ -863,6 +863,10 @@ static void SetCanFilters()
    Can* shunt_can = Can::GetInterface(Param::GetInt(Param::shunt_can));
    Can* lim_can = Can::GetInterface(Param::GetInt(Param::lim_can));
    Can* charger_can = Can::GetInterface(Param::GetInt(Param::charger_can));
+
+   can->ClearUserMessages();
+   can2->ClearUserMessages();
+
    inverter_can->RegisterUserMessage(0x1DA);//Leaf inv msg
    inverter_can->RegisterUserMessage(0x55A);//Leaf inv msg
    inverter_can->RegisterUserMessage(0x679);//Leaf obc msg
