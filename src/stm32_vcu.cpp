@@ -68,7 +68,8 @@ chargerClass chgtype;
 //uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
 CAN3_Msg CAN3;
-static Inverter* selectedInverter = 0;
+static Can_OI openInv;
+static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = 0;
 
 static void SetCanFilters();
@@ -310,7 +311,7 @@ static void Ms100Task(void)
 
    if(targetInverter == InvModes::OpenI)
    {
-      if (opmode == MOD_RUN) Can_OI::Send100msMessages();
+      if (opmode == MOD_RUN) selectedInverter->Task100Ms();
 
    }
 
@@ -381,10 +382,10 @@ static void Ms100Task(void)
 
    if (targetInverter == InvModes::OpenI)
    {
-      Param::SetInt(Param::tmphs,Can_OI::inv_temp);//send leaf temps to web interface
-      Param::SetInt(Param::tmpm,Can_OI::motor_temp);
-      Param::SetInt(Param::InvStat, Can_OI::error); //update inverter status on web interface
-      Param::SetInt(Param::INVudc,Can_OI::voltage);//display inverter derived dc link voltage on web interface
+      Param::SetInt(Param::tmphs,selectedInverter->GetInverterTemperature());//send leaf temps to web interface
+      Param::SetInt(Param::tmpm,selectedInverter->GetMotorTemperature());
+      Param::SetInt(Param::InvStat, selectedInverter->GetInverterState()); //update inverter status on web interface
+      Param::SetInt(Param::INVudc,selectedInverter->GetInverterVoltage());//display inverter derived dc link voltage on web interface
    }
 
    if(targetVehicle == vehicles::BMW_E65)
@@ -521,9 +522,8 @@ static void Ms10Task(void)
 
    if(targetInverter == InvModes::OpenI)
    {
-      torquePercent = utils::change(torquePercent, 0, 3040, 0, 1000); //map throttle for OI
-      Can_OI::SetThrottle(Param::GetInt(Param::dir),torquePercent);//send direction and torque request to inverter
-      speed = ABS(Can_OI::speed);//set motor rpm on interface
+      selectedInverter->SetTorque(torquePercent);
+      speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface
    }
 
    Param::SetInt(Param::speed, speed);
@@ -735,6 +735,29 @@ void Param::Change(Param::PARAM_NUM paramNum)
    // This function is called when the user changes a parameter
    switch (paramNum)
    {
+   case Param::Inverter:
+      selectedInverter->DeInit();
+
+      switch (Param::GetInt(Param::Inverter))
+      {
+         /*case InvModes::Leaf_Gen1:
+            selectedInverter = &leafInv;
+            break;
+         case InvModes::GS450H:
+            selectedInverter = &gs450Inverter;
+            gs450Inverter.SetGS450H();
+            break;
+         case InvModes::Prius_Gen3:
+            selectedInverter = &gs450Inverter;
+            gs450Inverter.SetPrius();
+            break;*/
+         default: //default to OpenI, does the least damage ;)
+         case InvModes::OpenI:
+            selectedInverter = &openInv;
+            break;
+      }
+      SetCanFilters();
+      break;
    case Param::Inverter_CAN:
    case Param::Vehicle_CAN:
    case Param::Shunt_CAN:
@@ -848,6 +871,7 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
       break;
 
    default:
+
       if (targetInverter == InvModes::Leaf_Gen1)
       {
          // process leaf inverter return messages
@@ -862,8 +886,8 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
       }
       if (targetInverter == InvModes::OpenI)
       {
-         // process leaf inverter return messages
-         Can_OI::DecodeCAN(id, data);
+         // process inverter return messages
+         selectedInverter->DecodeCAN(id, data);
       }
 
       if(targetVehicle == vehicles::BMW_E39)
@@ -969,6 +993,8 @@ static void SetCanFilters()
    vehicle_can->RegisterUserMessage(0x192);//E65 Shifter
    charger_can->RegisterUserMessage(0x108);//Charger HV request
    vehicle_can->RegisterUserMessage(0x153);//E39/E46 ASC1 message
+
+   selectedInverter->SetCanInterface(inverter_can);
 }
 
 extern "C" int main(void)

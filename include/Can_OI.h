@@ -23,29 +23,30 @@
 #define CAN_OI_H
 #include <stdint.h>
 #include "my_fp.h"
+#include "inverter.h"
 
-class Can_OI
+class Can_OI: public Inverter
 {
 public:
-    static void DecodeCAN(int id, uint32_t data[2]);
-    static void Send100msMessages();
-    static int16_t speed;
-    static void SetThrottle(int8_t gear, int16_t torque);
-    static int16_t inv_temp;
-    static int16_t motor_temp;
-    static bool error;
-    static uint16_t voltage;
-
+   void Task100Ms();
+   void DecodeCAN(int, uint32_t*);
+   void SetTorque(float torquePercent);
+   float GetMotorTemperature() { return motor_temp; }
+   float GetInverterTemperature() { return inv_temp; }
+   float GetInverterVoltage() { return voltage; }
+   float GetMotorSpeed() { return speed; }
+   int GetInverterState() { return error; }
 
 private:
+   static int16_t speed;
+   static int16_t inv_temp;
+   static int16_t motor_temp;
+   static bool error;
+   static uint16_t voltage;
 
-    static uint8_t run100ms;
-    static uint32_t lastRecv;
-
-
-
-    static int16_t final_torque_request;
-    //
+   static uint8_t run100ms;
+   static uint32_t lastRecv;
+   static int16_t final_torque_request;
 };
 
 #endif // CAN_OI_H
