@@ -22,37 +22,34 @@
 #define LEAFINV_H
 #include <stdint.h>
 #include "my_fp.h"
+#include "inverter.h"
 
-
-
-class LeafINV
+class LeafINV: public Inverter
 {
 public:
-    static void DecodeCAN(int id, uint32_t data[2]);
-    static void DecodePDM679(uint32_t data[2]);
-    static void DecodePDM390(uint32_t data[2]);
-    static void Send10msMessages();
-    static void Send100msMessages();
-    static bool ControlCharge(bool RunCh);
-    static int16_t speed;
-    static void SetTorque(int8_t gear, int16_t torque);
-    static int16_t inv_temp;
-    static int16_t motor_temp;
-    static bool error;
-    static uint16_t voltage;
-
+   void DecodeCAN(int id, uint32_t data[2]);
+   void Task10Ms();
+   void Task100Ms();
+   static bool ControlCharge(bool RunCh);
+   void SetTorque(float torque);
+   float GetMotorTemperature() { return motor_temp; }
+   float GetInverterTemperature() { return inv_temp; }
+   float GetInverterVoltage() { return voltage / 2; }
+   float GetMotorSpeed() { return speed / 2; }
+   int GetInverterState() { return error; }
 
 private:
-    static void nissan_crc(uint8_t *data, uint8_t polynomial);
-    static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
-    static uint8_t run10ms;
-    static uint8_t run100ms;
-    static uint32_t lastRecv;
-
-
-
-    static int16_t final_torque_request;
-    //
+   static void nissan_crc(uint8_t *data, uint8_t polynomial);
+   static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
+   uint8_t run10ms;
+   uint8_t run100ms;
+   uint32_t lastRecv;
+   int16_t speed;
+   int16_t inv_temp;
+   int16_t motor_temp;
+   bool error;
+   uint16_t voltage;
+   int16_t final_torque_request;
 };
 
 #endif // LEAFINV_H

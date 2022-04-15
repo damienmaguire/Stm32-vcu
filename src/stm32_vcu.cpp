@@ -63,11 +63,12 @@ alarm=0;			// != 0 when alarm is pending
 
 // Instantiate Classes
 BMW_E65Class E65Vehicle;
-GS450HClass gs450Inverter;
 chargerClass chgtype;
 //uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
 CAN3_Msg CAN3;
+static GS450HClass gs450Inverter;
+static LeafINV leafInv;
 static Can_OI openInv;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = 0;
@@ -144,6 +145,7 @@ static void Ms200Task(void)
    if(chargerClass::HVreq==true) Param::SetInt(Param::hvChg,1);
    if(chargerClass::HVreq==false) Param::SetInt(Param::hvChg,0);
    int opmode = Param::GetInt(Param::opmode);
+
    Param::SetInt(Param::Day,days);
    Param::SetInt(Param::Hour,hours);
    Param::SetInt(Param::Min,minutes);
@@ -215,10 +217,6 @@ static void Ms200Task(void)
          }
       }
    }
-
-
-
-
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
@@ -308,18 +306,13 @@ static void Ms100Task(void)
    utils::ProcessUdc(oldTime, GetInt(Param::speed));
    utils::CalcSOC();
 
-
-   if(targetInverter == InvModes::OpenI)
-   {
-      if (opmode == MOD_RUN) selectedInverter->Task100Ms();
-
-   }
+   selectedInverter->Task100Ms();
 
    if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
    {
       if (opmode == MOD_CHARGE)
       {
-         LeafINV::Send100msMessages();//send leaf 100ms msgs if we are using the pdm and in charge mode
+         leafInv.Task100Ms(); //send leaf 100ms msgs if we are using the pdm and in charge mode
       }
    }
 
@@ -351,30 +344,10 @@ static void Ms100Task(void)
 
    }
 
-   if (targetInverter == InvModes::Prius_Gen3 || targetInverter == InvModes::GS450H)
-   {
-      selectedInverter->Task100Ms();
-      Param::SetFloat(Param::INVudc,selectedInverter->GetInverterVoltage());//display inverter derived dc link voltage on web interface
-   }
-
-
-   if (targetInverter == InvModes::Leaf_Gen1)
-   {
-      // if (opmode == MOD_RUN) LeafINV::Send100msMessages();
-      //No 100ms required for Leaf inverter to run only charge.
-      Param::SetInt(Param::tmphs,LeafINV::inv_temp);//send leaf temps to web interface
-      Param::SetInt(Param::tmpm,LeafINV::motor_temp);
-      Param::SetInt(Param::InvStat, LeafINV::error); //update inverter status on web interface
-      Param::SetInt(Param::INVudc,(LeafINV::voltage/2));//display inverter derived dc link voltage on web interface
-   }
-
-   if (targetInverter == InvModes::OpenI)
-   {
-      Param::SetInt(Param::tmphs,selectedInverter->GetInverterTemperature());//send leaf temps to web interface
-      Param::SetInt(Param::tmpm,selectedInverter->GetMotorTemperature());
-      Param::SetInt(Param::InvStat, selectedInverter->GetInverterState()); //update inverter status on web interface
-      Param::SetInt(Param::INVudc,selectedInverter->GetInverterVoltage());//display inverter derived dc link voltage on web interface
-   }
+   Param::SetFloat(Param::tmphs, selectedInverter->GetInverterTemperature()); //send inverter temp to web interface
+   Param::SetFloat(Param::tmpm, selectedInverter->GetMotorTemperature()); //send motor temp to web interface
+   Param::SetFloat(Param::InvStat, selectedInverter->GetInverterState()); //update inverter status on web interface
+   Param::SetFloat(Param::INVudc, selectedInverter->GetInverterVoltage()); //display inverter derived dc link voltage on web interface
 
    if(targetVehicle == vehicles::BMW_E65)
    {
@@ -440,12 +413,10 @@ static void Ms10Task(void)
 
    if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
    {
-
       if (opmode == MOD_CHARGE)
       {
-         LeafINV::Send10msMessages();//send leaf 10ms msgs if we are using the pdm and in charge mode
+         leafInv.Task10Ms();//send leaf 10ms msgs if we are using the pdm and in charge mode
       }
-
    }
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
@@ -482,31 +453,9 @@ static void Ms10Task(void)
       utils::displayThrottle();//just displays pot and pot2 when not in run mode to allow throttle cal
    }
 
-   if (opmode != MOD_OFF)  //send leaf messages only when not in off mode.
-   {
 
-      if(targetInverter == InvModes::Leaf_Gen1)
-      {
-         LeafINV::Send10msMessages();//send leaf messages on can1 if we select leaf
-         speed = ABS(LeafINV::speed/2);//set motor rpm on interface
-         torquePercent = utils::change(torquePercent, 0, 3040, 0, 2047); //map throttle for Leaf inverter
-         LeafINV::SetTorque(Param::GetInt(Param::dir),torquePercent);//send direction and torque request to inverter
-
-      }
-
-   }
-
-   if(targetInverter == InvModes::GS450H || targetInverter == InvModes::Prius_Gen3)
-   {
-      selectedInverter->SetTorque(torquePercent);
-      speed = ABS(selectedInverter->GetMotorSpeed());
-   }
-
-   if(targetInverter == InvModes::OpenI)
-   {
-      selectedInverter->SetTorque(torquePercent);
-      speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface
-   }
+   selectedInverter->SetTorque(torquePercent);
+   speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface
 
    Param::SetInt(Param::speed, speed);
    utils::GetDigInputs(Can::GetInterface(Param::GetInt(Param::inv_can)));
@@ -682,27 +631,15 @@ static void Ms10Task(void)
       DigIo::gp_out3.Clear();//Heater enable and coolant pump off
       Ampera_Not_Awake=true;
    }
-
-
-
-
 }
-
 
 static void Ms1Task(void)
 {
-//gpio_toggle(GPIOB,GPIO12);
-   if(targetInverter == InvModes::GS450H || targetInverter == InvModes::Prius_Gen3)
-   {
-      // Send direction from this context.
-      // Torque updated in 10ms loop.
-      selectedInverter->Task1Ms();
-   }
+   //gpio_toggle(GPIOB,GPIO12);
+   // Send direction from this context.
+   // Torque updated in 10ms loop.
+   selectedInverter->Task1Ms();
 }
-
-
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void Param::Change(Param::PARAM_NUM paramNum)
@@ -715,9 +652,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
 
       switch (Param::GetInt(Param::Inverter))
       {
-         /*case InvModes::Leaf_Gen1:
+         case InvModes::Leaf_Gen1:
             selectedInverter = &leafInv;
-            break;*/
+            break;
          case InvModes::GS450H:
             selectedInverter = &gs450Inverter;
             gs450Inverter.SetGS450H();
@@ -838,20 +775,10 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
    case 0x2ef:
       i3LIMClass::handle2EF(data);// Data msg from LIM
       break;
-   case 0x679:
-      LeafINV::DecodePDM679(data);// Data msg from Leaf PDM
-      break;
-   case 0x390:
-      LeafINV::DecodePDM390(data);// Data msg from Leaf PDM
-      break;
 
    default:
+      selectedInverter->DecodeCAN(id, data);
 
-      if (targetInverter == InvModes::Leaf_Gen1)
-      {
-         // process leaf inverter return messages
-         LeafINV::DecodeCAN(id, data);
-      }
       if(targetVehicle == vehicles::BMW_E65)
       {
          // process BMW E65 CAS (Conditional Access System) return messages
@@ -859,13 +786,7 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
          // process BMW E65 CAN Gear Stalk messages
          E65Vehicle.Gear(id, data);
       }
-      if (targetInverter == InvModes::OpenI)
-      {
-         // process inverter return messages
-         selectedInverter->DecodeCAN(id, data);
-      }
-
-      if(targetVehicle == vehicles::BMW_E39)
+      else if(targetVehicle == vehicles::BMW_E39)
       {
          Can_E39::DecodeCAN(id, data);
       }

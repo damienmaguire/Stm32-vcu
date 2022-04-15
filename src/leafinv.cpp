@@ -23,19 +23,8 @@
 #include "my_math.h"
 #include "stm32_can.h"
 #include "params.h"
+#include "utils.h"
 
-
-
-
-uint8_t LeafINV::run10ms = 0;
-uint8_t LeafINV::run100ms = 0;
-uint32_t LeafINV::lastRecv = 0;
-uint16_t LeafINV::voltage;
-int16_t LeafINV::speed;
-bool LeafINV::error=false;
-int16_t LeafINV::inv_temp;
-int16_t LeafINV::motor_temp;
-int16_t LeafINV::final_torque_request;
 static uint16_t Vbatt=0;
 static uint16_t VbattSP=0;
 static uint8_t counter_1db=0;
@@ -48,7 +37,6 @@ static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
 static bool OBCwake = false;
 static bool PPStat = false;
-//static bool PDMWake = false;
 static uint8_t OBCVoltStat=0;
 static uint8_t PlugStat=0;
 
@@ -73,7 +61,6 @@ PDM sends:
 
 void LeafINV::DecodeCAN(int id, uint32_t data[2])
 {
-
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
    if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
@@ -92,31 +79,20 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2])
       motor_temp = fahrenheit_to_celsius(bytes[1]);//MOTOR TEMP
    }
 
-}
+   else if (id == 0x679)// THIS MSG FIRES ONCE ON CHARGE PLUG INSERT
+   {
+      uint8_t dummyVar = bytes[0];
+      dummyVar = dummyVar;
+      OBCwake = true;             //0x679 is received once when we plug in if pdm is asleep so wake wakey...
+   }
 
-void LeafINV::DecodePDM679(uint32_t data[2])
-{
-
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-
-   uint8_t dummyVar = bytes[0];
-   dummyVar = dummyVar;
-   OBCwake = true;             //0x679 is received once when we plug in if pdm is asleep so wake wakey...
-
-
-}
-
-void LeafINV::DecodePDM390(uint32_t data[2])
-{
-
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-
-   OBCVoltStat = (bytes[3] >> 3) & 0x03;
-   PlugStat = bytes[5] & 0x0F;
-   if(PlugStat == 0x08) PPStat = true; //plug inserted
-   if(PlugStat == 0x00) PPStat = false; //plug not inserted
-
-
+   else if (id == 0x390)// THIS MSG FROM PDM
+   {
+      OBCVoltStat = (bytes[3] >> 3) & 0x03;
+      PlugStat = bytes[5] & 0x0F;
+      if(PlugStat == 0x08) PPStat = true; //plug inserted
+      if(PlugStat == 0x00) PPStat = false; //plug not inserted
+   }
 }
 
 bool LeafINV::ControlCharge(bool RunCh)
@@ -140,24 +116,14 @@ bool LeafINV::ControlCharge(bool RunCh)
    return false;
 }
 
-
-
-
-void LeafINV::SetTorque(int8_t gear, int16_t torque)
+void LeafINV::SetTorque(float torquePercent)
 {
-   if(gear == 0) final_torque_request=0;//Neutral
-   if(gear > 0) final_torque_request=torque;//Drive
-   if(gear < 0) final_torque_request=torque*-1;//Reverse
+   final_torque_request = (torquePercent * 2047) / 100.0f;
 
-   Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
-
+   Param::SetInt(Param::torque,final_torque_request);//post processed final torque value sent to inv to web interface
 }
 
-
-
-
-
-void LeafINV::Send10msMessages()
+void LeafINV::Task10Ms()
 {
    int opmode = Param::GetInt(Param::opmode);
 
@@ -184,7 +150,7 @@ void LeafINV::Send10msMessages()
    //      non-gears 0 and 1 (44% of the time in LeafLogs)
 
 
-//byte 0 determines motor rotation direction
+   //byte 0 determines motor rotation direction
    if (opmode == MOD_CHARGE) bytes[0] = 0x01;//Car in park when charging
    if (opmode != MOD_CHARGE) bytes[0] = 0x4E;
    // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
@@ -226,7 +192,7 @@ void LeafINV::Send10msMessages()
 
 
 
-   Can::GetInterface(0)->Send(0x11A, (uint32_t*)bytes,8);//send 0x11a
+   can->Send(0x11A, (uint32_t*)bytes,8);//send 0x11a
    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    //Send target motor torque signal
    ////////////////////////////////////////////////////
@@ -247,11 +213,13 @@ void LeafINV::Send10msMessages()
    // Requested torque (signed 12-bit value + always 0x0 in low nibble)
    if (opmode != MOD_RUN) final_torque_request=0;//override any torque commands if not in run mode.
    static int16_t last_logged_final_torque_request = 0;
+
    if(final_torque_request != last_logged_final_torque_request)
    {
       last_logged_final_torque_request = final_torque_request;
 
    }
+
    if(final_torque_request >= -2048 && final_torque_request <= 2047)
    {
       bytes[2] = ((final_torque_request < 0) ? 0x80 : 0) |((final_torque_request >> 4) & 0x7f);
@@ -371,7 +339,7 @@ void LeafINV::Send10msMessages()
    // Extra CRC
    nissan_crc(bytes, 0x85);
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
+   can->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //We need to send 0x1db here with voltage measured by inverter
 //Zero seems to work also on my gen1
@@ -403,7 +371,7 @@ void LeafINV::Send10msMessages()
    counter_1db++;
    if(counter_1db >= 4) counter_1db = 0;
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DB, (uint32_t*)bytes,8);
+   can->Send(0x1DB, (uint32_t*)bytes,8);
 //////////////////////////////////////////////////////////////////////////////////////////
    // Statistics from 2016 capture:
    //     10 00000000000000
@@ -422,7 +390,7 @@ void LeafINV::Send10msMessages()
    bytes[5]=0x00;
    bytes[6]=0x00;
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
+   can->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
 
 
    if (opmode == MOD_CHARGE)
@@ -447,7 +415,7 @@ void LeafINV::Send10msMessages()
       counter_1dc++;
       if(counter_1dc >= 4) counter_1dc = 0;
 
-      Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DC, (uint32_t*)bytes,8);
+      can->Send(0x1DC, (uint32_t*)bytes,8);
 ////////////////////////////////////////////////////////////////////////////////////////////////
       OBCpwrSP=(Param::GetInt(Param::Pwrspnt)/100)+0x64;//grab setpoint power from webui and convert to pdm format
       Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
@@ -487,18 +455,12 @@ void LeafINV::Send10msMessages()
       counter_1f2++;
       if(counter_1f2 >= 4) counter_1f2 = 0;
 
-      Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1F2, (uint32_t*)bytes,8);
-
-
-
-
-      /////////////////////////////////////////////
-
+      can->Send(0x1F2, (uint32_t*)bytes,8);
    }
 
 }
 
-void LeafINV::Send100msMessages()
+void LeafINV::Task100Ms()
 {
    //MSGS for charging with pdm
    uint8_t bytes[8];
@@ -516,7 +478,7 @@ void LeafINV::Send100msMessages()
    counter_55b++;
    if(counter_55b >= 4) counter_55b = 0;
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x55b, (uint32_t*)bytes,8);
+   can->Send(0x55b, (uint32_t*)bytes,8);
 
    bytes[0]=0x00;//Static msg works fine here
    bytes[1]=0x00;//Batt capacity for chg and qc.
@@ -527,7 +489,7 @@ void LeafINV::Send100msMessages()
    bytes[6]=0x00;
    bytes[7]=0x00;
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x59e, (uint32_t*)bytes,8);
+   can->Send(0x59e, (uint32_t*)bytes,8);
 
    //muxed msg with info for gids etc. Will try static for a test.
    bytes[0]=0x3D;//Static msg works fine here
@@ -539,9 +501,7 @@ void LeafINV::Send100msMessages()
    bytes[6]=0x00;
    bytes[7]=0x32;
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x5bc, (uint32_t*)bytes,8);
-
-
+   can->Send(0x5bc, (uint32_t*)bytes,8);
 
    run100ms = (run100ms + 1) & 3;
 }
@@ -577,7 +537,3 @@ void LeafINV::nissan_crc(uint8_t *data, uint8_t polynomial)
    }
    data[7] = crc;
 }
-
-
-
-
