@@ -11,40 +11,43 @@
 #include <libopencm3/stm32/dma.h>
 #include "digio.h"
 #include "params.h"
+#include "inverter.h"
 
 #define MG2MAXSPEED 10000
 #define MAX_COMMAND_SIZE 200
 
-class GS450HClass
+class GS450HClass: public Inverter
 {
 
 public:
+   GS450HClass()
+   {
+       scaledTorqueTarget = 0;
+       timerIsRunning = false;
+   }
+   void Task1Ms();
+   void Task100Ms();
+   void SetTorque(float torquePercent);
+   float GetMotorTemperature();
+   float GetInverterTemperature() { return temp_inv_water; }
+   float GetInverterVoltage() { return dc_bus_voltage; }
+   float GetMotorSpeed() { return mg2_speed; }
+   int GetInverterState();
+   void DeInit() { setTimerState(false); } //called when switching to another inverter, similar to a destructor
 
-    static void ProcessHybrid(int8_t gear, int16_t torque);
-    static void ProcessMTH();
-    static int16_t dc_bus_voltage,temp_inv_water, temp_inv_inductor, mg1_speed, mg2_speed;
-    static bool statusFB();
-    void run100msTask(uint8_t, uint16_t);
-    void setTimerState(bool);
-    void setTorqueTarget(int16_t);
-    void UpdateHTMState1Ms(int8_t gear);
-	void SetPrius();
-	void SetGS450H();
+   //Lexus/Toyota specific functions
+   void SetPrius();
+   void SetGS450H();
+   void SetGear(int16_t g) { gear = g; }
+   void SetOil(int16_t o) { oil = o; }
 
-
-    GS450HClass()
-    {
-        scaledTorqueTarget = 0;
-        timerIsRunning = false;
-    }
 private:
-
-    static void UpdateHTMParams(int8_t gear, int16_t torque);
-    bool timerIsRunning;
-    int scaledTorqueTarget;
-    uint8_t VerifyMTHChecksum(uint16_t );
-	void CalcHTMChecksum(uint16_t);
-
+   int16_t dc_bus_voltage,temp_inv_water, temp_inv_inductor, mg1_speed, mg2_speed, gear, oil;
+   bool timerIsRunning;
+   int scaledTorqueTarget;
+   uint8_t VerifyMTHChecksum(uint16_t );
+   void CalcHTMChecksum(uint16_t);
+   void setTimerState(bool);
 };
 
 #endif /* GS450H_h */

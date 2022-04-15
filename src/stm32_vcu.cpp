@@ -351,22 +351,10 @@ static void Ms100Task(void)
 
    }
 
-   if (targetInverter == InvModes::Prius_Gen3)
+   if (targetInverter == InvModes::Prius_Gen3 || targetInverter == InvModes::GS450H)
    {
-      gs450Inverter.SetPrius();//select prius inverter mode
-      gs450Inverter.run100msTask(LexusGear, Lexus_Oil);
-      Param::SetInt(Param::INVudc,gs450Inverter.dc_bus_voltage);//display inverter derived dc link voltage on web interface
-   }
-
-   else if (targetInverter == InvModes::GS450H)
-   {
-      gs450Inverter.SetGS450H();//select gs450h inverter mode
-      gs450Inverter.run100msTask(LexusGear, Lexus_Oil);
-      Param::SetInt(Param::INVudc,gs450Inverter.dc_bus_voltage);//display inverter derived dc link voltage on web interface
-   }
-   else
-   {
-      gs450Inverter.setTimerState(false);
+      selectedInverter->Task100Ms();
+      Param::SetFloat(Param::INVudc,selectedInverter->GetInverterVoltage());//display inverter derived dc link voltage on web interface
    }
 
 
@@ -508,16 +496,10 @@ static void Ms10Task(void)
 
    }
 
-   if(targetInverter == InvModes::GS450H)
+   if(targetInverter == InvModes::GS450H || targetInverter == InvModes::Prius_Gen3)
    {
-      gs450Inverter.setTorqueTarget(torquePercent);//map throttle for GS450HClass inverter
-      speed = GS450HClass::mg2_speed;//return MG2 rpm as speed param
-   }
-
-   if(targetInverter == InvModes::Prius_Gen3)
-   {
-      gs450Inverter.setTorqueTarget(torquePercent);//map throttle for GS450HClass inverter
-      speed = GS450HClass::mg2_speed;//return MG2 rpm as speed param
+      selectedInverter->SetTorque(torquePercent);
+      speed = ABS(selectedInverter->GetMotorSpeed());
    }
 
    if(targetInverter == InvModes::OpenI)
@@ -710,18 +692,11 @@ static void Ms10Task(void)
 static void Ms1Task(void)
 {
 //gpio_toggle(GPIOB,GPIO12);
-   if(targetInverter == InvModes::GS450H)
+   if(targetInverter == InvModes::GS450H || targetInverter == InvModes::Prius_Gen3)
    {
       // Send direction from this context.
       // Torque updated in 10ms loop.
-      gs450Inverter.UpdateHTMState1Ms(Param::GetInt(Param::dir));
-   }
-
-   if(targetInverter == InvModes::Prius_Gen3)
-   {
-      // Send direction from this context.
-      // Torque updated in 10ms loop.
-      gs450Inverter.UpdateHTMState1Ms(Param::GetInt(Param::dir));
+      selectedInverter->Task1Ms();
    }
 }
 
@@ -742,7 +717,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
       {
          /*case InvModes::Leaf_Gen1:
             selectedInverter = &leafInv;
-            break;
+            break;*/
          case InvModes::GS450H:
             selectedInverter = &gs450Inverter;
             gs450Inverter.SetGS450H();
@@ -750,7 +725,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
          case InvModes::Prius_Gen3:
             selectedInverter = &gs450Inverter;
             gs450Inverter.SetPrius();
-            break;*/
+            break;
          default: //default to OpenI, does the least damage ;)
          case InvModes::OpenI:
             selectedInverter = &openInv;
