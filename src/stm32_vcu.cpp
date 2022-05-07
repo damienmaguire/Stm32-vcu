@@ -70,6 +70,7 @@ CAN3_Msg CAN3;
 static GS450HClass gs450Inverter;
 static LeafINV leafInv;
 static Can_OI openInv;
+static OutlanderInverter outlanderInv;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = 0;
 
@@ -663,6 +664,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
             selectedInverter = &gs450Inverter;
             gs450Inverter.SetPrius();
             break;
+         case InvModes::Outlander:
+            selectedInverter = &outlanderInv;
+            break;
          default: //default to OpenI, does the least damage ;)
          case InvModes::OpenI:
             selectedInverter = &openInv;
@@ -874,6 +878,9 @@ static void SetCanFilters()
    inverter_can->RegisterUserMessage(0x190);//Open Inv Msg
    inverter_can->RegisterUserMessage(0x19A);//Open Inv Msg
    inverter_can->RegisterUserMessage(0x1A4);//Open Inv Msg
+   inverter_can->RegisterUserMessage(0x289);//Outlander Inv Msg
+   inverter_can->RegisterUserMessage(0x299);//Outlander Inv Msg
+   inverter_can->RegisterUserMessage(0x733);//Outlander Inv Msg
    shunt_can->RegisterUserMessage(0x521);//ISA MSG
    shunt_can->RegisterUserMessage(0x522);//ISA MSG
    shunt_can->RegisterUserMessage(0x523);//ISA MSG

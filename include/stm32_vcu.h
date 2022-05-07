@@ -25,6 +25,7 @@
 #include "Can_E46.h"
 #include "BMW_E65.h"
 #include "Can_OI.h"
+#include "outlanderinverter.h"
 #include "Can_VAG.h"
 #include "GS450H.h"
 #include "throttle.h"

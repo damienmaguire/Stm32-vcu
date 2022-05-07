@@ -89,7 +89,6 @@
     PARAM_ENTRY(CAT_CLOCK,     Pre_Min,     "Mins",    0,      59,     0,      54  ) \
     PARAM_ENTRY(CAT_CLOCK,     Pre_Dur,     "Mins",    0,      60,     0,      55  ) \
     VALUE_ENTRY(version,       VERSTR,  2000 ) \
-    VALUE_ENTRY(hwver,         HWREVS,  2001 ) \
     VALUE_ENTRY(opmode,        OPMODES, 2002 ) \
     VALUE_ENTRY(chgtyp,        CHGTYPS, 2003 ) \
     VALUE_ENTRY(lasterr,       errorListString,  2004 ) \
@@ -174,7 +173,7 @@
 #define POTMODES     "0=Single, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
-#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3"
+#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander"
 #define PLTMODES     "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=Classic, 3=None , 5=BMW_E39 , 6=VAG"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
@@ -189,7 +188,6 @@
 #define CANSPEEDS    "0=250k, 1=500k, 2=800k, 3=1M"
 #define CANIOS       "1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms"
 #define CANPERIODS   "0=100ms, 1=10ms"
-#define HWREVS       "0=Rev1, 1=Rev2, 2=Rev3, 3=Tesla"
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"
 #define CRUISESTATES "0=None, 1=On, 2=Disable, 4=SetN, 8=SetP"
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
@@ -260,7 +258,8 @@ enum InvModes
     GS450H = 1,
     UserCAN = 2,
     OpenI = 3,
-    Prius_Gen3 = 4
+    Prius_Gen3 = 4,
+    Outlander = 5
 };
 
 enum ChargeModes
