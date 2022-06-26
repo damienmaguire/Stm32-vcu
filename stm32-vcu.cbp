@@ -67,6 +67,7 @@
 		<Unit filename="include/inverter.h" />
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/leafinv.h" />
+		<Unit filename="include/outlanderinverter.h" />
 		<Unit filename="include/param_prj.h" />
 		<Unit filename="include/stm32_vcu.h" />
 		<Unit filename="include/temp_meas.h" />
@@ -117,6 +118,7 @@
 		<Unit filename="src/i3LIM.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
 		<Unit filename="src/leafinv.cpp" />
+		<Unit filename="src/outlanderinverter.cpp" />
 		<Unit filename="src/stm32_vcu.cpp" />
 		<Unit filename="src/temp_meas.cpp" />
 		<Unit filename="src/terminal_prj.cpp" />
