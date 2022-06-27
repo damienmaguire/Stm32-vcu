@@ -166,7 +166,5 @@ void ChaDeMo::SendMessages()
    txMessage.frame.data6 = (data[1]>>16 & 0xFF);
    txMessage.frame.data7 = (data[1]>>24 & 0xFF);
    CANSPI_Transmit(&txMessage);
-
-
 }
 

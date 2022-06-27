@@ -43,6 +43,7 @@ void GetDigInputs(Can* can)
    Param::SetInt(Param::din_forward, DigIo::fwd_in.Get() | ((canio & CAN_IO_FWD) != 0));
    Param::SetInt(Param::din_reverse, DigIo::rev_in.Get() | ((canio & CAN_IO_REV) != 0));
    Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0);
+   Param::SetInt(Param::din_12Vgp, DigIo::gp_12Vin.Get());
 }
 
 float GetUserThrottleCommand()

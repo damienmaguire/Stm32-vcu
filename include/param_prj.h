@@ -24,16 +24,16 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 65
+//Next param id (increase when adding new parameter!): 75
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      5,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      6,      0,      6  ) \
-    PARAM_ENTRY(CAT_SETUP,     Inverter_CAN, CAN_DEV,  0,      1,      0,      60 ) \
-    PARAM_ENTRY(CAT_SETUP,     Vehicle_CAN,  CAN_DEV,  0,      1,      1,      61 ) \
-    PARAM_ENTRY(CAT_SETUP,     Shunt_CAN,    CAN_DEV,  0,      1,      0,      62 ) \
-    PARAM_ENTRY(CAT_SETUP,     LIM_CAN,      CAN_DEV,  0,      1,      0,      63 ) \
-    PARAM_ENTRY(CAT_SETUP,     Charger_CAN,  CAN_DEV,  0,      1,      1,      64 ) \
+    PARAM_ENTRY(CAT_SETUP,     Inverter_CAN, CAN_DEV,  0,      1,      0,      70 ) \
+    PARAM_ENTRY(CAT_SETUP,     Vehicle_CAN,  CAN_DEV,  0,      1,      1,      71 ) \
+    PARAM_ENTRY(CAT_SETUP,     Shunt_CAN,    CAN_DEV,  0,      1,      0,      72 ) \
+    PARAM_ENTRY(CAT_SETUP,     LIM_CAN,      CAN_DEV,  0,      1,      0,      73 ) \
+    PARAM_ENTRY(CAT_SETUP,     Charger_CAN,  CAN_DEV,  0,      1,      1,      74 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -133,6 +133,7 @@
     VALUE_ENTRY(din_forward,   ONOFF,   2038 ) \
     VALUE_ENTRY(din_reverse,   ONOFF,   2039 ) \
     VALUE_ENTRY(din_bms,       ONOFF,   2040 ) \
+    VALUE_ENTRY(din_12Vgp,     ONOFF,   2071 ) \
     VALUE_ENTRY(handbrk,       ONOFF,   2041 ) \
     VALUE_ENTRY(Gear1,         ONOFF,   2042 ) \
     VALUE_ENTRY(Gear2,         ONOFF,   2043 ) \
@@ -166,7 +167,7 @@
     VALUE_ENTRY(cpuload,       "%",     2063 ) \
 
 
-//Next value Id: 2076
+//Next value Id: 2077
 
 #define VERSTR STRINGIFY(4=VER)
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"

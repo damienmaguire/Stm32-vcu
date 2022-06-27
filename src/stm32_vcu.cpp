@@ -78,66 +78,50 @@ static void SetCanFilters();
 
 static void RunChaDeMo()
 {
-   static uint32_t connectorLockTime = 0;
+   static uint32_t startTime = 0;
 
-   chargeMode = true;//General chg boolean. Sets vcu into charge startup.
+   if (startTime == 0)
+   {
+      startTime = rtc_get_counter_val();
+   }
 
-
-   /* 1s after entering charge mode, enable charge permission */
-   if (Param::GetInt(Param::opmode) == MOD_CHARGE)
+   if ((rtc_get_counter_val() - startTime) > 100 && (rtc_get_counter_val() - startTime) < 150)
    {
       ChaDeMo::SetEnabled(true);
-      //here we will need a gpio output to pull the chademo enable signal low
-      //main contactor close?
+      DigIo::gp_out3.Set();
    }
 
-   if (connectorLockTime == 0 && ChaDeMo::ConnectorLocked())
+   if (Param::GetInt(Param::opmode) == MOD_CHARGE && ChaDeMo::ConnectorLocked())
    {
-      connectorLockTime = rtc_get_counter_val();
-
-   }
-   //10s after locking tell EVSE that we closed the contactor (in fact we have no control). Oh yes we do! Muhahahahaha
-   if (Param::GetInt(Param::opmode) == MOD_CHARGE && (rtc_get_counter_val() - connectorLockTime) > 1000)
-   {
-      //do not do 10 seconds!
-      DigIo::gp_out3.Set();//Chademo relay on
-      ChaDeMo::SetContactor(true);
       chargeModeDC = true;   //DC charge mode
       Param::SetInt(Param::chgtyp,DCFC);
    }
 
-   if (Param::GetInt(Param::chgtyp) == DCFC)
+   if (chargeModeDC)
    {
       int chargeCur = Param::GetInt(Param::CCS_ICmd);
       int chargeLim = Param::GetInt(Param::CCS_ILim);
       chargeCur = MIN(MIN(255, chargeLim), chargeCur);
       ChaDeMo::SetChargeCurrent(chargeCur);
-      ChaDeMo::CheckSensorDeviation(Param::GetInt(Param::udc));
+      //TODO: fix this to not false trigger
+      //ChaDeMo::CheckSensorDeviation(Param::GetInt(Param::udc));
    }
-
-
 
    ChaDeMo::SetTargetBatteryVoltage(Param::GetInt(Param::Voltspnt));
    ChaDeMo::SetSoC(Param::GetFloat(Param::CCS_SOCLim));
    Param::SetInt(Param::CCS_Ireq, ChaDeMo::GetRampedCurrentRequest());
 
-   if (chargeMode)
+   if (Param::GetInt(Param::CCS_ILim) == 0)
    {
-      if (Param::Get(Param::SOC) >= Param::Get(Param::CCS_SOCLim) ||
-            Param::GetInt(Param::CCS_ILim) == 0)
-      {
-
-         ChaDeMo::SetEnabled(false);
-         DigIo::gp_out3.Clear();//Chademo relay off
-         chargeMode = false;
-      }
-
-      Param::SetInt(Param::CCS_V, ChaDeMo::GetChargerOutputVoltage());
-      Param::SetInt(Param::CCS_I, ChaDeMo::GetChargerOutputCurrent());
-      ChaDeMo::SendMessages();
+      ChaDeMo::SetEnabled(false);
+      DigIo::gp_out3.Clear();//Chademo charge allow off
+      chargeMode = false;
    }
-   Param::SetInt(Param::CCS_State, ChaDeMo::GetChargerStatus());
 
+   Param::SetInt(Param::CCS_V, ChaDeMo::GetChargerOutputVoltage());
+   Param::SetInt(Param::CCS_I, ChaDeMo::GetChargerOutputCurrent());
+   Param::SetInt(Param::CCS_State, ChaDeMo::GetChargerStatus());
+   ChaDeMo::SendMessages();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -244,7 +228,16 @@ static void Ms200Task(void)
 
    if(targetCharger == ChargeModes::EXT_DIGI)
    {
-      if((opmode != MOD_RUN) && (RunChg))  chargeMode = DigIo::HV_req.Get();//false; //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
+      if((opmode != MOD_RUN) && Param::GetInt(Param::interface) == Chademo && DigIo::gp_12Vin.Get())
+      {
+         chargeMode = true;
+      }
+      else if((opmode != MOD_RUN) && (RunChg))
+      {
+         chargeMode = DigIo::HV_req.Get();//false; //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
+      }
+
+
       if(!RunChg) chargeMode = false;
 
       if(RunChg) DigIo::SP_out.Set();//enable charger digital line. using sp out from gs450h as not used when in charge
@@ -289,11 +282,6 @@ static void Ms200Task(void)
       count_one=0;
    }
 }
-
-
-
-
-
 
 static void Ms100Task(void)
 {
@@ -375,11 +363,9 @@ static void Ms100Task(void)
    if(targetVehicle==VAG) Can_VAG::SendVAG100msMessage();
 
 
-   if (!chargeMode && rtc_get_counter_val() > 100)
-   {
-      if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
-         Can::GetInterface(Param::GetInt(Param::inv_can))->SendAll();
-   }
+   if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
+      Can::GetInterface(Param::GetInt(Param::inv_can))->SendAll();
+
    int16_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
 
@@ -387,18 +373,15 @@ static void Ms100Task(void)
 
    if(targetChgint == ChargeInterfaces::Chademo) //Chademo on CAN3
    {
-      if(!DigIo::gp_12Vin.Get()) RunChaDeMo(); //if we detect chademo plug inserted off we go ...
-
-
+      if (DigIo::gp_12Vin.Get())
+         RunChaDeMo(); //if we detect chademo plug inserted off we go ...
    }
 
    if(targetChgint != ChargeInterfaces::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
    {
       Param::SetInt(Param::HeatReq,DigIo::gp_12Vin.Get());
    }
-
 }
-
 
 static void Ms10Task(void)
 {
@@ -566,7 +549,6 @@ static void Ms10Task(void)
       {
          newMode = MOD_CHARGE;
       }
-
 
       stt |= opmode != MOD_OFF ? STAT_NONE : STAT_WAITSTART;
    }
@@ -924,16 +906,15 @@ extern "C" int main(void)
 
    Terminal t(USART3, TermCmds);
    Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));
-   Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed));
+   Can c2(CAN2, (Can::baudrates)Param::GetInt(Param::canspeed), true);
 
    // Set up CAN 1 callback and messages to listen for
    c.SetReceiveCallback(CanCallback);
    c2.SetReceiveCallback(CanCallback);
-   SetCanFilters();
-
 
    can = &c;
    can2 = &c2;
+   SetCanFilters();
 
    CANSPI_Initialize();// init the MCP25625 on CAN3
    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
