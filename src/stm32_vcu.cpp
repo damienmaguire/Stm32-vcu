@@ -79,6 +79,7 @@ static void SetCanFilters();
 static void RunChaDeMo()
 {
    static uint32_t startTime = 0;
+   static int32_t controlledCurrent = 0;
 
    if (startTime == 0)
    {
@@ -99,15 +100,22 @@ static void RunChaDeMo()
 
    if (chargeModeDC)
    {
-      int chargeCur = Param::GetInt(Param::CCS_ICmd);
+      int udc = Param::GetInt(Param::udc);
+      int udcspnt = Param::GetInt(Param::Voltspnt);
       int chargeLim = Param::GetInt(Param::CCS_ILim);
-      chargeCur = MIN(MIN(255, chargeLim), chargeCur);
-      ChaDeMo::SetChargeCurrent(chargeCur);
+      chargeLim = MIN(125, chargeLim);
+
+      if (udc < udcspnt && controlledCurrent <= chargeLim)
+         controlledCurrent++;
+      if (udc > udcspnt && controlledCurrent > 0)
+         controlledCurrent--;
+
+      ChaDeMo::SetChargeCurrent(controlledCurrent);
       //TODO: fix this to not false trigger
       //ChaDeMo::CheckSensorDeviation(Param::GetInt(Param::udc));
    }
 
-   ChaDeMo::SetTargetBatteryVoltage(Param::GetInt(Param::Voltspnt));
+   ChaDeMo::SetTargetBatteryVoltage(Param::GetInt(Param::Voltspnt)+10);
    ChaDeMo::SetSoC(Param::GetFloat(Param::CCS_SOCLim));
    Param::SetInt(Param::CCS_Ireq, ChaDeMo::GetRampedCurrentRequest());
 
@@ -252,14 +260,14 @@ static void Ms200Task(void)
    if we are in charge mode and battV >= setpoint and power is <= termination setpoint
        Then we end charge.
    */
-   if(opmode==MOD_CHARGE)
+   /*if(opmode==MOD_CHARGE)
    {
       if(Param::GetInt(Param::udc)>=Param::GetInt(Param::Voltspnt) && Param::GetInt(Param::idc)<=Param::GetInt(Param::IdcTerm))
       {
          RunChg=false;//end charge
          ChgLck=true;//set charge lockout flag
       }
-   }
+   }*/
    if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
 
    ///////////////////////////////////////
