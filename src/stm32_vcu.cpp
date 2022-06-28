@@ -54,7 +54,7 @@ uint16_t ChgDur_tmp;
 uint8_t RTC_1Sec=0;
 uint32_t ChgTicks=0,ChgTicks_1Min=0;
 uint8_t CabHeater,CabHeater_ctrl;
-
+uint32_t chademoStartTime = 0;
 
 static volatile unsigned
 days=0,
@@ -78,20 +78,18 @@ static void SetCanFilters();
 
 static void RunChaDeMo()
 {
-   static uint32_t startTime = 0;
    static int32_t controlledCurrent = 0;
 
-   if (startTime == 0 && Param::GetInt(Param::opmode) != MOD_CHARGE)
+   if (chademoStartTime == 0 && Param::GetInt(Param::opmode) != MOD_CHARGE)
    {
-      startTime = rtc_get_counter_val();
+      chademoStartTime = rtc_get_counter_val();
       ChaDeMo::SetChargeCurrent(0);
    }
 
-   if ((rtc_get_counter_val() - startTime) > 100 && (rtc_get_counter_val() - startTime) < 150)
+   if ((rtc_get_counter_val() - chademoStartTime) > 100 && (rtc_get_counter_val() - chademoStartTime) < 150)
    {
       ChaDeMo::SetEnabled(true);
       DigIo::gp_out3.Set();
-      startTime = 0; //for next round
    }
 
    if (Param::GetInt(Param::opmode) == MOD_CHARGE && ChaDeMo::ConnectorLocked())
@@ -385,12 +383,16 @@ static void Ms100Task(void)
    if(targetChgint == ChargeInterfaces::Chademo) //Chademo on CAN3
    {
       if (DigIo::gp_12Vin.Get())
+      {
          RunChaDeMo(); //if we detect chademo plug inserted off we go ...
+      }
       else
       {
          chargeModeDC = false;   //DC charge mode
          Param::SetInt(Param::chgtyp,0);
          DigIo::gp_out3.Clear();//Chademo charge allow off
+         ChaDeMo::SetEnabled(false);
+         chademoStartTime = 0;
       }
    }
 

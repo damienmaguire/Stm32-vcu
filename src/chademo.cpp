@@ -111,7 +111,7 @@ void ChaDeMo::SendMessages()
 
    //Capacity fixed to 200 - so SoC resolution is 0.5
    data[0] = 0;
-   data[1] = (targetBatteryVoltage + 10) | 200 << 16;
+   data[1] = (targetBatteryVoltage + 40) | 200 << 16;
 
    txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
    txMessage.frame.id = 0x100;
