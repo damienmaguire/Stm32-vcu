@@ -66,7 +66,7 @@
     PARAM_ENTRY(CAT_COMM,      canspeed,    CANSPEEDS, 0,      3,      1,      35 ) \
     PARAM_ENTRY(CAT_COMM,      canperiod,   CANPERIODS,0,      1,      1,      36 ) \
     PARAM_ENTRY(CAT_CHARGER,   chargemodes, CHGMODS,   0,      4,      0,      37 ) \
-    PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0,      250,    22,     38 ) \
+    PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0.1,    250,    22,     38 ) \
     PARAM_ENTRY(CAT_CHARGER,   interface,   CHGINT,    0,      3,      0,      39 ) \
     PARAM_ENTRY(CAT_CHARGER,   Voltspnt,    "V",       0,      1000,   395,    40 ) \
     PARAM_ENTRY(CAT_CHARGER,   Pwrspnt,     "W",       0,      12000,  1500,   41 ) \

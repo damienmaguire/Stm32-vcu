@@ -6,7 +6,7 @@ namespace utils
 #define CAN_TIMEOUT       50  //500ms
 #define PRECHARGE_TIMEOUT 500 //5s
 
-uint32_t SOCVal=0;
+float SOCVal=0;
 int32_t NetWh=0;
 
 
@@ -178,8 +178,8 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
    float udclim = Param::GetFloat(Param::udclim);
    float udcsw = Param::GetFloat(Param::udcsw);
 
-   float deltaVolts1 = ABS((udc3/2)-udc2);
-   float deltaVolts2 = ABS((udc2+udc3)-udc);
+   float deltaVolts1 = (udc2 / 2) - udc3;
+   float deltaVolts2 = (udc2 + udc3) - udc;
    Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
 
    // Currently unused parameters:
@@ -192,9 +192,8 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
    //HW_REV1 had 3.9k resistors
    int uauxGain = 210;
    Param::SetFloat(Param::uaux, ((float)AnaIn::uaux.Get()) / uauxGain);
-   float udcfp = Param::GetFloat(Param::udc);
 
-   if (udcfp > udclim)
+   if (udc > udclim)
    {
       if (ABS(motorSpeed) < 50) //If motor is stationary, over voltage comes from outside
       {
@@ -209,7 +208,7 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
 
    if(opmode == MOD_PRECHARGE)
    {
-      if (udcfp < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
+      if (udc < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
       {
          DigIo::prec_out.Clear();
          ErrorMessage::Post(ERR_PRECHARGE);
@@ -217,12 +216,11 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
       }
    }
 
-   return udcfp;
+   return udc;
 }
 
 float ProcessThrottle(int speed)
 {
-   // s32fp throtSpnt;
    float finalSpnt;
 
    if (speed < Param::GetInt(Param::throtramprpm))
@@ -265,13 +263,13 @@ void displayThrottle()
 
 void CalcSOC()
 {
-   uint32_t Capacity_Parm = FP_FROMINT(Param::Get(Param::BattCap));
-   uint32_t kwh_Used = FP_FROMFLT(ABS(Param::Get(Param::KWh)));
+   float Capacity_Parm = Param::GetFloat(Param::BattCap);
+   float kwh_Used = ABS(Param::GetFloat(Param::KWh));
 
-   SOCVal = 100-(FP_MUL(FP_DIV(kwh_Used,Capacity_Parm),100));
+   SOCVal = 100.0f - 100.0f * kwh_Used / Capacity_Parm;
 
    if(SOCVal > 100) SOCVal = 100;
-   Param::SetInt(Param::SOC,SOCVal);
+   Param::SetFloat(Param::SOC,SOCVal);
 }
 
 } // namespace utils
