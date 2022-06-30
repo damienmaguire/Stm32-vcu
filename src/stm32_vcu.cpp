@@ -20,15 +20,6 @@
  */
 #include "stm32_vcu.h"
 
-#define  UserCAN  2
-#define  BMW_E46  0
-#define  User  2
-#define  None  4
-//#define  BMW_E39  5
-#define  VAG  6
-
-
-
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
 static bool chargeModeDC = false;
@@ -39,9 +30,6 @@ static InvModes targetInverter;
 static vehicles targetVehicle;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
-static uint8_t LexusGear;
-static uint16_t Lexus_Oil;
-static uint16_t maxRevs;
 static uint32_t oldTime;
 uint8_t pot_test;
 uint8_t count_one=0;
@@ -716,9 +704,6 @@ void Param::Change(Param::PARAM_NUM paramNum)
    targetCharger=static_cast<ChargeModes>(Param::GetInt(Param::chargemodes));//get charger setting from menu
    targetChgint=static_cast<ChargeInterfaces>(Param::GetInt(Param::interface));//get interface setting from menu
    Param::SetInt(Param::Charger, targetCharger);//Confirm mode
-   LexusGear=Param::GetInt(Param::GEAR);//get gear selection from Menu
-   Lexus_Oil=Param::GetInt(Param::OilPump);//get oil pump duty % selection from Menu
-   maxRevs=Param::GetInt(Param::revlim);//get revlimiter value
    CabHeater=Param::GetInt(Param::Heater);//get cabin heater type
    CabHeater_ctrl=Param::GetInt(Param::Control);//get cabin heater control mode
    if(ChgSet==1)
