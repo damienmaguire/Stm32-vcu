@@ -23,6 +23,7 @@
 				<Compiler>
 					<Add directory="include/project" />
 					<Add directory="include" />
+					<Add directory="libopeninv/include" />
 				</Compiler>
 				<MakeCommands>
 					<Build command="make" />
@@ -41,6 +42,7 @@
 				<Compiler>
 					<Add directory="include/project" />
 					<Add directory="include" />
+					<Add directory="libopeninv/include" />
 				</Compiler>
 			</Target>
 		</Build>
@@ -75,6 +77,8 @@
 		<Unit filename="include/utils.h" />
 		<Unit filename="include/vehicle.h" />
 		<Unit filename="libopeninv/include/anain.h" />
+		<Unit filename="libopeninv/include/canhardware.h" />
+		<Unit filename="libopeninv/include/canmap.h" />
 		<Unit filename="libopeninv/include/digio.h" />
 		<Unit filename="libopeninv/include/errormessage.h" />
 		<Unit filename="libopeninv/include/my_fp.h" />
@@ -88,6 +92,8 @@
 		<Unit filename="libopeninv/include/terminal.h" />
 		<Unit filename="libopeninv/include/terminalcommands.h" />
 		<Unit filename="libopeninv/src/anain.cpp" />
+		<Unit filename="libopeninv/src/canhardware.cpp" />
+		<Unit filename="libopeninv/src/canmap.cpp" />
 		<Unit filename="libopeninv/src/digio.cpp" />
 		<Unit filename="libopeninv/src/errormessage.cpp" />
 		<Unit filename="libopeninv/src/my_fp.c">

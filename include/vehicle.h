@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "stm32_can.h"
+#include "canhardware.h"
 
 class Vehicle
 {
@@ -37,10 +37,10 @@ public:
    virtual bool GetGear(gear&) { return false; } //if vehicle class knows gear return true and set dir
    virtual bool Ready() = 0;
    virtual bool Start() { return false; }
-   void SetCanInterface(Can* c) { can = c; }
+   void SetCanInterface(CanHardware* c) { can = c; }
 
 protected:
-   Can* can;
+   CanHardware* can;
 };
 
 #endif // VEHICLE_H_INCLUDED

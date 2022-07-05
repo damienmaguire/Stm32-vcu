@@ -167,7 +167,7 @@ void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state an
 }
 
 
-void i3LIMClass::Send10msMessages()
+void i3LIMClass::Send10msMessages(CanHardware* can)
 {
    uint16_t V_Batt=Param::GetInt(Param::udc)*10;
    uint8_t V_Batt2=(Param::GetInt(Param::udc))/4;
@@ -185,7 +185,7 @@ void i3LIMClass::Send10msMessages()
    bytes[6] = 0x65;  //Low nibble battery status. Seem to need to be 0x5.
    bytes[7] = V_Batt2;  //zwischenkreis. Battery voltage. Scale 4. 8 bit unsigned int.
 
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x112, (uint32_t*)bytes,8); //
+   can->Send(0x112, (uint32_t*)bytes,8); //
 
    ctr_20ms++;
    if(ctr_20ms==2)
@@ -198,13 +198,13 @@ void i3LIMClass::Send10msMessages()
       bytes[2] = 0x00;
       bytes[3] = 0x00;
       bytes[4] = 0x8a;
-      Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x1a1, (uint32_t*)bytes,5); // average 20ms
+      can->Send(0x1a1, (uint32_t*)bytes,5); // average 20ms
    }
 
 }
 
 
-void i3LIMClass::Send200msMessages()
+void i3LIMClass::Send200msMessages(CanHardware* can)
 {
 
    uint8_t bytes[8];
@@ -221,7 +221,7 @@ void i3LIMClass::Send200msMessages()
    bytes[5] = 0xff;
    bytes[6] = 0xff;
    bytes[7] = 0xff;
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2fa, (uint32_t*)bytes,8); // this msg varies from 82ms to 1s intervals.
+   can->Send(0x2fa, (uint32_t*)bytes,8); // this msg varies from 82ms to 1s intervals.
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -238,7 +238,7 @@ void i3LIMClass::Send200msMessages()
    bytes[5] = 0xff;
    bytes[6] = 0x02;
    bytes[7] = 0xff;
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x432, (uint32_t*)bytes,8); // average 190ms
+   can->Send(0x432, (uint32_t*)bytes,8); // average 190ms
 
    bytes[0] = 0x00;//network management
    bytes[1] = 0x00;
@@ -248,7 +248,7 @@ void i3LIMClass::Send200msMessages()
    bytes[5] = 0x00;
    bytes[6] = 0x00;
    bytes[7] = 0x1a;
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x51a, (uint32_t*)bytes,8); // average 640ms
+   can->Send(0x51a, (uint32_t*)bytes,8); // average 640ms
 
    bytes[0] = 0x00;//network management.May need to be dynamic
    bytes[1] = 0x00;
@@ -258,7 +258,7 @@ void i3LIMClass::Send200msMessages()
    bytes[5] = 0x3c;
    bytes[6] = 0xff;
    bytes[7] = 0x40;
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x540, (uint32_t*)bytes,8); // average 640ms
+   can->Send(0x540, (uint32_t*)bytes,8); // average 640ms
 
    bytes[0] = 0x40;//network management zgw
    bytes[1] = 0x10;
@@ -268,7 +268,7 @@ void i3LIMClass::Send200msMessages()
    bytes[5] = 0x00;
    bytes[6] = 0x00;
    bytes[7] = 0x00;
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x510, (uint32_t*)bytes,8); // average 640ms
+   can->Send(0x510, (uint32_t*)bytes,8); // average 640ms
 
    ctr_1second++;
    if(ctr_1second==5)//only send every 1 second.
@@ -281,7 +281,7 @@ void i3LIMClass::Send200msMessages()
       bytes[3] = sec_328<<24;
       bytes[4] = 0x87;    //day counter 16 bit.
       bytes[5] = 0x1e;
-      Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x328, (uint32_t*)bytes,6);
+      can->Send(0x328, (uint32_t*)bytes,6);
 
 
 
@@ -289,7 +289,7 @@ void i3LIMClass::Send200msMessages()
 //if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
       bytes[0] = 0xf1;
       bytes[1] = 0xff;
-      Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3e8, (uint32_t*)bytes,2);
+      can->Send(0x3e8, (uint32_t*)bytes,2);
 
       bytes[0] = 0xc0;//engine info? rex?
       bytes[1] = 0xf9;
@@ -299,7 +299,7 @@ void i3LIMClass::Send200msMessages()
       bytes[5] = 0x3c;
       bytes[6] = 0xc3;//0x3=park
       bytes[7] = 0xff;
-      Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3f9, (uint32_t*)bytes,8); //average 1s
+      can->Send(0x3f9, (uint32_t*)bytes,8); //average 1s
 
       ctr_5second++;
       if(ctr_5second==4)//only send every 4 second.
@@ -315,7 +315,7 @@ void i3LIMClass::Send200msMessages()
          bytes[5] = 0xff;
          bytes[6] = 0xff;
          bytes[7] = 0xff;
-         Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2fc, (uint32_t*)bytes,8); // average 5s.
+         can->Send(0x2fc, (uint32_t*)bytes,8); // average 5s.
 
          bytes[0] = 0x88;//central locking
          bytes[1] = 0x88;
@@ -325,7 +325,7 @@ void i3LIMClass::Send200msMessages()
          bytes[5] = 0xff;
          bytes[6] = 0xff;
          bytes[7] = 0xff;
-         Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2a0, (uint32_t*)bytes,8); // average 5s.
+         can->Send(0x2a0, (uint32_t*)bytes,8); // average 5s.
 
          bytes[0] = 0xff;//vehicle condition
          bytes[1] = 0xff;
@@ -335,7 +335,7 @@ void i3LIMClass::Send200msMessages()
          bytes[5] = 0xff;
          bytes[6] = 0xff;
          bytes[7] = 0xfc;
-         Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3a0, (uint32_t*)bytes,8); // average 4s.
+         can->Send(0x3a0, (uint32_t*)bytes,8); // average 4s.
       }
    }
 
@@ -391,7 +391,7 @@ void i3LIMClass::Send200msMessages()
 
 
 
-void i3LIMClass::Send100msMessages()
+void i3LIMClass::Send100msMessages(CanHardware* can)
 {
    uint8_t bytes[8];
    bytes[0] = 0xff;//vehicle status msg
@@ -402,7 +402,7 @@ void i3LIMClass::Send100msMessages()
    bytes[5] = 0x00;
    bytes[6] = 0xff;
    bytes[7] = 0xff;
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x03c, (uint32_t*)bytes,8); //average 100ms
+   can->Send(0x03c, (uint32_t*)bytes,8); //average 100ms
 
    uint16_t Wh_Local=Param::GetInt(Param::BattCap);
    CHG_Pwr=(CHG_Pwr & 0xFFF);
@@ -417,7 +417,7 @@ void i3LIMClass::Send100msMessages()
    bytes[7] = EOC_Time;    // end of charge timer.
 
 
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x3E9, (uint32_t*)bytes,8); //average 128ms
+   can->Send(0x3E9, (uint32_t*)bytes,8); //average 128ms
 
    //LIM needs to see this but doesnt control anything...
    bytes[0] = 0xca;
@@ -428,7 +428,7 @@ void i3LIMClass::Send100msMessages()
    bytes[5] = 0x26;
    bytes[6] = 0xf3;
    bytes[7] = 0x4b;
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x431, (uint32_t*)bytes,8); //.average 197ms but as low as 49ms.
+   can->Send(0x431, (uint32_t*)bytes,8); //.average 197ms but as low as 49ms.
 
    bytes[0] = 0xf5;//Wake up message.
    bytes[1] = 0x28;
@@ -440,7 +440,7 @@ void i3LIMClass::Send100msMessages()
    bytes[6] = 0x30;
    bytes[7] = 0x80;
 
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x12f, (uint32_t*)bytes,8); //. average 100ms
+   can->Send(0x12f, (uint32_t*)bytes,8); //. average 100ms
 
 
 
@@ -460,7 +460,7 @@ void i3LIMClass::Send100msMessages()
    bytes[6] = Bulk_SOCt >> 8;  //time remaining in seconds to hit soc target from byte 7 in ccs mode. MSB. 16 bit unsigned int. scale 10.Bulk SOC.
    bytes[7] = 0xA0;  //Fast charge SOC target. 8 bit unsigned int. scale 0.5. 0xA0=160*0.5=80%
 
-   Can::GetInterface(Param::GetInt(Param::lim_can))->Send(0x2f1, (uint32_t*)bytes,8); //. average 100ms
+   can->Send(0x2f1, (uint32_t*)bytes,8); //. average 100ms
 
    if(Param::GetInt(Param::opmode)!=MOD_RUN) vin_ctr=0;
    if((Param::GetInt(Param::opmode)==MOD_RUN) && vin_ctr<5)

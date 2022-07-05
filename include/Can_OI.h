@@ -36,6 +36,7 @@ public:
    float GetInverterVoltage() { return voltage; }
    float GetMotorSpeed() { return speed; }
    int GetInverterState() { return error; }
+   void SetCanInterface(CanHardware* c);
 
 private:
    static int16_t speed;

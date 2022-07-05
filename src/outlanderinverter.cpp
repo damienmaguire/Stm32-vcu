@@ -18,10 +18,20 @@
  */
 #include "outlanderinverter.h"
 #include "my_math.h"
+#include "params.h"
 
 OutlanderInverter::OutlanderInverter()
 {
    //ctor
+}
+
+void OutlanderInverter::SetCanInterface(CanHardware* c)
+{
+   can = c;
+
+   can->RegisterUserMessage(0x289);//Outlander Inv Msg
+   can->RegisterUserMessage(0x299);//Outlander Inv Msg
+   can->RegisterUserMessage(0x733);//Outlander Inv Msg
 }
 
 void OutlanderInverter::DecodeCAN(int id, uint32_t data[2])

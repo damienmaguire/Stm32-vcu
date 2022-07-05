@@ -1,5 +1,5 @@
 #include "Can_E39.h"
-#include "stm32_can.h"
+#include "params.h"
 
 static uint8_t counter_329 = 0;
 static uint8_t ABSMsg = 0;
@@ -11,7 +11,7 @@ static uint16_t Consumption = 0;
 //Based on an MS43 DME
 
 //////////////////////DME Messages //////////////////////////////////////////////////////////
-void Can_E39::Msg316(uint16_t speed_input)  //DME1
+void Can_E39::Msg316(uint16_t speed_input, CanHardware* can)  //DME1
 {
    // Limit tachometer range from 750 RPMs - 7000 RPMs at max.
    // These limits ensure the vehicle thinks engine is alive and within the
@@ -65,13 +65,13 @@ void Can_E39::Msg316(uint16_t speed_input)  //DME1
    // Byte 7 - Torque with internal interventions only
    bytes[7]=0x00;
 
-   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x316, (uint32_t*)bytes,8);
+   can->Send(0x316, (uint32_t*)bytes,8);
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Can_E39::Msg329(uint16_t tempValue)   //DME2
+void Can_E39::Msg329(uint16_t tempValue, CanHardware* can)   //DME2
 {
    //********************temp sense  *******************************
    //  tempValue=analogRead(tempIN); //read Analog pin voltage
@@ -157,10 +157,10 @@ void Can_E39::Msg329(uint16_t tempValue)   //DME2
    if(counter_329==8) ABSMsg=0x86;
    if(counter_329==15) ABSMsg=0xd9;
 
-   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x329, (uint32_t*)bytes,8);
+   can->Send(0x329, (uint32_t*)bytes,8);
 }
 
-void Can_E39::Msg545()  //DME4
+void Can_E39::Msg545(CanHardware* can)  //DME4
 {
    // int z = 0x60; // + y;  higher value lower MPG
 
@@ -223,7 +223,7 @@ void Can_E39::Msg545()  //DME4
    // Byte 7 - 0x80 Oil Pressure (Red Oil light), Idle set speed
    bytes[7]=0x18;
 
-   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x545, (uint32_t*)bytes,8);
+   can->Send(0x545, (uint32_t*)bytes,8);
 }
 
 void Can_E39::DecodeCAN(int id, uint32_t data[2])

@@ -20,7 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "stm32_can.h"
+#include "canhardware.h"
 
 class Inverter
 {
@@ -36,10 +36,10 @@ public:
    virtual float GetMotorSpeed() = 0;
    virtual int GetInverterState() = 0;
    virtual void DeInit() {} //called when switching to another inverter, similar to a destructor
-   void SetCanInterface(Can* c) { can = c; }
+   virtual void SetCanInterface(CanHardware* c) { can = c; }
 
 protected:
-   Can* can;
+   CanHardware* can;
 };
 
 #endif // INVERTER_H_INCLUDED

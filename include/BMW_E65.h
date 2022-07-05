@@ -8,16 +8,17 @@
 
 #include <stdint.h>
 #include "my_fp.h"
+#include "canhardware.h"
 
 class BMW_E65Class
 {
 
 public:
-   static void Tacho(int16_t speed);
-   static void absdsc(bool Brake_In);
-   static void GDis();
+   static void Tacho(int16_t speed, CanHardware* can);
+   static void absdsc(bool Brake_In, CanHardware* can);
+   static void GDis(CanHardware* can);
    void Cas(int id, uint32_t data[2]);
-   void DashOn();
+   void DashOn(CanHardware* can);
    void DashOff();
    void Gear(int id, uint32_t data[2]);
    uint8_t getGear();

@@ -37,6 +37,7 @@ public:
    float GetInverterVoltage() { return voltage / 2; }
    float GetMotorSpeed() { return speed / 2; }
    int GetInverterState() { return error; }
+   void SetCanInterface(CanHardware* c);
 
 private:
    static void nissan_crc(uint8_t *data, uint8_t polynomial);

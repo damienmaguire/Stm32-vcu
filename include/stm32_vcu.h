@@ -37,6 +37,8 @@
 #include "heater.h"
 #include "inverter.h"
 #include "vehicle.h"
+#include "canmap.h"
+#include "terminalcommands.h"
 
 typedef union {
     struct {

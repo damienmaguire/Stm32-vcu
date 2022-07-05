@@ -58,6 +58,15 @@ PDM sends:
 
 */
 
+void LeafINV::SetCanInterface(CanHardware* c)
+{
+   can = c;
+
+   can->RegisterUserMessage(0x1DA);//Leaf inv msg
+   can->RegisterUserMessage(0x55A);//Leaf inv msg
+   can->RegisterUserMessage(0x679);//Leaf obc msg
+   can->RegisterUserMessage(0x390);//Leaf obc msg
+}
 
 void LeafINV::DecodeCAN(int id, uint32_t data[2])
 {

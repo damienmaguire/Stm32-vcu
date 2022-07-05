@@ -33,6 +33,15 @@ int16_t Can_OI::inv_temp;
 int16_t Can_OI::motor_temp;
 int16_t Can_OI::final_torque_request;
 
+void Can_OI::SetCanInterface(CanHardware* c)
+{
+   can = c;
+
+   can->RegisterUserMessage(0x190);//Open Inv Msg
+   can->RegisterUserMessage(0x19A);//Open Inv Msg
+   can->RegisterUserMessage(0x1A4);//Open Inv Msg
+}
+
 void Can_OI::DecodeCAN(int id, uint32_t data[2])
 {
 //0x1A4 bits 0-15 inverter voltage x10

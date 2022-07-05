@@ -23,7 +23,7 @@ void PostErrorIfRunning(ERROR_MESSAGE_NUM err)
    }
 }
 
-void GetDigInputs(Can* can)
+void GetDigInputs(CanHardware* can)
 {
    static bool canIoActive = false;
    int canio = Param::GetInt(Param::canio);

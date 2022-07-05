@@ -26,6 +26,7 @@ class OutlanderInverter : public Inverter
 public:
    /** Default constructor */
    OutlanderInverter();
+   void SetCanInterface(CanHardware* c);
    void DecodeCAN(int id, uint32_t data[2]);
    void Task10Ms();
    void Task100Ms();

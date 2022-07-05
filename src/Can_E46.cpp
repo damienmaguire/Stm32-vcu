@@ -10,7 +10,7 @@ static uint8_t ABSMsg = 0;
 //these messages go out on vehicle can and are specific to driving the E46 instrument cluster etc.
 
 //////////////////////DME Messages //////////////////////////////////////////////////////////
-void Can_E46::Msg316(uint16_t speed_input)
+void Can_E46::Msg316(uint16_t speed_input, CanHardware* can)
 {
    // Limit tachometer range from 750 RPMs - 7000 RPMs at max.
    // These limits ensure the vehicle thinks engine is alive and within the
@@ -46,13 +46,13 @@ void Can_E46::Msg316(uint16_t speed_input)
    // Byte 7 - Torque with internal interventions only
    bytes[7]=0x00;
 
-   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x316, (uint32_t*)bytes,8);
+   can->Send(0x316, (uint32_t*)bytes,8);
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Can_E46::Msg329(uint16_t tempValue)
+void Can_E46::Msg329(uint16_t tempValue, CanHardware* can)
 {
    //********************temp sense  *******************************
    //  tempValue=analogRead(tempIN); //read Analog pin voltage
@@ -111,10 +111,10 @@ void Can_E46::Msg329(uint16_t tempValue)
    if(counter_329==8) ABSMsg=0x86;
    if(counter_329==15) ABSMsg=0xd9;
 
-   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x329, (uint32_t*)bytes,8);
+   can->Send(0x329, (uint32_t*)bytes,8);
 }
 
-void Can_E46::Msg43F(int8_t gear)
+void Can_E46::Msg43F(int8_t gear, CanHardware* can)
 {
    //Can bus data packet values to be sent
    uint8_t bytes[8];
@@ -171,10 +171,10 @@ void Can_E46::Msg43F(int8_t gear)
    // byte 7 = 0x00 //doesn't do anything to the ike
    bytes[7] = 0xFF;
 
-   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x43F, (uint32_t*)bytes,8);
+   can->Send(0x43F, (uint32_t*)bytes,8);
 }
 
-void Can_E46::Msg545()
+void Can_E46::Msg545(CanHardware* can)
 {
    // int z = 0x60; // + y;  higher value lower MPG
 
@@ -202,6 +202,6 @@ void Can_E46::Msg545()
    // Byte 7 - 0x80 Oil Pressure (Red Oil light), Idle set speed
    bytes[7]=0x18;
 
-   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x545, (uint32_t*)bytes,8);
+   can->Send(0x545, (uint32_t*)bytes,8);
 }
 

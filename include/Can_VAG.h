@@ -13,8 +13,8 @@ class Can_VAG
 {
 
 public:
-    static void SendVAG100msMessage();
-    static void SendVAG10msMessage(uint16_t rpm);
+    static void SendVAG100msMessage(CanHardware* can);
+    static void SendVAG10msMessage(uint16_t rpm, CanHardware* can);
 
 private:
 

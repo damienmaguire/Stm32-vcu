@@ -7,15 +7,16 @@
 
 #include <stdint.h>
 #include "my_fp.h"
+#include "canhardware.h"
 
 class Can_E46
 {
 
 public:
-    static		void Msg316(uint16_t outRPM);
-    static		void Msg329(uint16_t tempValue);
-    static		void Msg43F(int8_t gear);
-    static		void Msg545();
+    static		void Msg316(uint16_t outRPM, CanHardware* can);
+    static		void Msg329(uint16_t tempValue, CanHardware* can);
+    static		void Msg43F(int8_t gear, CanHardware* can);
+    static		void Msg545(CanHardware* can);
 
 private:
 

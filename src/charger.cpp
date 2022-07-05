@@ -13,7 +13,7 @@ void chargerClass::handle108(uint32_t data[2])  //HV request
    //Counter in byte 7 to validate msg.
 }
 
-void chargerClass::Send100msMessages(bool ChRun)
+void chargerClass::Send100msMessages(bool ChRun, CanHardware* can)
 {
    uint8_t bytes[8];
    uint16_t HVvolts=Param::GetInt(Param::udc);
@@ -33,7 +33,7 @@ void chargerClass::Send100msMessages(bool ChRun)
 
 
 
-   Can::GetInterface(Param::GetInt(Param::charger_can))->Send(0x109, (uint32_t*)bytes,8);
+   can->Send(0x109, (uint32_t*)bytes,8);
 
 }
 
