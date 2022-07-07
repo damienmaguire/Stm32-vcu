@@ -1,18 +1,71 @@
+/*
+ * This file is part of the stm32-vcu project.
+ *
+ * Copyright (C) 2021 Damien Maguire
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "Can_E39.h"
-#include "params.h"
+#include "stm32_can.h"
+#include "utils.h"
+#include "digio.h"
 
 static uint8_t counter_329 = 0;
 static uint8_t ABSMsg = 0;
 static uint16_t Consumption = 0;
+static uint16_t tempValue = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void Can_E39::Task10Ms()
+{
+   Msg316();
+   Msg329();
+   Msg545();
+
+   if (isE46)
+      Msg43F(Param::GetInt(Param::dir));
+}
+
+void Can_E39::SetCanInterface(CanHardware* c)
+{
+   can = c;
+
+   can->RegisterUserMessage(0x153);//E39/E46 ASC1 message
+}
+
+void Can_E39::SetTemperatureGauge(float temp)
+{
+   tempValue = utils::change(temp,15,80,88,254); //Map to e39 temp gauge
+}
+
+bool Can_E39::Ready()
+{
+   return DigIo::t15_digi.Get();
+}
+
+bool Can_E39::Start()
+{
+   return Param::GetBool(Param::din_start);
+}
 //these messages go out on vehicle can and are specific to driving the E39 instrument cluster etc.
 //Based on an MS43 DME
 
 //////////////////////DME Messages //////////////////////////////////////////////////////////
-void Can_E39::Msg316(uint16_t speed_input, CanHardware* can)  //DME1
+void Can_E39::Msg316()  //DME1
 {
+   uint16_t speed_input = speed;
    // Limit tachometer range from 750 RPMs - 7000 RPMs at max.
    // These limits ensure the vehicle thinks engine is alive and within the
    // max allowable RPM.
@@ -37,8 +90,8 @@ void Can_E39::Msg316(uint16_t speed_input, CanHardware* can)  //DME1
 //byte 5 - md_reib -- torque loss of consumers (alternator, ac, oil pump, etc.) (in %)
 //byte 7 - md_ind_lm_ist -- theoretical engine torque from air mass, excluding igntion angle (in %)
 
-   speed_input = (speed_input < 750) ? 750 : speed_input;
-   speed_input = (speed_input > 7000) ? 7000 : speed_input;
+   speed_input = MAX(750, speed_input);
+   speed_input = MIN(7000, speed_input);
 
    uint8_t rpm_to_can_mult = 64;
    uint8_t rpm_to_can_div = 10;
@@ -65,13 +118,13 @@ void Can_E39::Msg316(uint16_t speed_input, CanHardware* can)  //DME1
    // Byte 7 - Torque with internal interventions only
    bytes[7]=0x00;
 
-   can->Send(0x316, (uint32_t*)bytes,8);
+   can->Send(0x316, bytes, 8); //Send on CAN2
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Can_E39::Msg329(uint16_t tempValue, CanHardware* can)   //DME2
+void Can_E39::Msg329()   //DME2
 {
    //********************temp sense  *******************************
    //  tempValue=analogRead(tempIN); //read Analog pin voltage
@@ -157,10 +210,10 @@ void Can_E39::Msg329(uint16_t tempValue, CanHardware* can)   //DME2
    if(counter_329==8) ABSMsg=0x86;
    if(counter_329==15) ABSMsg=0xd9;
 
-   can->Send(0x329, (uint32_t*)bytes,8);
+   can->Send(0x329, bytes, 8); //Send on CAN2
 }
 
-void Can_E39::Msg545(CanHardware* can)  //DME4
+void Can_E39::Msg545()  //DME4
 {
    // int z = 0x60; // + y;  higher value lower MPG
 
@@ -223,10 +276,70 @@ void Can_E39::Msg545(CanHardware* can)  //DME4
    // Byte 7 - 0x80 Oil Pressure (Red Oil light), Idle set speed
    bytes[7]=0x18;
 
-   can->Send(0x545, (uint32_t*)bytes,8);
+   can->Send(0x545, bytes, 8); //Send on CAN2
 }
 
-void Can_E39::DecodeCAN(int id, uint32_t data[2])
+void Can_E39::Msg43F(int8_t gear)
+{
+   //Can bus data packet values to be sent
+   uint8_t bytes[8];
+   // Source: https://www.bimmerforums.com/forum/showthread.php?1887229-E46-Can-bus-project&p=30055342#post30055342
+   // byte 0 = 0x81 //doesn't do anything to the ike
+   bytes[0] = 0x81;
+   // byte 1 = 0x01 where;
+   // 01 = first gear
+   // 02= second gear
+   // 03 = third gear
+   // 04 = fourth gear
+   // 05 = D
+   // 06 = N
+   // 07 = R
+   // 08 = P
+   // 09 = 5
+   // 0A = 6
+   switch (gear)
+   {
+   case -1 /* Reverse */:
+      bytes[1] = 0x07;
+      break;
+   case 0 /* Neutral */:
+      bytes[1] = 0x06;
+      break;
+   case 1 /* Drive */:
+      bytes[1] = 0x05;
+      break;
+   default:
+      bytes[1] = 0x08;
+      break;
+   }
+
+   // byte 2 = 0xFF where;
+   // FF = no display
+   // 00 = E
+   // 39 = M
+   // 40 = S
+   bytes[2] = 0xFF;
+
+   // byte 3 = 0xFF //doesn't do anything to the ike
+   bytes[3] = 0xFF;
+
+   // byte 4 = 0x00 //doesn't do anything to the ike
+   bytes[4] = 0x00;
+
+   // byte 5 = 0x80 where;
+   // 80 = clears the gear warning picture - all other values bring it on
+   bytes[5] = 0x80;
+
+   // byte 6 = 0xFF //doesn't do anything to the ike
+   bytes[6] = 0xFF;
+
+   // byte 7 = 0x00 //doesn't do anything to the ike
+   bytes[7] = 0xFF;
+
+   can->Send(0x43F, bytes, 8);
+}
+
+void Can_E39::DecodeCAN(int id, uint32_t* data)
 {
    //ASC1 message data 0x153
    /*

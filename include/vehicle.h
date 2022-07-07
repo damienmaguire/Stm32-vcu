@@ -1,6 +1,3 @@
-#ifndef VEHICLE_H_INCLUDED
-#define VEHICLE_H_INCLUDED
-
 /*
  * This file is part of the tumanako_vc project.
  *
@@ -19,6 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef VEHICLE_H_INCLUDED
+#define VEHICLE_H_INCLUDED
+
 #include "canhardware.h"
 
 class Vehicle

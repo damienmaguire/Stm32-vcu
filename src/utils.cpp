@@ -87,27 +87,28 @@ float GetUserThrottleCommand()
 }
 
 
-void SelectDirection(vehicles targetVehicle, BMW_E65Class E65Vehicle)
+void SelectDirection(Vehicle* vehicle)
 {
+   Vehicle::gear gear;
    int8_t selectedDir = Param::GetInt(Param::dir);
    int8_t userDirSelection = 0;
    int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
 
-   if (targetVehicle == vehicles::BMW_E65)
+   if (vehicle->GetGear(gear))
    {
       // if in an E65 we get direction from the shift stalk via CAN
-      switch (E65Vehicle.getGear())
+      switch (gear)
       {
-      case 0:
+      case Vehicle::PARK:
          selectedDir = 0; // Park
          break;
-      case 1:
+      case Vehicle::REVERSE:
          selectedDir = -1; // Reverse
          break;
-      case 2:
+      case Vehicle::NEUTRAL:
          selectedDir = 0; // Neutral
          break;
-      case 3:
+      case Vehicle::DRIVE:
          selectedDir = 1; // Drive
          break;
       }

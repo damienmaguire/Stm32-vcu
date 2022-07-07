@@ -22,7 +22,7 @@ namespace utils
     void CalcSOC();
     void GetDigInputs(CanHardware*);
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
-    void SelectDirection(vehicles, BMW_E65Class);
+    void SelectDirection(Vehicle*);
     void displayThrottle();
 }
 
