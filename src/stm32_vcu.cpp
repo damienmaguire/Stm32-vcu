@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "stm32_vcu.h"
+extern "C" void __cxa_pure_virtual() { while (1); }
 
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
