@@ -27,7 +27,7 @@
 //Next param id (increase when adding new parameter!): 75
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
-    PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      5,      0,      5  ) \
+    PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      6,      0,      6  ) \
     PARAM_ENTRY(CAT_SETUP,     Inverter_CAN, CAN_DEV,  0,      1,      0,      70 ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle_CAN,  CAN_DEV,  0,      1,      1,      71 ) \
@@ -164,17 +164,18 @@
     VALUE_ENTRY(ChgT,          "M",     2068 ) \
     VALUE_ENTRY(HeatReq,       ONOFF,   2069 ) \
     VALUE_ENTRY(Test,          ONOFF,   2070 ) \
+    VALUE_ENTRY(Test2,          "dig",   2078 ) \
     VALUE_ENTRY(cpuload,       "%",     2063 ) \
 
 
-//Next value Id: 2077
+//Next value Id: 2078
 
 #define VERSTR STRINGIFY(4=VER)
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=Single, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
-#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander"
+#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander, 6=GS300H"
 #define PLTMODES     "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=Classic, 3=None , 5=BMW_E39 , 6=VAG"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
@@ -260,7 +261,8 @@ enum InvModes
     UserCAN = 2,
     OpenI = 3,
     Prius_Gen3 = 4,
-    Outlander = 5
+    Outlander = 5,
+    GS300H = 6
 };
 
 enum ChargeModes

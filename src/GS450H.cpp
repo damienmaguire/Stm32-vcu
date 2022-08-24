@@ -12,7 +12,7 @@
 
 
 static uint8_t htm_state = 0;
-static uint8_t inv_status = 1;//must be 1 for gs450h
+static uint8_t inv_status = 1;//must be 1 for gs450h and gs300h
 uint16_t counter;
 static uint16_t htm_checksum;
 static uint8_t frame_count;
@@ -23,10 +23,11 @@ static void dma_read(uint8_t *data, int size);
 static void dma_write(uint8_t *data, int size);
 
 //80 bytes out and 100 bytes back in (with offset of 8 bytes.
-static uint8_t mth_data[120];
+static uint8_t mth_data[140];
 static uint8_t htm_data_setup[100]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,128,0,0,0,128,0,0,0,37,1};
-static uint8_t htm_data[100]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0};
-
+static uint8_t htm_data[105]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0};
+static uint8_t htm_data_GS300H[105]={0,14,0,2,0,0,0,0,0,0,0,0,0,23,0,97,0,0,0,0,0,0,0,248,254,8,1,0,0,0,0,0,0,22,0,0,0,0,0,23,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,23,0,75,22,47,250,137,14,0,0,23,0,0,0,0,201,0,218,0,16,0,0,0,29,0,0,0,0,0,0
+};
 #if 0
 // Not currently used
 static uint8_t htm_data_setup_auris[100]= {0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x00, 0x00, 0x00, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5F, 0x01};
@@ -41,6 +42,16 @@ uint8_t htm_data_init[7][100]=
    {0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,25,60,246,52,8,0,0,0,0,0,0,138,0,0,0,168,0,0,0,2,0,0,0,75,5},
    {0,30,0,0,0,0,0,18,0,154,250,0,0,255,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,255,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,255,4,73,25,60,246,52,8,0,0,255,0,0,0,138,0,0,0,168,0,0,0,3,0,0,0,70,9},
    {0,30,0,2,0,0,0,18,0,154,250,0,0,16,0,97,0,0,0,0,0,0,200,249,56,6,165,0,136,0,63,0,16,0,0,0,63,0,16,0,3,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,16,0,75,12,45,248,21,6,0,0,16,0,0,0,202,0,211,0,16,0,0,0,134,16,0,0,130,10}
+};
+
+uint8_t  htm_data_Init_GS300H[6][105]=
+{
+     {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,0,0,0,0,136,0,0,0,160,0,0,0,0,0,0,0,0,95,1},
+     {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,0,0,0,0,136,0,0,0,160,0,0,0,0,0,0,0,0,95,1},
+     {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,97,4,0,0,0,0,0,0,173,255,82,0,0,0,0,0,0,0,22,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,4,75,25,212,254,210,15,0,0,0,0,0,0,0,137,0,0,0,168,0,0,0,1,0,0,0,0,220,6},
+     {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,97,4,0,0,0,0,0,0,173,255,82,0,0,0,0,0,0,0,22,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,4,75,25,212,254,210,15,0,0,0,0,0,0,0,137,0,0,0,168,0,0,0,1,0,0,0,0,220,6},
+     {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,4,75,25,212,254,190,15,0,0,0,0,0,0,0,137,0,0,0,168,0,0,0,2,0,0,0,0,203,4},
+     {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,4,75,25,212,254,190,15,0,0,0,0,0,0,0,137,0,0,0,168,0,0,0,2,0,0,0,0,203,4}
 };
 
 void GS450HClass::SetTorque(float torquePercent)
@@ -86,7 +97,7 @@ void GS450HClass::Task100Ms()
 
       Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
    }
-   setTimerState(true);
+  // setTimerState(true);
 
    uint16_t Lexus_Oil2 = utils::change(oil, 10, 80, 1875, 425); //map oil pump pwm to timer
    timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
@@ -102,6 +113,7 @@ void GS450HClass::Task100Ms()
 
 void GS450HClass::SetPrius()
 {
+    setTimerState(true);//start toyota timers
    if (htm_state<5)
    {
       htm_state = 5;
@@ -111,11 +123,24 @@ void GS450HClass::SetPrius()
 
 void GS450HClass::SetGS450H()
 {
+    setTimerState(true);//start toyota timers
    if (htm_state>4)
    {
       htm_state = 0;
       inv_status = 1;//must be 1 for gs450h
    }
+}
+
+void GS450HClass::SetGS300H()
+{
+    setTimerState(true);//start toyota timers
+   if (htm_state<10)
+   {
+      htm_state = 10;
+
+   }
+    inv_status = 0;//must be 0 for gs300h
+   for(int i=0; i<105; i++)htm_data[i] = htm_data_GS300H[i];
 }
 
 uint8_t GS450HClass::VerifyMTHChecksum(uint16_t len)
@@ -142,6 +167,7 @@ void GS450HClass::CalcHTMChecksum(uint16_t len)
    htm_data[len-1]=htm_checksum>>8;
 
 }
+
 
 void GS450HClass::Task1Ms()
 {
@@ -368,6 +394,129 @@ void GS450HClass::Task1Ms()
       CalcHTMChecksum(100);
 
       htm_state=5;
+      break;
+
+
+         /***** Code for Lexus GS300H */
+   case 10:
+      dma_read(mth_data,140);//read in mth data via dma. Probably need some kind of check dma complete flag here
+     // Param::SetInt(Param::Test2,mth_data[1]);
+      DigIo::req_out.Clear(); //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
+      htm_state++;
+      break;
+   case 11:
+      DigIo::req_out.Set();  //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
+
+      if(inv_status>6)
+      {
+         if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL7, DMA_TCIF))// if the transfer complete flag is set then send another packet
+         {
+            dma_clear_interrupt_flags(DMA1, DMA_CHANNEL7, DMA_TCIF);//clear the flag.
+            dma_write(htm_data,105); //HAL_UART_Transmit_IT(&huart2, htm_data, 80);
+         }
+      }
+      else
+      {
+         dma_write(&htm_data_Init_GS300H[ inv_status ][0],105); //HAL_UART_Transmit_IT(&huart2, htm_data_setup, 80);
+
+         inv_status++;
+         if(inv_status>5 && mth_data[1]==2)
+         {
+           // inv_status=0;
+         }
+      }
+      htm_state++;
+      break;
+   case 12:
+      htm_state++;
+      break;
+   case 13:
+      if(VerifyMTHChecksum(140)==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0)
+      {
+
+         statusInv=0;
+      }
+      else
+      {
+
+         //exchange data and prepare next HTM frame
+         dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
+         statusInv=1;
+         dc_bus_voltage=(((mth_data[117]|mth_data[118]<<8))/2);
+         temp_inv_water=0;//(mth_data[42]|mth_data[43]<<8);
+         temp_inv_inductor=(mth_data[86]|mth_data[87]<<8);
+         mg1_speed=mth_data[10]|mth_data[11]<<8;
+         mg2_speed=mth_data[43]|mth_data[44]<<8;
+      }
+
+     // mth_data[98]=0;
+     // mth_data[99]=0;
+
+      htm_state++;
+      break;
+   case 14:
+      Param::SetInt(Param::torque,mg2_torque);//post processed final torue value sent to inv to web interface
+
+      //speed feedback
+      speedSum=mg2_speed+mg1_speed;
+      speedSum/=113;
+      //Possibly not needed
+      //uint8_t speedSum2=speedSum;
+      //htm_data[0]=speedSum2;
+
+      //these bytes are used, and seem to be MG1 for startup, but can't work out the relatino to the
+      //bytes earlier in the stream, possibly the byte order has been flipped on these 2 bytes
+      //could be a software bug ?
+     // htm_data[76]=(mg1_torque*4) & 0xFF;
+     // htm_data[75]=((mg1_torque*4)>>8) & 0xFF;
+
+    //mg1
+    htm_data[5]=(mg1_torque*-1)&0xFF;  //negative is forward
+    htm_data[6]=((mg1_torque*-1)>>8);
+    htm_data[11]=htm_data[5];
+    htm_data[12]=htm_data[6];
+
+    //mg2
+    htm_data[31]=(mg2_torque)&0xFF; //positive is forward
+    htm_data[32]=((mg2_torque)>>8);
+    htm_data[37]=htm_data[26];
+    htm_data[38]=htm_data[27];
+/*
+      if(scaledTorqueTarget > 0)
+      {
+         //forward direction these bytes should match
+         htm_data[26]=htm_data[30];
+         htm_data[27]=htm_data[31];
+         htm_data[28]=(mg2_torque/2) & 0xFF; //positive is forward
+         htm_data[29]=((mg2_torque/2)>>8) & 0xFF;
+      }
+
+      if(scaledTorqueTarget < 0)
+      {
+         //reverse direction these bytes should match
+         htm_data[28]=htm_data[30];
+         htm_data[29]=htm_data[31];
+         htm_data[26]=(mg2_torque/2) & 0xFF; //positive is forward
+         htm_data[27]=((mg2_torque/2)>>8) & 0xFF;
+      }
+
+      //This data has moved!
+
+      htm_data[85]=(-5000)&0xFF;  // regen ability of battery
+      htm_data[86]=((-5000)>>8);
+
+      htm_data[87]=(-10000)&0xFF;  // discharge ability of battery
+      htm_data[88]=((-10000)>>8);
+
+      //checksum
+     if(++frame_count & 0x01)
+      {
+         htm_data[94]++;
+      }
+*/
+      CalcHTMChecksum(105);
+
+      htm_state=10;
       break;
    }
 }
