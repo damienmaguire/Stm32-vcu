@@ -10,7 +10,7 @@
 #define  HIGH_Gear  1
 #define  AUTO_Gear  2
 
-
+volatile int received = 0;
 static uint8_t htm_state = 0;
 static uint8_t inv_status = 1;//must be 1 for gs450h and gs300h
 uint16_t counter;
@@ -399,14 +399,13 @@ void GS450HClass::Task1Ms()
 
          /***** Code for Lexus GS300H */
    case 10:
-      dma_read(mth_data,140);//read in mth data via dma. Probably need some kind of check dma complete flag here
-     // Param::SetInt(Param::Test2,mth_data[1]);
+      if (Param::GetInt(Param::opmode) == MOD_OFF) inv_status = 0;
+      dma_read(mth_data,140);//read in mth data via dma.
       DigIo::req_out.Clear(); //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
       htm_state++;
       break;
    case 11:
       DigIo::req_out.Set();  //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
-
       if(inv_status>6)
       {
          if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL7, DMA_TCIF))// if the transfer complete flag is set then send another packet
@@ -420,10 +419,7 @@ void GS450HClass::Task1Ms()
          dma_write(&htm_data_Init_GS300H[ inv_status ][0],105); //HAL_UART_Transmit_IT(&huart2, htm_data_setup, 80);
 
          inv_status++;
-         if(inv_status>5 && mth_data[1]==2)
-         {
-           // inv_status=0;
-         }
+
       }
       htm_state++;
       break;
@@ -435,6 +431,7 @@ void GS450HClass::Task1Ms()
       {
 
          statusInv=0;
+         inv_status=0;
       }
       else
       {

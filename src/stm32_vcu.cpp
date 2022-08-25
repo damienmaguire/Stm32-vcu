@@ -549,6 +549,7 @@ static void Ms10Task(void)
       opmode = MOD_PRECHARGE;
       Param::SetInt(Param::opmode, opmode);
       oldTime=rtc_get_counter_val();
+      Param::SetInt(Param::Test2,oldTime);
    }
 
 
