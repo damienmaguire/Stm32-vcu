@@ -18,6 +18,7 @@ static uint16_t htm_checksum;
 static uint8_t frame_count;
 static int16_t mg1_torque, mg2_torque, speedSum;
 static bool statusInv=0;
+static uint16_t Lexus_Oil2=0;
 
 static void dma_read(uint8_t *data, int size);
 static void dma_write(uint8_t *data, int size);
@@ -98,8 +99,9 @@ void GS450HClass::Task100Ms()
       Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
    }
   // setTimerState(true);
-
-   uint16_t Lexus_Oil2 = utils::change(oil, 10, 80, 1875, 425); //map oil pump pwm to timer
+   if (Param::GetInt(Param::opmode) == MOD_OFF) Lexus_Oil2 =0;
+   if (Param::GetInt(Param::opmode) == MOD_RUN) Lexus_Oil2 = Param::GetInt(Param::OilPump);
+   Lexus_Oil2 = utils::change(Lexus_Oil2, 10, 80, 1875, 425); //map oil pump pwm to timer
    timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
 
    Param::SetInt(Param::Gear1,DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
@@ -195,8 +197,8 @@ void GS450HClass::Task1Ms()
       else
       {
          dma_write(htm_data_setup,80);   //HAL_UART_Transmit_IT(&huart2, htm_data_setup, 80);
-         if(mth_data[1]!=0)
-            inv_status--;
+         if(mth_data[1]!=0) inv_status--;
+         if(mth_data[1]==0) inv_status=1;
       }
       htm_state++;
       break;
