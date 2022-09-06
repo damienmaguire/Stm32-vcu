@@ -686,33 +686,6 @@ void Param::Change(Param::PARAM_NUM paramNum)
    case Param::Inverter:
       selectedInverter->DeInit();
         UpdateInv();
-        /*
-      switch (Param::GetInt(Param::Inverter))
-      {
-         case InvModes::Leaf_Gen1:
-            selectedInverter = &leafInv;
-            break;
-         case InvModes::GS450H:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetGS450H();
-            break;
-        case InvModes::GS300H:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetGS300H();
-            break;
-         case InvModes::Prius_Gen3:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetPrius();
-            break;
-         case InvModes::Outlander:
-            selectedInverter = &outlanderInv;
-            break;
-      //   default: //default to OpenI, does the least damage ;)
-         case InvModes::OpenI:
-            selectedInverter = &openInv;
-            break;
-      }
-      */
       SetCanFilters();
       break;
    case Param::Inverter_CAN:
@@ -987,8 +960,7 @@ extern "C" int main(void)
    s.AddTask(Ms200Task, 200);
 
 
-   // ISA::initialize();//only call this once if a new sensor is fitted. Might put an option on web interface to call this....
-   //  DigIo::prec_out.Set();//commence precharge
+   if(Param::GetInt(Param::ISA_INIT)==1) ISA::initialize();//only call this once if a new sensor is fitted.
    Param::SetInt(Param::version, 4); //backward compatibility
     UpdateInv();
    while(1)
