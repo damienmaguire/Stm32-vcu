@@ -16,8 +16,10 @@ static uint8_t inv_status = 1;//must be 1 for gs450h and gs300h
 uint16_t counter;
 static uint16_t htm_checksum;
 static uint8_t frame_count;
+static uint8_t GearSW;
 static int16_t mg1_torque, mg2_torque, speedSum;
 static bool statusInv=0;
+static bool TorqueCut=0;
 static uint16_t Lexus_Oil2=0;
 
 static void dma_read(uint8_t *data, int size);
@@ -57,29 +59,42 @@ uint8_t  htm_data_Init_GS300H[6][105]=
 
 void GS450HClass::SetTorque(float torquePercent)
 {
+   if(!TorqueCut)
+   {
    scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
    mg2_torque = this->scaledTorqueTarget;
 
    if (scaledTorqueTarget < 0) mg1_torque = 0;
    else mg1_torque=((mg2_torque*5)/4);
+   }
+   else
+   {
+       mg2_torque =0;
+       mg1_torque=0;
+   }
+
 }
 
 float GS450HClass::GetMotorTemperature()
 {
    int tmpmg1 = AnaIn::MG1_Temp.Get();//in the gs450h case we must read the analog temp values from sensors in the gearbox
    int tmpmg2 = AnaIn::MG2_Temp.Get();
+   Param::SetFloat(Param::MG1Raw,tmpmg1);//-0.01982833(x) +56.678789
+   Param::SetFloat(Param::MG2Raw,tmpmg2);
 
-   s32fp t1 = TempMeas::Lookup(tmpmg1, TempMeas::TEMP_TOYOTA);
-   s32fp t2 = TempMeas::Lookup(tmpmg2, TempMeas::TEMP_TOYOTA);
-   s32fp tmpm = MAX(t1, t2);//which ever is the hottest gets displayed
+   float t1 = (tmpmg1*(-0.02058758))+56.56512898;//Trying a best fit line approach.
+   float t2 = (tmpmg2*(-0.02058758))+56.56512898;;
+   float tmpm = MAX(t1, t2);//which ever is the hottest gets displayed
 
-   return FP_TOFLOAT(tmpm);
+   return float(tmpm);
+    // return 20;
 }
 
 // 100 ms code
 void GS450HClass::Task100Ms()
 {
    //Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update inverter status on web interface
+   gear=(Param::GetInt(Param::GEAR));
 
    if (gear == 1)
    {
@@ -87,16 +102,16 @@ void GS450HClass::Task100Ms()
       DigIo::SL1_out.Clear();
       DigIo::SL2_out.Clear();
 
-      Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
+    //  Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
    }
 
    if (gear == 0)
    {
       DigIo::SP_out.Clear();
-      DigIo::SL1_out.Clear();
-      DigIo::SL2_out.Clear();
+      DigIo::SL1_out.Set();
+      DigIo::SL2_out.Set();
 
-      Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
+    //  Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
    }
   // setTimerState(true);
    if (Param::GetInt(Param::opmode) == MOD_OFF) Lexus_Oil2 =0;
@@ -104,9 +119,12 @@ void GS450HClass::Task100Ms()
    Lexus_Oil2 = utils::change(Lexus_Oil2, 10, 80, 1875, 425); //map oil pump pwm to timer
    timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
 
-   Param::SetInt(Param::Gear1,DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
-   Param::SetInt(Param::Gear2,DigIo::gear2_in.Get());
-   Param::SetInt(Param::Gear3,DigIo::gear3_in.Get());
+   Param::SetInt(Param::Gear1,!DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
+   Param::SetInt(Param::Gear2,!DigIo::gear2_in.Get());
+   Param::SetInt(Param::Gear3,!DigIo::gear3_in.Get());
+   GearSW=((!DigIo::gear3_in.Get()<<2)|(!DigIo::gear2_in.Get()<<1)|(!DigIo::gear1_in.Get()));
+   if(GearSW==6) Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
+   if(GearSW==5) Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
