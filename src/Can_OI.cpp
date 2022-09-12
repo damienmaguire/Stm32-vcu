@@ -65,7 +65,7 @@ void Can_OI::SetTorque(float torquePercent)
    bytes[0]=final_torque_request & 0xFF;//throttle lsb
    bytes[1]=final_torque_request >> 8;//throttle msb
 
-   can->Send(0x64, (uint32_t*)bytes,2);//send 0x64 (100 decimal)
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x64, (uint32_t*)bytes,2);//send 0x64 (100 decimal)
 
    Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
 }
@@ -88,7 +88,7 @@ void Can_OI::Task100Ms()
    if(Param::GetBool(Param::din_start)) tempIO+=2;
    bytes[0] = tempIO;
 
-   can->Send(0x12C, (uint32_t*)bytes,1);//send 0x12C (300 decimal)
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x12C, (uint32_t*)bytes,1);//send 0x12C (300 decimal)
    run100ms = (run100ms + 1) & 3;
 }
 

@@ -192,7 +192,7 @@ void LeafINV::Task10Ms()
 
 
 
-   can->Send(0x11A, (uint32_t*)bytes,8);//send 0x11a
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x11A, (uint32_t*)bytes,8);//send 0x11a
    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    //Send target motor torque signal
    ////////////////////////////////////////////////////
@@ -339,7 +339,7 @@ void LeafINV::Task10Ms()
    // Extra CRC
    nissan_crc(bytes, 0x85);
 
-   can->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //We need to send 0x1db here with voltage measured by inverter
 //Zero seems to work also on my gen1
@@ -371,7 +371,7 @@ void LeafINV::Task10Ms()
    counter_1db++;
    if(counter_1db >= 4) counter_1db = 0;
 
-   can->Send(0x1DB, (uint32_t*)bytes,8);
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DB, (uint32_t*)bytes,8);
 //////////////////////////////////////////////////////////////////////////////////////////
    // Statistics from 2016 capture:
    //     10 00000000000000
@@ -390,7 +390,7 @@ void LeafINV::Task10Ms()
    bytes[5]=0x00;
    bytes[6]=0x00;
 
-   can->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
 
 
    if (opmode == MOD_CHARGE)
@@ -415,7 +415,7 @@ void LeafINV::Task10Ms()
       counter_1dc++;
       if(counter_1dc >= 4) counter_1dc = 0;
 
-      can->Send(0x1DC, (uint32_t*)bytes,8);
+      Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DC, (uint32_t*)bytes,8);
 ////////////////////////////////////////////////////////////////////////////////////////////////
       OBCpwrSP=(Param::GetInt(Param::Pwrspnt)/100)+0x64;//grab setpoint power from webui and convert to pdm format
       Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
@@ -455,13 +455,14 @@ void LeafINV::Task10Ms()
       counter_1f2++;
       if(counter_1f2 >= 4) counter_1f2 = 0;
 
-      can->Send(0x1F2, (uint32_t*)bytes,8);
+      Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1F2, (uint32_t*)bytes,8);
    }
 
 }
 
 void LeafINV::Task100Ms()
 {
+
    //MSGS for charging with pdm
    uint8_t bytes[8];
 
@@ -478,7 +479,7 @@ void LeafINV::Task100Ms()
    counter_55b++;
    if(counter_55b >= 4) counter_55b = 0;
 
-   can->Send(0x55b, (uint32_t*)bytes,8);
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x55b, (uint32_t*)bytes,8);
 
    bytes[0]=0x00;//Static msg works fine here
    bytes[1]=0x00;//Batt capacity for chg and qc.
@@ -489,7 +490,7 @@ void LeafINV::Task100Ms()
    bytes[6]=0x00;
    bytes[7]=0x00;
 
-   can->Send(0x59e, (uint32_t*)bytes,8);
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x59e, (uint32_t*)bytes,8);
 
    //muxed msg with info for gids etc. Will try static for a test.
    bytes[0]=0x3D;//Static msg works fine here
@@ -501,9 +502,10 @@ void LeafINV::Task100Ms()
    bytes[6]=0x00;
    bytes[7]=0x32;
 
-   can->Send(0x5bc, (uint32_t*)bytes,8);
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x5bc, (uint32_t*)bytes,8);
 
    run100ms = (run100ms + 1) & 3;
+
 }
 
 

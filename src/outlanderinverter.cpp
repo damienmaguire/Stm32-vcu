@@ -61,7 +61,7 @@ void OutlanderInverter::Task10Ms()
       data[0] = final_torque_request << 16;
       data[1] = 0;
 
-      can->Send(0x287, data, 8);
+      Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x287, data, 8);
    }
 }
 
@@ -81,5 +81,5 @@ void OutlanderInverter::Task100Ms()
    data[0] = 0x3D000000;
    data[1] = 0x00210000;
 
-   can->Send(0x286, data, 8);
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x286, data, 8);
 }

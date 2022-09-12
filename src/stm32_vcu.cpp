@@ -324,7 +324,7 @@ static void Ms200Task(void)
 
 static void Ms100Task(void)
 {
-   DigIo::led_out.Toggle();
+    DigIo::led_out.Toggle();
    iwdg_reset();
    float cpuLoad = scheduler->GetCpuLoad() / 10.0f;
    Param::SetFloat(Param::cpuload, cpuLoad);
@@ -963,6 +963,7 @@ extern "C" int main(void)
    if(Param::GetInt(Param::ISA_INIT)==1) ISA::initialize();//only call this once if a new sensor is fitted.
    Param::SetInt(Param::version, 4); //backward compatibility
     UpdateInv();
+
    while(1)
       t.Run();
 
