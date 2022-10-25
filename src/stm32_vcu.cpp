@@ -502,6 +502,8 @@ static void Ms10Task(void)
       //Messages required for E39
       Can_E39::Msg316(speed);//send rpm to e39 dash
       Can_E39::Msg329(tempGauge);//send heatsink temp to E39 dash temp gauge
+      Can_E39::Msg43B();
+      Can_E39::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
       Can_E39::Msg545();
    }
    else if (targetVehicle == BMW_E46)
@@ -671,9 +673,6 @@ static void Ms10Task(void)
 
 static void Ms1Task(void)
 {
-   //gpio_toggle(GPIOB,GPIO12);
-   // Send direction from this context.
-   // Torque updated in 10ms loop.
    selectedInverter->Task1Ms();
 }
 

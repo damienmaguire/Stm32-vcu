@@ -160,6 +160,66 @@ void Can_E39::Msg329(uint16_t tempValue)   //DME2
    Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x329, (uint32_t*)bytes,8);
 }
 
+void Can_E39::Msg43B()  //EGS1
+{
+
+   uint8_t bytes[3];
+
+   bytes[0]=0x46;
+   bytes[1]=0x00;
+   bytes[2]=0x00;
+
+   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x43B, (uint32_t*)bytes,3);
+}
+
+void Can_E39::Msg43F(int8_t gear)  //EGS2
+{
+
+   uint8_t bytes[8];
+
+   bytes[0]=0x81;
+            //byte 1 = 0x01 where;
+            //01 = first gear
+            //02= second gear
+            //03 = third gear
+            //04 = fourth gear
+            //05 = D
+            //06 = N
+            //07 = R
+            //08 = P
+            //09 = 5
+            //0A = 6
+   switch (gear)
+   {
+   case -1 /* Reverse */:
+      bytes[1] = 0x07;
+      break;
+   case 0 /* Neutral */:
+      bytes[1] = 0x06;
+      break;
+   case 1 /* Drive */:
+      bytes[1] = 0x05;
+      break;
+   default:
+      bytes[1] = 0x08;
+      break;
+   }
+
+            //byte 2 = 0xFF where;
+            //FF = no display
+            //00 = E
+            //39 = M
+            //40 = S
+   bytes[2]=0xFF;
+   bytes[3]=0xFF;
+   bytes[4]=0x00;
+   bytes[5]=0x80;//80 = clears the gear warning picture - all other values bring it on
+   bytes[6]=0xFF;
+   bytes[7]=0x00;
+
+   Can::GetInterface(Param::GetInt(Param::veh_can))->Send(0x43F, (uint32_t*)bytes,8);
+}
+
 void Can_E39::Msg545()  //DME4
 {
    // int z = 0x60; // + y;  higher value lower MPG

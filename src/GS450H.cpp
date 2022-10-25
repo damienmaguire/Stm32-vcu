@@ -21,6 +21,7 @@ static int16_t mg1_torque, mg2_torque, speedSum;
 static bool statusInv=0;
 static bool TorqueCut=0;
 static uint16_t Lexus_Oil2=0;
+static uint8_t speedSum2;
 
 static void dma_read(uint8_t *data, int size);
 static void dma_write(uint8_t *data, int size);
@@ -87,7 +88,7 @@ float GS450HClass::GetMotorTemperature()
    float tmpm = MAX(t1, t2);//which ever is the hottest gets displayed
 
    return float(tmpm);
-    // return 20;
+
 }
 
 // 100 ms code
@@ -102,7 +103,7 @@ void GS450HClass::Task100Ms()
       DigIo::SL1_out.Clear();
       DigIo::SL2_out.Clear();
 
-    //  Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
+
    }
 
    if (gear == 0)
@@ -111,10 +112,19 @@ void GS450HClass::Task100Ms()
       DigIo::SL1_out.Set();
       DigIo::SL2_out.Set();
 
-    //  Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
+
    }
-  // setTimerState(true);
-   if (Param::GetInt(Param::opmode) == MOD_OFF) Lexus_Oil2 =0;
+
+   if (Param::GetInt(Param::opmode) == MOD_OFF)
+   {
+       setTimerState(false);
+       Lexus_Oil2 =0;
+   }
+   else
+   {
+       setTimerState(true);
+   }
+        Lexus_Oil2 =0;
    if (Param::GetInt(Param::opmode) == MOD_RUN) Lexus_Oil2 = Param::GetInt(Param::OilPump);
    Lexus_Oil2 = utils::change(Lexus_Oil2, 10, 80, 1875, 425); //map oil pump pwm to timer
    timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
@@ -191,7 +201,6 @@ void GS450HClass::CalcHTMChecksum(uint16_t len)
 
 void GS450HClass::Task1Ms()
 {
-   uint8_t speedSum2;
 
    switch(htm_state)
    {

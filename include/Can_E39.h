@@ -15,6 +15,8 @@ public:
     static void DecodeCAN(int id, uint32_t data[2]);
     static void Msg316(uint16_t outRPM);
     static void Msg329(uint16_t tempValue);
+    static void Msg43B();//EGS message for Automatic
+    static void Msg43F(int8_t gear);//EGS message for Automatic
     static void Msg545();
 
 private:
