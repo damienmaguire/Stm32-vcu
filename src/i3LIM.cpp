@@ -809,6 +809,10 @@ void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
    if(CCS_Ilim==0x1)CCSI_Spnt--;//decrement if current limit flag is set
    if(CCS_Plim==0x1)CCSI_Spnt--;//decrement if Power limit flag is set
 
+   // force once more that we stay within our maximum bounds
+   if(CCSI_Spnt>=Tmp_ICCS_Avail)CCSI_Spnt=Tmp_ICCS_Avail; //never exceed available current
+   if(CCSI_Spnt>Tmp_ICCS_Lim)CCSI_Spnt=Tmp_ICCS_Lim; //clamp setpoint to current lim paramater.
+
    Param::SetInt(Param::CCS_Ireq,CCSI_Spnt);
 }
 
