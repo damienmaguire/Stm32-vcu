@@ -24,7 +24,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 75
+//Next param id (increase when adding new parameter!): 80
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      5,      0,      5  ) \
@@ -34,6 +34,12 @@
     PARAM_ENTRY(CAT_SETUP,     Shunt_CAN,    CAN_DEV,  0,      1,      0,      72 ) \
     PARAM_ENTRY(CAT_SETUP,     LIM_CAN,      CAN_DEV,  0,      1,      0,      73 ) \
     PARAM_ENTRY(CAT_SETUP,     Charger_CAN,  CAN_DEV,  0,      1,      1,      74 ) \
+    PARAM_ENTRY(CAT_SETUP,     gp_out1_role, GPOUT_ROLES, 0,   9,      1,      75 ) \
+    PARAM_ENTRY(CAT_SETUP,     gp_out2_role, GPOUT_ROLES, 0,   9,      2,      76 ) \
+    PARAM_ENTRY(CAT_SETUP,     gp_out3_role, GPOUT_ROLES, 0,   9,      3,      77 ) \
+    PARAM_ENTRY(CAT_SETUP,     inv_out_role, GPOUT_ROLES, 0,   9,      4,      78 ) \
+    PARAM_ENTRY(CAT_SETUP,     prec_out_role,GPOUT_ROLES, 0,   9,      5,      78 ) \
+    PARAM_ENTRY(CAT_SETUP,     dcsw_out_role,GPOUT_ROLES, 0,   9,      6,      79 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -198,6 +204,7 @@
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=Leaf_PDM"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
+#define GPOUT_ROLES  "0=Disabled, 1=CoolantPump, 2=NegativeContactor, 3=Chademo, 4=Inverter, 5=Precharge, 6=MainContactor, 7=Heater, 8=Reverse, 9=ACRelay"
 #define CAT_THROTTLE "Throttle"
 #define CAT_POWER    "Power Limit"
 #define CAT_CONTACT  "Contactor Control"
@@ -353,6 +360,19 @@ enum can_devices
     CAN_DEV2 = 1
 };
 
+enum gpout_roles
+{
+    DISABLED = 0,
+    COOLANT_PUMP = 1,
+    NEG_CON = 2,
+    CHADEMO = 3,
+    INVERTER = 4,
+    PRECHARGE = 5,
+    MAIN_CON = 6,
+    HEATER = 7,
+    REVERSE = 8,
+    AC_RELAY = 9,
+};
 
 
 extern const char* errorListString;

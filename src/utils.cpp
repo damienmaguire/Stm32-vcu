@@ -157,6 +157,12 @@ void SelectDirection(Vehicle* vehicle)
          selectedDir = 0;
    }
 
+   if (selectedDir == -1) {
+     GPSet(gpout_roles::REVERSE); // Turn on reverse lights
+   } else {
+     GPClear(gpout_roles::REVERSE); // Turn off reverse lights
+   }
+
    Param::SetInt(Param::dir, selectedDir);
 }
 
@@ -198,8 +204,8 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
    {
       if (ABS(motorSpeed) < 50) //If motor is stationary, over voltage comes from outside
       {
-         DigIo::dcsw_out.Clear();  //In this case, open DC switch
-         DigIo::prec_out.Clear();  //and
+         GPClear(gpout_roles::MAIN_CON); //In this case, open DC switch
+         GPClear(gpout_roles::PRECHARGE); //and
 
       }
 
@@ -209,9 +215,9 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
 
    if(opmode == MOD_PRECHARGE)
    {
-      if (udc < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
+      if (udc < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && utils::GPGet(gpout_roles::PRECHARGE))
       {
-         DigIo::prec_out.Clear();
+         GPClear(gpout_roles::PRECHARGE);
          ErrorMessage::Post(ERR_PRECHARGE);
          Param::SetInt(Param::opmode, MOD_PCHFAIL);
       }
@@ -271,6 +277,92 @@ void CalcSOC()
 
    if(SOCVal > 100) SOCVal = 100;
    Param::SetFloat(Param::SOC,SOCVal);
+}
+
+void GPSet(int role)
+{
+   if (Param::GetInt(Param::gp_out1_role) == role)
+   {
+      DigIo::gp_out1.Set();
+   }
+   if (Param::GetInt(Param::gp_out2_role) == role)
+   {
+      DigIo::gp_out2.Set();
+   }
+   if (Param::GetInt(Param::gp_out3_role) == role)
+   {
+      DigIo::gp_out3.Set();
+   }
+   if (Param::GetInt(Param::inv_out_role) == role)
+   {
+      DigIo::inv_out.Set();
+   }
+   if (Param::GetInt(Param::prec_out_role) == role)
+   {
+      DigIo::prec_out.Set();
+   }
+   if (Param::GetInt(Param::dcsw_out_role) == role)
+   {
+      DigIo::dcsw_out.Set();
+   }
+}
+
+void GPClear(int role)
+{
+   if (Param::GetInt(Param::gp_out1_role) == role)
+   {
+      DigIo::gp_out1.Clear();
+   }
+   if (Param::GetInt(Param::gp_out2_role) == role)
+   {
+      DigIo::gp_out2.Clear();
+   }
+   if (Param::GetInt(Param::gp_out3_role) == role)
+   {
+      DigIo::gp_out3.Clear();
+   }
+   if (Param::GetInt(Param::inv_out_role) == role)
+   {
+      DigIo::inv_out.Clear();
+   }
+   if (Param::GetInt(Param::prec_out_role) == role)
+   {
+      DigIo::prec_out.Clear();
+   }
+   if (Param::GetInt(Param::dcsw_out_role) == role)
+   {
+      DigIo::dcsw_out.Clear();
+   }
+}
+
+bool GPGet(int role)
+{
+   bool ret = false;
+   if (Param::GetInt(Param::gp_out1_role) == role)
+   {
+      ret |= DigIo::gp_out1.Get();
+   }
+   if (Param::GetInt(Param::gp_out2_role) == role)
+   {
+      ret |= DigIo::gp_out2.Get();
+   }
+   if (Param::GetInt(Param::gp_out3_role) == role)
+   {
+      ret |= DigIo::gp_out3.Get();
+   }
+   if (Param::GetInt(Param::inv_out_role) == role)
+   {
+      ret |= DigIo::inv_out.Get();
+   }
+   if (Param::GetInt(Param::prec_out_role) == role)
+   {
+      ret |= DigIo::prec_out.Get();
+   }
+   if (Param::GetInt(Param::dcsw_out_role) == role)
+   {
+      ret |= DigIo::dcsw_out.Get();
+   }
+   return ret;
 }
 
 } // namespace utils

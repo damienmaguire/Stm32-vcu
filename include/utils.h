@@ -24,6 +24,9 @@ namespace utils
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
     void SelectDirection(Vehicle*);
     void displayThrottle();
+    void GPSet(int role);
+    void GPClear(int role);
+    bool GPGet(int role);
 }
 
 #endif

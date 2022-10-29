@@ -76,7 +76,7 @@ static void RunChaDeMo()
    if ((rtc_get_counter_val() - chademoStartTime) > 100 && (rtc_get_counter_val() - chademoStartTime) < 150)
    {
       ChaDeMo::SetEnabled(true);
-      DigIo::gp_out3.Set();
+      utils::GPSet(gpout_roles::CHADEMO);
    }
 
    if (Param::GetInt(Param::opmode) == MOD_CHARGE && ChaDeMo::ConnectorLocked())
@@ -109,7 +109,7 @@ static void RunChaDeMo()
    if (Param::GetInt(Param::CCS_ILim) == 0)
    {
       ChaDeMo::SetEnabled(false);
-      DigIo::gp_out3.Clear();//Chademo charge allow off
+      utils::GPClear(gpout_roles::CHADEMO); //Chademo charge allow off
       chargeMode = false;
    }
 
@@ -173,8 +173,8 @@ static void Ms200Task(void)
 
    if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2/3 PDM charger/DCDC/Chademo
    {
-      if (opmode == MOD_CHARGE || opmode == MOD_RUN)  DigIo::inv_out.Set();//inverter and PDM power on if using pdm and in chg mode or in run mode
-      if (opmode == MOD_OFF)  DigIo::inv_out.Clear();//inverter and pdm off in off mode. Duh!
+      if (opmode == MOD_CHARGE || opmode == MOD_RUN) utils::GPSet(gpout_roles::INVERTER); //inverter and PDM power on if using pdm and in chg mode or in run mode
+      if (opmode == MOD_OFF) utils::GPClear(gpout_roles::INVERTER); //inverter and pdm off in off mode. Duh!
 
       if(opmode != MOD_RUN)                   //only run charge logic if not in run mode.
       {
@@ -250,8 +250,8 @@ static void Ms200Task(void)
 
 
 
-   // if(opmode==MOD_CHARGE) DigIo::gp_out3.Set();//Chademo relay on for testing
-   // if(opmode!=MOD_CHARGE) DigIo::gp_out3.Clear();//Chademo relay off for testing
+   // if(opmode==MOD_CHARGE) utils::GPSet(gpout_roles::CHADEMO);//Chademo relay on for testing
+   // if(opmode!=MOD_CHARGE) utils::GPClear(gpout_roles::CHADEMO);//Chademo relay off for testing
 
    count_one++;
    if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
@@ -352,7 +352,7 @@ static void Ms100Task(void)
       {
          chargeModeDC = false;   //DC charge mode
          Param::SetInt(Param::chgtyp,0);
-         DigIo::gp_out3.Clear();//Chademo charge allow off
+         utils::GPClear(gpout_roles::CHADEMO); //Chademo charge allow off
          ChaDeMo::SetEnabled(false);
          chademoStartTime = 0;
       }
@@ -443,11 +443,11 @@ static void Ms10Task(void)
       if(chargeMode==false)
       {
          //activate inv during precharge if not oi.
-         if(targetInverter != InvModes::OpenI) DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
+         if(targetInverter != InvModes::OpenI) utils::GPSet(gpout_roles::INVERTER); //inverter power on but not if we are in charge mode!
       }
-      DigIo::gp_out2.Set();//Negative contactors on
-      DigIo::gp_out1.Set();//Coolant pump on
-      DigIo::prec_out.Set();//commence precharge
+      utils::GPSet(gpout_roles::NEG_CON); //Negative contactors on
+      utils::GPSet(gpout_roles::COOLANT_PUMP); //Coolant pump on
+      utils::GPSet(gpout_roles::PRECHARGE); //commence precharge
       opmode = MOD_PRECHARGE;
       Param::SetInt(Param::opmode, opmode);
       oldTime=rtc_get_counter_val();
@@ -485,7 +485,7 @@ static void Ms10Task(void)
 
    if(opmode == MOD_RUN) //only shut off via ign command if not in charge mode
    {
-      if(targetInverter == InvModes::OpenI) DigIo::inv_out.Set();//inverter power on in run only if openi.
+      if(targetInverter == InvModes::OpenI) utils::GPSet(gpout_roles::INVERTER); //inverter power on in run only if openi.
 
       //switch to off mode via igntition digital input.
       if(!Param::GetBool(Param::T15Stat)) opmode = MOD_OFF;
@@ -495,18 +495,18 @@ static void Ms10Task(void)
 
    if (newMode != MOD_OFF)
    {
-      DigIo::dcsw_out.Set();
+      utils::GPSet(gpout_roles::MAIN_CON);
       Param::SetInt(Param::opmode, newMode);
       ErrorMessage::UnpostAll();
    }
 
    if (opmode == MOD_OFF)
    {
-      DigIo::inv_out.Clear();//inverter power off
-      DigIo::dcsw_out.Clear();
-      DigIo::gp_out2.Clear();//Negative contactors off
-      DigIo::gp_out1.Clear();//Coolant pump off
-      DigIo::prec_out.Clear();
+      utils::GPClear(gpout_roles::INVERTER); //inverter power off
+      utils::GPClear(gpout_roles::MAIN_CON);
+      utils::GPClear(gpout_roles::NEG_CON); //Negative contactors off
+      utils::GPClear(gpout_roles::COOLANT_PUMP); //Coolant pump off
+      utils::GPClear(gpout_roles::PRECHARGE);
       Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown
       Param::SetInt(Param::opmode, newMode);
       selectedVehicle->DashOff();
@@ -515,8 +515,8 @@ static void Ms10Task(void)
    //Cabin heat control
    if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN))//If we have selected an ampera heater are in run mode and heater not diabled...
    {
-      //TODO: multiplex with chademo
-      //DigIo::gp_out3.Set();//Heater enable and coolant pump on
+      utils::GPSet(gpout_roles::HEATER);//Heater enable and coolant pump on
+      utils::GPSet(gpout_roles::COOLANT_PUMP);
 
       if(Ampera_Not_Awake)
       {
@@ -530,8 +530,8 @@ static void Ms10Task(void)
 
    if(CabHeater_ctrl==0 || opmode!=MOD_RUN)
    {
-      //TODO: multiplex with chademo
-      //DigIo::gp_out3.Clear();//Heater enable and coolant pump off
+      utils::GPClear(gpout_roles::HEATER); //Heater enable and coolant pump off
+      utils::GPClear(gpout_roles::COOLANT_PUMP);
       Ampera_Not_Awake=true;
    }
 }
@@ -790,7 +790,7 @@ extern "C" int main(void)
    spi2_setup();
    spi3_setup();
    Param::Change(Param::PARAM_LAST);
-   DigIo::inv_out.Clear();//inverter power off during bootup
+   utils::GPClear(gpout_roles::INVERTER); //inverter power off during bootup
    DigIo::mcp_sby.Clear();//enable can3
 
    Terminal t(USART3, TermCmds);
@@ -820,7 +820,7 @@ extern "C" int main(void)
    s.AddTask(Ms200Task, 200);
 
    // ISA::initialize();//only call this once if a new sensor is fitted. Might put an option on web interface to call this....
-   //  DigIo::prec_out.Set();//commence precharge
+   //  utils::GPClear(gpout_roles::PRECHARGE);//commence precharge
    Param::SetInt(Param::version, 4); //backward compatibility
 
    while(1)
