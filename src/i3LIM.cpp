@@ -407,6 +407,10 @@ void i3LIMClass::Send100msMessages(CanHardware* can)
 
    uint16_t Wh_Local=Param::GetInt(Param::BattCap);
    CHG_Pwr=(CHG_Pwr & 0xFFF);
+   // one more check that we never ever request more A than available
+   FC_Cur = std::min<int16_t>(FC_Cur, Param::GetInt(Param::CCS_I_Avail));
+   FC_Cur = std::min<int16_t>(FC_Cur, Param::GetInt(Param::CCS_ILim));
+
    bytes[0] = Wh_Local & 0xFF;  //Battery Wh lowbyte
    bytes[1] = Wh_Local >> 8;  //BAttery Wh high byte
    bytes[2] = (((uint8_t)CHG_Status<<4)|((uint8_t)CHG_Req));  //charge status in bits 4-7.goes to 1 then 2.8 secs later to 2. Plug locking???. Charge request in lower nibble. 1 when charging. 0 when not charging.
