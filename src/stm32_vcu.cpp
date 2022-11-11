@@ -279,8 +279,8 @@ static void Ms200Task(void)
 
       if(!RunChg) chargeMode = false;
 
-      if(RunChg) DigIo::SP_out.Set();//enable charger digital line. using sp out from gs450h as not used when in charge
-      if(!RunChg) DigIo::SP_out.Clear();//disable charger digital line when requested by timer or webui.
+      if(RunChg) DigIo::PWM3.Set();//enable charger digital line.
+      if(!RunChg) DigIo::PWM3.Clear();//disable charger digital line when requested by timer or webui.
 
    }
 
@@ -335,6 +335,15 @@ static void Ms100Task(void)
    utils::CalcSOC();
 
    selectedInverter->Task100Ms();
+
+    if(opmode==MOD_RUN)
+    {
+       DigIo::PWM2.Set();//Enable run mode digital line to high.
+    }
+     else
+     {
+        DigIo::PWM2.Clear();
+     }
 
    if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
    {
@@ -934,6 +943,7 @@ extern "C" int main(void)
    Param::Change(Param::PARAM_LAST);
    DigIo::inv_out.Clear();//inverter power off during bootup
    DigIo::mcp_sby.Clear();//enable can3
+  // DigIo::PWM3.Set();//Enable pcs for test
 
    Terminal t(USART3, TermCmds);
    Can c(CAN1, (Can::baudrates)Param::GetInt(Param::canspeed));
