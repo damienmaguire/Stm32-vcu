@@ -700,7 +700,7 @@ i3LIMChargingState i3LIMClass::Control_Charge(bool RunCh)
             CHG_Pwr=44000/25;//49kw approx power
             //we chill out here charging.
 
-            if((!RunCh)||CCS_IntStat==0x02)//if we have a request to terminate from the web ui or the evse then move to next state.
+            if((!RunCh)||CCS_IntStat==0x02||CCS_IntStat==0x0f)//if we have a request to terminate from the web ui or the evse then move to next state.
             {
                FC_Cur=0;//set current to 0
                lim_state++; //move to state 7 (shutdown)
