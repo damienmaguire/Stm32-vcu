@@ -40,6 +40,7 @@
     PARAM_ENTRY(CAT_THROTTLE,  pot2max,     "dig",     0,      4095,   4095,   10 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regentravel, "%",       0,      100,    30,     60  ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenmax,    "%",       -100,   0,     -30,     61  ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    100,    68  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmode,     POTMODES,  0,      1,      0,      11 ) \
     PARAM_ENTRY(CAT_THROTTLE,  dirmode,     DIRMODES,  0,      4,      1,      12 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramp,   "%/10ms",  0.1,    100,    100,    13 ) \
@@ -174,7 +175,7 @@
 
 #define VERSTR STRINGIFY(4=VER)
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
-#define POTMODES     "0=Single, 1=DualChannel"
+#define POTMODES     "0=SingleChannel, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander, 6=GS300H"
@@ -311,7 +312,7 @@ enum vehicles
 
 enum _potmodes
 {
-    POTMODE_REGENADJ = 0,
+    POTMODE_SINGLECHANNEL = 0,
     POTMODE_DUALCHANNEL,
 };
 
