@@ -52,10 +52,19 @@ static void TestThrottleUnderTemperateNoDeRate() {
    ASSERT(Throttle::TemperatureDerate(temp, tempMax, finalSpnt) == false && finalSpnt == 100);
 }
 
+static void TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit() {
+   float temp = 61;
+   float tempMax = 60;
+   float finalSpnt = 49;
+   ASSERT(Throttle::TemperatureDerate(temp, tempMax, finalSpnt) && finalSpnt == 49);
+}
+
+
 void ThrottleTest::RunTest()
 {
    TestSetup();
    TestThrottleTemperateOverMaxThrottleTo0();
    TestThrottleTemperateInDerateZoneThrottleTo50Percent();
    TestThrottleUnderTemperateNoDeRate();
+   TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit();
 }
