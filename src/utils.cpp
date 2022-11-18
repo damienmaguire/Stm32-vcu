@@ -46,42 +46,78 @@ void GetDigInputs(Can* can)
    Param::SetInt(Param::din_12Vgp, DigIo::gp_12Vin.Get());
 }
 
+/**
+ * @brief Read Throttle inputs, perform sanity checks and return throttle command
+ * 
+ * @return float Throttle percentage in the range of [-100.0, 100.0]
+ */
 float GetUserThrottleCommand()
 {
-   int potval, pot2val;
    bool brake = Param::GetBool(Param::din_brake);
    int potmode = Param::GetInt(Param::potmode);
+   int direction = Param::GetInt(Param::dir);
 
-   potval = AnaIn::throttle1.Get();
-   pot2val = AnaIn::throttle2.Get();
+   int potval = AnaIn::throttle1.Get();
+   int pot2val = AnaIn::throttle2.Get();
    Param::SetInt(Param::pot, potval);
    Param::SetInt(Param::pot2, pot2val);
 
+   bool inRange1 = Throttle::CheckAndLimitRange(&potval, 0);
+   bool inRange2 = Throttle::CheckAndLimitRange(&pot2val, 1);
 
-   /* Error light on implausible value */
-   if (!Throttle::CheckAndLimitRange(&potval, 0))
+   // check the throttle values for plausibility
+   if (potmode == POTMODE_SINGLECHANNEL) 
    {
-//        DigIo::err_out.Set();
-      utils::PostErrorIfRunning(ERR_THROTTLE1);
-      return 0;
-   }
-
-   bool throt2Res = Throttle::CheckAndLimitRange(&pot2val, 1);
-
-   if (potmode == POTMODE_DUALCHANNEL)
-   {
-      if (!Throttle::CheckDualThrottle(&potval, pot2val) || !throt2Res)
+      if(!inRange1)
       {
-//            DigIo::err_out.Set();
+         //DigIo::err_out.Set();
          utils::PostErrorIfRunning(ERR_THROTTLE1);
          Param::SetInt(Param::potnom, 0);
-         return 0;
+         return 0.0;
       }
-      pot2val = Throttle::potmax[1]; //make sure we don't attenuate regen
-   }
+   } 
+   else if(potmode == POTMODE_DUALCHANNEL)
+   {
+      if(!Throttle::CheckDualThrottle(&potval, pot2val))
+      {
+         // when there's something wrong with the dual throttle values,
+         // we try to make the best of it and use the valid one
+         if(inRange1 && !inRange2)
+         {
+            utils::PostErrorIfRunning(ERR_THROTTLE2);
 
-   if (Param::GetInt(Param::dir) == 0)
-      return 0;
+            pot2val = potval;
+         }
+         else if(!inRange1 && inRange2)
+         {
+            utils::PostErrorIfRunning(ERR_THROTTLE1);
+
+            potval = pot2val;
+         }
+         else
+         {
+            utils::PostErrorIfRunning(ERR_THROTTLE1);
+            utils::PostErrorIfRunning(ERR_THROTTLE2);
+            Param::SetInt(Param::potnom, 0);
+
+            return 0.0;
+         }
+      }
+      else // (yet) unknown throttle mode
+      {
+         utils::PostErrorIfRunning(ERR_THROTTLE1);
+         utils::PostErrorIfRunning(ERR_THROTTLE2);
+         Param::SetInt(Param::potnom, 0);
+
+         return 0.0;
+      }
+
+   // don't return a throttle value if we are in neutral
+   // TODO: the direction for FORWARD/NEUTRAL/REVERSE needs an enum in param_prj.h as well
+   if (direction == 0)
+   {
+      return 0.0;
+   }
 
    return Throttle::CalcThrottle(potval, pot2val, brake);
 }
