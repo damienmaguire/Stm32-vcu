@@ -48,14 +48,14 @@ void GetDigInputs(Can* can)
 
 /**
  * @brief Read Throttle inputs, perform sanity checks and return throttle command
- * 
+ *
  * This function can throw the following error messages:
  *  - ERR_THROTTLE1: Throttle input value Channel 1 out of range
  *  - ERR_THROTTLE2: Throttle input value Channel 2 out of range
  *  - ERR_THROTTLE12: Throttle input value Channel 1 and 2 out of range
  *  - ERR_THROTTLE12DIFF: Throttle input difference between 1 and 2 out of range
  *  - ERR_THROTTLEMODE: Illegal Throttle Mode used
- * 
+ *
  * @return float Throttle percentage in the range of [-100.0, 100.0]
  */
 float GetUserThrottleCommand()
@@ -74,7 +74,7 @@ float GetUserThrottleCommand()
    int useChannel = 0; // default case: use Throttle 1
 
    // check the throttle values for plausibility
-   if (potmode == POTMODE_SINGLECHANNEL) 
+   if (potmode == POTMODE_SINGLECHANNEL)
    {
       if(!inRange1)
       {
@@ -83,9 +83,9 @@ float GetUserThrottleCommand()
          Param::SetInt(Param::potnom, 0);
          return 0.0;
       }
-      
+
       useChannel = 0;
-   } 
+   }
    else if(potmode == POTMODE_DUALCHANNEL)
    {
       // when there's something wrong with the dual throttle values,
@@ -96,31 +96,31 @@ float GetUserThrottleCommand()
          // if the "limp mode" is activated.
          float pot1nomTmp = Throttle::NormalizeThrottle(pot1val, 0);
          float pot2nomTmp = Throttle::NormalizeThrottle(pot2val, 1);
-         
+
          if(ABS(pot2nomTmp - pot1nomTmp) > 10.0f)
          {
             utils::PostErrorIfRunning(ERR_THROTTLE12DIFF);
-            
+
             // simple implementation of a limp mode: select the lower of
             // the two throttle inputs and limiting the throttle value
-            // to 50%            
+            // to 50%
             if(pot1nomTmp < pot2nomTmp)
             {
                if(pot1nomTmp > 50.0f)
                   pot1val = Throttle::potmax[0] / 2;
-               
+
                useChannel = 0;
             }
             else
             {
                if(pot2nomTmp > 50.0f)
                   pot2val = Throttle::potmax[1] / 2;
-                  
+
                useChannel = 1;
             }
          }
       }
-      if(inRange1 && !inRange2)
+      else if(inRange1 && !inRange2)
       {
          utils::PostErrorIfRunning(ERR_THROTTLE2);
 
