@@ -81,28 +81,24 @@ bool Throttle::CheckAndLimitRange(int* potval, int potIdx)
    return true;
 }
 
-bool Throttle::CheckDualThrottle(int* potval, int pot2val)
+/**
+ * @brief Normalize the throttle input value to the min-max scale.
+ * 
+ * Returns 0.0% for illegal indices and if potmin and potmax are equal.
+ * 
+ * @param potval Throttle input value, range is [potmin[potIdx], potmax[potIdx]], not checked!
+ * @param potIdx Index of the throttle input, should be [0, 1].
+ * @return Normalized throttle value output with range [0.0, 100.0] with correct input.
+ */
+float Throttle::NormalizeThrottle(int potval, int potIdx)
 {
-   int potnom1, potnom2;
-   //2nd input running inverse
-   if (potmin[1] > potmax[1])
-   {
-      potnom2 = 100 - (100 * (pot2val - potmax[1])) / (potmin[1] - potmax[1]);
-   }
-   else
-   {
-      potnom2 = (100 * (pot2val - potmin[1])) / (potmax[1] - potmin[1]);
-   }
-   potnom1 = (100 * (*potval - potmin[0])) / (potmax[0] - potmin[0]);
-   int diff = potnom2 - potnom1;
-   diff = ABS(diff);
-
-   if (diff > 100)
-   {
-      *potval = potmin[0];
-      return false;
-   }
-   return true;
+   if(potIdx < 0 || potIdx > 1)
+      return 0.0f;
+   
+   if(potmin[potIdx] == potmax[potIdx])
+      return 0.0f;
+   
+   return 100.0f * ((float)(potval - potmin[potIdx]) / (float)(potmax[potIdx] - potmin[potIdx]));
 }
 
 /**
@@ -115,11 +111,11 @@ bool Throttle::CheckDualThrottle(int* potval, int pot2val)
  * TODO: No regen implemented. Commanding 0 throttle while braking, otherwise direct output.
  * 
  * @param potval 
- * @param pot2val 
+ * @param idx Index of the throttle input that should be used for calculation.
  * @param brkpedal Brake pedal input (true for brake pedal pressed, false otherwise).
  * @return float 
  */
-float Throttle::CalcThrottle(int potval, int pot2val, bool brkpedal)
+float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 {
    float potnom = 0.0f;  // normalize potval against the potmin and potmax values
 
@@ -131,7 +127,9 @@ float Throttle::CalcThrottle(int potval, int pot2val, bool brkpedal)
    }
    
    // substract offset, bring potval to the potmin-potmax scale and make a percentage
-   potnom = 100.0f * ((float)(potval - potmin[0]) / (float)(potmax[0] - potmin[0]));
+   //potnom = 100.0f * ((float)(potval - potmin[potIdx]) / (float)(potmax[potIdx] - potmin[potIdx]));
+   
+   potnom = NormalizeThrottle(potval, potIdx);
    
    return potnom;
 
