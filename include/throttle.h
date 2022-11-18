@@ -26,8 +26,8 @@ class Throttle
 {
 public:
     static bool CheckAndLimitRange(int* potval, int potIdx);
-    static bool CheckDualThrottle(int* potval, int pot2val);
-    static float CalcThrottle(int potval, int pot2val, bool brkpedal);
+    static float NormalizeThrottle(int potval, int potIdx);
+    static float CalcThrottle(int potval, int potIdx, bool brkpedal);
     static float CalcIdleSpeed(int speed);
     static float CalcCruiseSpeed(int speed);
     static bool TemperatureDerate(float tmp, float tmpMax, float& finalSpnt);
@@ -44,6 +44,7 @@ public:
     static float brkcruise;
     static float throtmax;
     static float throtmin;
+    static float throtdead;
     static int idleSpeed;
     static int cruiseSpeed;
     static float speedkp;

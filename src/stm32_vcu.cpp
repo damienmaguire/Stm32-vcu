@@ -723,11 +723,12 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Throttle::regenmax = Param::GetFloat(Param::regenmax);
    Throttle::throtmax = Param::GetFloat(Param::throtmax);
    Throttle::throtmin = Param::GetFloat(Param::throtmin);
+   Throttle::throtdead = Param::GetFloat(Param::throtdead);
    Throttle::idcmin = Param::GetFloat(Param::idcmin);
    Throttle::idcmax = Param::GetFloat(Param::idcmax);
    Throttle::udcmin = FP_MUL(Param::Get(Param::udcmin), FP_FROMFLT(0.95)); //Leave some room for the notification light
    Throttle::speedLimit = Param::GetInt(Param::revlim);
-   Throttle::regenRamp = 1.0f; //TODO: make parameter
+   Throttle::regenRamp = Param::GetFloat(Param::regenramp);
    targetInverter=static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
    Param::SetInt(Param::inv, targetInverter);//Confirm mode
    targetVehicle=static_cast<vehicles>(Param::GetInt(Param::Vehicle));//get vehicle setting from menu

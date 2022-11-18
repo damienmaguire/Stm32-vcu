@@ -1,7 +1,8 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVerter project.
  *
- * Copyright (C) 2011 Johannes Huebner <dev@johanneshuebner.com>
+ * Copyright (C) 2011-2019 Johannes Huebner <dev@johanneshuebner.com>
+ * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 1.01.A
+#define VER 1.04.A
 
 
 /* Entries must be ordered as follows:
@@ -24,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 76
+//Next param id (increase when adding new parameter!): 77
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
@@ -38,25 +39,27 @@
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2max,     "dig",     0,      4095,   4095,   10 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regentravel, "%",       0,      100,    30,     60  ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regenmax,    "%",       -100,   0,     -30,     61  ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regentravel, "%",       0,      100,    30,     60 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenmax,    "%",       -100,   0,     -30,     61 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    100,    68 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmode,     POTMODES,  0,      1,      0,      11 ) \
     PARAM_ENTRY(CAT_THROTTLE,  dirmode,     DIRMODES,  0,      4,      1,      12 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramp,   "%/10ms",  0.1,    100,    100,    13 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramprpm,"rpm",     0,      20000,  20000,  14 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  revlim,      "rpm",      0,     20000,   6000,  15 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  revlim,      "rpm",     0,      20000,  6000,   15 ) \
     PARAM_ENTRY(CAT_THROTTLE,  bmslimhigh,  "%",       0,      100,    50,     17 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  bmslimlow,   "%",       -100,   0,      -1,     18 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  bmslimlow,   "%",      -100,    0,     -1,      18 ) \
     PARAM_ENTRY(CAT_THROTTLE,  udcmin,      "V",       0,      1000,   450,    19 ) \
     PARAM_ENTRY(CAT_THROTTLE,  udclim,      "V",       0,      1000,   520,    20 ) \
     PARAM_ENTRY(CAT_THROTTLE,  idcmax,      "A",       0,      5000,   5000,   21 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  idcmin,      "A",       -5000,  0,     -5000,   22 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  tmphsmax,    "°C",      50,     150,   85,      23 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  tmpmmax,     "°C",      70,     300,   300,     24 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  throtmax,    "%",       0,      100,   100,     25 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  throtmin,    "%",       -100,   0,     -100,    26 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  idcmin,      "A",      -5000,   0,     -5000,   22 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  tmphsmax,    "°C",      50,     150,    85,     23 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  tmpmmax,     "°C",      70,     300,    300,    24 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  throtmax,    "%",       0,      100,    100,    25 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  throtmin,    "%",      -100,    0,     -100,    26 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  throtdead,   "%",       0,      50,     10,     76 ) \
     PARAM_ENTRY(CAT_LEXUS,     GEAR,        LOWHIGH,   0,      2,      0,      27 ) \
-    PARAM_ENTRY(CAT_LEXUS,     OilPump,     "%",       0,      100,      50,   28 ) \
+    PARAM_ENTRY(CAT_LEXUS,     OilPump,     "%",       0,      100,    50,     28 ) \
     PARAM_ENTRY(CAT_CRUISE,    cruisestep,  "rpm",     1,      1000,   200,    29 ) \
     PARAM_ENTRY(CAT_CRUISE,    cruiseramp,  "rpm/100ms",1,     1000,   20,     30 ) \
     PARAM_ENTRY(CAT_CRUISE,    regenlevel,  "",        0,      3,      2,      31 ) \
@@ -71,24 +74,24 @@
     PARAM_ENTRY(CAT_CHARGER,   Voltspnt,    "V",       0,      1000,   395,    40 ) \
     PARAM_ENTRY(CAT_CHARGER,   Pwrspnt,     "W",       0,      12000,  1500,   41 ) \
     PARAM_ENTRY(CAT_CHARGER,   IdcTerm,     "A",       0,      150,    0,      56 ) \
-    PARAM_ENTRY(CAT_CHARGER,   CCS_ICmd,    "A",       0,      150,    0,      42  ) \
-    PARAM_ENTRY(CAT_CHARGER,   CCS_ILim,    "A",       0,      350,    100,    43  ) \
-    PARAM_ENTRY(CAT_CHARGER,   CCS_SOCLim,  "%",       0,      100,    80,     44  ) \
-    PARAM_ENTRY(CAT_CHARGER,   Chgctrl,     CHGCTRL,   0,      2,      0,      45  ) \
-    PARAM_ENTRY(CAT_Heater,    Heater,      HTTYPE,    0,      2,      0,      57  ) \
-    PARAM_ENTRY(CAT_Heater,    Control,     HTCTRL,    0,      2,      0,      58  ) \
-    PARAM_ENTRY(CAT_Heater,    HeatPwr,     "W",       0,      6500,   0,      59  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Set_Min,     "Mins",    0,      59,     0,      48  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Set_Sec,     "Secs",    0,      59,     0,      49  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Chg_Hrs,     "Hours",   0,      23,     0,      50  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Chg_Min,     "Mins",    0,      59,     0,      51  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Chg_Dur,     "Mins",    0,      300,    0,      52  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Pre_Hrs,     "Hours",   0,      59,     0,      53  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Pre_Min,     "Mins",    0,      59,     0,      54  ) \
-    PARAM_ENTRY(CAT_CLOCK,     Pre_Dur,     "Mins",    0,      60,     0,      55  ) \
-    PARAM_ENTRY(CAT_SHUNT,     ISA_INIT,     ONOFF,    0,      1,     0,       75  ) \
+    PARAM_ENTRY(CAT_CHARGER,   CCS_ICmd,    "A",       0,      150,    0,      42 ) \
+    PARAM_ENTRY(CAT_CHARGER,   CCS_ILim,    "A",       0,      350,    100,    43 ) \
+    PARAM_ENTRY(CAT_CHARGER,   CCS_SOCLim,  "%",       0,      100,    80,     44 ) \
+    PARAM_ENTRY(CAT_CHARGER,   Chgctrl,     CHGCTRL,   0,      2,      0,      45 ) \
+    PARAM_ENTRY(CAT_Heater,    Heater,      HTTYPE,    0,      2,      0,      57 ) \
+    PARAM_ENTRY(CAT_Heater,    Control,     HTCTRL,    0,      2,      0,      58 ) \
+    PARAM_ENTRY(CAT_Heater,    HeatPwr,     "W",       0,      6500,   0,      59 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Set_Min,     "Mins",    0,      59,     0,      48 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Set_Sec,     "Secs",    0,      59,     0,      49 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Chg_Hrs,     "Hours",   0,      23,     0,      50 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Chg_Min,     "Mins",    0,      59,     0,      51 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Chg_Dur,     "Mins",    0,      300,    0,      52 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Pre_Hrs,     "Hours",   0,      59,     0,      53 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Pre_Min,     "Mins",    0,      59,     0,      54 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Pre_Dur,     "Mins",    0,      60,     0,      55 ) \
+    PARAM_ENTRY(CAT_SHUNT,     ISA_INIT,     ONOFF,    0,      1,      0,      75 ) \
     VALUE_ENTRY(version,       VERSTR,  2000 ) \
     VALUE_ENTRY(opmode,        OPMODES, 2002 ) \
     VALUE_ENTRY(chgtyp,        CHGTYPS, 2003 ) \
@@ -174,7 +177,7 @@
 
 #define VERSTR STRINGIFY(4=VER)
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
-#define POTMODES     "0=Single, 1=DualChannel"
+#define POTMODES     "0=SingleChannel, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander, 6=GS300H"
@@ -311,7 +314,7 @@ enum vehicles
 
 enum _potmodes
 {
-    POTMODE_REGENADJ = 0,
+    POTMODE_SINGLECHANNEL = 0,
     POTMODE_DUALCHANNEL,
 };
 
