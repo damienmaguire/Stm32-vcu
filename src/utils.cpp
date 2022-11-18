@@ -111,6 +111,7 @@ float GetUserThrottleCommand()
 
          return 0.0;
       }
+    }
 
    // don't return a throttle value if we are in neutral
    // TODO: the direction for FORWARD/NEUTRAL/REVERSE needs an enum in param_prj.h as well
