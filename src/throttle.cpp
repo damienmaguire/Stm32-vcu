@@ -37,6 +37,7 @@ float Throttle::idleThrotLim;
 float Throttle::potnomFiltered;
 float Throttle::throtmax;
 float Throttle::throtmin;
+float Throttle::throtdead;
 float Throttle::regenRamp;
 float Throttle::throttleRamp;
 //float Throttle::throttleRamped;
@@ -127,9 +128,15 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
    }
    
    // substract offset, bring potval to the potmin-potmax scale and make a percentage
-   //potnom = 100.0f * ((float)(potval - potmin[potIdx]) / (float)(potmax[potIdx] - potmin[potIdx]));
-   
    potnom = NormalizeThrottle(potval, potIdx);
+   
+   // Apply the deadzone parameter. To avoid that we lose the range between
+   // 0 and throtdead, the scale of potnom is mapped from the [0.0, 100.0] scale
+   // to the [throtdead, 100.0] scale.
+   if(potnom < throtdead)
+      potnom = 0.0f;
+   else
+      potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
    
    return potnom;
 

@@ -44,6 +44,7 @@ public:
     static float brkcruise;
     static float throtmax;
     static float throtmin;
+    static float throtdead;
     static int idleSpeed;
     static int cruiseSpeed;
     static float speedkp;
