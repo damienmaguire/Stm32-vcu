@@ -94,24 +94,27 @@ float GetUserThrottleCommand()
 
             potval = pot2val;
          }
-         else
+         else if(!inRange1 && !inRange2)
          {
-            utils::PostErrorIfRunning(ERR_THROTTLE1);
-            utils::PostErrorIfRunning(ERR_THROTTLE2);
+            utils::PostErrorIfRunning(ERR_THROTTLE12);
             Param::SetInt(Param::potnom, 0);
 
             return 0.0;
          }
+         else
+         {
+            // CheckDualThrottle failed but both are in range should never
+            // happen. We can assume though that the values are correct.
+         }
       }
-      else // (yet) unknown throttle mode
-      {
-         utils::PostErrorIfRunning(ERR_THROTTLE1);
-         utils::PostErrorIfRunning(ERR_THROTTLE2);
-         Param::SetInt(Param::potnom, 0);
+   }
+   else // (yet) unknown throttle mode
+   {
+      utils::PostErrorIfRunning(ERR_THROTTLE12);
+      Param::SetInt(Param::potnom, 0);
 
-         return 0.0;
-      }
-    }
+      return 0.0;
+   }
 
    // don't return a throttle value if we are in neutral
    // TODO: the direction for FORWARD/NEUTRAL/REVERSE needs an enum in param_prj.h as well
