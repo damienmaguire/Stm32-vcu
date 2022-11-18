@@ -135,7 +135,6 @@ float GetUserThrottleCommand()
       else // !inRange1 && !inRange2
       {
          utils::PostErrorIfRunning(ERR_THROTTLE12);
-         Param::SetInt(Param::potnom, 0);
 
          return 0.0;
       }
