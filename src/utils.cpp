@@ -49,6 +49,13 @@ void GetDigInputs(Can* can)
 /**
  * @brief Read Throttle inputs, perform sanity checks and return throttle command
  * 
+ * This function can throw the following error messages:
+ *  - ERR_THROTTLE1: Throttle input value Channel 1 out of range
+ *  - ERR_THROTTLE2: Throttle input value Channel 2 out of range
+ *  - ERR_THROTTLE12: Throttle input value Channel 1 and 2 out of range
+ *  - ERR_THROTTLE12DIFF: Throttle input difference between 1 and 2 out of range
+ *  - ERR_THROTTLEMODE: Illegal Throttle Mode used
+ * 
  * @return float Throttle percentage in the range of [-100.0, 100.0]
  */
 float GetUserThrottleCommand()
@@ -57,13 +64,14 @@ float GetUserThrottleCommand()
    int potmode = Param::GetInt(Param::potmode);
    int direction = Param::GetInt(Param::dir);
 
-   int potval = AnaIn::throttle1.Get();
+   int pot1val = AnaIn::throttle1.Get();
    int pot2val = AnaIn::throttle2.Get();
-   Param::SetInt(Param::pot, potval);
+   Param::SetInt(Param::pot, pot1val);
    Param::SetInt(Param::pot2, pot2val);
 
-   bool inRange1 = Throttle::CheckAndLimitRange(&potval, 0);
+   bool inRange1 = Throttle::CheckAndLimitRange(&pot1val, 0);
    bool inRange2 = Throttle::CheckAndLimitRange(&pot2val, 1);
+   int useChannel = 0; // default case: use Throttle 1
 
    // check the throttle values for plausibility
    if (potmode == POTMODE_SINGLECHANNEL) 
@@ -75,43 +83,66 @@ float GetUserThrottleCommand()
          Param::SetInt(Param::potnom, 0);
          return 0.0;
       }
+      
+      useChannel = 0;
    } 
    else if(potmode == POTMODE_DUALCHANNEL)
    {
-      if(!Throttle::CheckDualThrottle(&potval, pot2val))
+      // when there's something wrong with the dual throttle values,
+      // we try to make the best of it and use the valid one
+      if(inRange1 && inRange2)
       {
-         // when there's something wrong with the dual throttle values,
-         // we try to make the best of it and use the valid one
-         if(inRange1 && !inRange2)
+         // These are only temporary values, because they can change
+         // if the "limp mode" is activated.
+         float pot1nomTmp = Throttle::NormalizeThrottle(pot1val, 0);
+         float pot2nomTmp = Throttle::NormalizeThrottle(pot2val, 1);
+         
+         if(ABS(pot2nomTmp - pot1nomTmp) > 10.0f)
          {
-            utils::PostErrorIfRunning(ERR_THROTTLE2);
+            utils::PostErrorIfRunning(ERR_THROTTLE12DIFF);
+            
+            // simple implementation of a limp mode: select the lower of
+            // the two throttle inputs and limiting the throttle value
+            // to 50%            
+            if(pot1nomTmp < pot2nomTmp)
+            {
+               if(pot1nomTmp > 50.0f)
+                  pot1val = Throttle::potmax[0] / 2;
+               
+               useChannel = 0;
+            }
+            else
+            {
+               if(pot2nomTmp > 50.0f)
+                  pot2val = Throttle::potmax[1] / 2;
+                  
+               useChannel = 1;
+            }
+         }
+      }
+      if(inRange1 && !inRange2)
+      {
+         utils::PostErrorIfRunning(ERR_THROTTLE2);
 
-            pot2val = potval;
-         }
-         else if(!inRange1 && inRange2)
-         {
-            utils::PostErrorIfRunning(ERR_THROTTLE1);
+         useChannel = 0; // use throttle channel 1
+      }
+      else if(!inRange1 && inRange2)
+      {
+         utils::PostErrorIfRunning(ERR_THROTTLE1);
 
-            potval = pot2val;
-         }
-         else if(!inRange1 && !inRange2)
-         {
-            utils::PostErrorIfRunning(ERR_THROTTLE12);
-            Param::SetInt(Param::potnom, 0);
+         useChannel = 1; // use throttle channel 2
+      }
+      else // !inRange1 && !inRange2
+      {
+         utils::PostErrorIfRunning(ERR_THROTTLE12);
+         Param::SetInt(Param::potnom, 0);
 
-            return 0.0;
-         }
-         else
-         {
-            // CheckDualThrottle failed but both are in range should never
-            // happen. We can assume though that the values are correct.
-         }
+         return 0.0;
       }
    }
    else // (yet) unknown throttle mode
    {
-      utils::PostErrorIfRunning(ERR_THROTTLE12);
-      Param::SetInt(Param::potnom, 0);
+      utils::PostErrorIfRunning(ERR_THROTTLEMODE);
 
       return 0.0;
    }
@@ -119,11 +150,15 @@ float GetUserThrottleCommand()
    // don't return a throttle value if we are in neutral
    // TODO: the direction for FORWARD/NEUTRAL/REVERSE needs an enum in param_prj.h as well
    if (direction == 0)
-   {
       return 0.0;
-   }
 
-   return Throttle::CalcThrottle(potval, pot2val, brake);
+   // calculate the throttle depending on the channel we've decided to use
+   if (useChannel == 0)
+      return Throttle::CalcThrottle(pot1val, 0, brake);
+   else if(useChannel == 1)
+      return Throttle::CalcThrottle(pot2val, 1, brake);
+   else
+      return 0.0;
 }
 
 
