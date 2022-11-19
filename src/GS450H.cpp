@@ -117,12 +117,12 @@ void GS450HClass::Task100Ms()
 
    if (Param::GetInt(Param::opmode) == MOD_OFF)
    {
-       setTimerState(false);
+       //setTimerState(false);
        Lexus_Oil2 =0;
    }
    else
    {
-       setTimerState(true);
+       //setTimerState(true);
    }
         Lexus_Oil2 =0;
    if (Param::GetInt(Param::opmode) == MOD_RUN) Lexus_Oil2 = Param::GetInt(Param::OilPump);
@@ -428,7 +428,7 @@ void GS450HClass::Task1Ms()
 
          /***** Code for Lexus GS300H */
    case 10:
-      if (Param::GetInt(Param::opmode) == MOD_OFF) inv_status = 0;
+      if (Param::GetInt(Param::opmode) != MOD_RUN) inv_status = 0;
       dma_read(mth_data,140);//read in mth data via dma.
       DigIo::req_out.Clear(); //HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
       htm_state++;
