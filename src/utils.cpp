@@ -319,7 +319,13 @@ float ProcessThrottle(int speed)
    {
       ErrorMessage::Post(ERR_TMPMMAX);
    }
-
+   
+   // make sure the torque percentage is NEVER out of range
+   if (finalSpnt < -100.0f)
+      finalSpnt = -100.0f;
+   else if (finalSpnt > 100.0f)
+      finalSpnt = 100.0f;
+   
    Param::SetFloat(Param::potnom, finalSpnt);
 
    return finalSpnt;
