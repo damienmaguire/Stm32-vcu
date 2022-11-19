@@ -28,9 +28,13 @@ using namespace std;
 
 static void TestSetup()
 {
-
+   //percentage of deadzone
+   Throttle::throtdead = 5;
+   Throttle::potmin[0] = 100;
+   Throttle::potmax[0] = 4000;
 }
 
+// TEMPERATURE DERATING
 static void TestThrottleTemperateOverMaxThrottleTo0() {
    float temp = 60;
    float tempMax = 50;
@@ -59,6 +63,40 @@ static void TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit() {
    ASSERT(Throttle::TemperatureDerate(temp, tempMax, finalSpnt) && finalSpnt == 49);
 }
 
+// CALC THROTTLE
+static void TestCalcThrottleIs0WhenThrottleAndBrakePressed() {
+
+
+   ASSERT(Throttle::CalcThrottle(3000, 0, true) == 0);
+}
+
+static void TestCalcThrottleIs0WhenNoThrottleAndBrakePressed() {
+
+   ASSERT(Throttle::CalcThrottle(0, 0, true) == 0);
+}
+
+static void TestCalcThrottleIs0WhenInDeadZone() {
+   //deadzone is first 5% of travel between 100 and 4000
+   ASSERT(Throttle::CalcThrottle(295, 0, false) == 0);
+}
+
+static void TestCalcThrottleIsAbove0WhenJustOutOfDeadZone() {
+   //deadzone is first 5% of travel between 100 and 4000
+   ASSERT(Throttle::CalcThrottle(296, 0, false) > 0);
+}
+
+static void TestCalcThrottleIs100WhenMax() {
+   //deadzone is first 5% of travel between 100 and 4000
+   float throtVal = Throttle::CalcThrottle(4000, 0, false);
+   ASSERT(throtVal ==  100);
+}
+
+static void TestCalcThrottleIs100WhenOverMax() {
+   //deadzone is first 5% of travel between 100 and 4000
+   float throtVal = Throttle::CalcThrottle(4001, 0, false);
+   ASSERT(throtVal ==  100);
+}
+
 
 void ThrottleTest::RunTest()
 {
@@ -67,4 +105,10 @@ void ThrottleTest::RunTest()
    TestThrottleTemperateInDerateZoneThrottleTo50Percent();
    TestThrottleUnderTemperateNoDeRate();
    TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit();
+   TestCalcThrottleIs0WhenThrottleAndBrakePressed();
+   TestCalcThrottleIs0WhenNoThrottleAndBrakePressed();
+   TestCalcThrottleIs0WhenInDeadZone();
+   TestCalcThrottleIsAbove0WhenJustOutOfDeadZone();
+   TestCalcThrottleIs100WhenMax();
+   TestCalcThrottleIs100WhenOverMax();
 }
