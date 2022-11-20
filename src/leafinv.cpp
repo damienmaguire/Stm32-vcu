@@ -155,7 +155,7 @@ void LeafINV::Task10Ms()
    if (opmode != MOD_CHARGE) bytes[0] = 0x4E;
    // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
    if (opmode == MOD_CHARGE) bytes[1] = 0x80;
-   if (opmode != MOD_CHARGE) bytes[0] = 0x40;
+   if (opmode != MOD_CHARGE) bytes[1] = 0x40;
    // Usually 0x00, sometimes 0x80 (LeafLogs), 0x04 seen by canmsgs
    bytes[2] = 0x00;
 
