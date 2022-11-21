@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 1.07.A
+#define VER 1.08.A
 
 
 /* Entries must be ordered as follows:
@@ -92,85 +92,85 @@
     PARAM_ENTRY(CAT_CLOCK,     Pre_Min,     "Mins",    0,      59,     0,      54 ) \
     PARAM_ENTRY(CAT_CLOCK,     Pre_Dur,     "Mins",    0,      60,     0,      55 ) \
     PARAM_ENTRY(CAT_SHUNT,     ISA_INIT,     ONOFF,    0,      1,      0,      75 ) \
-    VALUE_ENTRY(version,       VERSTR,  2000 ) \
-    VALUE_ENTRY(opmode,        OPMODES, 2002 ) \
-    VALUE_ENTRY(chgtyp,        CHGTYPS, 2003 ) \
-    VALUE_ENTRY(lasterr,       errorListString,  2004 ) \
-    VALUE_ENTRY(status,        STATUS,  2005 ) \
-    VALUE_ENTRY(udc,           "V",     2006 ) \
-    VALUE_ENTRY(udc2,          "V",     2007 ) \
-    VALUE_ENTRY(udc3,          "V",     2008 ) \
-    VALUE_ENTRY(deltaV,        "V",     2009 ) \
-    VALUE_ENTRY(INVudc,        "V",     2010 ) \
-    VALUE_ENTRY(power,         "kW",    2011 ) \
-    VALUE_ENTRY(idc,           "A",     2012 ) \
-    VALUE_ENTRY(KWh,           "kwh",   2013 ) \
-    VALUE_ENTRY(AMPh,          "Ah",    2014 ) \
-    VALUE_ENTRY(SOC,           "%",     2015 ) \
-    VALUE_ENTRY(speed,         "rpm",   2016 ) \
-    VALUE_ENTRY(Veh_Speed,     "kph",   2017 ) \
-    VALUE_ENTRY(torque,        "dig",   2018 ) \
-    VALUE_ENTRY(pot,           "dig",   2019 ) \
-    VALUE_ENTRY(pot2,          "dig",   2020 ) \
-    VALUE_ENTRY(potbrake,      "dig",   2021 ) \
-    VALUE_ENTRY(brakepressure, "dig",   2022 ) \
-    VALUE_ENTRY(potnom,        "%",     2023 ) \
-    VALUE_ENTRY(dir,           DIRS,    2024 ) \
-    VALUE_ENTRY(inv,           INVMODES,2025 ) \
-    VALUE_ENTRY(veh,           VEHMODES,2026 ) \
-    VALUE_ENTRY(inv_can,       CAN_DEV, 2071) \
-    VALUE_ENTRY(veh_can,       CAN_DEV, 2072) \
-    VALUE_ENTRY(shunt_can,     CAN_DEV, 2073) \
-    VALUE_ENTRY(lim_can,       CAN_DEV, 2074) \
-    VALUE_ENTRY(charger_can,   CAN_DEV, 2075) \
-    VALUE_ENTRY(Charger,       CHGMODS, 2027 ) \
-    VALUE_ENTRY(tmphs,         "°C",    2028 ) \
-    VALUE_ENTRY(tmpm,          "°C",    2029 ) \
-    VALUE_ENTRY(tmpaux,        "°C",    2030 ) \
-    VALUE_ENTRY(uaux,          "V",     2031 ) \
-    VALUE_ENTRY(canio,         CANIOS,  2032 ) \
-    VALUE_ENTRY(cruisespeed,   "rpm",   2033 ) \
-    VALUE_ENTRY(cruisestt,     CRUISESTATES,2034 ) \
-    VALUE_ENTRY(din_cruise,    ONOFF,   2035 ) \
-    VALUE_ENTRY(din_start,     ONOFF,   2036 ) \
-    VALUE_ENTRY(din_brake,     ONOFF,   2037 ) \
-    VALUE_ENTRY(din_forward,   ONOFF,   2038 ) \
-    VALUE_ENTRY(din_reverse,   ONOFF,   2039 ) \
-    VALUE_ENTRY(din_bms,       ONOFF,   2040 ) \
-    VALUE_ENTRY(din_12Vgp,     ONOFF,   2071 ) \
-    VALUE_ENTRY(handbrk,       ONOFF,   2041 ) \
-    VALUE_ENTRY(Gear1,         ONOFF,   2042 ) \
-    VALUE_ENTRY(Gear2,         ONOFF,   2043 ) \
-    VALUE_ENTRY(Gear3,         ONOFF,   2044 ) \
-    VALUE_ENTRY(T15Stat,       ONOFF,   2045 ) \
-    VALUE_ENTRY(InvStat,       ONOFF,   2046 ) \
-    VALUE_ENTRY(GearFB,        LOWHIGH, 2047 ) \
-    VALUE_ENTRY(CableLim,      "A",     2048 ) \
-    VALUE_ENTRY(PilotLim,      "A",     2049 ) \
-    VALUE_ENTRY(PlugDet,       ONOFF,   2050 ) \
-    VALUE_ENTRY(PilotTyp,      PLTMODES,2051 ) \
-    VALUE_ENTRY(CCS_I_Avail,   "A",     2052 ) \
-    VALUE_ENTRY(CCS_V_Avail,   "V",     2053 ) \
-    VALUE_ENTRY(CCS_I,         "A",     2054 ) \
-    VALUE_ENTRY(CCS_Ireq,      "A",     2068 ) \
-    VALUE_ENTRY(CCS_V,         "V",     2055 ) \
-    VALUE_ENTRY(CCS_V_Min,     "V",     2056 ) \
-    VALUE_ENTRY(CCS_V_Con,     "V",     2057 ) \
-    VALUE_ENTRY(hvChg,         ONOFF,   2058 ) \
-    VALUE_ENTRY(CCS_COND,      CCS_STATUS,2059 ) \
-    VALUE_ENTRY(CCS_State,     "s",     2060 ) \
-    VALUE_ENTRY(CP_DOOR,       DMODES,  2061 ) \
-    VALUE_ENTRY(CCS_Contactor, ONOFF,   2062 ) \
-    VALUE_ENTRY(Day,           DOW,     2064 ) \
-    VALUE_ENTRY(Hour,          "H",     2065 ) \
-    VALUE_ENTRY(Min,           "M",     2066 ) \
-    VALUE_ENTRY(Sec,           "S",     2067 ) \
-    VALUE_ENTRY(ChgT,          "M",     2068 ) \
-    VALUE_ENTRY(HeatReq,       ONOFF,   2069 ) \
-    VALUE_ENTRY(Test,          ONOFF,   2070 ) \
-    VALUE_ENTRY(MG2Raw,          "dig",   2078 ) \
-    VALUE_ENTRY(MG1Raw,          "dig",   2079 ) \
-    VALUE_ENTRY(cpuload,       "%",     2063 ) \
+    VALUE_ENTRY(version,       VERSTR,              2000 ) \
+    VALUE_ENTRY(opmode,        OPMODES,             2002 ) \
+    VALUE_ENTRY(chgtyp,        CHGTYPS,             2003 ) \
+    VALUE_ENTRY(lasterr,       errorListString,     2004 ) \
+    VALUE_ENTRY(status,        STATUS,              2005 ) \
+    VALUE_ENTRY(udc,           "V",                 2006 ) \
+    VALUE_ENTRY(udc2,          "V",                 2007 ) \
+    VALUE_ENTRY(udc3,          "V",                 2008 ) \
+    VALUE_ENTRY(deltaV,        "V",                 2009 ) \
+    VALUE_ENTRY(INVudc,        "V",                 2010 ) \
+    VALUE_ENTRY(power,         "kW",                2011 ) \
+    VALUE_ENTRY(idc,           "A",                 2012 ) \
+    VALUE_ENTRY(KWh,           "kwh",               2013 ) \
+    VALUE_ENTRY(AMPh,          "Ah",                2014 ) \
+    VALUE_ENTRY(SOC,           "%",                 2015 ) \
+    VALUE_ENTRY(speed,         "rpm",               2016 ) \
+    VALUE_ENTRY(Veh_Speed,     "kph",               2017 ) \
+    VALUE_ENTRY(torque,        "dig",               2018 ) \
+    VALUE_ENTRY(pot,           "dig",               2019 ) \
+    VALUE_ENTRY(pot2,          "dig",               2020 ) \
+    VALUE_ENTRY(potbrake,      "dig",               2021 ) \
+    VALUE_ENTRY(brakepressure, "dig",               2022 ) \
+    VALUE_ENTRY(potnom,        "%",                 2023 ) \
+    VALUE_ENTRY(dir,           DIRS,                2024 ) \
+    VALUE_ENTRY(inv,           INVMODES,            2025 ) \
+    VALUE_ENTRY(veh,           VEHMODES,            2026 ) \
+    VALUE_ENTRY(inv_can,       CAN_DEV,             2071 ) \
+    VALUE_ENTRY(veh_can,       CAN_DEV,             2072 ) \
+    VALUE_ENTRY(shunt_can,     CAN_DEV,             2073 ) \
+    VALUE_ENTRY(lim_can,       CAN_DEV,             2074 ) \
+    VALUE_ENTRY(charger_can,   CAN_DEV,             2075 ) \
+    VALUE_ENTRY(Charger,       CHGMODS,             2027 ) \
+    VALUE_ENTRY(tmphs,         "°C",                2028 ) \
+    VALUE_ENTRY(tmpm,          "°C",                2029 ) \
+    VALUE_ENTRY(tmpaux,        "°C",                2030 ) \
+    VALUE_ENTRY(uaux,          "V",                 2031 ) \
+    VALUE_ENTRY(canio,         CANIOS,              2032 ) \
+    VALUE_ENTRY(cruisespeed,   "rpm",               2033 ) \
+    VALUE_ENTRY(cruisestt,     CRUISESTATES,        2034 ) \
+    VALUE_ENTRY(din_cruise,    ONOFF,               2035 ) \
+    VALUE_ENTRY(din_start,     ONOFF,               2036 ) \
+    VALUE_ENTRY(din_brake,     ONOFF,               2037 ) \
+    VALUE_ENTRY(din_forward,   ONOFF,               2038 ) \
+    VALUE_ENTRY(din_reverse,   ONOFF,               2039 ) \
+    VALUE_ENTRY(din_bms,       ONOFF,               2040 ) \
+    VALUE_ENTRY(din_12Vgp,     ONOFF,               2071 ) \
+    VALUE_ENTRY(handbrk,       ONOFF,               2041 ) \
+    VALUE_ENTRY(Gear1,         ONOFF,               2042 ) \
+    VALUE_ENTRY(Gear2,         ONOFF,               2043 ) \
+    VALUE_ENTRY(Gear3,         ONOFF,               2044 ) \
+    VALUE_ENTRY(T15Stat,       ONOFF,               2045 ) \
+    VALUE_ENTRY(InvStat,       ONOFF,               2046 ) \
+    VALUE_ENTRY(GearFB,        LOWHIGH,             2047 ) \
+    VALUE_ENTRY(CableLim,      "A",                 2048 ) \
+    VALUE_ENTRY(PilotLim,      "A",                 2049 ) \
+    VALUE_ENTRY(PlugDet,       ONOFF,               2050 ) \
+    VALUE_ENTRY(PilotTyp,      PLTMODES,            2051 ) \
+    VALUE_ENTRY(CCS_I_Avail,   "A",                 2052 ) \
+    VALUE_ENTRY(CCS_V_Avail,   "V",                 2053 ) \
+    VALUE_ENTRY(CCS_I,         "A",                 2054 ) \
+    VALUE_ENTRY(CCS_Ireq,      "A",                 2068 ) \
+    VALUE_ENTRY(CCS_V,         "V",                 2055 ) \
+    VALUE_ENTRY(CCS_V_Min,     "V",                 2056 ) \
+    VALUE_ENTRY(CCS_V_Con,     "V",                 2057 ) \
+    VALUE_ENTRY(hvChg,         ONOFF,               2058 ) \
+    VALUE_ENTRY(CCS_COND,      CCS_STATUS,          2059 ) \
+    VALUE_ENTRY(CCS_State,     "s",                 2060 ) \
+    VALUE_ENTRY(CP_DOOR,       DMODES,              2061 ) \
+    VALUE_ENTRY(CCS_Contactor, ONOFF,               2062 ) \
+    VALUE_ENTRY(Day,           DOW,                 2064 ) \
+    VALUE_ENTRY(Hour,          "H",                 2065 ) \
+    VALUE_ENTRY(Min,           "M",                 2066 ) \
+    VALUE_ENTRY(Sec,           "S",                 2067 ) \
+    VALUE_ENTRY(ChgT,          "M",                 2068 ) \
+    VALUE_ENTRY(HeatReq,       ONOFF,               2069 ) \
+    VALUE_ENTRY(Test,          ONOFF,               2070 ) \
+    VALUE_ENTRY(MG2Raw,        "dig",               2078 ) \
+    VALUE_ENTRY(MG1Raw,        "dig",               2079 ) \
+    VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
 //Next value Id: 2080
