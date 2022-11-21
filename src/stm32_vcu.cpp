@@ -1,10 +1,11 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVerter project.
  *
  * Copyright (C) 2010 Johannes Huebner <contact@johanneshuebner.com>
  * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
  * Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
- * Copyright (C) 2020 Damien Maguire <info@evbmw.com>
+ * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -19,14 +20,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "stm32_vcu.h"
-
-#define  UserCAN  2
-#define  BMW_E46  0
-#define  User  2
-#define  None  4
-//#define  BMW_E39  5
-#define  VAG  6
-
 
 
 static Stm32Scheduler* scheduler;
@@ -490,6 +483,8 @@ static void Ms10Task(void)
       {
          torquePercent *= requestedDirection;
       }
+      
+      selectedInverter->Task10Ms();
    }
    else
    {
@@ -505,7 +500,7 @@ static void Ms10Task(void)
    utils::GetDigInputs(Can::GetInterface(Param::GetInt(Param::inv_can)));
 
    // Send CAN 2 (Vehicle CAN) messages if necessary for vehicle integration.
-   if (targetVehicle == BMW_E39)
+   if (targetVehicle == vehicles::BMW_E39)
    {
       uint16_t tempGauge = utils::change(Param::GetInt(Param::tmphs),15,80,88,254); //Map to e39 temp gauge
       //Messages required for E39
@@ -515,7 +510,7 @@ static void Ms10Task(void)
       Can_E39::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
       Can_E39::Msg545();
    }
-   else if (targetVehicle == BMW_E46)
+   else if (targetVehicle == vehicles::BMW_E46)
    {
       uint16_t tempGauge = utils::change(Param::GetInt(Param::tmphs),15,80,88,254); //Map to e46 temp gauge
       //Messages required for E46
@@ -530,12 +525,7 @@ static void Ms10Task(void)
       if(E65Vehicle.getTerminal15())
          BMW_E65Class::Tacho(Param::GetInt(Param::speed));//only send tach message if we are starting
    }
-   else if (targetVehicle == VAG)
-   {
-      Can_VAG::SendVAG10msMessage(Param::GetInt(Param::speed));
-   }
-
-   else if (targetVehicle == VAG)
+   else if (targetVehicle == vehicles::VAG)
    {
       Can_VAG::SendVAG10msMessage(Param::GetInt(Param::speed));
    }
@@ -548,8 +538,8 @@ static void Ms10Task(void)
    stt |= udc >= Param::GetFloat(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
    stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
-
-   if (opmode==MOD_OFF && (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15() || chargeMode))//on detection of ign on or charge mode enable we commence prechage and go to mode precharge
+   //on detection of ign on or charge mode enable we commence prechage and go to mode precharge
+   if (opmode == MOD_OFF && (Param::GetBool(Param::din_start) || E65Vehicle.getTerminal15() || chargeMode))
    {
       if(chargeMode==false)
       {

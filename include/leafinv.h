@@ -1,8 +1,8 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVeter project.
  *
  * Copyright (C) 2020 Johannes Huebner <dev@johanneshuebner.com>
- *                      Damien Maguire <info@evbmw.com>
+ *               2021-2022 Damien Maguire <info@evbmw.com>
  * Yes I'm really writing software now........run.....run away.......
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
  */
 #ifndef LEAFINV_H
 #define LEAFINV_H
+
 #include <stdint.h>
 #include "my_fp.h"
 #include "inverter.h"

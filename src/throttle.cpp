@@ -1,7 +1,8 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVerter project.
  *
- * Copyright (C) 2012 Johannes Huebner <contact@johanneshuebner.com>
+ * Copyright (C) 2012-2020 Johannes Huebner <dev@johanneshuebner.com> 
+ *               2021-2022 Damien Maguire <info@evbmw.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +41,6 @@ float Throttle::throtmin;
 float Throttle::throtdead;
 float Throttle::regenRamp;
 float Throttle::throttleRamp;
-//float Throttle::throttleRamped;
 int Throttle::bmslimhigh;
 int Throttle::bmslimlow;
 float Throttle::udcmin;
