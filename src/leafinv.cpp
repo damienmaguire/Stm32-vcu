@@ -214,16 +214,13 @@ void LeafINV::Task10Ms()
    // 2016: 6E
    //outFrame.data.bytes[1] = 0x6E;
 
-   // Requested torque (signed 12-bit value + always 0x0 in low nibble)
-   if (opmode != MOD_RUN) final_torque_request=0;//override any torque commands if not in run mode.
-   static int16_t last_logged_final_torque_request = 0;
-
-   if(final_torque_request != last_logged_final_torque_request)
-   {
-      last_logged_final_torque_request = final_torque_request;
-
+   // override any torque commands if not in run mode.
+   if (opmode != MOD_RUN)
+   { 
+      final_torque_request = 0;
    }
 
+   // Requested torque (signed 12-bit value + always 0x0 in low nibble)
    if(final_torque_request >= -2048 && final_torque_request <= 2047)
    {
       bytes[2] = ((final_torque_request < 0) ? 0x80 : 0) |((final_torque_request >> 4) & 0x7f);
