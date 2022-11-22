@@ -130,6 +130,8 @@ void LeafINV::Task10Ms()
 
    uint8_t bytes[8];
 
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Messaage 0x11A
 
    // Data taken from a gen1 inFrame where the car is starting to
    // move at about 10% throttle: 4E400055 0000017D
@@ -193,10 +195,11 @@ void LeafINV::Task10Ms()
 
 
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x11A, (uint32_t*)bytes,8);//send 0x11a
-   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-   //Send target motor torque signal
-   ////////////////////////////////////////////////////
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x11A, (uint32_t*)bytes, 8);
+   
+   
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x1D4: Target Motor Torque
 
    // Data taken from a gen1 inFrame where the car is starting to
    // move at about 10% throttle: F70700E0C74430D4
@@ -340,28 +343,32 @@ void LeafINV::Task10Ms()
    // Extra CRC
    nissan_crc(bytes, 0x85);
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1D4, (uint32_t*)bytes,8);//send on can1
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//We need to send 0x1db here with voltage measured by inverter
-//Zero seems to work also on my gen1
-////////////////////////////////////////////////////////////////
-//Byte 1 bits 8-10 LB Failsafe Status
-//0x00 Normal start req. seems to stay on this value most of the time
-//0x01 Normal stop req
-//0x02 Charge stop req
-//0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
-//bits 11-12 LB relay cut req
-//0x00 no req
-//0x01,0x02,0x03 main relay off req
-   s16fp TMP_battI=(Param::Get(Param::idc))*2;
-   s16fp TMP_battV=(Param::Get(Param::udc))*4;
-   bytes[0]=TMP_battI>>8;//MSB current. 11 bit signed MSBit first
-   bytes[1]=TMP_battI & 0xE0;//LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
-   bytes[2]=TMP_battV>>8;
-   bytes[3]=((TMP_battV & 0xC0)|(0x2b));//0x2b should give no cut req, main rly on permission,normal p limit.
-   bytes[4]=0x40;//SOC for dash in Leaf. fixed val.
-   bytes[5]=0x00;
-   bytes[6]=counter_1db;
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1D4, (uint32_t*)bytes, 8);//send on can1
+
+   
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x1DB
+
+   //We need to send 0x1db here with voltage measured by inverter
+   //Zero seems to work also on my gen1
+   ////////////////////////////////////////////////////////////////
+   //Byte 1 bits 8-10 LB Failsafe Status
+   //0x00 Normal start req. seems to stay on this value most of the time
+   //0x01 Normal stop req
+   //0x02 Charge stop req
+   //0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
+   //bits 11-12 LB relay cut req
+   //0x00 no req
+   //0x01,0x02,0x03 main relay off req
+   s16fp TMP_battI = (Param::Get(Param::idc))*2;
+   s16fp TMP_battV = (Param::Get(Param::udc))*4;
+   bytes[0] = TMP_battI >> 8;     //MSB current. 11 bit signed MSBit first
+   bytes[1] = TMP_battI & 0xE0;  //LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
+   bytes[2] = TMP_battV >> 8;
+   bytes[3] = ((TMP_battV & 0xC0) | (0x2b)); //0x2b should give no cut req, main rly on permission,normal p limit.
+   bytes[4] = 0x40;  //SOC for dash in Leaf. fixed val.
+   bytes[5] = 0x00;
+   bytes[6] = counter_1db;
 
 
 
@@ -372,8 +379,11 @@ void LeafINV::Task10Ms()
    counter_1db++;
    if(counter_1db >= 4) counter_1db = 0;
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DB, (uint32_t*)bytes,8);
-//////////////////////////////////////////////////////////////////////////////////////////
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DB, (uint32_t*)bytes, 8);
+   
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x50B
+   
    // Statistics from 2016 capture:
    //     10 00000000000000
    //     21 000002c0000000
@@ -382,131 +392,152 @@ void LeafINV::Task10Ms()
 
    // Let's just send the most common one all the time
    // FIXME: This is a very sloppy implementation. Thanks. I try:)
-   //  hex_to_data(outFrame.data.bytes, "00,00,06,c0,00,00,00");
-   bytes[0]=0x00;
-   bytes[1]=0x00;
-   bytes[2]=0x06;
-   bytes[3]=0xc0;
-   bytes[4]=0x00;
+   bytes[0] = 0x00;
+   bytes[1] = 0x00;
+   bytes[2] = 0x06;
+   bytes[3] = 0xc0;
+   bytes[4] = 0x00;
+   bytes[5] = 0x00;
+   bytes[6] = 0x00;
+
+   //possible problem here as 0x50B is DLC 7....
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x50B, (uint32_t*)bytes, 7);
+
+
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x1DC:
+   
+   // 0x1dc from lbc. Contains chg power lims and disch power lims.
+   // Disch power lim in byte 0 and byte 1 bits 6-7. Just set to max for now.
+   // Max charging power in bits 13-20. 10 bit unsigned scale 0.25.Byte 1 limit in kw.
+   bytes[0]=0x6E;
+   bytes[1]=0x0A;
+   bytes[2]=0x05;
+   bytes[3]=0xD5;
+   bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
    bytes[5]=0x00;
-   bytes[6]=0x00;
+   bytes[6]=counter_1dc;
+   // Extra CRC in byte 7
+   nissan_crc(bytes, 0x85);
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x50B, (uint32_t*)bytes,7);//possible problem here as 0x50B is DLC 7....
+   counter_1dc++;
+   if (counter_1dc >= 4) 
+      counter_1dc = 0;
 
-
-   if (opmode == MOD_CHARGE)
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DC, (uint32_t*)bytes, 8);
+      
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x1F2: Charge Power and DC/DC Converter Control
+   
+   // convert power setpoint to PDM format:
+   //    0x70 = 3 amps ish
+   //    0x6a = 1.4A
+   //    0x66 = 0.5A
+   //    0x65 = 0.3A
+   //    0x64 = no chg
+   //    so 0x64=100. 0xA0=160. so 60 decimal steps. 1 step=100W???
+   OBCpwrSP = (Param::GetInt(Param::Pwrspnt) / 100) + 0x64;
+   
+   // get actual voltage and voltage setpoints
+   Vbatt = Param::GetInt(Param::udc);
+   VbattSP = Param::GetInt(Param::Voltspnt);
+   
+   if (opmode == MOD_CHARGE && Param::GetInt(Param::Chgctrl) == ChargeControl::Enable)
    {
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-      //SPECIFIC MSGS NEEDED FOR CHARGE
-      //////////////////////////////////////////
-      //0x1dc from lbc. Contains chg power lims and disch power lims.
-      //Disch power lim in byte 0 and byte 1 bits 6-7. Just set to max for now.
-      //Max charging power in bits 13-20. 10 bit unsigned scale 0.25.Byte 1 limit in kw.
-      bytes[0]=0x6E;
-      bytes[1]=0x0A;
-      bytes[2]=0x05;
-      bytes[3]=0xD5;
-      bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
-      bytes[5]=0x00;
-      bytes[6]=counter_1dc;
-      // Extra CRC in byte 7
-      nissan_crc(bytes, 0x85);
-
-      counter_1dc++;
-      if(counter_1dc >= 4) counter_1dc = 0;
-
-      Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1DC, (uint32_t*)bytes,8);
-////////////////////////////////////////////////////////////////////////////////////////////////
-      OBCpwrSP=(Param::GetInt(Param::Pwrspnt)/100)+0x64;//grab setpoint power from webui and convert to pdm format
-      Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
-      VbattSP=Param::GetInt(Param::Voltspnt);
-      if(!Param::GetBool(Param::Chgctrl))
-      {
-         if(OBCpwrSP>160) OBCpwrSP=160;//clamp max value
-         if(OBCpwrSP<100) OBCpwrSP=100;//clamp min value
-         if(Vbatt<VbattSP) OBCpwr=OBCpwrSP;//if measured vbatt is less than setoint got to max power from web ui
-         if(Vbatt>=VbattSP) OBCpwr--;//decrement charger power if volt setpoint is reached.
-      }
-      else
-      {
-         OBCpwr=100;//power to 0 if charge control set to off.
-      }
-
-
-      //0x1f2 from vcm has commanded chg power
-      //Commanded chg power in byte 1 and byte 0 bits 0-1. 10 bit number.
-      //byte 1=0x64 and byte 0=0x00 at 0 power.
-      //0x00 chg 0ff dcdc on.
-      bytes[0]=0x30;//msg is muxed but pdm doesn't seem to care.
-      //no chg at 0x64
-      //3 amps ish at 0x70
-      //0x6a = 1.4A
-      //0x66=0.5A
-      //0x65=0.3A
-      //so 0x64=100. 0xA0=160. so 60 decimal steps. 1 step=100W???
-      bytes[1]=OBCpwr;//0xA0;
-      bytes[2]=0x20;
-      bytes[3]=0xAC;
-      bytes[4]=0x00;
-      bytes[5]=0x3C;
-      bytes[6]=counter_1f2;
-      bytes[7]=0x8F;//may not need checksum here?
-
-      counter_1f2++;
-      if(counter_1f2 >= 4) counter_1f2 = 0;
-
-      Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1F2, (uint32_t*)bytes,8);
+      // clamp min and max values
+      if (OBCpwrSP > 0xA0)
+         OBCpwrSP = 0xA0;
+      else if (OBCpwrSP < 0x64) 
+         OBCpwrSP = 0x64;
+      
+      // if measured vbatt is less than setpoint got to max power from web ui
+      if (Vbatt < VbattSP) 
+         OBCpwr = OBCpwrSP;
+      
+      // decrement charger power if volt setpoint is reached
+      if (Vbatt >= VbattSP) 
+         OBCpwr--;
+   }
+   else
+   {
+      // set power to 0 if charge control is set to off or not in charge mode
+      OBCpwr = 0x64;
    }
 
+
+   // Commanded chg power in byte 1 and byte 0 bits 0-1. 10 bit number.
+   // byte 1=0x64 and byte 0=0x00 at 0 power.
+   // 0x00 chg 0ff dcdc on.
+   bytes[0] = 0x30;  // msg is muxed but pdm doesn't seem to care.
+   bytes[1] = OBCpwr;
+   bytes[2] = 0x20;
+   bytes[3] = 0xAC;
+   bytes[4] = 0x00;
+   bytes[5] = 0x3C;
+   bytes[6] = counter_1f2;
+   bytes[7] = 0x8F;  //may not need checksum here?
+
+   counter_1f2++;
+   if (counter_1f2 >= 4)
+   {
+      counter_1f2 = 0;
+   }
+
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x1F2, (uint32_t*)bytes, 8);
 }
 
 void LeafINV::Task100Ms()
 {
 
-   //MSGS for charging with pdm
+   // MSGS for charging with pdm
    uint8_t bytes[8];
 
-   bytes[0]=0xA4;
-   bytes[1]=0x40;
-   bytes[2]=0xAA;
-   bytes[3]=0x00;
-   bytes[4]=0xDF;
-   bytes[5]=0xC0;
-   bytes[6]=((0x1<<4)|(counter_55b));
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x55B:
+
+   bytes[0] = 0xA4;
+   bytes[1] = 0x40;
+   bytes[2] = 0xAA;
+   bytes[3] = 0x00;
+   bytes[4] = 0xDF;
+   bytes[5] = 0xC0;
+   bytes[6] = ((0x1 << 4) | (counter_55b));
    // Extra CRC in byte 7
    nissan_crc(bytes, 0x85);
 
    counter_55b++;
    if(counter_55b >= 4) counter_55b = 0;
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x55b, (uint32_t*)bytes,8);
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x55b, (uint32_t*)bytes, 8);
 
-   bytes[0]=0x00;//Static msg works fine here
-   bytes[1]=0x00;//Batt capacity for chg and qc.
-   bytes[2]=0x0c;
-   bytes[3]=0x76;
-   bytes[4]=0x18;
-   bytes[5]=0x00;
-   bytes[6]=0x00;
-   bytes[7]=0x00;
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x59E:
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x59e, (uint32_t*)bytes,8);
+   bytes[0] = 0x00;//Static msg works fine here
+   bytes[1] = 0x00;//Batt capacity for chg and qc.
+   bytes[2] = 0x0c;
+   bytes[3] = 0x76;
+   bytes[4] = 0x18;
+   bytes[5] = 0x00;
+   bytes[6] = 0x00;
+   bytes[7] = 0x00;
 
-   //muxed msg with info for gids etc. Will try static for a test.
-   bytes[0]=0x3D;//Static msg works fine here
-   bytes[1]=0x80;
-   bytes[2]=0xF0;
-   bytes[3]=0x64;
-   bytes[4]=0xB0;
-   bytes[5]=0x01;
-   bytes[6]=0x00;
-   bytes[7]=0x32;
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x59e, (uint32_t*)bytes, 8);
 
-   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x5bc, (uint32_t*)bytes,8);
+   /////////////////////////////////////////////////////////////////////////////////////////////////
+   // CAN Message 0x5BC:
 
-   run100ms = (run100ms + 1) & 3;
+   // muxed msg with info for gids etc. Will try static for a test.
+   bytes[0] = 0x3D;//Static msg works fine here
+   bytes[1] = 0x80;
+   bytes[2] = 0xF0;
+   bytes[3] = 0x64;
+   bytes[4] = 0xB0;
+   bytes[5] = 0x01;
+   bytes[6] = 0x00;
+   bytes[7] = 0x32;
 
+   Can::GetInterface(Param::GetInt(Param::inv_can))->Send(0x5bc, (uint32_t*)bytes, 8);
 }
 
 
