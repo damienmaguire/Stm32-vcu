@@ -5,7 +5,7 @@
  * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
  * Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
  * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -339,8 +339,8 @@ static void Ms100Task(void)
      }
 
    // Leaf Gen2 PDM Charger/DCDC/Chademo
-   if(targetChgint == ChargeInterfaces::Leaf_PDM && 
-      targetInverter != InvModes::Leaf_Gen1) 
+   if(targetChgint == ChargeInterfaces::Leaf_PDM &&
+      targetInverter != InvModes::Leaf_Gen1)
    {
       // If the Leaf PDM is in the system, always send the appropriate CAN
       //  messages to make it happy, EXCEPT if we already sent the messages
@@ -454,8 +454,8 @@ static void Ms10Task(void)
    ErrorMessage::SetTime(rtc_get_counter_val());
 
    // Leaf Gen2 PDM Charger/DCDC/Chademo
-   if(targetChgint == ChargeInterfaces::Leaf_PDM && 
-      targetInverter != InvModes::Leaf_Gen1) 
+   if(targetChgint == ChargeInterfaces::Leaf_PDM &&
+      targetInverter != InvModes::Leaf_Gen1)
    {
       // If the Leaf PDM is in the system, always send the appropriate CAN
       //  messages to make it happy, EXCEPT if we already sent the messages
@@ -495,7 +495,7 @@ static void Ms10Task(void)
       {
          torquePercent *= requestedDirection;
       }
-      
+
       selectedInverter->Task10Ms();
    }
    else
@@ -528,7 +528,8 @@ static void Ms10Task(void)
       //Messages required for E46
       Can_E46::Msg316(speed);//send rpm to e46 dash
       Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
-      Can_E46::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
+     // Can_E46::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
+     //TODO add manual auto option for bmw vehicles.
       Can_E46::Msg545();
    }
    else if (targetVehicle == vehicles::BMW_E65)
@@ -659,10 +660,10 @@ static void Ms10Task(void)
    }
 
    //Cabin heat control
-   if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN))//If we have selected an ampera heater are in run mode and heater not diabled...
+   if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN)&&(targetChgint != ChargeInterfaces::Chademo))//If we have selected an ampera heater are in run mode and heater not diabled...
    {
       //TODO: multiplex with chademo
-      //DigIo::gp_out3.Set();//Heater enable and coolant pump on
+      DigIo::gp_out3.Set();//Heater enable and coolant pump on
 
       if(Ampera_Not_Awake)
       {
@@ -674,10 +675,10 @@ static void Ms10Task(void)
 
    };
 
-   if(CabHeater_ctrl==0 || opmode!=MOD_RUN)
+   if((CabHeater_ctrl==0 || opmode!=MOD_RUN)&&(targetChgint != ChargeInterfaces::Chademo))
    {
       //TODO: multiplex with chademo
-      //DigIo::gp_out3.Clear();//Heater enable and coolant pump off
+      DigIo::gp_out3.Clear();//Heater enable and coolant pump off
       Ampera_Not_Awake=true;
    }
 }
