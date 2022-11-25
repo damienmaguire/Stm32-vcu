@@ -42,8 +42,6 @@ public:
 private:
    static void nissan_crc(uint8_t *data, uint8_t polynomial);
    static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
-   uint8_t run10ms;
-   uint8_t run100ms;
    uint32_t lastRecv;
    int16_t speed;
    int16_t inv_temp;

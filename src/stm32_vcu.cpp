@@ -317,7 +317,7 @@ static void Ms200Task(void)
 
 static void Ms100Task(void)
 {
-    DigIo::led_out.Toggle();
+   DigIo::led_out.Toggle();
    iwdg_reset();
    float cpuLoad = scheduler->GetCpuLoad() / 10.0f;
    Param::SetFloat(Param::cpuload, cpuLoad);
@@ -338,11 +338,16 @@ static void Ms100Task(void)
         DigIo::PWM2.Clear();
      }
 
-   if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+   // Leaf Gen2 PDM Charger/DCDC/Chademo
+   if(targetChgint == ChargeInterfaces::Leaf_PDM && 
+      targetInverter != InvModes::Leaf_Gen1) 
    {
-      if (opmode == MOD_CHARGE)
+      // If the Leaf PDM is in the system, always send the appropriate CAN
+      //  messages to make it happy, EXCEPT if we already sent the messages
+      //  (when Leaf Inverter is present).
+      if (opmode == MOD_RUN || opmode == MOD_CHARGE)
       {
-         leafInv.Task100Ms(); //send leaf 100ms msgs if we are using the pdm and in charge mode
+         leafInv.Task100Ms();
       }
    }
 
@@ -448,11 +453,18 @@ static void Ms10Task(void)
 
    ErrorMessage::SetTime(rtc_get_counter_val());
 
-   if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+   // Leaf Gen2 PDM Charger/DCDC/Chademo
+   if(targetChgint == ChargeInterfaces::Leaf_PDM && 
+      targetInverter != InvModes::Leaf_Gen1) 
    {
-      if (opmode == MOD_CHARGE)
+      // If the Leaf PDM is in the system, always send the appropriate CAN
+      //  messages to make it happy, EXCEPT if we already sent the messages
+      //  (when Leaf Inverter is present).
+      if (opmode == MOD_RUN || opmode == MOD_CHARGE)
       {
-         leafInv.Task10Ms();//send leaf 10ms msgs if we are using the pdm and in charge mode
+         // don't send any torque (well.. there's no Leaf inverter)
+         leafInv.SetTorque(0);
+         leafInv.Task10Ms();
       }
    }
 
