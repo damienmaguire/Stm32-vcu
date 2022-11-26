@@ -25,17 +25,17 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 78
+//Next param id (increase when adding new parameter!): 79
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      6,      0,      6  ) \
+    PARAM_ENTRY(CAT_SETUP,     Transmission, TRNMODES, 0,      1,      0,      78  ) \
     PARAM_ENTRY(CAT_SETUP,     Inverter_CAN, CAN_DEV,  0,      1,      0,      70 ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle_CAN,  CAN_DEV,  0,      1,      1,      71 ) \
     PARAM_ENTRY(CAT_SETUP,     Shunt_CAN,    CAN_DEV,  0,      1,      0,      72 ) \
     PARAM_ENTRY(CAT_SETUP,     LIM_CAN,      CAN_DEV,  0,      1,      0,      73 ) \
     PARAM_ENTRY(CAT_SETUP,     Charger_CAN,  CAN_DEV,  0,      1,      1,      74 ) \
-    PARAM_ENTRY(CAT_SETUP,     CAN3Speed,    CAN3Spd,  0,      1,      0,      77 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -69,6 +69,7 @@
     PARAM_ENTRY(CAT_CONTACT,   errlights,   ERRLIGHTS, 0,      255,    0,      34 ) \
     PARAM_ENTRY(CAT_COMM,      canspeed,    CANSPEEDS, 0,      3,      1,      35 ) \
     PARAM_ENTRY(CAT_COMM,      canperiod,   CANPERIODS,0,      1,      1,      36 ) \
+    PARAM_ENTRY(CAT_COMM,      CAN3Speed,    CAN3Spd,  0,      1,      0,      77 ) \
     PARAM_ENTRY(CAT_CHARGER,   chargemodes, CHGMODS,   0,      4,      0,      37 ) \
     PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0.1,    250,    22,     38 ) \
     PARAM_ENTRY(CAT_CHARGER,   interface,   CHGINT,    0,      3,      0,      39 ) \
@@ -125,6 +126,7 @@
     VALUE_ENTRY(lim_can,       CAN_DEV,             2074 ) \
     VALUE_ENTRY(charger_can,   CAN_DEV,             2075 ) \
     VALUE_ENTRY(can3Speed,     CAN3Spd,             2080 ) \
+    VALUE_ENTRY(TRANS,        TRNMODES,             2081 ) \
     VALUE_ENTRY(Charger,       CHGMODS,             2027 ) \
     VALUE_ENTRY(tmphs,         "°C",                2028 ) \
     VALUE_ENTRY(tmpm,          "°C",                2029 ) \
@@ -175,7 +177,7 @@
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2081
+//Next value Id: 2082
 
 #define VERSTR STRINGIFY(4=VER)
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
@@ -206,6 +208,7 @@
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=Leaf_PDM"
 #define CAN3Spd      "0=k33.3, 1=k500"
+#define TRNMODES     "0=MAN, 1=AUT"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
 #define CAT_POWER    "Power Limit"

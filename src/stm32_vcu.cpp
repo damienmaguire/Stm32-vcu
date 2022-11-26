@@ -518,8 +518,11 @@ static void Ms10Task(void)
       //Messages required for E39
       Can_E39::Msg316(speed);//send rpm to e39 dash
       Can_E39::Msg329(tempGauge);//send heatsink temp to E39 dash temp gauge
-      Can_E39::Msg43B();
+      if(Param::GetInt(Param::TRANS)==1)
+      {
+      Can_E39::Msg43B();//only send auto egs msgs if an auto is selected.
       Can_E39::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
+      }
       Can_E39::Msg545();
    }
    else if (targetVehicle == vehicles::BMW_E46)
@@ -528,8 +531,10 @@ static void Ms10Task(void)
       //Messages required for E46
       Can_E46::Msg316(speed);//send rpm to e46 dash
       Can_E46::Msg329(tempGauge);//send heatsink temp to E64 dash temp gauge
-     // Can_E46::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
-     //TODO add manual auto option for bmw vehicles.
+      if(Param::GetInt(Param::TRANS)==1)
+      {
+      Can_E46::Msg43F(Param::GetInt(Param::dir));//set the gear indicator on the dash
+      }
       Can_E46::Msg545();
    }
    else if (targetVehicle == vehicles::BMW_E65)
@@ -722,7 +727,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Param::SetInt(Param::shunt_can,Param::GetInt(Param::Shunt_CAN));
    Param::SetInt(Param::lim_can,Param::GetInt(Param::LIM_CAN));
    Param::SetInt(Param::charger_can,Param::GetInt(Param::Charger_CAN));
-
+   Param::SetInt(Param::TRANS,Param::GetInt(Param::Transmission));
 
    Throttle::potmin[0] = Param::GetInt(Param::potmin);
    Throttle::potmax[0] = Param::GetInt(Param::potmax);
