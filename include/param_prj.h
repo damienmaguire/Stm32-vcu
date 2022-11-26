@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 1.09.D
+#define VER 1.10.A
 
 
 /* Entries must be ordered as follows:
@@ -25,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 77
+//Next param id (increase when adding new parameter!): 78
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
@@ -35,6 +35,7 @@
     PARAM_ENTRY(CAT_SETUP,     Shunt_CAN,    CAN_DEV,  0,      1,      0,      72 ) \
     PARAM_ENTRY(CAT_SETUP,     LIM_CAN,      CAN_DEV,  0,      1,      0,      73 ) \
     PARAM_ENTRY(CAT_SETUP,     Charger_CAN,  CAN_DEV,  0,      1,      1,      74 ) \
+    PARAM_ENTRY(CAT_SETUP,     CAN3Speed,    CAN3Spd,  0,      1,      0,      77 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -123,6 +124,7 @@
     VALUE_ENTRY(shunt_can,     CAN_DEV,             2073 ) \
     VALUE_ENTRY(lim_can,       CAN_DEV,             2074 ) \
     VALUE_ENTRY(charger_can,   CAN_DEV,             2075 ) \
+    VALUE_ENTRY(can3Speed,     CAN3Spd,             2080 ) \
     VALUE_ENTRY(Charger,       CHGMODS,             2027 ) \
     VALUE_ENTRY(tmphs,         "°C",                2028 ) \
     VALUE_ENTRY(tmpm,          "°C",                2029 ) \
@@ -173,7 +175,7 @@
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2080
+//Next value Id: 2081
 
 #define VERSTR STRINGIFY(4=VER)
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
@@ -203,6 +205,7 @@
 #define CHGMODS      "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=Leaf_PDM"
+#define CAN3Spd      "0=k33.3, 1=k500"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
 #define CAT_POWER    "Power Limit"
@@ -360,6 +363,8 @@ enum can_devices
     CAN_DEV1 = 0,
     CAN_DEV2 = 1
 };
+
+
 
 
 

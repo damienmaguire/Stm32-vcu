@@ -709,6 +709,11 @@ void Param::Change(Param::PARAM_NUM paramNum)
    case Param::canspeed:
       can->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
       can2->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
+   case Param::CAN3Speed:
+       Param::SetInt(Param::can3Speed,Param::GetInt(Param::CAN3Speed));
+      CANSPI_Initialize();// init the MCP25625 on CAN3
+      CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
+      break;
    default:
       break;
    }
@@ -717,6 +722,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Param::SetInt(Param::shunt_can,Param::GetInt(Param::Shunt_CAN));
    Param::SetInt(Param::lim_can,Param::GetInt(Param::LIM_CAN));
    Param::SetInt(Param::charger_can,Param::GetInt(Param::Charger_CAN));
+
 
    Throttle::potmin[0] = Param::GetInt(Param::potmin);
    Throttle::potmax[0] = Param::GetInt(Param::potmax);
