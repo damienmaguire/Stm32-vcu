@@ -284,14 +284,14 @@ static void Ms200Task(void)
    if we are in charge mode and battV >= setpoint and power is <= termination setpoint
        Then we end charge.
    */
-   /*if(opmode==MOD_CHARGE)
+   if(opmode==MOD_CHARGE)
    {
       if(Param::GetInt(Param::udc)>=Param::GetInt(Param::Voltspnt) && Param::GetInt(Param::idc)<=Param::GetInt(Param::IdcTerm))
       {
          RunChg=false;//end charge
          ChgLck=true;//set charge lockout flag
       }
-   }*/
+   }
    if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
 
    ///////////////////////////////////////
