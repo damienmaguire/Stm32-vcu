@@ -1,10 +1,11 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVerter project.
  *
  * Copyright (C) 2010 Johannes Huebner <contact@johanneshuebner.com>
  * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
  * Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
- * Copyright (C) 2020 Damien Maguire <info@evbmw.com>
+ * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -19,6 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "stm32_vcu.h"
+
 extern "C" void __cxa_pure_virtual() { while (1); }
 
 static Stm32Scheduler* scheduler;
@@ -62,6 +64,58 @@ static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
+
+static void UpdateInv()
+{
+      switch (Param::GetInt(Param::Inverter))
+      {
+         case InvModes::Leaf_Gen1:
+            selectedInverter = &leafInv;
+            break;
+         case InvModes::GS450H:
+            selectedInverter = &gs450Inverter;
+            gs450Inverter.SetGS450H();
+            break;
+        case InvModes::GS300H:
+            selectedInverter = &gs450Inverter;
+            gs450Inverter.SetGS300H();
+            break;
+         case InvModes::Prius_Gen3:
+            selectedInverter = &gs450Inverter;
+            gs450Inverter.SetPrius();
+            break;
+         case InvModes::Outlander:
+            selectedInverter = &outlanderInv;
+            break;
+      //   default: //default to OpenI, does the least damage ;)
+         case InvModes::OpenI:
+            selectedInverter = &openInv;
+            break;
+      }
+}
+
+
+//Whenever the user clears mapped can messages or changes the
+//CAN interface of a device, this will be called by the CanHardware module
+static void SetCanFilters()
+{
+   CanHardware* inverter_can = canInterface[Param::GetInt(Param::inv_can)];
+   CanHardware* vehicle_can = canInterface[Param::GetInt(Param::veh_can)];
+   CanHardware* shunt_can = canInterface[Param::GetInt(Param::shunt_can)];
+   CanHardware* lim_can = canInterface[Param::GetInt(Param::lim_can)];
+   CanHardware* charger_can = canInterface[Param::GetInt(Param::charger_can)];
+
+   selectedInverter->SetCanInterface(inverter_can);
+   selectedVehicle->SetCanInterface(vehicle_can);
+   ISA::RegisterCanMessages(shunt_can);
+   lim_can->RegisterUserMessage(0x3b4);//LIM MSG
+   lim_can->RegisterUserMessage(0x29e);//LIM MSG
+   lim_can->RegisterUserMessage(0x2b2);//LIM MSG
+   lim_can->RegisterUserMessage(0x2ef);//LIM MSG
+   lim_can->RegisterUserMessage(0x272);//LIM MSG
+
+   charger_can->RegisterUserMessage(0x108);//Charger HV request
+}
 
 static void RunChaDeMo()
 {
@@ -224,8 +278,8 @@ static void Ms200Task(void)
 
       if(!RunChg) chargeMode = false;
 
-      if(RunChg) DigIo::SP_out.Set();//enable charger digital line. using sp out from gs450h as not used when in charge
-      if(!RunChg) DigIo::SP_out.Clear();//disable charger digital line when requested by timer or webui.
+      if(RunChg) DigIo::PWM3.Set();//enable charger digital line.
+      if(!RunChg) DigIo::PWM3.Clear();//disable charger digital line when requested by timer or webui.
 
    }
 
@@ -282,11 +336,25 @@ static void Ms100Task(void)
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
 
-   if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+    if(opmode==MOD_RUN)
+    {
+       DigIo::PWM2.Set();//Enable run mode digital line to high.
+    }
+     else
+     {
+        DigIo::PWM2.Clear();
+     }
+
+   // Leaf Gen2 PDM Charger/DCDC/Chademo
+   if(targetChgint == ChargeInterfaces::Leaf_PDM &&
+      targetInverter != InvModes::Leaf_Gen1)
    {
-      if (opmode == MOD_CHARGE)
+      // If the Leaf PDM is in the system, always send the appropriate CAN
+      //  messages to make it happy, EXCEPT if we already sent the messages
+      //  (when Leaf Inverter is present).
+      if (opmode == MOD_RUN || opmode == MOD_CHARGE)
       {
-         leafInv.Task100Ms(); //send leaf 100ms msgs if we are using the pdm and in charge mode
+         leafInv.Task100Ms();
       }
    }
 
@@ -362,6 +430,8 @@ static void Ms100Task(void)
    {
       Param::SetInt(Param::HeatReq,DigIo::gp_12Vin.Get());
    }
+
+
 }
 
 static void Ms10Task(void)
@@ -376,11 +446,18 @@ static void Ms10Task(void)
 
    ErrorMessage::SetTime(rtc_get_counter_val());
 
-   if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2 PDM charger/DCDC/Chademo
+   // Leaf Gen2 PDM Charger/DCDC/Chademo
+   if(targetChgint == ChargeInterfaces::Leaf_PDM &&
+      targetInverter != InvModes::Leaf_Gen1)
    {
-      if (opmode == MOD_CHARGE)
+      // If the Leaf PDM is in the system, always send the appropriate CAN
+      //  messages to make it happy, EXCEPT if we already sent the messages
+      //  (when Leaf Inverter is present).
+      if (opmode == MOD_RUN || opmode == MOD_CHARGE)
       {
-         leafInv.Task10Ms();//send leaf 10ms msgs if we are using the pdm and in charge mode
+         // don't send any torque (well.. there's no Leaf inverter)
+         leafInv.SetTorque(0);
+         leafInv.Task10Ms();
       }
    }
 
@@ -411,6 +488,8 @@ static void Ms10Task(void)
       {
          torquePercent *= requestedDirection;
       }
+
+      selectedInverter->Task10Ms();
    }
    else
    {
@@ -437,8 +516,8 @@ static void Ms10Task(void)
    stt |= udc >= Param::GetFloat(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
    stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
-
-   if (opmode==MOD_OFF && (selectedVehicle->Start() || chargeMode))//on detection of ign on or charge mode enable we commence prechage and go to mode precharge
+   //on detection of ign on or charge mode enable we commence prechage and go to mode precharge
+   if (opmode == MOD_OFF && (Param::GetBool(Param::din_start) || /*E65Vehicle.getTerminal15() ||*/ chargeMode))
    {
       if(chargeMode==false)
       {
@@ -513,10 +592,10 @@ static void Ms10Task(void)
    }
 
    //Cabin heat control
-   if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN))//If we have selected an ampera heater are in run mode and heater not diabled...
+   if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN)&&(targetChgint != ChargeInterfaces::Chademo))//If we have selected an ampera heater are in run mode and heater not diabled...
    {
       //TODO: multiplex with chademo
-      //DigIo::gp_out3.Set();//Heater enable and coolant pump on
+      DigIo::gp_out3.Set();//Heater enable and coolant pump on
 
       if(Ampera_Not_Awake)
       {
@@ -528,19 +607,16 @@ static void Ms10Task(void)
 
    };
 
-   if(CabHeater_ctrl==0 || opmode!=MOD_RUN)
+   if((CabHeater_ctrl==0 || opmode!=MOD_RUN)&&(targetChgint != ChargeInterfaces::Chademo))
    {
       //TODO: multiplex with chademo
-      //DigIo::gp_out3.Clear();//Heater enable and coolant pump off
+      DigIo::gp_out3.Clear();//Heater enable and coolant pump off
       Ampera_Not_Awake=true;
    }
 }
 
 static void Ms1Task(void)
 {
-   //gpio_toggle(GPIOB,GPIO12);
-   // Send direction from this context.
-   // Torque updated in 10ms loop.
    selectedInverter->Task1Ms();
    selectedVehicle->Task1Ms();
 }
@@ -553,31 +629,8 @@ void Param::Change(Param::PARAM_NUM paramNum)
    {
    case Param::Inverter:
       selectedInverter->DeInit();
-
-      switch (Param::GetInt(Param::Inverter))
-      {
-         case InvModes::Leaf_Gen1:
-            selectedInverter = &leafInv;
-            break;
-         case InvModes::GS450H:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetGS450H();
-            break;
-         case InvModes::Prius_Gen3:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetPrius();
-            break;
-         case InvModes::Outlander:
-            selectedInverter = &outlanderInv;
-            break;
-         default: //default to OpenI, does the least damage ;)
-         case InvModes::OpenI:
-            selectedInverter = &openInv;
-            break;
-      }
-      //This will call SetCanFilters() via the Clear Callback
-      canInterface[0]->ClearUserMessages();
-      canInterface[1]->ClearUserMessages();
+      UpdateInv();
+      SetCanFilters();
       break;
    case Param::Vehicle:
       switch (Param::GetInt(Param::Vehicle))
@@ -612,6 +665,10 @@ void Param::Change(Param::PARAM_NUM paramNum)
    case Param::canspeed:
       canInterface[0]->SetBaudrate((CanHardware::baudrates)Param::GetInt(Param::canspeed));
       canInterface[1]->SetBaudrate((CanHardware::baudrates)Param::GetInt(Param::canspeed));
+   case Param::CAN3Speed:
+       Param::SetInt(Param::can3Speed,Param::GetInt(Param::CAN3Speed));
+      CANSPI_Initialize();// init the MCP25625 on CAN3
+      CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
       break;
    default:
       break;
@@ -622,6 +679,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Param::SetInt(Param::shunt_can,Param::GetInt(Param::Shunt_CAN));
    Param::SetInt(Param::lim_can,Param::GetInt(Param::LIM_CAN));
    Param::SetInt(Param::charger_can,Param::GetInt(Param::Charger_CAN));
+   Param::SetInt(Param::TRANS,Param::GetInt(Param::Transmission));
 
    Throttle::potmin[0] = Param::GetInt(Param::potmin);
    Throttle::potmax[0] = Param::GetInt(Param::potmax);
@@ -631,11 +689,12 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Throttle::regenmax = Param::GetFloat(Param::regenmax);
    Throttle::throtmax = Param::GetFloat(Param::throtmax);
    Throttle::throtmin = Param::GetFloat(Param::throtmin);
+   Throttle::throtdead = Param::GetFloat(Param::throtdead);
    Throttle::idcmin = Param::GetFloat(Param::idcmin);
    Throttle::idcmax = Param::GetFloat(Param::idcmax);
    Throttle::udcmin = Param::GetFloat(Param::udcmin);
    Throttle::speedLimit = Param::GetInt(Param::revlim);
-   Throttle::regenRamp = 1.0f; //TODO: make parameter
+   Throttle::regenRamp = Param::GetFloat(Param::regenramp);
    targetInverter=static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
    Param::SetInt(Param::inv, targetInverter);//Confirm mode
    //What is this copy meant for?
@@ -753,28 +812,6 @@ extern "C" void rtc_isr(void)
    }
 }
 
-//Whenever the user clears mapped can messages or changes the
-//CAN interface of a device, this will be called by the CanHardware module
-static void SetCanFilters()
-{
-   CanHardware* inverter_can = canInterface[Param::GetInt(Param::inv_can)];
-   CanHardware* vehicle_can = canInterface[Param::GetInt(Param::veh_can)];
-   CanHardware* shunt_can = canInterface[Param::GetInt(Param::shunt_can)];
-   CanHardware* lim_can = canInterface[Param::GetInt(Param::lim_can)];
-   CanHardware* charger_can = canInterface[Param::GetInt(Param::charger_can)];
-
-   selectedInverter->SetCanInterface(inverter_can);
-   selectedVehicle->SetCanInterface(vehicle_can);
-   ISA::RegisterCanMessages(shunt_can);
-   lim_can->RegisterUserMessage(0x3b4);//LIM MSG
-   lim_can->RegisterUserMessage(0x29e);//LIM MSG
-   lim_can->RegisterUserMessage(0x2b2);//LIM MSG
-   lim_can->RegisterUserMessage(0x2ef);//LIM MSG
-   lim_can->RegisterUserMessage(0x272);//LIM MSG
-
-   charger_can->RegisterUserMessage(0x108);//Charger HV request
-}
-
 extern "C" int main(void)
 {
    extern const TERM_CMD TermCmds[];
@@ -792,6 +829,7 @@ extern "C" int main(void)
    Param::Change(Param::PARAM_LAST);
    DigIo::inv_out.Clear();//inverter power off during bootup
    DigIo::mcp_sby.Clear();//enable can3
+  // DigIo::PWM3.Set();//Enable pcs for test
 
    Terminal t(USART3, TermCmds);
    FunctionPointerCallback canCb(CanCallback, SetCanFilters);
@@ -806,6 +844,7 @@ extern "C" int main(void)
 
    canInterface[0] = &c;
    canInterface[1] = &c2;
+   CanHardware* shunt_can = canInterface[Param::GetInt(Param::shunt_can)];
    SetCanFilters();
 
    CANSPI_Initialize();// init the MCP25625 on CAN3
@@ -819,9 +858,10 @@ extern "C" int main(void)
    s.AddTask(Ms100Task, 100);
    s.AddTask(Ms200Task, 200);
 
-   // ISA::initialize();//only call this once if a new sensor is fitted. Might put an option on web interface to call this....
-   //  DigIo::prec_out.Set();//commence precharge
+   if(Param::GetInt(Param::ISA_INIT)==1) ISA::initialize(shunt_can);//only call this once if a new sensor is fitted.
+
    Param::SetInt(Param::version, 4); //backward compatibility
+   UpdateInv();
 
    while(1)
       t.Run();

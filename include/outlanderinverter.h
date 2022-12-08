@@ -1,7 +1,8 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVerter project.
  *
- * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
+ * Copyright (C) 2021-2022  Johannes Huebner <dev@johanneshuebner.com>
+ * 	                        Damien Maguire <info@evbmw.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +16,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */#ifndef OUTLANDERINVERTER_H
+ */
+#ifndef OUTLANDERINVERTER_H
 #define OUTLANDERINVERTER_H
 
 #include <inverter.h>
 
-
 class OutlanderInverter : public Inverter
 {
 public:
-   /** Default constructor */
    OutlanderInverter();
    void SetCanInterface(CanHardware* c);
    void DecodeCAN(int id, uint32_t data[2]);
@@ -38,8 +38,6 @@ public:
    int GetInverterState() { return error; }
 
 private:
-   static void nissan_crc(uint8_t *data, uint8_t polynomial);
-   static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
    uint8_t run10ms;
    uint32_t lastRecv;
    int16_t speed;
@@ -48,10 +46,6 @@ private:
    bool error;
    uint16_t voltage;
    uint32_t final_torque_request;
-
-   protected:
-
-   private:
 };
 
 #endif // OUTLANDERINVERTER_H

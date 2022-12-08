@@ -1,7 +1,9 @@
 /*
- * This file is part of the ZombieVerter project.
+ * This file is part of the tumanako_vc project.
  *
- * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
+ * Copyright (C) 2010 Johannes Huebner <contact@johanneshuebner.com>
+ * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
+ * Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,22 +18,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef TEST_LIST_H_INCLUDED
+#define TEST_LIST_H_INCLUDED
 
-#ifndef ANAIN_PRJ_H_INCLUDED
-#define ANAIN_PRJ_H_INCLUDED
+#include "test.h"
 
-#include "hwdefs.h"
+class ThrottleTest: public IUnitTest
+{
+   public:
+      virtual void RunTest();
+};
 
-#define NUM_SAMPLES 12
-#define SAMPLE_TIME ADC_SMPR_SMP_7DOT5CYC
+#ifdef EXPORT_TESTLIST
+IUnitTest* testList[] =
+{
+   new ThrottleTest(),
+   NULL
+};
+#endif
 
-#define ANA_IN_LIST \
-   ANA_IN_ENTRY(throttle1, GPIOC, 0) \
-   ANA_IN_ENTRY(throttle2, GPIOC, 1) \
-   ANA_IN_ENTRY(uaux,      GPIOB, 1) \
-   ANA_IN_ENTRY(GP_analog1,GPIOC, 2) \
-   ANA_IN_ENTRY(GP_analog2,GPIOC, 3) \
-   ANA_IN_ENTRY(MG1_Temp,  GPIOC, 4) \
-   ANA_IN_ENTRY(MG2_Temp,  GPIOC, 5) \
-
-#endif // ANAIN_PRJ_H_INCLUDED
+#endif // TEST_LIST_H_INCLUDED

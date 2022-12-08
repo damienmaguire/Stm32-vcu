@@ -38,6 +38,7 @@ public:
    //Lexus/Toyota specific functions
    void SetPrius();
    void SetGS450H();
+   void SetGS300H();
    void SetGear(int16_t g) { gear = g; }
    void SetOil(int16_t o) { oil = o; }
 

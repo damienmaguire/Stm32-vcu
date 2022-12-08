@@ -29,8 +29,21 @@ Now you can compile stm32-vcu by typing
 
 `make`
 
+# Tests
+
+`cd tests`
+
+Build the tests
+
+`make`
+
+Run the tests
+
+`./test_vcu`
+
 And upload it to your board using a JTAG/SWD adapter, the updater.py script or the esp8266 web interface
 
 I use CodeBlocks IDE :  https://www.codeblocks.org/
 
 Sept 21 : V1 hardware and firmware from "Master" branch now running in my E46 Touring and E39 vehicles.
+

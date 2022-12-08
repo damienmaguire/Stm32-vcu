@@ -45,6 +45,7 @@ private:
    void Msg329();
    void Msg545();
    void Msg43F(int8_t gear);
+   void Msg43B();
 
    uint16_t speed;
    bool isE46;

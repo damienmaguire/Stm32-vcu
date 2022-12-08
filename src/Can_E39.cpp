@@ -33,6 +33,7 @@ void Can_E39::Task10Ms()
    Msg316();
    Msg329();
    Msg545();
+   Msg43B();
 
    if (isE46)
       Msg43F(Param::GetInt(Param::dir));
@@ -211,6 +212,18 @@ void Can_E39::Msg329()   //DME2
    if(counter_329==15) ABSMsg=0xd9;
 
    can->Send(0x329, bytes, 8); //Send on CAN2
+}
+
+void Can_E39::Msg43B()  //EGS1
+{
+
+   uint8_t bytes[3];
+
+   bytes[0]=0x46;
+   bytes[1]=0x00;
+   bytes[2]=0x00;
+
+   can->Send(0x43B, (uint32_t*)bytes,3);
 }
 
 void Can_E39::Msg545()  //DME4

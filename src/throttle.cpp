@@ -1,7 +1,8 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVerter project.
  *
- * Copyright (C) 2012 Johannes Huebner <contact@johanneshuebner.com>
+ * Copyright (C) 2012-2020 Johannes Huebner <dev@johanneshuebner.com> 
+ *               2021-2022 Damien Maguire <info@evbmw.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,9 +38,9 @@ float Throttle::idleThrotLim;
 float Throttle::potnomFiltered;
 float Throttle::throtmax;
 float Throttle::throtmin;
+float Throttle::throtdead;
 float Throttle::regenRamp;
 float Throttle::throttleRamp;
-float Throttle::throttleRamped;
 int Throttle::bmslimhigh;
 int Throttle::bmslimlow;
 float Throttle::udcmin;
@@ -48,19 +49,30 @@ float Throttle::idcmin;
 float Throttle::idcmax;
 int Throttle::speedLimit;
 
+/**
+ * @brief Check the throttle input for sanity and limit the range to min/max values
+ * 
+ * @param potval Pointer to the throttle input array, range should be [potMin, potMax].
+ * @param potIdx Index of the throttle input array, range is [0, 1].
+ * @return true if the throttle input was within bounds (accounting for POT_SLACK).
+ * @return false the throttle was too far out of bounds. Setting potval to the minimum.
+ */
 bool Throttle::CheckAndLimitRange(int* potval, int potIdx)
 {
+   // The range check accounts for inverted throttle pedals, where the minimum
+   // value is higher than the maximum. To accomodate for that, the potMin and potMax
+   // variables are set for internal use.
    int potMin = potmax[potIdx] > potmin[potIdx] ? potmin[potIdx] : potmax[potIdx];
    int potMax = potmax[potIdx] > potmin[potIdx] ? potmax[potIdx] : potmin[potIdx];
 
    if (((*potval + POT_SLACK) < potMin) || (*potval > (potMax + POT_SLACK)))
    {
-      *potval = potMin - 1;
+      *potval = potMin;
       return false;
    }
    else if (*potval < potMin)
    {
-      *potval = potMin - 1;
+      *potval = potMin;
    }
    else if (*potval > potMax)
    {
@@ -70,72 +82,114 @@ bool Throttle::CheckAndLimitRange(int* potval, int potIdx)
    return true;
 }
 
-bool Throttle::CheckDualThrottle(int* potval, int pot2val)
+/**
+ * @brief Normalize the throttle input value to the min-max scale.
+ * 
+ * Returns 0.0% for illegal indices and if potmin and potmax are equal.
+ * 
+ * @param potval Throttle input value, range is [potmin[potIdx], potmax[potIdx]], not checked!
+ * @param potIdx Index of the throttle input, should be [0, 1].
+ * @return Normalized throttle value output with range [0.0, 100.0] with correct input.
+ */
+float Throttle::NormalizeThrottle(int potval, int potIdx)
 {
-   int potnom1, potnom2;
-   //2nd input running inverse
-   if (potmin[1] > potmax[1])
-   {
-      potnom2 = 100 - (100 * (pot2val - potmax[1])) / (potmin[1] - potmax[1]);
-   }
-   else
-   {
-      potnom2 = (100 * (pot2val - potmin[1])) / (potmax[1] - potmin[1]);
-   }
-   potnom1 = (100 * (*potval - potmin[0])) / (potmax[0] - potmin[0]);
-   int diff = potnom2 - potnom1;
-   diff = ABS(diff);
-
-   if (diff > 100)
-   {
-      *potval = potmin[0];
-      return false;
-   }
-   return true;
+   if(potIdx < 0 || potIdx > 1)
+      return 0.0f;
+   
+   if(potmin[potIdx] == potmax[potIdx])
+      return 0.0f;
+   
+   return 100.0f * ((float)(potval - potmin[potIdx]) / (float)(potmax[potIdx] - potmin[potIdx]));
 }
 
-float Throttle::CalcThrottle(int potval, int pot2val, bool brkpedal)
+/**
+ * @brief Calculate a throttle percentage from the potval input.
+ * 
+ * After the previous range checks, the throttle input potval lies within the
+ * range of [potmin[0], potmax[0]]. From this range, the input is converted to
+ * a percent range of [-100.0, -100.0].
+ * 
+ * TODO: No regen implemented. Commanding 0 throttle while braking, otherwise direct output.
+ * 
+ * @param potval 
+ * @param idx Index of the throttle input that should be used for calculation.
+ * @param brkpedal Brake pedal input (true for brake pedal pressed, false otherwise).
+ * @return float 
+ */
+float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 {
-   float potnom;
-   float scaledBrkMax = brkpedal ? brknompedal : regenmax;
-
-   if (pot2val >= potmin[1])
-   {
-      potnom = (100.0f * (pot2val - potmin[1])) / (potmax[1] - potmin[1]);
-      //Never reach 0, because that can spin up the motor
-      scaledBrkMax = -0.1f + (scaledBrkMax * potnom) / 100.0f;
-   }
+   float potnom = 0.0f;  // normalize potval against the potmin and potmax values
 
    if (brkpedal)
    {
-      potnom = scaledBrkMax;
+      // no regen for now, just command zero throttle when braking
+      potnom = 0.0f;
+      return potnom;
    }
+   
+   // substract offset, bring potval to the potmin-potmax scale and make a percentage
+   potnom = NormalizeThrottle(potval, potIdx);
+   
+   // Apply the deadzone parameter. To avoid that we lose the range between
+   // 0 and throtdead, the scale of potnom is mapped from the [0.0, 100.0] scale
+   // to the [throtdead, 100.0] scale.
+   if(potnom < throtdead)
+      potnom = 0.0f;
    else
-   {
-      potnom = potval - potmin[0];
-      potnom = ((100.0f + regenTravel) * potnom) / (potmax[0] - potmin[0]);
-      potnom -= regenTravel;
-
-      if (potnom < 0)
-      {
-         potnom = -(potnom * scaledBrkMax / regenTravel);
-      }
-   }
-
+      potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
+   
    return potnom;
+
+   // float potnom;
+   // float scaledBrkMax = brkpedal ? brknompedal : regenmax;
+
+   // if (pot2val >= potmin[1])
+   // {
+   //    potnom = (100.0f * (pot2val - potmin[1])) / (potmax[1] - potmin[1]);
+   //    //Never reach 0, because that can spin up the motor
+   //    scaledBrkMax = -0.1f + (scaledBrkMax * potnom) / 100.0f;
+   // }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+   // if (brkpedal)
+   // {
+   //    potnom = scaledBrkMax;
+   // }
+   // else
+   // {
+   //    potnom = potval - potmin[0];
+   //    potnom = ((100.0f + regenTravel) * potnom) / (potmax[0] - potmin[0]);
+   //    potnom -= regenTravel;
+
+   //    if (potnom < 0)
+   //    {
+   //       potnom = -(potnom * scaledBrkMax / regenTravel);
+   //    }
+   // }
+
+   // return potnom;
 }
 
+/**
+ * @brief Apply the throttle ramping parameters for ramping up and down.
+ * 
+ * @param potnom Normalized throttle command in percent, range [-100.0, 100.0].
+ * @return float Ramped throttle command in percent, range [-100.0, 100.0].
+ */
 float Throttle::RampThrottle(float potnom)
 {
+   // internal variable, reused every time the function is called
+   static float throttleRamped = 0.0;
+
+   // make sure potnom is within the boundaries of [throtmin, throtmax]
    potnom = MIN(potnom, throtmax);
    potnom = MAX(potnom, throtmin);
 
-   if (potnom >= throttleRamped)
+   if (potnom >= throttleRamped) // higher throttle command than currently applied
    {
       throttleRamped = RAMPUP(throttleRamped, potnom, throttleRamp);
       potnom = throttleRamped;
    }
-   else if (potnom < throttleRamped && potnom > 0)
+   else if (potnom < throttleRamped && potnom > 0) // lower throttle command than currently applied
    {
       throttleRamped = potnom; //No ramping from high throttle to low throttle
    }

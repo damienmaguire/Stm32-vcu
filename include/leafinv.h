@@ -1,8 +1,8 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the ZombieVeter project.
  *
  * Copyright (C) 2020 Johannes Huebner <dev@johanneshuebner.com>
- *                      Damien Maguire <info@evbmw.com>
+ *               2021-2022 Damien Maguire <info@evbmw.com>
  * Yes I'm really writing software now........run.....run away.......
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
  */
 #ifndef LEAFINV_H
 #define LEAFINV_H
+
 #include <stdint.h>
 #include "my_fp.h"
 #include "inverter.h"
@@ -42,8 +43,6 @@ public:
 private:
    static void nissan_crc(uint8_t *data, uint8_t polynomial);
    static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
-   uint8_t run10ms;
-   uint8_t run100ms;
    uint32_t lastRecv;
    int16_t speed;
    int16_t inv_temp;
