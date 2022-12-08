@@ -174,7 +174,8 @@ void i3LIMClass::Send10msMessages()
    int32_t I_Batt=(Param::GetInt(Param::idc)+819)*10;//(Param::GetInt(Param::idc);FP_FROMINT
    //I_Batt=0xa0a0;
    //uint16_t SOC_Local=25*10;//(Param::GetInt(Param::SOC))*10;
-   uint16_t SOC_Local=(Param::GetInt(Param::SOC))*10;
+   //uint16_t SOC_Local=(Param::GetInt(Param::SOC))*10;
+   uint16_t SOC_Local=(Param::GetInt(Param::SOCFC))*10;
    uint8_t bytes[8]; //seems to be from i3 BMS.
    bytes[0] = I_Batt & 0xFF;  //Battery current LSB. Scale 0.1 offset 819.2. 16 bit unsigned int
    bytes[1] = I_Batt >> 8;  //Battery current MSB. Scale 0.1 offset 819.2.  16 bit unsigned int
@@ -619,8 +620,7 @@ i3LIMChargingState i3LIMClass::Control_Charge(bool RunCh)
             CHG_Ready=ChargeReady::Rdy;
             CHG_Pwr=44000/25;//39kw approx power
             CCSI_Spnt=0;//No current
-
-            if(Cont_Volts==0)lim_stateCnt++; //we wait for the contactor voltage to return to 0 to indicate end of cable test
+            if(Cont_Volts<=50)lim_stateCnt++; //we wait for the contactor voltage to drop under 50v to indicate end of cable test
             if(lim_stateCnt>20)
             {
                if(CCS_Iso==0x1) lim_state++; //next state after 2 secs if we have valid iso test
@@ -808,6 +808,7 @@ void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
    if(Tmp_Vbatt>Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.
    if(CCS_Ilim==0x1)CCSI_Spnt--;//decrement if current limit flag is set
    if(CCS_Plim==0x1)CCSI_Spnt--;//decrement if Power limit flag is set
+
    Param::SetInt(Param::CCS_Ireq,CCSI_Spnt);
 }
 
