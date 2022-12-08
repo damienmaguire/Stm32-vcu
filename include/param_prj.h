@@ -196,7 +196,7 @@
 #define ONOFF        "0=Off, 1=On, 2=na"
 #define LOWHIGH      "0=LOW, 1=HIGH, 2=AUTO"
 #define OKERR        "0=Error, 1=Ok, 2=na"
-#define CANSPEEDS    "0=250k, 1=500k, 2=800k, 3=1M"
+#define CANSPEEDS    "0=125k, 1=250k, 2=500k, 3=800k, 4=1M"
 #define CANIOS       "1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms"
 #define CANPERIODS   "0=100ms, 1=10ms"
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"

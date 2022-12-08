@@ -67,31 +67,33 @@ static Vehicle* selectedVehicle = &vagVehicle;
 
 static void UpdateInv()
 {
-      switch (Param::GetInt(Param::Inverter))
-      {
-         case InvModes::Leaf_Gen1:
-            selectedInverter = &leafInv;
-            break;
-         case InvModes::GS450H:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetGS450H();
-            break;
-        case InvModes::GS300H:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetGS300H();
-            break;
-         case InvModes::Prius_Gen3:
-            selectedInverter = &gs450Inverter;
-            gs450Inverter.SetPrius();
-            break;
-         case InvModes::Outlander:
-            selectedInverter = &outlanderInv;
-            break;
-      //   default: //default to OpenI, does the least damage ;)
-         case InvModes::OpenI:
-            selectedInverter = &openInv;
-            break;
-      }
+   selectedInverter->DeInit();
+   switch (Param::GetInt(Param::Inverter))
+   {
+      case InvModes::Leaf_Gen1:
+         selectedInverter = &leafInv;
+         break;
+      case InvModes::GS450H:
+         selectedInverter = &gs450Inverter;
+         gs450Inverter.SetGS450H();
+         break;
+     case InvModes::GS300H:
+         selectedInverter = &gs450Inverter;
+         gs450Inverter.SetGS300H();
+         break;
+      case InvModes::Prius_Gen3:
+         selectedInverter = &gs450Inverter;
+         gs450Inverter.SetPrius();
+         break;
+      case InvModes::Outlander:
+         selectedInverter = &outlanderInv;
+         break;
+      case InvModes::OpenI:
+         selectedInverter = &openInv;
+         break;
+   }
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
 }
 
 
@@ -628,9 +630,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    switch (paramNum)
    {
    case Param::Inverter:
-      selectedInverter->DeInit();
       UpdateInv();
-      SetCanFilters();
       break;
    case Param::Vehicle:
       switch (Param::GetInt(Param::Vehicle))
@@ -665,6 +665,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    case Param::canspeed:
       canInterface[0]->SetBaudrate((CanHardware::baudrates)Param::GetInt(Param::canspeed));
       canInterface[1]->SetBaudrate((CanHardware::baudrates)Param::GetInt(Param::canspeed));
+      break;
    case Param::CAN3Speed:
        Param::SetInt(Param::can3Speed,Param::GetInt(Param::CAN3Speed));
       CANSPI_Initialize();// init the MCP25625 on CAN3
@@ -845,10 +846,12 @@ extern "C" int main(void)
    canInterface[0] = &c;
    canInterface[1] = &c2;
    CanHardware* shunt_can = canInterface[Param::GetInt(Param::shunt_can)];
-   SetCanFilters();
+   //SetCanFilters();
 
    CANSPI_Initialize();// init the MCP25625 on CAN3
    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
+
+   UpdateInv();
 
    Stm32Scheduler s(TIM3); //We never exit main so it's ok to put it on stack
    scheduler = &s;
@@ -861,7 +864,6 @@ extern "C" int main(void)
    if(Param::GetInt(Param::ISA_INIT)==1) ISA::initialize(shunt_can);//only call this once if a new sensor is fitted.
 
    Param::SetInt(Param::version, 4); //backward compatibility
-   UpdateInv();
 
    while(1)
       t.Run();
