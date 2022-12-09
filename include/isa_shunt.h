@@ -32,7 +32,7 @@ public:
     static		int32_t Voltage;
     static		int32_t Voltage2;
     static		int32_t Voltage3;
-    static		int16_t Temperature;
+    static		int32_t Temperature;
     static      int32_t Amperes;   // Floating point with current in Amperes
     static      int32_t KW;
     static      int32_t KWh;

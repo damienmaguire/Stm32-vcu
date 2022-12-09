@@ -24,7 +24,7 @@ int32_t ISA::KWh;
 int32_t ISA::Voltage=0;
 int32_t ISA::Voltage2=0;
 int32_t ISA::Voltage3=0;
-int16_t ISA::Temperature;
+int32_t ISA::Temperature;
 
 
 
@@ -77,8 +77,8 @@ void ISA::handle525(uint32_t data[2])  //Temperature
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    framecount++;
-   uint16_t temp=0;
-   temp = (uint16_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
+   int32_t temp=0;
+   temp = (int32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
    Temperature=temp/10;
 

@@ -412,7 +412,7 @@ static void Ms100Task(void)
    if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
       Can::GetInterface(Param::GetInt(Param::inv_can))->SendAll();
 
-   int16_t IsaTemp=ISA::Temperature;
+   int32_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
 
    chargerClass::Send100msMessages(RunChg);
