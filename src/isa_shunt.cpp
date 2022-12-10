@@ -237,9 +237,6 @@ void ISA::handle522(uint32_t data[2])  //Voltage
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage=((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
-
-
 }
 
 void ISA::handle523(uint32_t data[2]) //Voltage2
