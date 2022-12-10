@@ -292,14 +292,14 @@ static void Ms200Task(void)
    if we are in charge mode and battV >= setpoint and power is <= termination setpoint
        Then we end charge.
    */
-   /*if(opmode==MOD_CHARGE)
+   if(opmode==MOD_CHARGE)
    {
       if(Param::GetInt(Param::udc)>=Param::GetInt(Param::Voltspnt) && Param::GetInt(Param::idc)<=Param::GetInt(Param::IdcTerm))
       {
          RunChg=false;//end charge
          ChgLck=true;//set charge lockout flag
       }
-   }*/
+   }
    if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
 
    ///////////////////////////////////////
@@ -407,7 +407,7 @@ static void Ms100Task(void)
    //if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
      // Can::GetInterface(Param::GetInt(Param::inv_can))->SendAll();
 
-   int16_t IsaTemp=ISA::Temperature;
+   int32_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
 
    chargerClass::Send100msMessages(RunChg, canInterface[Param::GetInt(Param::charger_can)]);

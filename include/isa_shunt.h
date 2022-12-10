@@ -29,17 +29,17 @@ public:
     static void START(CanHardware* can);
     static void RESTART(CanHardware* can);
     static void deFAULT(CanHardware* can);
+    static void DecodeCAN(int id, uint32_t data[2]);
 
     static int32_t Voltage;
     static int32_t Voltage2;
     static int32_t Voltage3;
-    static int16_t Temperature;
+    static int32_t Temperature;
     static int32_t Amperes;   // Floating point with current in Amperes
     static int32_t KW;
     static int32_t KWh;
     static int32_t Ah;
 
-    static void DecodeCAN(int id, uint32_t data[2]);
 
 private:
     static		unsigned long elapsedtime;
