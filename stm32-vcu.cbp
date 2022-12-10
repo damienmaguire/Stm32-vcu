@@ -16,7 +16,7 @@
 		</MakeCommands>
 		<Build>
 			<Target title="STM32F107">
-				<Option output="stm32_sine" prefix_auto="0" extension_auto="0" />
+				<Option output="stm32_vcu" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="armelfgcc" />
@@ -139,8 +139,11 @@
 				<general />
 			</DoxyBlocks>
 			<debugger>
-				<remote_debugging target="STM32F103">
-					<options conn_type="0" ip_address="localhost" ip_port="3333" additional_cmds="load&#x0A;r" />
+				<remote_debugging>
+					<options conn_type="0" ip_address="localhost" ip_port="3333" />
+				</remote_debugging>
+				<remote_debugging target="STM32F107">
+					<options conn_type="0" additional_cmds="load&#x0A;r" />
 				</remote_debugging>
 			</debugger>
 		</Extensions>
