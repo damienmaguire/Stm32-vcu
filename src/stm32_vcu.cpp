@@ -663,10 +663,6 @@ void Param::Change(Param::PARAM_NUM paramNum)
       canInterface[0]->ClearUserMessages();
       canInterface[1]->ClearUserMessages();
       break;
-   case Param::canspeed:
-      canInterface[0]->SetBaudrate((CanHardware::baudrates)Param::GetInt(Param::canspeed));
-      canInterface[1]->SetBaudrate((CanHardware::baudrates)Param::GetInt(Param::canspeed));
-      break;
    case Param::CAN3Speed:
       CANSPI_Initialize();// init the MCP25625 on CAN3
       CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
@@ -824,8 +820,8 @@ extern "C" int main(void)
 
    Terminal t(USART3, TermCmds);
    FunctionPointerCallback canCb(CanCallback, SetCanFilters);
-   Stm32Can c(CAN1, (CanHardware::baudrates)Param::GetInt(Param::canspeed));
-   Stm32Can c2(CAN2, (CanHardware::baudrates)Param::GetInt(Param::canspeed), true);
+   Stm32Can c(CAN1, CanHardware::Baud500);
+   Stm32Can c2(CAN2, CanHardware::Baud500, true);
    CanMap cm(&c);
 
    // Set up CAN 1 callback and messages to listen for

@@ -67,9 +67,7 @@
     PARAM_ENTRY(CAT_CONTACT,   udcsw,       "V",       0,      1000,   330,    32 ) \
     PARAM_ENTRY(CAT_CONTACT,   cruiselight, ONOFF,     0,      1,      0,      33 ) \
     PARAM_ENTRY(CAT_CONTACT,   errlights,   ERRLIGHTS, 0,      255,    0,      34 ) \
-    PARAM_ENTRY(CAT_COMM,      canspeed,    CANSPEEDS, 0,      3,      1,      35 ) \
-    PARAM_ENTRY(CAT_COMM,      canperiod,   CANPERIODS,0,      1,      1,      36 ) \
-    PARAM_ENTRY(CAT_COMM,      CAN3Speed,    CAN3Spd,  0,      1,      0,      77 ) \
+    PARAM_ENTRY(CAT_COMM,      CAN3Speed,   CAN3Spd,   0,      1,      0,      77 ) \
     PARAM_ENTRY(CAT_CHARGER,   chargemodes, CHGMODS,   0,      4,      0,      37 ) \
     PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0.1,    250,    22,     38 ) \
     PARAM_ENTRY(CAT_CHARGER,   interface,   CHGINT,    0,      3,      0,      39 ) \
