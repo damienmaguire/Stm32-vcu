@@ -20,11 +20,13 @@
 #define VEHICLE_H_INCLUDED
 
 #include "canhardware.h"
+#include "params.h"
 
 class Vehicle
 {
 public:
    enum gear { PARK, REVERSE, NEUTRAL, DRIVE };
+   enum cruise { CC_NONE, CC_ON, CC_SET, CC_RESUME, CC_CANCEL };
 
    virtual void Task1Ms() {} //Default does nothing
    virtual void Task10Ms() {} //Default does nothing
@@ -35,8 +37,9 @@ public:
    virtual void SetRevCounter(int speed) = 0;
    virtual void SetTemperatureGauge(float temp) = 0;
    virtual bool GetGear(gear&) { return false; } //if vehicle class knows gear return true and set dir
+   virtual cruise GetCruiseState() { return CC_NONE; }
    virtual bool Ready() = 0;
-   virtual bool Start() { return false; }
+   virtual bool Start() { return Param::GetBool(Param::din_start); }
    void SetCanInterface(CanHardware* c) { can = c; }
 
 protected:

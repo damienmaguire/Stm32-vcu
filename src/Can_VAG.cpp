@@ -56,5 +56,6 @@ void Can_VAG::Task10Ms()
 
 bool Can_VAG::Start()
 {
+   //TODO the start signal can be found on CAN bus, use it!
    return Param::GetBool(Param::din_start);
 }

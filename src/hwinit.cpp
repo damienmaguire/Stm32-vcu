@@ -56,8 +56,8 @@ void clock_setup(void)
    rcc_periph_clock_enable(RCC_USART2);//GS450H Inverter Comms
    rcc_periph_clock_enable(RCC_TIM1); //GS450H oil pump pwm
    rcc_periph_clock_enable(RCC_TIM2); //GS450H 500khz usart clock
-   rcc_periph_clock_enable(RCC_TIM3); //Scheduler
-   rcc_periph_clock_enable(RCC_TIM4); //
+   rcc_periph_clock_enable(RCC_TIM3); //PWM outputs
+   rcc_periph_clock_enable(RCC_TIM4); //Scheduler
    rcc_periph_clock_enable(RCC_DMA1);  //ADC, and UARTS
    // rcc_periph_clock_enable(RCC_DMA2);
    rcc_periph_clock_enable(RCC_ADC1);
@@ -132,10 +132,8 @@ void nvic_setup(void)
    // nvic_enable_irq(NVIC_DMA1_CHANNEL3_IRQ);
    //nvic_set_priority(NVIC_DMA1_CHANNEL3_IRQ, 0x20);//usart3_RX high priority int
 
-
-   nvic_enable_irq(NVIC_TIM3_IRQ); //Scheduler on tim3
-   nvic_set_priority(NVIC_TIM3_IRQ, 0); //Highest priority
-
+   nvic_enable_irq(NVIC_TIM4_IRQ); //Scheduler on tim4
+   nvic_set_priority(NVIC_TIM4_IRQ, 0); //Highest priority
 
    nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ); //CAN RX
    nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, 0xe << 4); //second lowest priority
@@ -157,8 +155,8 @@ void nvic_setup(void)
 void rtc_setup()
 {
    //Base clock is HSE/128 = 8MHz/128 = 62.5kHz
-   //62.5kHz / (624 + 1) = 100Hz
-   rtc_auto_awake(RCC_HSE, 624); //10ms tick
+   //62.5kHz / (62499 + 1) = 1Hz
+   rtc_auto_awake(RCC_HSE, 62499); //1s tick
    rtc_set_counter_val(0);
    //* Enable the RTC interrupt to occur off the SEC flag.
    rtc_clear_flag(RTC_SEC);
@@ -218,3 +216,32 @@ void tim2_setup()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
+
+void tim3_setup()
+{
+   timer_disable_counter(TIM3);
+   //edge aligned PWM
+   timer_set_alignment(TIM3, TIM_CR1_CMS_EDGE);
+   timer_enable_preload(TIM3);
+   /* PWM mode 1 and preload enable */
+   timer_set_oc_mode(TIM3, TIM_OC1, TIM_OCM_PWM1);
+   timer_set_oc_mode(TIM3, TIM_OC2, TIM_OCM_PWM1);
+   timer_set_oc_mode(TIM3, TIM_OC3, TIM_OCM_PWM1);
+   timer_enable_oc_preload(TIM3, TIM_OC1);
+   timer_enable_oc_preload(TIM3, TIM_OC2);
+   timer_enable_oc_preload(TIM3, TIM_OC3);
+
+   timer_set_oc_polarity_high(TIM3, TIM_OC1);
+   timer_set_oc_polarity_high(TIM3, TIM_OC2);
+   timer_set_oc_polarity_high(TIM3, TIM_OC3);
+   timer_enable_oc_output(TIM3, TIM_OC1);
+   timer_enable_oc_output(TIM3, TIM_OC2);
+   timer_enable_oc_output(TIM3, TIM_OC3);
+   timer_set_period(TIM3, 7200); //default to 10 kHz
+   timer_generate_event(TIM3, TIM_EGR_UG);
+   timer_set_prescaler(TIM3, 0);
+   timer_enable_counter(TIM3);
+
+   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO6 | GPIO7);
+   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO0);
+}
