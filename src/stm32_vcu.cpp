@@ -212,8 +212,7 @@ static void Ms200Task(void)
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
-      i3LIMClass::Send200msMessages(canInterface[Param::GetInt(Param::lim_can)]);
-
+      i3LIMClass::Send200msMessages(canInterface[Param::GetInt(Param::LimCan)]);
    }
 
    if(targetCharger == ChargeModes::Off)
@@ -305,7 +304,7 @@ static void Ms100Task(void)
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
-      i3LIMClass::Send100msMessages(canInterface[Param::GetInt(Param::lim_can)]);
+      i3LIMClass::Send100msMessages(canInterface[Param::GetInt(Param::LimCan)]);
 
       auto LIMmode=i3LIMClass::Control_Charge(RunChg);
 
@@ -353,7 +352,7 @@ static void Ms100Task(void)
    int32_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
 
-   chargerClass::Send100msMessages(RunChg, canInterface[Param::GetInt(Param::charger_can)]);
+   chargerClass::Send100msMessages(RunChg, canInterface[Param::GetInt(Param::ChargerCan)]);
 
    if(targetChgint == ChargeInterfaces::Chademo) //Chademo on CAN3
    {
@@ -408,7 +407,7 @@ static void Ms10Task(void)
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
-      i3LIMClass::Send10msMessages(canInterface[Param::GetInt(Param::lim_can)]);
+      i3LIMClass::Send10msMessages(canInterface[Param::GetInt(Param::LimCan)]);
    }
 
    if (Param::GetInt(Param::opmode) == MOD_RUN)
@@ -447,7 +446,7 @@ static void Ms10Task(void)
    speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface
 
    Param::SetInt(Param::speed, speed);
-   utils::GetDigInputs(canInterface[Param::GetInt(Param::inv_can)]);
+   utils::GetDigInputs(canInterface[Param::GetInt(Param::InverterCan)]);
 
    selectedVehicle->SetRevCounter(ABS(Param::GetInt(Param::speed)));
    selectedVehicle->SetTemperatureGauge(Param::GetFloat(Param::tmphs));
@@ -656,11 +655,11 @@ void Param::Change(Param::PARAM_NUM paramNum)
    case Param::Vehicle:
       UpdateVehicle();
       break;
-   case Param::Inverter_CAN:
-   case Param::Vehicle_CAN:
-   case Param::Shunt_CAN:
-   case Param::LIM_CAN:
-   case Param::Charger_CAN:
+   case Param::InverterCan:
+   case Param::VehicleCan:
+   case Param::ShuntCan:
+   case Param::LimCan:
+   case Param::ChargerCan:
       canInterface[0]->ClearUserMessages();
       canInterface[1]->ClearUserMessages();
       break;
@@ -669,20 +668,12 @@ void Param::Change(Param::PARAM_NUM paramNum)
       canInterface[1]->SetBaudrate((CanHardware::baudrates)Param::GetInt(Param::canspeed));
       break;
    case Param::CAN3Speed:
-       Param::SetInt(Param::can3Speed,Param::GetInt(Param::CAN3Speed));
       CANSPI_Initialize();// init the MCP25625 on CAN3
       CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
       break;
    default:
       break;
    }
-
-   Param::SetInt(Param::inv_can,Param::GetInt(Param::Inverter_CAN));
-   Param::SetInt(Param::veh_can,Param::GetInt(Param::Vehicle_CAN));
-   Param::SetInt(Param::shunt_can,Param::GetInt(Param::Shunt_CAN));
-   Param::SetInt(Param::lim_can,Param::GetInt(Param::LIM_CAN));
-   Param::SetInt(Param::charger_can,Param::GetInt(Param::Charger_CAN));
-   Param::SetInt(Param::TRANS,Param::GetInt(Param::Transmission));
 
    Throttle::potmin[0] = Param::GetInt(Param::potmin);
    Throttle::potmax[0] = Param::GetInt(Param::potmax);
@@ -699,12 +690,8 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Throttle::speedLimit = Param::GetInt(Param::revlim);
    Throttle::regenRamp = Param::GetFloat(Param::regenramp);
    targetInverter=static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
-   Param::SetInt(Param::inv, targetInverter);//Confirm mode
-   //What is this copy meant for?
-   Param::SetInt(Param::veh, Param::GetInt(Param::Vehicle));//Confirm mode
    targetCharger=static_cast<ChargeModes>(Param::GetInt(Param::chargemodes));//get charger setting from menu
    targetChgint=static_cast<ChargeInterfaces>(Param::GetInt(Param::interface));//get interface setting from menu
-   Param::SetInt(Param::Charger, targetCharger);//Confirm mode
    CabHeater=Param::GetInt(Param::Heater);//get cabin heater type
    CabHeater_ctrl=Param::GetInt(Param::Control);//get cabin heater control mode
    if(ChgSet==1)
@@ -848,7 +835,7 @@ extern "C" int main(void)
 
    canInterface[0] = &c;
    canInterface[1] = &c2;
-   CanHardware* shunt_can = canInterface[Param::GetInt(Param::shunt_can)];
+   CanHardware* shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
    //SetCanFilters();
 
    CANSPI_Initialize();// init the MCP25625 on CAN3

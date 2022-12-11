@@ -141,14 +141,14 @@ void CANSPI_Initialize(void)
    MCP2515_Write_ByteSequence(MCP2515_RXF5SIDH, MCP2515_RXF5EID0, &(RXF5reg.RXF5SIDH));
 
    // Initialize CAN Timings
-if(Param::GetInt(Param::can3Speed)==1)
+if(Param::GetInt(Param::CAN3Speed)==1)
 {
       MCP2515_Write_Byte(MCP2515_CNF1, 0x40);//500kbps at 16HMz xtal.
       MCP2515_Write_Byte(MCP2515_CNF2, 0xe5);
       MCP2515_Write_Byte(MCP2515_CNF3, 0x83);
 }
 
-if(Param::GetInt(Param::can3Speed)==0)
+if(Param::GetInt(Param::CAN3Speed)==0)
 {
    MCP2515_Write_Byte(MCP2515_CNF1, 0x4E);//33kbps at 16HMz xtal.
    MCP2515_Write_Byte(MCP2515_CNF2, 0xe5);

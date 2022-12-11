@@ -31,11 +31,11 @@
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      6,      0,      6  ) \
     PARAM_ENTRY(CAT_SETUP,     Transmission, TRNMODES, 0,      1,      0,      78  ) \
-    PARAM_ENTRY(CAT_SETUP,     Inverter_CAN, CAN_DEV,  0,      1,      0,      70 ) \
-    PARAM_ENTRY(CAT_SETUP,     Vehicle_CAN,  CAN_DEV,  0,      1,      1,      71 ) \
-    PARAM_ENTRY(CAT_SETUP,     Shunt_CAN,    CAN_DEV,  0,      1,      0,      72 ) \
-    PARAM_ENTRY(CAT_SETUP,     LIM_CAN,      CAN_DEV,  0,      1,      0,      73 ) \
-    PARAM_ENTRY(CAT_SETUP,     Charger_CAN,  CAN_DEV,  0,      1,      1,      74 ) \
+    PARAM_ENTRY(CAT_SETUP,     InverterCan,  CAN_DEV,  0,      1,      0,      70 ) \
+    PARAM_ENTRY(CAT_SETUP,     VehicleCan,   CAN_DEV,  0,      1,      1,      71 ) \
+    PARAM_ENTRY(CAT_SETUP,     ShuntCan,     CAN_DEV,  0,      1,      0,      72 ) \
+    PARAM_ENTRY(CAT_SETUP,     LimCan,       CAN_DEV,  0,      1,      0,      73 ) \
+    PARAM_ENTRY(CAT_SETUP,     ChargerCan,   CAN_DEV,  0,      1,      1,      74 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -59,7 +59,7 @@
     PARAM_ENTRY(CAT_THROTTLE,  throtmax,    "%",       0,      100,    100,    25 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtmin,    "%",      -100,    0,     -100,    26 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtdead,   "%",       0,      50,     10,     76 ) \
-    PARAM_ENTRY(CAT_LEXUS,     GEAR,        LOWHIGH,   0,      2,      0,      27 ) \
+    PARAM_ENTRY(CAT_LEXUS,     Gear,        LOWHIGH,   0,      2,      0,      27 ) \
     PARAM_ENTRY(CAT_LEXUS,     OilPump,     "%",       0,      100,    50,     28 ) \
     PARAM_ENTRY(CAT_CRUISE,    cruisestep,  "rpm",     1,      1000,   200,    29 ) \
     PARAM_ENTRY(CAT_CRUISE,    cruiseramp,  "rpm/100ms",1,     1000,   20,     30 ) \
@@ -119,16 +119,6 @@
     VALUE_ENTRY(brakepressure, "dig",               2022 ) \
     VALUE_ENTRY(potnom,        "%",                 2023 ) \
     VALUE_ENTRY(dir,           DIRS,                2024 ) \
-    VALUE_ENTRY(inv,           INVMODES,            2025 ) \
-    VALUE_ENTRY(veh,           VEHMODES,            2026 ) \
-    VALUE_ENTRY(inv_can,       CAN_DEV,             2071 ) \
-    VALUE_ENTRY(veh_can,       CAN_DEV,             2072 ) \
-    VALUE_ENTRY(shunt_can,     CAN_DEV,             2073 ) \
-    VALUE_ENTRY(lim_can,       CAN_DEV,             2074 ) \
-    VALUE_ENTRY(charger_can,   CAN_DEV,             2075 ) \
-    VALUE_ENTRY(can3Speed,     CAN3Spd,             2080 ) \
-    VALUE_ENTRY(TRANS,        TRNMODES,             2081 ) \
-    VALUE_ENTRY(Charger,       CHGMODS,             2027 ) \
     VALUE_ENTRY(tmphs,         "°C",                2028 ) \
     VALUE_ENTRY(tmpm,          "°C",                2029 ) \
     VALUE_ENTRY(tmpaux,        "°C",                2030 ) \
@@ -216,7 +206,7 @@
 #define CAT_CONTACT  "Contactor Control"
 #define CAT_TEST     "Testing"
 #define CAT_COMM     "Communication"
-#define CAT_SETUP    "Vehicle Module"
+#define CAT_SETUP    "General Setup"
 #define CAT_CLOCK    "RTC Module"
 #define CAT_Heater   "Heater Module"
 #define CAT_CRUISE   "Cruise Control"

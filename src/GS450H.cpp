@@ -95,7 +95,7 @@ float GS450HClass::GetMotorTemperature()
 void GS450HClass::Task100Ms()
 {
    //Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update inverter status on web interface
-   gear=(Param::GetInt(Param::GEAR));
+   gear=(Param::GetInt(Param::Gear));
 
    if (gear == 1)
    {
