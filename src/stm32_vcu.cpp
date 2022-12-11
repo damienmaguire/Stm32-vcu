@@ -817,6 +817,7 @@ extern "C" int main(void)
    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
 
    UpdateInv();
+   UpdateVehicle();
 
    Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;
