@@ -40,7 +40,7 @@ public:
    virtual cruise GetCruiseState() { return CC_NONE; }
    virtual bool Ready() = 0;
    virtual bool Start() { return Param::GetBool(Param::din_start); }
-   void SetCanInterface(CanHardware* c) { can = c; }
+   virtual void SetCanInterface(CanHardware* c) { can = c; }
 
 protected:
    CanHardware* can;
