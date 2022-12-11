@@ -32,18 +32,16 @@ static InvModes targetInverter;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
 static uint32_t oldTime;
-uint8_t pot_test;
-uint8_t count_one=0;
-uint8_t ChgSet;
-bool RunChg;
-bool Ampera_Not_Awake=true;
-uint8_t ChgHrs_tmp;
-uint8_t ChgMins_tmp;
-uint16_t ChgDur_tmp;
-uint8_t RTC_1Sec=0;
-uint32_t ChgTicks=0,ChgTicks_1Min=0;
-uint8_t CabHeater,CabHeater_ctrl;
-uint32_t chademoStartTime = 0;
+static uint8_t ChgSet;
+static bool RunChg;
+static bool Ampera_Not_Awake=true;
+static uint8_t ChgHrs_tmp;
+static uint8_t ChgMins_tmp;
+static uint16_t ChgDur_tmp;
+static uint8_t RTC_1Sec=0;
+static uint32_t ChgTicks=0,ChgTicks_1Min=0;
+static uint8_t CabHeater,CabHeater_ctrl;
+static uint32_t chademoStartTime = 0;
 
 static volatile unsigned
 days=0,
@@ -55,8 +53,6 @@ BMWE65 e65Vehicle;
 Can_E39 e39Vehicle;
 Can_VAG vagVehicle;
 chargerClass chgtype;
-//uCAN_MSG txMessage;
-uCAN_MSG rxMessage;
 CAN3_Msg CAN3;
 static GS450HClass gs450Inverter;
 static LeafINV leafInv;
@@ -64,60 +60,6 @@ static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
-
-static void UpdateInv()
-{
-   selectedInverter->DeInit();
-   switch (Param::GetInt(Param::Inverter))
-   {
-      case InvModes::Leaf_Gen1:
-         selectedInverter = &leafInv;
-         break;
-      case InvModes::GS450H:
-         selectedInverter = &gs450Inverter;
-         gs450Inverter.SetGS450H();
-         break;
-     case InvModes::GS300H:
-         selectedInverter = &gs450Inverter;
-         gs450Inverter.SetGS300H();
-         break;
-      case InvModes::Prius_Gen3:
-         selectedInverter = &gs450Inverter;
-         gs450Inverter.SetPrius();
-         break;
-      case InvModes::Outlander:
-         selectedInverter = &outlanderInv;
-         break;
-      case InvModes::OpenI:
-         selectedInverter = &openInv;
-         break;
-   }
-   canInterface[0]->ClearUserMessages();
-   canInterface[1]->ClearUserMessages();
-}
-
-
-//Whenever the user clears mapped can messages or changes the
-//CAN interface of a device, this will be called by the CanHardware module
-static void SetCanFilters()
-{
-   CanHardware* inverter_can = canInterface[Param::GetInt(Param::inv_can)];
-   CanHardware* vehicle_can = canInterface[Param::GetInt(Param::veh_can)];
-   CanHardware* shunt_can = canInterface[Param::GetInt(Param::shunt_can)];
-   CanHardware* lim_can = canInterface[Param::GetInt(Param::lim_can)];
-   CanHardware* charger_can = canInterface[Param::GetInt(Param::charger_can)];
-
-   selectedInverter->SetCanInterface(inverter_can);
-   selectedVehicle->SetCanInterface(vehicle_can);
-   ISA::RegisterCanMessages(shunt_can);
-   lim_can->RegisterUserMessage(0x3b4);//LIM MSG
-   lim_can->RegisterUserMessage(0x29e);//LIM MSG
-   lim_can->RegisterUserMessage(0x2b2);//LIM MSG
-   lim_can->RegisterUserMessage(0x2ef);//LIM MSG
-   lim_can->RegisterUserMessage(0x272);//LIM MSG
-
-   charger_can->RegisterUserMessage(0x108);//Charger HV request
-}
 
 static void RunChaDeMo()
 {
@@ -174,6 +116,25 @@ static void RunChaDeMo()
    Param::SetInt(Param::CCS_State, ChaDeMo::GetChargerStatus());
    Param::SetInt(Param::CCS_I_Avail, ChaDeMo::GetChargerMaxCurrent());
    ChaDeMo::SendMessages();
+}
+
+static void DigitalPotTest()
+{
+   static uint8_t count_one=0;
+   static uint8_t pot_test = 0;
+
+   count_one++;
+   if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
+   {
+      pot_test++;
+      DigIo::pot1_cs.Clear();
+      DigIo::pot2_cs.Clear();
+      uint8_t dummy=spi_xfer(SPI3,pot_test);//test
+      dummy=dummy;
+      DigIo::pot1_cs.Set();
+      DigIo::pot2_cs.Set();
+      count_one=0;
+   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -302,25 +263,7 @@ static void Ms200Task(void)
    }
    if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
 
-   ///////////////////////////////////////
-
-
-
-   // if(opmode==MOD_CHARGE) DigIo::gp_out3.Set();//Chademo relay on for testing
-   // if(opmode!=MOD_CHARGE) DigIo::gp_out3.Clear();//Chademo relay off for testing
-
-   count_one++;
-   if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
-   {
-      pot_test++;
-      DigIo::pot1_cs.Clear();
-      DigIo::pot2_cs.Clear();
-      uint8_t dummy=spi_xfer(SPI3,pot_test);//test
-      dummy=dummy;
-      DigIo::pot1_cs.Set();
-      DigIo::pot2_cs.Set();
-      count_one=0;
-   }
+   DigitalPotTest();
 }
 
 static void Ms100Task(void)
@@ -519,7 +462,7 @@ static void Ms10Task(void)
    stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
    //on detection of ign on or charge mode enable we commence prechage and go to mode precharge
-   if (opmode == MOD_OFF && (Param::GetBool(Param::din_start) || /*E65Vehicle.getTerminal15() ||*/ chargeMode))
+   if (opmode == MOD_OFF && (selectedVehicle->Start() || chargeMode))
    {
       if(chargeMode==false)
       {
@@ -624,17 +567,42 @@ static void Ms1Task(void)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void Param::Change(Param::PARAM_NUM paramNum)
+static void UpdateInv()
 {
-   // This function is called when the user changes a parameter
-   switch (paramNum)
+   selectedInverter->DeInit();
+   switch (Param::GetInt(Param::Inverter))
    {
-   case Param::Inverter:
-      UpdateInv();
-      break;
-   case Param::Vehicle:
-      switch (Param::GetInt(Param::Vehicle))
-      {
+      case InvModes::Leaf_Gen1:
+         selectedInverter = &leafInv;
+         break;
+      case InvModes::GS450H:
+         selectedInverter = &gs450Inverter;
+         gs450Inverter.SetGS450H();
+         break;
+     case InvModes::GS300H:
+         selectedInverter = &gs450Inverter;
+         gs450Inverter.SetGS300H();
+         break;
+      case InvModes::Prius_Gen3:
+         selectedInverter = &gs450Inverter;
+         gs450Inverter.SetPrius();
+         break;
+      case InvModes::Outlander:
+         selectedInverter = &outlanderInv;
+         break;
+      case InvModes::OpenI:
+         selectedInverter = &openInv;
+         break;
+   }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+}
+
+static void UpdateVehicle()
+{
+   switch (Param::GetInt(Param::Vehicle))
+   {
       case BMW_E39:
          selectedVehicle = &e39Vehicle;
          e39Vehicle.SetE46(false);
@@ -649,10 +617,44 @@ void Param::Change(Param::PARAM_NUM paramNum)
       case VAG:
          selectedVehicle = &vagVehicle;
          break;
-      }
-      //This will call SetCanFilters() via the Clear Callback
-      canInterface[0]->ClearUserMessages();
-      canInterface[1]->ClearUserMessages();
+   }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+
+}
+//Whenever the user clears mapped can messages or changes the
+//CAN interface of a device, this will be called by the CanHardware module
+static void SetCanFilters()
+{
+   CanHardware* inverter_can = canInterface[Param::GetInt(Param::InverterCan)];
+   CanHardware* vehicle_can = canInterface[Param::GetInt(Param::VehicleCan)];
+   CanHardware* shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
+   CanHardware* lim_can = canInterface[Param::GetInt(Param::LimCan)];
+   CanHardware* charger_can = canInterface[Param::GetInt(Param::ChargerCan)];
+
+   selectedInverter->SetCanInterface(inverter_can);
+   selectedVehicle->SetCanInterface(vehicle_can);
+   ISA::RegisterCanMessages(shunt_can);
+   lim_can->RegisterUserMessage(0x3b4);//LIM MSG
+   lim_can->RegisterUserMessage(0x29e);//LIM MSG
+   lim_can->RegisterUserMessage(0x2b2);//LIM MSG
+   lim_can->RegisterUserMessage(0x2ef);//LIM MSG
+   lim_can->RegisterUserMessage(0x272);//LIM MSG
+
+   charger_can->RegisterUserMessage(0x108);//Charger HV request
+}
+
+void Param::Change(Param::PARAM_NUM paramNum)
+{
+   // This function is called when the user changes a parameter
+   switch (paramNum)
+   {
+   case Param::Inverter:
+      UpdateInv();
+      break;
+   case Param::Vehicle:
+      UpdateVehicle();
       break;
    case Param::Inverter_CAN:
    case Param::Vehicle_CAN:
@@ -771,6 +773,7 @@ extern "C" void tim3_isr(void)
 
 extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
 {
+   uCAN_MSG rxMessage;
    uint32_t canData[2];
    if(CANSPI_receive(&rxMessage))
    {
