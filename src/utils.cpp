@@ -3,8 +3,8 @@
 namespace utils
 {
 
-#define CAN_TIMEOUT       50  //500ms
-#define PRECHARGE_TIMEOUT 500 //5s
+#define CAN_TIMEOUT       1  //1000ms
+#define PRECHARGE_TIMEOUT 5  //5s
 
 float SOCVal=0;
 int32_t NetWh=0;
@@ -283,7 +283,7 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
 
    if(opmode == MOD_PRECHARGE)
    {
-      if (udc < (udcsw / 2) && rtc_get_counter_val() > (oldTime+PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
+      if (udc < (udcsw / 2) && rtc_get_counter_val() > (oldTime + PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
       {
          DigIo::prec_out.Clear();
          ErrorMessage::Post(ERR_PRECHARGE);
@@ -320,13 +320,13 @@ float ProcessThrottle(int speed)
    {
       ErrorMessage::Post(ERR_TMPMMAX);
    }
-   
+
    // make sure the torque percentage is NEVER out of range
    if (finalSpnt < -100.0f)
       finalSpnt = -100.0f;
    else if (finalSpnt > 100.0f)
       finalSpnt = 100.0f;
-   
+
    Param::SetFloat(Param::potnom, finalSpnt);
 
    return finalSpnt;

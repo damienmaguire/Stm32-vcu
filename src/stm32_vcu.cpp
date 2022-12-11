@@ -28,17 +28,14 @@ static bool chargeMode = false;
 static bool chargeModeDC = false;
 static bool ChgLck = false;
 static CanHardware* canInterface[3];
-static InvModes targetInverter;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
-static uint32_t oldTime;
 static uint8_t ChgSet;
 static bool RunChg;
 static bool Ampera_Not_Awake=true;
 static uint8_t ChgHrs_tmp;
 static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
-static uint8_t RTC_1Sec=0;
 static uint32_t ChgTicks=0,ChgTicks_1Min=0;
 static uint8_t CabHeater,CabHeater_ctrl;
 static uint32_t chademoStartTime = 0;
@@ -49,11 +46,10 @@ hours=0, minutes=0, seconds=0,
 alarm=0;			// != 0 when alarm is pending
 
 // Instantiate Classes
-BMWE65 e65Vehicle;
-Can_E39 e39Vehicle;
-Can_VAG vagVehicle;
-chargerClass chgtype;
-CAN3_Msg CAN3;
+static BMWE65 e65Vehicle;
+static Can_E39 e39Vehicle;
+static Can_VAG vagVehicle;
+static SubaruVehicle subaruVehicle;
 static GS450HClass gs450Inverter;
 static LeafINV leafInv;
 static Can_OI openInv;
@@ -71,7 +67,7 @@ static void RunChaDeMo()
       ChaDeMo::SetChargeCurrent(0);
    }
 
-   if ((rtc_get_counter_val() - chademoStartTime) > 100 && (rtc_get_counter_val() - chademoStartTime) < 150)
+   if ((rtc_get_counter_val() - chademoStartTime) > 1 && (rtc_get_counter_val() - chademoStartTime) < 2)
    {
       ChaDeMo::SetEnabled(true);
       DigIo::gp_out3.Set();
@@ -267,6 +263,8 @@ static void Ms200Task(void)
 
 static void Ms100Task(void)
 {
+   InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
+
    DigIo::led_out.Toggle();
    iwdg_reset();
    float cpuLoad = scheduler->GetCpuLoad() / 10.0f;
@@ -274,7 +272,6 @@ static void Ms100Task(void)
    Param::SetInt(Param::lasterr, ErrorMessage::GetLastError());
    int opmode = Param::GetInt(Param::opmode);
    utils::SelectDirection(selectedVehicle);
-   utils::ProcessUdc(oldTime, GetInt(Param::speed));
    utils::CalcSOC();
 
    selectedInverter->Task100Ms();
@@ -335,19 +332,7 @@ static void Ms100Task(void)
    Param::SetFloat(Param::InvStat, selectedInverter->GetInverterState()); //update inverter status on web interface
    Param::SetFloat(Param::INVudc, selectedInverter->GetInverterVoltage()); //display inverter derived dc link voltage on web interface
 
-   if (selectedVehicle->Ready())
-   {
-      selectedVehicle->Task100Ms();
-      Param::SetInt(Param::T15Stat,1);
-   }
-   else
-   {
-      Param::SetInt(Param::T15Stat,0);
-   }
-
-   //TODO:
-   //if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
-     // Can::GetInterface(Param::GetInt(Param::inv_can))->SendAll();
+   Param::SetInt(Param::T15Stat, selectedVehicle->Ready());
 
    int32_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
@@ -380,6 +365,9 @@ static void Ms100Task(void)
 
 static void Ms10Task(void)
 {
+   static uint32_t vehicleStartTime = 0;
+
+   InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
    int16_t previousSpeed=Param::GetInt(Param::speed);
    int16_t speed = 0;
    float torquePercent;
@@ -455,7 +443,7 @@ static void Ms10Task(void)
    //////////////////////////////////////////////////
    //            MODE CONTROL SECTION              //
    //////////////////////////////////////////////////
-   float udc = utils::ProcessUdc(oldTime, GetInt(Param::speed));
+   float udc = utils::ProcessUdc(vehicleStartTime, GetInt(Param::speed));
    stt |= Param::GetInt(Param::potnom) <= 0 ? STAT_NONE : STAT_POTPRESSED;
    stt |= udc >= Param::GetFloat(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
    stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
@@ -463,17 +451,16 @@ static void Ms10Task(void)
    //on detection of ign on or charge mode enable we commence prechage and go to mode precharge
    if (opmode == MOD_OFF && (selectedVehicle->Start() || chargeMode))
    {
-      if(chargeMode==false)
+      if (!chargeMode)
       {
-         //activate inv during precharge if not oi.
-         if(targetInverter != InvModes::OpenI) DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
+         DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
       }
       DigIo::gp_out2.Set();//Negative contactors on
       DigIo::gp_out1.Set();//Coolant pump on
       DigIo::prec_out.Set();//commence precharge
       opmode = MOD_PRECHARGE;
       Param::SetInt(Param::opmode, opmode);
-      oldTime=rtc_get_counter_val();
+      vehicleStartTime = rtc_get_counter_val();
    }
 
    if(opmode == MOD_PCHFAIL && (!selectedVehicle->Start() || chargeMode)) //use start input to reset.
@@ -506,15 +493,11 @@ static void Ms10Task(void)
 
    Param::SetInt(Param::status, stt);
 
-   if(opmode == MOD_RUN) //only shut off via ign command if not in charge mode
-   {
-      if(targetInverter == InvModes::OpenI) DigIo::inv_out.Set();//inverter power on in run only if openi.
+   if(opmode == MOD_RUN && !selectedVehicle->Ready())
+      opmode = MOD_OFF; //only shut off via ign command if not in charge mode
 
-      //switch to off mode via igntition digital input.
-      if(!Param::GetBool(Param::T15Stat)) opmode = MOD_OFF;
-   }
-
-   if(opmode == MOD_CHARGE && !chargeMode) opmode = MOD_OFF; //if we are in charge mode and commdn charge mode off then go to mode off.
+   if(opmode == MOD_CHARGE && !chargeMode)
+      opmode = MOD_OFF; //if we are in charge mode and command charge mode off then go to mode off.
 
    if (newMode != MOD_OFF)
    {
@@ -616,6 +599,9 @@ static void UpdateVehicle()
       case VAG:
          selectedVehicle = &vagVehicle;
          break;
+      case SUBARU:
+         selectedVehicle = &subaruVehicle;
+         break;
    }
    //This will call SetCanFilters() via the Clear Callback
    canInterface[0]->ClearUserMessages();
@@ -685,7 +671,6 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Throttle::udcmin = Param::GetFloat(Param::udcmin);
    Throttle::speedLimit = Param::GetInt(Param::revlim);
    Throttle::regenRamp = Param::GetFloat(Param::regenramp);
-   targetInverter=static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
    targetCharger=static_cast<ChargeModes>(Param::GetInt(Param::chargemodes));//get charger setting from menu
    targetChgint=static_cast<ChargeInterfaces>(Param::GetInt(Param::interface));//get interface setting from menu
    CabHeater=Param::GetInt(Param::Heater);//get cabin heater type
@@ -748,7 +733,7 @@ static void ConfigureVariantIO()
 }
 
 
-extern "C" void tim3_isr(void)
+extern "C" void tim4_isr(void)
 {
    scheduler->Run();
 }
@@ -775,27 +760,22 @@ extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
 extern "C" void rtc_isr(void)
 {
    /* The interrupt flag isn't cleared by hardware, we have to do it. */
-   rtc_clear_flag(RTC_SEC);    //This will fire every 10ms so we need to count to 100 to get a 1 sec tick.
-   RTC_1Sec++;
+   rtc_clear_flag(RTC_SEC);
 
-   if(RTC_1Sec==100)
+   if ( ++seconds >= 60 )
    {
-      RTC_1Sec=0;
-      if ( ++seconds >= 60 )
-      {
-         ++minutes;
-         seconds -= 60;
-      }
-      if ( minutes >= 60 )
-      {
-         ++hours;
-         minutes -= 60;
-      }
-      if ( hours >= 24 )
-      {
-         ++days;
-         hours -= 24;
-      }
+      ++minutes;
+      seconds -= 60;
+   }
+   if ( minutes >= 60 )
+   {
+      ++hours;
+      minutes -= 60;
+   }
+   if ( hours >= 24 )
+   {
+      ++days;
+      hours -= 24;
    }
 }
 
@@ -832,14 +812,13 @@ extern "C" int main(void)
    canInterface[0] = &c;
    canInterface[1] = &c2;
    CanHardware* shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
-   //SetCanFilters();
 
    CANSPI_Initialize();// init the MCP25625 on CAN3
    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
 
    UpdateInv();
 
-   Stm32Scheduler s(TIM3); //We never exit main so it's ok to put it on stack
+   Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;
 
    s.AddTask(Ms1Task, 1);
