@@ -35,7 +35,7 @@ void Can_E39::Task10Ms()
    Msg545();
    Msg43B();
 
-   if (isE46)
+   if (Param::GetBool(Param::Transmission))
       Msg43F(Param::GetInt(Param::dir));
 }
 
