@@ -28,16 +28,15 @@ static bool chargeMode = false;
 static bool chargeModeDC = false;
 static bool ChgLck = false;
 static CanHardware* canInterface[3];
+static CanMap* canMap;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
 static uint8_t ChgSet;
 static bool RunChg;
-static bool Ampera_Not_Awake=true;
 static uint8_t ChgHrs_tmp;
 static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks=0,ChgTicks_1Min=0;
-static uint8_t CabHeater,CabHeater_ctrl;
 static uint32_t chademoStartTime = 0;
 
 static volatile unsigned
@@ -54,8 +53,10 @@ static GS450HClass gs450Inverter;
 static LeafINV leafInv;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
+static AmperaHeater amperaHeater;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
+static Heater* selectedHeater = &amperaHeater;
 
 static void RunChaDeMo()
 {
@@ -70,7 +71,7 @@ static void RunChaDeMo()
    if ((rtc_get_counter_val() - chademoStartTime) > 1 && (rtc_get_counter_val() - chademoStartTime) < 2)
    {
       ChaDeMo::SetEnabled(true);
-      DigIo::gp_out3.Set();
+      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set();
    }
 
    if (Param::GetInt(Param::opmode) == MOD_CHARGE && ChaDeMo::ConnectorLocked())
@@ -103,7 +104,7 @@ static void RunChaDeMo()
    if (Param::GetInt(Param::CCS_ILim) == 0)
    {
       ChaDeMo::SetEnabled(false);
-      DigIo::gp_out3.Clear();//Chademo charge allow off
+      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Clear();//Chademo charge allow off
       chargeMode = false;
    }
 
@@ -276,6 +277,7 @@ static void Ms100Task(void)
 
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
+   canMap->SendAll();
 
     if(opmode==MOD_RUN)
     {
@@ -349,7 +351,7 @@ static void Ms100Task(void)
       {
          chargeModeDC = false;   //DC charge mode
          Param::SetInt(Param::chgtyp,0);
-         DigIo::gp_out3.Clear();//Chademo charge allow off
+         IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Clear();//Chademo charge allow off
          ChaDeMo::SetEnabled(false);
          chademoStartTime = 0;
       }
@@ -359,8 +361,23 @@ static void Ms100Task(void)
    {
       Param::SetInt(Param::HeatReq,DigIo::gp_12Vin.Get());
    }
+}
 
-
+static void ControlCabHeater(int opmode)
+{
+   //Only run heater in run mode
+   //What about charge mode and timer mode?
+   if (opmode == MOD_RUN && Param::GetInt(Param::Control) == 1)
+   {
+      IOMatrix::GetPin(IOMatrix::HEATERENABLE)->Set();//Heater enable and coolant pump on
+      selectedHeater->SetTargetTemperature(50); //TODO: Currently does nothing
+      selectedHeater->SetPower(Param::GetFloat(Param::HeatPwr));
+   }
+   else
+   {
+      IOMatrix::GetPin(IOMatrix::HEATERENABLE)->Clear(); //Disable heater and coolant pump
+      selectedHeater->SetPower(0);
+   }
 }
 
 static void Ms10Task(void)
@@ -455,8 +472,8 @@ static void Ms10Task(void)
       {
          DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
       }
-      DigIo::gp_out2.Set();//Negative contactors on
-      DigIo::gp_out1.Set();//Coolant pump on
+      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
+      IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
       DigIo::prec_out.Set();//commence precharge
       opmode = MOD_PRECHARGE;
       Param::SetInt(Param::opmode, opmode);
@@ -510,36 +527,15 @@ static void Ms10Task(void)
    {
       DigIo::inv_out.Clear();//inverter power off
       DigIo::dcsw_out.Clear();
-      DigIo::gp_out2.Clear();//Negative contactors off
-      DigIo::gp_out1.Clear();//Coolant pump off
+      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Clear();//Negative contactors off
+      IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear();//Coolant pump off
       DigIo::prec_out.Clear();
       Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown
       Param::SetInt(Param::opmode, newMode);
       selectedVehicle->DashOff();
    }
 
-   //Cabin heat control
-   if((CabHeater_ctrl==1)&& (CabHeater==1)&&(opmode==MOD_RUN)&&(targetChgint != ChargeInterfaces::Chademo))//If we have selected an ampera heater are in run mode and heater not diabled...
-   {
-      //TODO: multiplex with chademo
-      DigIo::gp_out3.Set();//Heater enable and coolant pump on
-
-      if(Ampera_Not_Awake)
-      {
-         AmperaHeater::sendWakeup();
-         Ampera_Not_Awake=false;
-      }
-      //gp in used as heat request from car (E46 in case of testing). May be poss via CAN also...
-      if(!Ampera_Not_Awake) AmperaHeater::controlPower(Param::GetInt(Param::HeatPwr),Param::GetBool(Param::HeatReq));
-
-   };
-
-   if((CabHeater_ctrl==0 || opmode!=MOD_RUN)&&(targetChgint != ChargeInterfaces::Chademo))
-   {
-      //TODO: multiplex with chademo
-      DigIo::gp_out3.Clear();//Heater enable and coolant pump off
-      Ampera_Not_Awake=true;
-   }
+   ControlCabHeater(opmode);
 }
 
 static void Ms1Task(void)
@@ -673,8 +669,6 @@ void Param::Change(Param::PARAM_NUM paramNum)
    Throttle::regenRamp = Param::GetFloat(Param::regenramp);
    targetCharger=static_cast<ChargeModes>(Param::GetInt(Param::chargemodes));//get charger setting from menu
    targetChgint=static_cast<ChargeInterfaces>(Param::GetInt(Param::interface));//get interface setting from menu
-   CabHeater=Param::GetInt(Param::Heater);//get cabin heater type
-   CabHeater_ctrl=Param::GetInt(Param::Control);//get cabin heater control mode
    if(ChgSet==1)
    {
       seconds=Param::GetInt(Param::Set_Sec);//only update these params if charge command is set to disable
@@ -687,6 +681,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    }
    ChgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
    ChgTicks = (GetInt(Param::Chg_Dur)*300);//number of 200ms ticks that equates to charge timer in minutes
+   IOMatrix::AssignFromParams();
 }
 
 
@@ -808,6 +803,7 @@ extern "C" int main(void)
    c.AddReceiveCallback(&canCb);
    c2.AddReceiveCallback(&canCb);
    TerminalCommands::SetCanMap(&cm);
+   canMap = &cm;
 
    canInterface[0] = &c;
    canInterface[1] = &c2;
