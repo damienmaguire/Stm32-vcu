@@ -71,6 +71,7 @@ static ChargeRequest CHG_Req=ChargeRequest::EndCharge;  //observed values 0 when
 static ChargeReady CHG_Ready=ChargeReady::NotRdy;  //indicator to the LIM that we are ready to charge. observed values 0 when not charging , 1 when commanded to charge. only 2 bits used.
 static uint8_t CONT_Ctrl=0;  //4 bits with DC ccs contactor command.
 static uint8_t CCSI_Spnt=0;
+static uint8_t LastSeenOpmode = 0xff;
 
 void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
 
@@ -286,11 +287,16 @@ void i3LIMClass::Send200msMessages(CanHardware* can)
 
 
 
+      uint8_t opmode = Param::GetInt(Param::opmode);
 //if(Param::GetInt(Param::opmode)==MOD_RUN) bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
 //if(Param::GetInt(Param::opmode)!=MOD_RUN) bytes[0] = 0xf1;//f1=no obd reset. fb=obd reset.
       bytes[0] = 0xf1;
+      if (opmode == MOD_RUN && LastSeenOpmode != MOD_RUN)
+          bytes[0] = 0xfb;//f1=no obd reset. fb=obd reset.
       bytes[1] = 0xff;
       can->Send(0x3e8, (uint32_t*)bytes,2);
+
+      LastSeenOpmode = opmode;
 
       bytes[0] = 0xc0;//engine info? rex?
       bytes[1] = 0xf9;
