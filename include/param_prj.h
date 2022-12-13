@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 1.11.A
+#define VER 1.12.A
 
 
 /* Entries must be ordered as follows:
@@ -25,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 83
+//Next param id (increase when adding new parameter!): 85
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
@@ -95,7 +95,9 @@
     PARAM_ENTRY(CAT_IOPINS,    Out1Func,    PINFUNCS,  0,      9,      6,      80 ) \
     PARAM_ENTRY(CAT_IOPINS,    Out2Func,    PINFUNCS,  0,      9,      7,      81 ) \
     PARAM_ENTRY(CAT_IOPINS,    Out3Func,    PINFUNCS,  0,      9,      3,      82 ) \
-    PARAM_ENTRY(CAT_SHUNT,     ISA_INIT,     ONOFF,    0,      1,      0,      75 ) \
+    PARAM_ENTRY(CAT_IOPINS,    SL1Func,     PINFUNCS,  0,      9,      3,      83 ) \
+    PARAM_ENTRY(CAT_IOPINS,    SL2Func,     PINFUNCS,  0,      9,      3,      84 ) \
+    PARAM_ENTRY(CAT_SHUNT,     ISA_INIT,    ONOFF,     0,      1,      0,      75 ) \
     VALUE_ENTRY(version,       VERSTR,              2000 ) \
     VALUE_ENTRY(opmode,        OPMODES,             2002 ) \
     VALUE_ENTRY(chgtyp,        CHGTYPS,             2003 ) \

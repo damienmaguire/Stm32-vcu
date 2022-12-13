@@ -18,7 +18,8 @@
  */
 #include "iomatrix.h"
 
-DigIo* const IOMatrix::paramToPin[] = { &DigIo::gp_out1, &DigIo::gp_out2, &DigIo::gp_out3 };
+DigIo* const IOMatrix::paramToPin[] = { &DigIo::gp_out1, &DigIo::gp_out2, &DigIo::gp_out3,
+                                        &DigIo::SL1_out, &DigIo::SL2_out };
 DigIo* IOMatrix::functionToPin[];
 
 void IOMatrix::AssignFromParams()

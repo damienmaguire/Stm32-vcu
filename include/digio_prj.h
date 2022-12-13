@@ -57,4 +57,6 @@
     DIG_IO_ENTRY(gp_12Vin,  GPIOD, GPIO4,  PinMode::INPUT_FLT)   \
     DIG_IO_ENTRY(dummypin,  GPIOE, GPIO7,  PinMode::INPUT_FLT)   \
 
+//dummypin is used by IOMatrix class for unused functions. Must be set to a pin that has no effect
+
 #endif // PinMode_PRJ_H_INCLUDED
