@@ -25,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 85
+//Next param id (increase when adding new parameter!): 88
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
@@ -95,9 +95,12 @@
     PARAM_ENTRY(CAT_IOPINS,    Out1Func,    PINFUNCS,  0,      9,      6,      80 ) \
     PARAM_ENTRY(CAT_IOPINS,    Out2Func,    PINFUNCS,  0,      9,      7,      81 ) \
     PARAM_ENTRY(CAT_IOPINS,    Out3Func,    PINFUNCS,  0,      9,      3,      82 ) \
-    PARAM_ENTRY(CAT_IOPINS,    SL1Func,     PINFUNCS,  0,      9,      3,      83 ) \
-    PARAM_ENTRY(CAT_IOPINS,    SL2Func,     PINFUNCS,  0,      9,      3,      84 ) \
-    PARAM_ENTRY(CAT_SHUNT,     ISA_INIT,    ONOFF,     0,      1,      0,      75 ) \
+    PARAM_ENTRY(CAT_IOPINS,    SL1Func,     PINFUNCS,  0,      9,      0,      83 ) \
+    PARAM_ENTRY(CAT_IOPINS,    SL2Func,     PINFUNCS,  0,      9,      0,      84 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PWM1Func,    PINFUNCS,  0,      9,      0,      85 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PWM2Func,    PINFUNCS,  0,      9,      4,      86 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PWM3Func,    PINFUNCS,  0,      9,      2,      87 ) \
+    PARAM_ENTRY(CAT_SHUNT,     IsaInit,     ONOFF,     0,      1,      0,      75 ) \
     VALUE_ENTRY(version,       VERSTR,              2000 ) \
     VALUE_ENTRY(opmode,        OPMODES,             2002 ) \
     VALUE_ENTRY(chgtyp,        CHGTYPS,             2003 ) \
@@ -176,7 +179,7 @@
 
 #define VERSTR STRINGIFY(4=VER)
 #define PINFUNCS     "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, 5=WarnIndication," \
-                     "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=MotorSpeed, 11=VehicleSpeed"
+                     "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight"
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleChannel, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
@@ -205,7 +208,7 @@
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=Leaf_PDM"
 #define CAN3Spd      "0=k33.3, 1=k500"
-#define TRNMODES     "0=MAN, 1=AUT"
+#define TRNMODES     "0=Manual, 1=Auto"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
 #define CAT_POWER    "Power Limit"

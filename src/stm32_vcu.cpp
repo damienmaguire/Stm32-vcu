@@ -237,9 +237,16 @@ static void Ms200Task(void)
 
       if(!RunChg) chargeMode = false;
 
-      if(RunChg) DigIo::PWM3.Set();//enable charger digital line.
-      if(!RunChg) DigIo::PWM3.Clear();//disable charger digital line when requested by timer or webui.
-
+      if (RunChg)
+      {
+         //enable charger digital line.
+         IOMatrix::GetPin(IOMatrix::OBCENABLE)->Set();
+      }
+      else
+      {
+         //disable charger digital line when requested by timer or webui.
+         IOMatrix::GetPin(IOMatrix::OBCENABLE)->Clear();
+      }
    }
 
    ///////////////////////////////////////
@@ -279,14 +286,23 @@ static void Ms100Task(void)
    selectedVehicle->Task100Ms();
    canMap->SendAll();
 
-    if(opmode==MOD_RUN)
-    {
-       DigIo::PWM2.Set();//Enable run mode digital line to high.
-    }
-     else
-     {
-        DigIo::PWM2.Clear();
-     }
+   if (Param::GetInt(Param::dir) < 0)
+   {
+      IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Set();
+   }
+   else
+   {
+      IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Clear();
+   }
+
+   if(opmode==MOD_RUN)
+   {
+      IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Set();
+   }
+   else
+   {
+      IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Clear();
+   }
 
    // Leaf Gen2 PDM Charger/DCDC/Chademo
    if(targetChgint == ChargeInterfaces::Leaf_PDM &&
@@ -823,7 +839,7 @@ extern "C" int main(void)
    s.AddTask(Ms100Task, 100);
    s.AddTask(Ms200Task, 200);
 
-   if(Param::GetInt(Param::ISA_INIT)==1) ISA::initialize(shunt_can);//only call this once if a new sensor is fitted.
+   if(Param::GetInt(Param::IsaInit)==1) ISA::initialize(shunt_can);//only call this once if a new sensor is fitted.
 
    Param::SetInt(Param::version, 4); //backward compatibility
 
