@@ -37,7 +37,7 @@ class IOMatrix
 
    private:
       static DigIo* functionToPin[LAST];
-      static const int numPins = 5;
+      static const int numPins = 8;
       static DigIo* const paramToPin[numPins];
 };
 
