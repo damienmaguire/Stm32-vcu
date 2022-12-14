@@ -19,29 +19,82 @@
 #include "subaruvehicle.h"
 #include "anain.h"
 #include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/gpio.h>
 
 SubaruVehicle::SubaruVehicle()
+   : lastGear(NEUTRAL), timerPeriod(10000)
 {
-   //ctor
+}
+
+//We use this as an init function
+void SubaruVehicle::SetCanInterface(CanHardware* c)
+{
+   c = c;
+
+   //Connect PWM outputs to timer hardware
+   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO6 | GPIO7);
+   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO0);
 }
 
 void SubaruVehicle::SetRevCounter(int speed)
 {
-   timer_set_oc_value(TIM3, TIM_OC1, speed);
+   //This will also shortly change the value of temp and fuel gauge but we assume
+   //they are updated soon after and their inertia keeps them stationary
+   timerPeriod = 10000 / speed; //TODO: find correct factor or make parameter
+   timer_set_period(TIM3, timerPeriod);
+   timer_set_oc_value(TIM3, TIM_OC1, timerPeriod / 2); //always stay at 50% duty cycle
 }
 
 void SubaruVehicle::SetTemperatureGauge(float temp)
 {
+   float dc = temp * 10; //TODO find right factor for value like 0..0.5 or so
+   dc *= timerPeriod;
+   timer_set_oc_value(TIM3, TIM_OC3, dc);
+}
+
+void SubaruVehicle::SetFuelGauge(float level)
+{
+   float dc = 0.2f + level * 10; //TODO find right factor for value like 0.5..0.8 or so
+   dc *= timerPeriod;
+   timer_set_oc_value(TIM3, TIM_OC2, dc);
 }
 
 bool SubaruVehicle::GetGear(gear& gear)
 {
    int gearsel = AnaIn::GP_analog2.Get();
 
-   if (gearsel > 1000 && gearsel < 1200) //usw.
+   if (gearsel > 1350 && gearsel < 1500) //usw.
    {
-      gear = PARK;
+      gear = REVERSE;
    }
+   else if (gearsel > 700 && gearsel < 850)
+   {
+      gear = DRIVE;
+   }
+   else
+   {
+      gear = lastGear;
+   }
+   lastGear = gear;
 
    return true;
+}
+
+Vehicle::cruise SubaruVehicle::GetCruiseState()
+{
+   int cruisesel = AnaIn::GP_analog1.Get();
+
+   if (cruisesel > 1700 && cruisesel < 1820)
+   {
+      return CC_RESUME;
+   }
+   if (cruisesel > 2650 && cruisesel < 2800)
+   {
+      return CC_SET;
+   }
+   if (cruisesel > 3000 && cruisesel < 3150)
+   {
+      return CC_CANCEL;
+   }
+
 }

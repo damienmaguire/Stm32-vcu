@@ -238,10 +238,8 @@ void tim3_setup()
    timer_enable_oc_output(TIM3, TIM_OC2);
    timer_enable_oc_output(TIM3, TIM_OC3);
    timer_set_period(TIM3, 7200); //default to 10 kHz
+   timer_set_oc_value(TIM3, TIM_OC1, 3600); //50%
    timer_generate_event(TIM3, TIM_EGR_UG);
-   timer_set_prescaler(TIM3, 0);
+   timer_set_prescaler(TIM3, 719); //100 kHz base speed
    timer_enable_counter(TIM3);
-
-   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO6 | GPIO7);
-   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO0);
 }

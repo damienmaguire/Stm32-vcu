@@ -27,14 +27,19 @@ class SubaruVehicle : public Vehicle
    public:
       /** Default constructor */
       SubaruVehicle();
+      void SetCanInterface(CanHardware* c);
       bool GetGear(gear& gear);
       bool Ready() { return true; }
       void SetRevCounter(int speed);
       void SetTemperatureGauge(float temp);
+      void SetFuelGauge(float level);
+      cruise GetCruiseState();
 
    protected:
 
    private:
+      gear lastGear;
+      int timerPeriod;
 };
 
 #endif // SUBARUVEHICLE_H

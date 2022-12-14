@@ -170,7 +170,7 @@ void SelectDirection(Vehicle* vehicle)
 
    if (vehicle->GetGear(gear))
    {
-      // if in an E65 we get direction from the shift stalk via CAN
+      // if the vehicle class supplies gear selection then use that
       switch (gear)
       {
       case Vehicle::PARK:
@@ -189,7 +189,7 @@ void SelectDirection(Vehicle* vehicle)
    }
    else
    {
-      // only use this if we are NOT in an E65.
+      // otherwise use the traditional inputs
       if (Param::GetInt(Param::dirmode) == DIR_DEFAULTFORWARD)
       {
          if (Param::GetBool(Param::din_forward) && Param::GetBool(Param::din_reverse))

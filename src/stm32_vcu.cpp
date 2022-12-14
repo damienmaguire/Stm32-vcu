@@ -793,6 +793,7 @@ extern "C" int main(void)
    parm_load();
    spi2_setup();
    spi3_setup();
+   tim3_setup(); //For general purpose PWM output
    Param::Change(Param::PARAM_LAST);
    DigIo::inv_out.Clear();//inverter power off during bootup
    DigIo::mcp_sby.Clear();//enable can3
