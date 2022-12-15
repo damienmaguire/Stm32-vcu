@@ -83,8 +83,8 @@ float GS450HClass::GetMotorTemperature()
    Param::SetFloat(Param::MG1Raw,tmpmg1);//-0.01982833(x) +56.678789
    Param::SetFloat(Param::MG2Raw,tmpmg2);
 
-   float t1 = (tmpmg1*(-0.02058758))+56.56512898;//Trying a best fit line approach.
-   float t2 = (tmpmg2*(-0.02058758))+56.56512898;;
+   float t1 = (tmpmg1*(-0.01770665))+53.61145805;//Trying a best fit line approach.
+   float t2 = (tmpmg2*(-0.01770665))+53.61145805;//
    float tmpm = MAX(t1, t2);//which ever is the hottest gets displayed
 
    return float(tmpm);
