@@ -40,6 +40,7 @@ void SubaruVehicle::SetRevCounter(int speed)
 {
    //This will also shortly change the value of temp and fuel gauge but we assume
    //they are updated soon after and their inertia keeps them stationary
+   //Subaru speedo displays 250 km/h for a timer value of 600 or 166 Hz.
    timerPeriod = 10000 / speed; //TODO: find correct factor or make parameter
    timer_set_period(TIM3, timerPeriod);
    timer_set_oc_value(TIM3, TIM_OC1, timerPeriod / 2); //always stay at 50% duty cycle
@@ -96,5 +97,9 @@ Vehicle::cruise SubaruVehicle::GetCruiseState()
    {
       return CC_CANCEL;
    }
-
+   if (cruisesel > 2850 && cruisesel < 2990)
+   {
+      return CC_ON;
+   }
+   return CC_NONE;
 }
