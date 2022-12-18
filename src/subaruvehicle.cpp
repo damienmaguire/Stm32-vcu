@@ -16,10 +16,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "subaruvehicle.h"
-#include "anain.h"
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/gpio.h>
+#include "subaruvehicle.h"
+#include "anain.h"
+#include "my_math.h"
+
+#define IS_IN_RANGE(v, r)           (v < (r + 40) && v > (r - 40))
+#define IS_GEARSEL_NONE(v)          v < 50
+#define IS_GEARSEL_RESET_BALANCE(v) IS_IN_RANGE(v, 1172)
+#define IS_GEARSEL_FRONT_PLUS(v)    IS_IN_RANGE(v, 605)
+#define IS_GEARSEL_FRONT_MINUS(v)   IS_IN_RANGE(v, 497)
+#define IS_GEARSEL_REVERSE(v)       IS_IN_RANGE(v, 1449)
+#define IS_GEARSEL_DRIVE(v)         IS_IN_RANGE(v, 776)
+#define IS_GEARSEL_TCTOGGLE(v)      IS_IN_RANGE(v, 422)
+#define IS_CC_RESUME(v)             IS_IN_RANGE(v, 1768)
+#define IS_CC_SET(v)                IS_IN_RANGE(v, 2725)
+#define IS_CC_CANCEL(v)             IS_IN_RANGE(v, 3063)
+#define IS_CC_ON(v)                 IS_IN_RANGE(v, 2922)
+#define IS_CC_NONE(v)               IS_IN_RANGE(v, 1019)
 
 SubaruVehicle::SubaruVehicle()
    : lastGear(NEUTRAL), timerPeriod(10000)
@@ -64,11 +79,11 @@ bool SubaruVehicle::GetGear(gear& gear)
 {
    int gearsel = AnaIn::GP_analog2.Get();
 
-   if (gearsel > 1350 && gearsel < 1500) //usw.
+   if (IS_GEARSEL_REVERSE(gearsel))
    {
       gear = REVERSE;
    }
-   else if (gearsel > 700 && gearsel < 850)
+   else if (IS_GEARSEL_DRIVE(gearsel))
    {
       gear = DRIVE;
    }
@@ -83,23 +98,68 @@ bool SubaruVehicle::GetGear(gear& gear)
 
 Vehicle::cruise SubaruVehicle::GetCruiseState()
 {
+   static int prevSel = 0;
    int cruisesel = AnaIn::GP_analog1.Get();
+   cruise result = CC_NONE;
 
-   if (cruisesel > 1700 && cruisesel < 1820)
+   if (IS_CC_RESUME(cruisesel))
    {
-      return CC_RESUME;
+      result = CC_RESUME;
    }
-   if (cruisesel > 2650 && cruisesel < 2800)
+   else if (IS_CC_SET(cruisesel))
    {
-      return CC_SET;
+      result = CC_SET;
    }
-   if (cruisesel > 3000 && cruisesel < 3150)
+   else if (IS_CC_CANCEL(cruisesel))
    {
-      return CC_CANCEL;
+      result = CC_CANCEL;
    }
-   if (cruisesel > 2850 && cruisesel < 2990)
+   else if (IS_CC_ON(cruisesel) && IS_CC_NONE(prevSel))
    {
-      return CC_ON;
+      result = CC_ON;
    }
-   return CC_NONE;
+
+   prevSel = cruisesel;
+
+   return result;
+}
+
+float SubaruVehicle::GetFrontRearBalance()
+{
+   static int prevSel = 0;
+   int sel = AnaIn::GP_analog2.Get();
+
+   if (IS_GEARSEL_RESET_BALANCE(sel))
+   {
+      frontRearBalance = 50;
+   }
+   else if (IS_GEARSEL_FRONT_PLUS(sel) && IS_GEARSEL_NONE(prevSel)) //Only trigger when nothing was previously pushed
+   {
+      frontRearBalance += 16.66f;
+      frontRearBalance = MIN(frontRearBalance, 100);
+   }
+   else if (IS_GEARSEL_FRONT_MINUS(sel) && IS_GEARSEL_NONE(prevSel)) //Only trigger when nothing was previously pushed
+   {
+      frontRearBalance -= 16.66f;
+      frontRearBalance = MAX(frontRearBalance, 0);
+   }
+
+   prevSel = sel;
+
+   return frontRearBalance;
+}
+
+bool SubaruVehicle::EnableTractionControl()
+{
+   static int prevSel = 0;
+   int sel = AnaIn::GP_analog2.Get();
+
+   if (IS_GEARSEL_TCTOGGLE(sel) && IS_GEARSEL_NONE(prevSel))
+   {
+      tcOn = !tcOn;
+   }
+
+   prevSel = sel;
+
+   return tcOn;
 }

@@ -16,34 +16,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef SUBARUVEHICLE_H
-#define SUBARUVEHICLE_H
+#ifndef AMPERAHEATER_H
+#define AMPERAHEATER_H
 
-#include <vehicle.h>
+#include <heater.h>
 
 
-class SubaruVehicle : public Vehicle
+class AmperaHeater : public Heater
 {
    public:
       /** Default constructor */
-      SubaruVehicle();
-      void SetCanInterface(CanHardware* c);
-      bool GetGear(gear& gear);
-      bool Ready() { return true; }
-      void SetRevCounter(int speed);
-      void SetTemperatureGauge(float temp);
-      void SetFuelGauge(float level);
-      float GetFrontRearBalance();
-      cruise GetCruiseState();
-      bool EnableTractionControl();
-
-   protected:
+      AmperaHeater();
+      void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
+      void SetPower(float power);
 
    private:
-      gear lastGear;
-      int timerPeriod;
-      float frontRearBalance;
-      bool tcOn;
+      bool isAwake;
+      void SendWakeup();
 };
 
-#endif // SUBARUVEHICLE_H
+#endif // AMPERAHEATER_H

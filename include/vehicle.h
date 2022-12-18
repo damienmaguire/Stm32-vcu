@@ -36,9 +36,11 @@ public:
    virtual void DashOff() {}
    virtual void SetRevCounter(int speed) = 0;
    virtual void SetTemperatureGauge(float temp) = 0;
-   virtual void SetFuelGauge(float level) {}; //SoC 0-100%
+   virtual void SetFuelGauge(float level) { (void)level; }; //SoC 0-100%
    virtual bool GetGear(gear&) { return false; } //if vehicle class knows gear return true and set dir
    virtual cruise GetCruiseState() { return CC_NONE; }
+   virtual float GetFrontRearBalance() { return 50; } //100% - all front, 0% all rear
+   virtual bool EnableTractionControl() { return false; }
    virtual bool Ready() = 0;
    virtual bool Start() { return Param::GetBool(Param::din_start); }
    virtual void SetCanInterface(CanHardware* c) { can = c; }
