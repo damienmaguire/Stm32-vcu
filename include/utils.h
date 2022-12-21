@@ -12,6 +12,7 @@
 #include "anain.h"
 #include "throttle.h"
 #include "isa_shunt.h"
+#include "vehicle.h"
 
 namespace utils
 {
@@ -24,6 +25,7 @@ namespace utils
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
     void SelectDirection(Vehicle*);
     void displayThrottle();
+    void ProcessCruiseControlButtons();
 }
 
 #endif

@@ -26,7 +26,7 @@ class Vehicle
 {
 public:
    enum gear { PARK, REVERSE, NEUTRAL, DRIVE };
-   enum cruise { CC_NONE = 0, CC_ON = 1, CC_SET = 2, CC_RESUME = 4, CC_CANCEL = 8 };
+   enum cruise { CC_NONE = 0, CC_ON = 1, CC_CANCEL = 2, CC_SET = 4, CC_RESUME = 8 };
 
    virtual void Task1Ms() {} //Default does nothing
    virtual void Task10Ms() {} //Default does nothing
@@ -38,7 +38,7 @@ public:
    virtual void SetTemperatureGauge(float temp) = 0;
    virtual void SetFuelGauge(float level) { (void)level; }; //SoC 0-100%
    virtual bool GetGear(gear&) { return false; } //if vehicle class knows gear return true and set dir
-   virtual cruise GetCruiseState() { return CC_NONE; }
+   virtual int GetCruiseState() { return CC_NONE; }
    virtual float GetFrontRearBalance() { return 50; } //100% - all front, 0% all rear
    virtual bool EnableTractionControl() { return false; }
    virtual bool Ready() = 0;

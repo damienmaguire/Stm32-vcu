@@ -274,8 +274,15 @@ static void Ms100Task(void)
    utils::SelectDirection(selectedVehicle);
    utils::CalcSOC();
 
+   Param::SetInt(Param::cruisestt, selectedVehicle->GetCruiseState());
+
+   utils::ProcessCruiseControlButtons();
+
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
+
+   Param::SetInt(Param::MG1Raw, AnaIn::GP_analog1.Get());
+   Param::SetInt(Param::MG2Raw, AnaIn::GP_analog2.Get());
 
     if(opmode==MOD_RUN)
     {

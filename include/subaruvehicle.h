@@ -34,7 +34,7 @@ class SubaruVehicle : public Vehicle
       void SetTemperatureGauge(float temp);
       void SetFuelGauge(float level);
       float GetFrontRearBalance();
-      cruise GetCruiseState();
+      int GetCruiseState();
       bool EnableTractionControl();
 
    protected:
@@ -44,6 +44,7 @@ class SubaruVehicle : public Vehicle
       int timerPeriod;
       float frontRearBalance;
       bool tcOn;
+      bool ccOn;
 };
 
 #endif // SUBARUVEHICLE_H

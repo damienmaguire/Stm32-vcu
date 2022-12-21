@@ -189,7 +189,7 @@
 #define CANIOS       "1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms"
 #define CANPERIODS   "0=100ms, 1=10ms"
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"
-#define CRUISESTATES "0=None, 1=On, 2=Disable, 4=SetN, 8=SetP"
+#define CRUISESTATES "0=None, 1=On, 2=Disable, 4=Set, 8=Resume"
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
 #define HTTYPE       "0=None, 1=Ampera, 2=VW"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"

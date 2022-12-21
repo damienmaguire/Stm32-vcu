@@ -96,11 +96,11 @@ bool SubaruVehicle::GetGear(gear& gear)
    return true;
 }
 
-Vehicle::cruise SubaruVehicle::GetCruiseState()
+int SubaruVehicle::GetCruiseState()
 {
    static int prevSel = 0;
    int cruisesel = AnaIn::GP_analog1.Get();
-   cruise result = CC_NONE;
+   int result = CC_NONE;
 
    if (IS_CC_RESUME(cruisesel))
    {
@@ -116,10 +116,11 @@ Vehicle::cruise SubaruVehicle::GetCruiseState()
    }
    else if (IS_CC_ON(cruisesel) && IS_CC_NONE(prevSel))
    {
-      result = CC_ON;
+      ccOn = !ccOn;
    }
 
    prevSel = cruisesel;
+   result |= ccOn ? CC_ON : CC_NONE;
 
    return result;
 }
