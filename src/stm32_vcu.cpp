@@ -275,6 +275,7 @@ static void Ms100Task(void)
    utils::CalcSOC();
 
    Param::SetInt(Param::cruisestt, selectedVehicle->GetCruiseState());
+   Param::SetFloat(Param::FrontRearBal, selectedVehicle->GetFrontRearBalance());
 
    utils::ProcessCruiseControlButtons();
 

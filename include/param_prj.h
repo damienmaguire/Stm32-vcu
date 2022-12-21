@@ -122,6 +122,7 @@
     VALUE_ENTRY(tmpaux,        "°C",                2030 ) \
     VALUE_ENTRY(uaux,          "V",                 2031 ) \
     VALUE_ENTRY(canio,         CANIOS,              2032 ) \
+    VALUE_ENTRY(FrontRearBal,  "%",                 2082 ) \
     VALUE_ENTRY(cruisespeed,   "rpm",               2033 ) \
     VALUE_ENTRY(cruisestt,     CRUISESTATES,        2034 ) \
     VALUE_ENTRY(din_cruise,    ONOFF,               2035 ) \
@@ -166,7 +167,7 @@
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2082
+//Next value Id: 2083
 
 #define VERSTR STRINGIFY(4=VER)
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
