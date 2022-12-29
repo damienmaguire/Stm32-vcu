@@ -10,7 +10,6 @@
             "defines": [
                 "STM32F1"
             ],
-            "compilerPath": "/usr/lib64/ccache/arm-none-eabi-gcc",
             "cStandard": "c11",
             "intelliSenseMode": "linux-gcc-arm",
             "cppStandard": "c++17",

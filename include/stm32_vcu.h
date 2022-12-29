@@ -38,6 +38,10 @@
 #include "inverter.h"
 #include "vehicle.h"
 
+#include "bms.h"
+#include "simpbms.h"
+#include "daisychainbms.h"
+
 typedef union {
     struct {
         uint32_t data[2];

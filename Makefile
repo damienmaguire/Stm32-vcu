@@ -38,9 +38,10 @@ CPPFLAGS    = -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/inc
 LDSCRIPT	= $(BINARY).ld
 LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) -march=armv7 -nostartfiles -Wl,--gc-sections,-Map,linker.map
 OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
-           my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o Can_E46.o BMW_E65.o GS450H.o temp_meas.o \
-           Can_E39.o Can_VAG.o Can_OI.o MCP2515.o CANSPI.o outlanderinverter.o \
-           param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o charger.o i3LIM.o chademo.o heater.o
+           my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o Can_E46.o BMW_E65.o GS450H.o \
+           temp_meas.o Can_E39.o Can_VAG.o Can_OI.o MCP2515.o CANSPI.o outlanderinverter.o \
+           param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o charger.o \
+           i3LIM.o chademo.o heater.o bms.o simpbms.o daisychainbms.o
 OBJS     = $(patsubst %.o,$(OUT_DIR)/%.o, $(OBJSL))
 vpath %.c src/ libopeninv/src/
 vpath %.cpp src/ libopeninv/src/
@@ -75,7 +76,7 @@ ${OUT_DIR}:
 
 $(BINARY): $(OBJS) $(LDSCRIPT)
 	@printf "  LD      $(subst $(shell pwd)/,,$(@))\n"
-	$(Q)$(LD) $(LDFLAGS) -o $(BINARY) $(OBJS) -lopencm3_stm32f1
+	$(Q)$(LD) $(LDFLAGS) -o $(BINARY) $(OBJS) -lopencm3_stm32f1 -lm
 
 $(OUT_DIR)/%.o: %.c Makefile
 	@printf "  CC      $(subst $(shell pwd)/,,$(@))\n"

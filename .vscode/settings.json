@@ -1,0 +1,5 @@
+{
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false,
+    "C_Cpp.default.compilerPath": "arm-none-eabi-gcc"
+}

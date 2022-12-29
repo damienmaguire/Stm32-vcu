@@ -65,7 +65,11 @@ static LeafINV leafInv;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static Inverter* selectedInverter = &openInv;
-static Vehicle* selectedVehicle = 0;
+
+static BMS noBMS;
+static SimpBMS simpBMS;
+static DaisychainBMS daisychainBMS;
+static BMS* selectedBMS = &noBMS;
 
 static void SetCanFilters();
 
@@ -98,6 +102,23 @@ static void UpdateInv()
       }
 }
 
+static void SelectBMS()
+{
+      switch (Param::GetInt(Param::BMS_Mode))
+      {
+         case BMSModes::BMSModeSimpBMS:
+            selectedBMS = &simpBMS;
+            break;
+         case BMSModes::BMSModeDaisychainSingleBMS:
+         case BMSModes::BMSModeDaisychainDualBMS:
+            selectedBMS = &daisychainBMS;
+            break;
+         default:
+            // Default to no BMS
+            selectedBMS = &noBMS;
+            break;
+      }
+}
 
 static void RunChaDeMo()
 {
@@ -326,6 +347,7 @@ static void Ms100Task(void)
    utils::SelectDirection(targetVehicle, E65Vehicle);
    utils::ProcessUdc(oldTime, GetInt(Param::speed));
    utils::CalcSOC();
+   selectedBMS->Task100Ms();
 
    selectedInverter->Task100Ms();
 
@@ -717,11 +739,15 @@ void Param::Change(Param::PARAM_NUM paramNum)
         UpdateInv();
       SetCanFilters();
       break;
+   case Param::BMS_Mode:
+      SelectBMS();
+      break;
    case Param::Inverter_CAN:
    case Param::Vehicle_CAN:
    case Param::Shunt_CAN:
    case Param::LIM_CAN:
    case Param::Charger_CAN:
+   case Param::BMS_CAN:
       SetCanFilters();
       break;
    case Param::canspeed:
@@ -829,7 +855,6 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
    case 0x2ef:
       i3LIMClass::handle2EF(data);// Data msg from LIM
       break;
-
    default:
       selectedInverter->DecodeCAN(id, data);
 
@@ -844,7 +869,7 @@ static void CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
       {
          Can_E39::DecodeCAN(id, data);
       }
-
+      selectedBMS->DecodeCAN(id, (uint8_t*)data);
       break;
    }
 }
@@ -917,6 +942,7 @@ static void SetCanFilters()
    Can* shunt_can = Can::GetInterface(Param::GetInt(Param::shunt_can));
    Can* lim_can = Can::GetInterface(Param::GetInt(Param::lim_can));
    Can* charger_can = Can::GetInterface(Param::GetInt(Param::charger_can));
+   Can* bms_can = Can::GetInterface(Param::GetInt(Param::bms_can));
 
    can->ClearUserMessages();
    can2->ClearUserMessages();
@@ -944,6 +970,10 @@ static void SetCanFilters()
    lim_can->RegisterUserMessage(0x2b2);//LIM MSG
    lim_can->RegisterUserMessage(0x2ef);//LIM MSG
    lim_can->RegisterUserMessage(0x272);//LIM MSG
+   bms_can->RegisterUserMessage(0x373);//SimpBMS MSG
+   bms_can->RegisterUserMessage(0x351);//SimpBMS MSG
+   bms_can->RegisterUserMessage(0x4f1);//Daisychain BMS MSG
+   bms_can->RegisterUserMessage(0x4f5);//Daisychain BMS MSG
 
    // Set up CAN 2 (Vehicle CAN) callback and messages to listen for.
    vehicle_can->RegisterUserMessage(0x130);//E65 CAS
@@ -999,7 +1029,8 @@ extern "C" int main(void)
 
    if(Param::GetInt(Param::ISA_INIT)==1) ISA::initialize();//only call this once if a new sensor is fitted.
    Param::SetInt(Param::version, 4); //backward compatibility
-    UpdateInv();
+   UpdateInv();
+   SelectBMS();
 
    while(1)
       t.Run();
