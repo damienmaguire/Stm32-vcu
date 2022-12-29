@@ -36,9 +36,9 @@
 class BMS
 {
    public:
-      void DecodeCAN(int id, uint8_t * data);
-      bool ChargeAllowed();
-      float MaxChargeCurrent();
-      void Task100Ms();
+      virtual void DecodeCAN(int id, uint8_t * data);
+      virtual bool ChargeAllowed();
+      virtual float MaxChargeCurrent();
+      virtual void Task100Ms();
 };
 #endif // BMS_H

@@ -31,10 +31,10 @@ class DaisychainBMS: public BMS
    private:
       float temperature(uint16_t adc);
       int timeoutCounter[2];
-      int minCell[2] = {0, 0};
-      int maxCell[2] = {0, 0};
-      int minTemp[2] = {0, 0};
-      int maxTemp[2] = {0, 0};
+      uint16_t minCell[2] = {0, 0};
+      uint16_t maxCell[2] = {0, 0};
+      uint16_t minTemp[2] = {0, 0};
+      uint16_t maxTemp[2] = {0, 0};
       float minCellV = 0;
       float maxCellV = 0;
       float minTempC = 0;

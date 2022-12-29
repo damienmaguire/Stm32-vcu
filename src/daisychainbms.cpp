@@ -56,6 +56,11 @@ float DaisychainBMS::temperature(uint16_t adc)
    return t;
 }
 
+float DaisychainBMS::MaxChargeCurrent()
+{
+   return 9998.0;
+}
+
 // Process voltage and temperature message from TI Daisychain BMS.
 void DaisychainBMS::DecodeCAN(int id, uint8_t *data)
 {
@@ -64,10 +69,10 @@ void DaisychainBMS::DecodeCAN(int id, uint8_t *data)
    if (id == 0x4f5) bms = 1;
    if (bms == -1) return;
 
-   minCell[bms] = data[1] | (data[0] << 8);
-   maxCell[bms] = data[3] | (data[2] << 8);
-   minTemp[bms] = data[5] | (data[4] << 8);
-   maxTemp[bms] = data[7] | (data[6] << 8);
+   maxCell[bms] = data[1] | (data[0] << 8);
+   minCell[bms] = data[3] | (data[2] << 8);
+   maxTemp[bms] = data[5] | (data[4] << 8);
+   minTemp[bms] = data[7] | (data[6] << 8);
    
    timeoutCounter[bms] = Param::GetInt(Param::BMS_Timeout) * 10;
 
@@ -76,14 +81,14 @@ void DaisychainBMS::DecodeCAN(int id, uint8_t *data)
       // Dual BMS mode.
       if(minCell[0] < minCell[1]) minCellV = minCell[0] / 13107.0;
       else                        minCellV = minCell[1] / 13107.0;
-
+      
       if(maxCell[0] > maxCell[1]) maxCellV = maxCell[0] / 13107.0;
       else                        maxCellV = maxCell[1] / 13107.0;
 
-      if(minTemp[0] < minTemp[1]) minTempC = temperature(minTemp[0]);
+      if(minTemp[0] > minTemp[1]) minTempC = temperature(minTemp[0]);
       else                        minTempC = temperature(minTemp[1]);
 
-      if(maxTemp[0] > maxTemp[1]) maxTempC = temperature(maxTemp[0]);
+      if(maxTemp[0] < maxTemp[1]) maxTempC = temperature(maxTemp[0]);
       else                        maxTempC = temperature(maxTemp[1]);
    } else {
       // Single BMS mode.
