@@ -307,7 +307,7 @@ float ProcessThrottle(int speed)
    finalSpnt = Throttle::RampThrottle(finalSpnt);
 
    Throttle::UdcLimitCommand(finalSpnt, Param::Get(Param::udc));
-   Throttle::IdcLimitCommand(finalSpnt, Param::Get(Param::idc));
+   Throttle::IdcLimitCommand(finalSpnt, ABS(Param::GetFloat(Param::idc)));
    Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));
 
    if (Throttle::TemperatureDerate(Param::Get(Param::tmphs), Param::Get(Param::tmphsmax), finalSpnt))
@@ -319,13 +319,13 @@ float ProcessThrottle(int speed)
    {
       ErrorMessage::Post(ERR_TMPMMAX);
    }
-   
+
    // make sure the torque percentage is NEVER out of range
    if (finalSpnt < -100.0f)
       finalSpnt = -100.0f;
    else if (finalSpnt > 100.0f)
       finalSpnt = 100.0f;
-   
+
    Param::SetFloat(Param::potnom, finalSpnt);
 
    return finalSpnt;

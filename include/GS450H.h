@@ -44,7 +44,7 @@ public:
 
 private:
    int16_t dc_bus_voltage, mg1_speed, mg2_speed, gear, oil;
-   float temp_inv_water, temp_inv_inductor;
+   float temp_inv_water, temp_inv_inductor , water_temp;
    bool timerIsRunning;
    int scaledTorqueTarget;
    uint8_t VerifyMTHChecksum(uint16_t );

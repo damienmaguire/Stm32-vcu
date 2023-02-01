@@ -229,7 +229,7 @@ void i3LIMClass::Send200msMessages()
 //Possibly needed for dc ccs.
 ////////////////////////////////////
 
-   uint16_t SOC_Local=(Param::GetInt(Param::SOC))*2;
+   uint16_t SOC_Local=(Param::GetInt(Param::SOCFC))*2;
    bytes[0] = 0x2c;//BMS soc msg. May need to be dynamic
    bytes[1] = 0xe2;
    bytes[2] = 0x10;
