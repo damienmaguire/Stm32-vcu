@@ -715,7 +715,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
       can->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
       can2->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
    case Param::CAN3Speed:
-       Param::SetInt(Param::can3Speed,Param::GetInt(Param::CAN3Speed));
+       Param::SetInt(Param::can3Set,Param::GetInt(Param::CAN3Speed));
       CANSPI_Initialize();// init the MCP25625 on CAN3
       CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
       break;

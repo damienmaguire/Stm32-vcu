@@ -126,7 +126,7 @@
     VALUE_ENTRY(shunt_can,     CAN_DEV,             2073 ) \
     VALUE_ENTRY(lim_can,       CAN_DEV,             2074 ) \
     VALUE_ENTRY(charger_can,   CAN_DEV,             2075 ) \
-    VALUE_ENTRY(can3Speed,     CAN3Spd,             2080 ) \
+    VALUE_ENTRY(can3Set,       CAN3Spd,             2080 ) \
     VALUE_ENTRY(TRANS,        TRNMODES,             2081 ) \
     VALUE_ENTRY(Charger,       CHGMODS,             2027 ) \
     VALUE_ENTRY(tmphs,         "°C",                2028 ) \
