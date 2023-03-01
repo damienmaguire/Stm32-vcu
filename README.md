@@ -6,6 +6,8 @@ Please visit the development thread on the Openinverter Forum for more informati
 
 Video on progress : https://vimeo.com/506480876
 
+V1.11a On dyno with GS450h / BMW E39 : https://vimeo.com/802405172
+
 # Features
 
 - Nissan Leaf Gen1/2/3 inverter via CAN
