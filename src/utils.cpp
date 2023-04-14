@@ -170,7 +170,7 @@ void SelectDirection(Vehicle* vehicle)
 
    if (vehicle->GetGear(gear))
    {
-      // if in an E65 we get direction from the shift stalk via CAN
+      // if the vehicle class supplies gear selection then use that
       switch (gear)
       {
       case Vehicle::PARK:
@@ -189,7 +189,7 @@ void SelectDirection(Vehicle* vehicle)
    }
    else
    {
-      // only use this if we are NOT in an E65.
+      // otherwise use the traditional inputs
       if (Param::GetInt(Param::dirmode) == DIR_DEFAULTFORWARD)
       {
          if (Param::GetBool(Param::din_forward) && Param::GetBool(Param::din_reverse))
@@ -305,11 +305,22 @@ float ProcessThrottle(int speed)
 
    finalSpnt = utils::GetUserThrottleCommand();
 
+   if (Param::Get(Param::cruisespeed) > 0)
+   {
+      Throttle::brkcruise = 0;
+      Throttle::speedflt = 5;
+      Throttle::speedkp = 0.25f;
+      Throttle::cruiseSpeed = Param::GetInt(Param::cruisespeed);
+      float cruiseThrottle = Throttle::CalcCruiseSpeed(Param::GetInt(Param::speed));
+      finalSpnt = MAX(cruiseThrottle, finalSpnt);
+   }
+
    finalSpnt = Throttle::RampThrottle(finalSpnt);
 
    Throttle::UdcLimitCommand(finalSpnt, Param::Get(Param::udc));
    Throttle::IdcLimitCommand(finalSpnt, Param::Get(Param::idc));
    Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));
+
 
    if (Throttle::TemperatureDerate(Param::Get(Param::tmphs), Param::Get(Param::tmphsmax), finalSpnt))
    {
@@ -351,6 +362,101 @@ void CalcSOC()
 
    if(SOCVal > 100) SOCVal = 100;
    Param::SetFloat(Param::SOC,SOCVal);
+}
+
+void ProcessCruiseControlButtons()
+{
+   static bool transition = false;
+   static int cruiseTarget = 0;
+   int cruisespeed = Param::GetInt(Param::cruisespeed);
+   int cruisestt = Param::GetInt(Param::cruisestt);
+
+   if (transition)
+   {
+      if ((cruisestt & (Vehicle::CC_RESUME | Vehicle::CC_SET)) == 0)
+      {
+         transition = false;
+      }
+      return;
+   }
+   else
+   {
+      if (cruisestt & (Vehicle::CC_RESUME | Vehicle::CC_SET))
+      {
+         transition = true;
+      }
+   }
+
+   if (cruisestt & Vehicle::CC_ON && Param::GetInt(Param::opmode) == MOD_RUN)
+   {
+      if (cruisespeed <= 0)
+      {
+         int currentSpeed = Param::GetInt(Param::speed);
+
+         if (cruisestt & Vehicle::CC_SET && currentSpeed > 500) //Start cruise control at current speed
+         {
+            cruiseTarget = currentSpeed;
+            cruisespeed = cruiseTarget;
+         }
+         else if (cruisestt & Vehicle::CC_RESUME && cruiseTarget > 0) //resume via ramp
+         {
+            cruisespeed = currentSpeed;
+         }
+      }
+      else
+      {
+         if (cruisestt & Vehicle::CC_CANCEL || Param::GetBool(Param::din_brake))
+         {
+            cruisespeed = 0;
+         }
+         else if (cruisestt & Vehicle::CC_RESUME)
+         {
+            cruiseTarget += Param::GetInt(Param::cruisestep);
+         }
+         else if (cruisestt & Vehicle::CC_SET)
+         {
+            cruiseTarget -= Param::GetInt(Param::cruisestep);
+         }
+      }
+   }
+   else
+   {
+      cruisespeed = 0;
+      cruiseTarget = 0;
+
+      //When pressing cruise control buttons while cruise control is off
+      //Use them to adjust regen level
+      int regenLevel = Param::GetInt(Param::regenlevel);
+      if (cruisestt & Vehicle::CC_RESUME)
+      {
+         regenLevel++;
+         regenLevel = MIN(3, regenLevel);
+      }
+      else if (cruisestt & Vehicle::CC_SET)
+      {
+         regenLevel--;
+         regenLevel = MAX(0, regenLevel);
+      }
+
+      Param::SetInt(Param::regenlevel, regenLevel);
+   }
+
+   if (cruisespeed <= 0)
+   {
+      Param::SetInt(Param::cruisespeed, 0);
+   }
+   else if (cruisespeed < cruiseTarget)
+   {
+      Param::SetInt(Param::cruisespeed, RAMPUP(cruisespeed, cruiseTarget, Param::GetInt(Param::cruiseramp)));
+   }
+   else if (cruisespeed > cruiseTarget)
+   {
+      Param::SetInt(Param::cruisespeed, RAMPDOWN(cruisespeed, cruiseTarget, Param::GetInt(Param::cruiseramp)));
+   }
+   else
+   {
+      Param::SetInt(Param::cruisespeed, cruisespeed);
+   }
 }
 
 } // namespace utils

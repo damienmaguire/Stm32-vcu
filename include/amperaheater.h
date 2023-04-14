@@ -27,7 +27,7 @@ class AmperaHeater : public Heater
    public:
       /** Default constructor */
       AmperaHeater();
-      void SetTargetTemperature(float temp) { } //Not supported (yet)?
+      void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
       void SetPower(float power);
 
    private:

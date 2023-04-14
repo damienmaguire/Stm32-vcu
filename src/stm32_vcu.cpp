@@ -282,9 +282,15 @@ static void Ms100Task(void)
    utils::SelectDirection(selectedVehicle);
    utils::CalcSOC();
 
+   Param::SetInt(Param::cruisestt, selectedVehicle->GetCruiseState());
+   Param::SetFloat(Param::FrontRearBal, selectedVehicle->GetFrontRearBalance());
+
+   utils::ProcessCruiseControlButtons();
+
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
    canMap->SendAll();
+
 
    if (Param::GetInt(Param::dir) < 0)
    {
@@ -804,6 +810,7 @@ extern "C" int main(void)
    parm_load();
    spi2_setup();
    spi3_setup();
+   tim3_setup(); //For general purpose PWM output
    Param::Change(Param::PARAM_LAST);
    DigIo::inv_out.Clear();//inverter power off during bootup
    DigIo::mcp_sby.Clear();//enable can3

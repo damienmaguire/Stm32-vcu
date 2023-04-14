@@ -130,6 +130,7 @@
     VALUE_ENTRY(tmpaux,        "°C",                2030 ) \
     VALUE_ENTRY(uaux,          "V",                 2031 ) \
     VALUE_ENTRY(canio,         CANIOS,              2032 ) \
+    VALUE_ENTRY(FrontRearBal,  "%",                 2082 ) \
     VALUE_ENTRY(cruisespeed,   "rpm",               2033 ) \
     VALUE_ENTRY(cruisestt,     CRUISESTATES,        2034 ) \
     VALUE_ENTRY(din_cruise,    ONOFF,               2035 ) \
@@ -174,7 +175,7 @@
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2082
+//Next value Id: 2083
 
 
 #define VERSTR STRINGIFY(4=VER)
@@ -200,7 +201,7 @@
 #define CANIOS       "1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms"
 #define CANPERIODS   "0=100ms, 1=10ms"
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"
-#define CRUISESTATES "0=None, 1=On, 2=Disable, 4=SetN, 8=SetP"
+#define CRUISESTATES "0=None, 1=On, 2=Disable, 4=Set, 8=Resume"
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
 #define HTTYPE       "0=None, 1=Ampera, 2=VW"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
