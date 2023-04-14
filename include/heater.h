@@ -9,27 +9,18 @@
 #include "digio.h"
 #include "utils.h"
 
-class AmperaHeater
+class Heater
 {
-   public:
-    static void sendWakeup();
-    static void controlPower(uint16_t heatPwr, bool heatReq);
-    protected:
+public:
+   virtual void DecodeCAN(int, uint32_t*) {};
+   virtual float GetTemperature() { return 0; }
+   virtual void SetTargetTemperature(float temp) = 0; //target temperature in °C
+   virtual void SetPower(float power) = 0; //Must be called cyclically with power in watts
+   virtual void DeInit() {} //called when switching to another heater, similar to a destructor
+   virtual void SetCanInterface(CanHardware* c) { can = c; }
 
-    private:
-
-
+protected:
+   CanHardware* can;
 };
 
-class VWHeater
-{
-   public:
-
-
-    protected:
-
-    private:
-
-
-};
 #endif // HEATER_H

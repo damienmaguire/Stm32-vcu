@@ -31,7 +31,7 @@
    ANA_IN_ENTRY(uaux,      GPIOB, 1) \
    ANA_IN_ENTRY(GP_analog1,GPIOC, 2) \
    ANA_IN_ENTRY(GP_analog2,GPIOC, 3) \
-   ANA_IN_ENTRY(MG1_Temp,  GPIOC, 4) \
-   ANA_IN_ENTRY(MG2_Temp,  GPIOC, 5) \
+   ANA_IN_ENTRY(MG1_Temp,  GPIOC, 5) \
+   ANA_IN_ENTRY(MG2_Temp,  GPIOC, 4) \
 
 #endif // ANAIN_PRJ_H_INCLUDED

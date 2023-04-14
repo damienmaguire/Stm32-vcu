@@ -53,10 +53,12 @@
 #include "CANSPI.h"
 #include "chademo.h"
 #include "heater.h"
+#include "amperaheater.h"
 #include "inverter.h"
 #include "vehicle.h"
 #include "canmap.h"
 #include "terminalcommands.h"
+#include "iomatrix.h"
 
 typedef union {
     struct {
