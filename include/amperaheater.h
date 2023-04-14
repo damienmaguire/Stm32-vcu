@@ -1,7 +1,7 @@
 /*
- * This file is part of the ZombieVerter project.
+ * This file is part of the tumanako_vc project.
  *
- * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
+ * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,22 +16,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef AMPERAHEATER_H
+#define AMPERAHEATER_H
 
-#ifndef ANAIN_PRJ_H_INCLUDED
-#define ANAIN_PRJ_H_INCLUDED
+#include <heater.h>
 
-#include "hwdefs.h"
 
-#define NUM_SAMPLES 12
-#define SAMPLE_TIME ADC_SMPR_SMP_7DOT5CYC
+class AmperaHeater : public Heater
+{
+   public:
+      /** Default constructor */
+      AmperaHeater();
+      void SetTargetTemperature(float temp) { } //Not supported (yet)?
+      void SetPower(float power);
 
-#define ANA_IN_LIST \
-   ANA_IN_ENTRY(throttle1, GPIOC, 0) \
-   ANA_IN_ENTRY(throttle2, GPIOC, 1) \
-   ANA_IN_ENTRY(uaux,      GPIOB, 1) \
-   ANA_IN_ENTRY(GP_analog1,GPIOC, 2) \
-   ANA_IN_ENTRY(GP_analog2,GPIOC, 3) \
-   ANA_IN_ENTRY(MG1_Temp,  GPIOC, 5) \
-   ANA_IN_ENTRY(MG2_Temp,  GPIOC, 4) \
+   private:
+      bool isAwake;
+      void SendWakeup();
+};
 
-#endif // ANAIN_PRJ_H_INCLUDED
+#endif // AMPERAHEATER_H
