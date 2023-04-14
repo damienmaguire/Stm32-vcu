@@ -453,18 +453,31 @@ static void Ms10Task(void)
 
    ErrorMessage::SetTime(rtc_get_counter_val());
 
-   // Leaf Gen2 PDM Charger/DCDC/Chademo
-   if(targetChgint == ChargeInterfaces::Leaf_PDM &&
-      targetInverter != InvModes::Leaf_Gen1)
+   // If we're using a Gen2 PDM we need to ensure it always receives
+   // messages even when the inverter is not present or not running.
+   if(targetChgint == ChargeInterfaces::Leaf_PDM)
    {
-      // If the Leaf PDM is in the system, always send the appropriate CAN
-      //  messages to make it happy, EXCEPT if we already sent the messages
-      //  (when Leaf Inverter is present).
-      if (opmode == MOD_RUN || opmode == MOD_CHARGE)
+      if(targetInverter == InvModes::Leaf_Gen1)
       {
-         // don't send any torque (well.. there's no Leaf inverter)
-         leafInv.SetTorque(0);
-         leafInv.Task10Ms();
+         // If the leaf inverter is present, we only need to send the messages
+         // when in charge mode.
+         if(opmode == MOD_CHARGE)
+         {
+            // don't send any torque, the inverter isn't running
+            leafInv.SetTorque(0);
+            leafInv.Task10Ms();
+         }
+      }
+      else
+      {
+         // If the leaf inverter is not present, we need to send the messages
+         // in both run and charge modes.
+         if(opmode == MOD_RUN || opmode == MOD_CHARGE)
+         {
+            // don't send any torque (well.. there's no Leaf inverter)
+            leafInv.SetTorque(0);
+            leafInv.Task10Ms();
+         }
       }
    }
 
