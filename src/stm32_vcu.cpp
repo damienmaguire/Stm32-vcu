@@ -753,6 +753,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    case Param::canspeed:
       can->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
       can2->SetBaudrate((Can::baudrates)Param::GetInt(Param::canspeed));
+      [[fallthrough]];
    case Param::CAN3Speed:
        Param::SetInt(Param::can3Set,Param::GetInt(Param::CAN3Speed));
       CANSPI_Initialize();// init the MCP25625 on CAN3
