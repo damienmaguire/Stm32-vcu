@@ -31,8 +31,8 @@ int32_t SBOX::Amperes;
 int32_t SBOX::Ah;
 int32_t SBOX::KW;
 int32_t SBOX::KWh;
-uint32_t SBOX::Voltage=0;
-uint32_t SBOX::Voltage2=0;
+int32_t SBOX::Voltage=0;
+int32_t SBOX::Voltage2=0;
 int32_t SBOX::Temperature;
 uint8_t canCtr100=0;
 uint8_t CCByte=0;
@@ -126,6 +126,7 @@ void SBOX::handle210(uint32_t data[2])  //SBOX battery voltage
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
+   Voltage = (Voltage<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
 }
 
 void SBOX::handle220(uint32_t data[2]) //SBOX Output voltage
@@ -133,7 +134,7 @@ void SBOX::handle220(uint32_t data[2]) //SBOX Output voltage
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage2=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
-
+   Voltage2 = (Voltage2<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
 
 }
 
