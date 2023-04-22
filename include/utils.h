@@ -12,6 +12,7 @@
 #include "anain.h"
 #include "throttle.h"
 #include "isa_shunt.h"
+#include "bmw_sbox.h"
 #include "vehicle.h"
 
 namespace utils

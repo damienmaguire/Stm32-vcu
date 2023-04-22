@@ -59,6 +59,7 @@
 #include "canmap.h"
 #include "terminalcommands.h"
 #include "iomatrix.h"
+#include "bmw_sbox.h"
 
 typedef union {
     struct {

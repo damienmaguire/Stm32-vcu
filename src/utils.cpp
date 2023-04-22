@@ -236,6 +236,9 @@ void SelectDirection(Vehicle* vehicle)
 
 float ProcessUdc(uint32_t oldTime, int motorSpeed)
 {
+
+if (Param::GetInt(Param::Type) == 0)
+{
    float udc = ((float)ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
    Param::SetFloat(Param::udc, udc);
    float udc2 = ((float)ISA::Voltage2)/1000;//get voltage from isa sensor and post to parameter database
@@ -250,13 +253,26 @@ float ProcessUdc(uint32_t oldTime, int motorSpeed)
    Param::SetFloat(Param::KWh, kwh);
    float Amph = ((float)ISA::Ah)/3600;//get Ah from isa sensor and post to parameter database
    Param::SetFloat(Param::AMPh, Amph);
-   float udclim = Param::GetFloat(Param::udclim);
-   float udcsw = Param::GetFloat(Param::udcsw);
-
    float deltaVolts1 = (udc2 / 2) - udc3;
    float deltaVolts2 = (udc2 + udc3) - udc;
    Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
+}
 
+else if (Param::GetInt(Param::Type) == 1)
+
+{
+   float udc = ((float)SBOX::Voltage2)/1000;//get output voltage from sbox sensor and post to parameter database
+   Param::SetFloat(Param::udc, udc);
+   float udc2 = ((float)SBOX::Voltage)/1000;//get battery voltage from sbox sensor and post to parameter database
+   Param::SetFloat(Param::udc2, udc2);
+   float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
+   Param::SetFloat(Param::udc3, udc3);
+   float idc = ((float)SBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
+   Param::SetFloat(Param::idc, idc);
+}
+   float udclim = Param::GetFloat(Param::udclim);
+   float udcsw = Param::GetFloat(Param::udcsw);
+   float udc = Param::GetFloat(Param::udc);
    // Currently unused parameters:
    // s32fp udcmin = Param::Get(Param::udcmin);
    // s32fp udcmax = Param::Get(Param::udcmax);

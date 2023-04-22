@@ -558,6 +558,10 @@ static void Ms10Task(void)
    }
 
    ControlCabHeater(opmode);
+
+
+   if (Param::GetInt(Param::Type) == 1)  SBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);
+
 }
 
 static void Ms1Task(void)
@@ -638,7 +642,8 @@ static void SetCanFilters()
 
    selectedInverter->SetCanInterface(inverter_can);
    selectedVehicle->SetCanInterface(vehicle_can);
-   ISA::RegisterCanMessages(shunt_can);
+   if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
+   if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
    lim_can->RegisterUserMessage(0x3b4);//LIM MSG
    lim_can->RegisterUserMessage(0x29e);//LIM MSG
    lim_can->RegisterUserMessage(0x2b2);//LIM MSG
@@ -731,7 +736,8 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
       break;
 
    default:
-      ISA::DecodeCAN(id, data);
+   if (Param::GetInt(Param::Type) == 0)  ISA::DecodeCAN(id, data);
+   if (Param::GetInt(Param::Type) == 1)  SBOX::DecodeCAN(id, data);
       selectedInverter->DecodeCAN(id, data);
       selectedVehicle->DecodeCAN(id, data);
 
