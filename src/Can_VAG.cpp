@@ -59,3 +59,8 @@ bool Can_VAG::Start()
    //TODO the start signal can be found on CAN bus, use it!
    return Param::GetBool(Param::din_start);
 }
+
+bool Can_VAG::Ready()
+{
+   return DigIo::t15_digi.Get();
+}

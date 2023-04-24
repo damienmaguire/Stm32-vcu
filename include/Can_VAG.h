@@ -27,6 +27,7 @@
 #include "my_fp.h"
 #include "stm32_can.h"
 #include "vehicle.h"
+#include "digio.h"
 
 class Can_VAG: public Vehicle
 {
@@ -35,7 +36,7 @@ public:
    void Task100Ms();
    void SetRevCounter(int s) { rpm = s; }
    void SetTemperatureGauge(float) { } //TODO
-   bool Ready() { return true; }
+   bool Ready();// { return true; }
    bool Start();
 
 private:
