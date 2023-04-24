@@ -38,6 +38,7 @@ static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks=0,ChgTicks_1Min=0;
 static uint32_t chademoStartTime = 0;
+static bool StartSig=false;
 
 static volatile unsigned
 days=0,
@@ -488,8 +489,9 @@ static void Ms10Task(void)
    stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
    //on detection of ign on or charge mode enable we commence prechage and go to mode precharge
-   if (opmode == MOD_OFF && (selectedVehicle->Start() || chargeMode))
+   if (opmode == MOD_OFF && ((selectedVehicle->Start() && selectedVehicle->Ready()) || chargeMode))
    {
+      if((selectedVehicle->Start()) && selectedVehicle->Ready()) StartSig=true;//set start signal to true to indicate key was in start pos
       if (!chargeMode)
       {
          DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
@@ -502,6 +504,8 @@ static void Ms10Task(void)
       vehicleStartTime = rtc_get_counter_val();
    }
 
+   if(opmode == MOD_PCHFAIL) StartSig=false;//reset for next time if fail precharge
+
    if(opmode == MOD_PCHFAIL && (!selectedVehicle->Start() || chargeMode)) //use start input to reset.
    {
       opmode = MOD_OFF;
@@ -510,16 +514,18 @@ static void Ms10Task(void)
 
    /* switch on DC switch if
     * - throttle is not pressed
-    * - start pin is high
+    * - start bool is set
     * - udc >= udcsw
     * - udc < udclim
     */
    if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
    {
 
-      if (selectedVehicle->Start())
+     // if (selectedVehicle->Start())
+        if(StartSig)
       {
          newMode = MOD_RUN;
+         StartSig=false;//reset for next time
       }
 
       if (chargeMode)
@@ -555,6 +561,7 @@ static void Ms10Task(void)
       Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown
       Param::SetInt(Param::opmode, newMode);
       selectedVehicle->DashOff();
+      StartSig=false;//reset for next time
    }
 
    ControlCabHeater(opmode);
