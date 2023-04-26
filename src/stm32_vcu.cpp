@@ -191,13 +191,15 @@ static void Ms200Task(void)
 
    if(selectedCharger->ControlCharge(RunChg) && opmode != MOD_RUN)
    {
-        chargeMode = true;   //AC charge mode
+       // DigIo::inv_out.Set();//
+       // chargeMode = true;   //AC charge mode
         Param::SetInt(Param::chgtyp,AC);
    }
    else
    {
         Param::SetInt(Param::chgtyp,OFF);
-        chargeMode = false;  //no charge mode
+    //    chargeMode = false;  //no charge mode
+    //    DigIo::inv_out.Clear();
    }
 /*
    if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2/3 PDM charger/DCDC/Chademo

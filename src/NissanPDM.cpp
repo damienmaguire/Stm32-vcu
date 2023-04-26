@@ -75,18 +75,18 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
 
    if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
    {
-      voltage = (bytes[0] << 2) | (bytes[1] >> 6);//MEASURED VOLTAGE FROM LEAF INVERTER
+   //   voltage = (bytes[0] << 2) | (bytes[1] >> 6);//MEASURED VOLTAGE FROM LEAF INVERTER
 
-      int16_t parsed_speed = (bytes[4] << 8) | bytes[5];
-      speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
+ //     int16_t parsed_speed = (bytes[4] << 8) | bytes[5];
+//      speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
 
-      error = (bytes[6] & 0xb0) != 0x00;//INVERTER ERROR STATE
+//      error = (bytes[6] & 0xb0) != 0x00;//INVERTER ERROR STATE
 
    }
    else if (id == 0x55A)// THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
    {
-      inv_temp = fahrenheit_to_celsius(bytes[2]);//INVERTER TEMP
-      motor_temp = fahrenheit_to_celsius(bytes[1]);//MOTOR TEMP
+//      inv_temp = fahrenheit_to_celsius(bytes[2]);//INVERTER TEMP
+//      motor_temp = fahrenheit_to_celsius(bytes[1]);//MOTOR TEMP
    }
 
    else if (id == 0x679)// THIS MSG FIRES ONCE ON CHARGE PLUG INSERT
@@ -126,12 +126,6 @@ bool NissanPDM::ControlCharge(bool RunCh)
    return false;
 }
 
-void NissanPDM::SetTorque(float torquePercent)
-{
-   final_torque_request = (torquePercent * 2047) / 100.0f;
-
-   Param::SetInt(Param::torque,final_torque_request);//post processed final torque value sent to inv to web interface
-}
 
 void NissanPDM::Task10Ms()
 {
@@ -163,11 +157,9 @@ void NissanPDM::Task10Ms()
 
 
    //byte 0 determines motor rotation direction
-   if (opmode == MOD_CHARGE) bytes[0] = 0x01;//Car in park when charging
-   if (opmode != MOD_CHARGE) bytes[0] = 0x4E;
+   bytes[0] = 0x01;//Car in park when charging
    // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
-   if (opmode == MOD_CHARGE) bytes[1] = 0x80;
-   if (opmode != MOD_CHARGE) bytes[1] = 0x40;
+   bytes[1] = 0x80;
    // Usually 0x00, sometimes 0x80 (LeafLogs), 0x04 seen by canmsgs
    bytes[2] = 0x00;
 
@@ -224,22 +216,10 @@ void NissanPDM::Task10Ms()
    //outFrame.data.bytes[1] = 0x6E;
 
    // override any torque commands if not in run mode.
-   if (opmode != MOD_RUN)
-   {
-      final_torque_request = 0;
-   }
 
-   // Requested torque (signed 12-bit value + always 0x0 in low nibble)
-   if(final_torque_request >= -2048 && final_torque_request <= 2047)
-   {
-      bytes[2] = ((final_torque_request < 0) ? 0x80 : 0) |((final_torque_request >> 4) & 0x7f);
-      bytes[3] = (final_torque_request << 4) & 0xf0;
-   }
-   else
-   {
       bytes[2] = 0x00;
       bytes[3] = 0x00;
-   }
+
 
    // MSB nibble: Runs through the sequence 0, 4, 8, C
    // LSB nibble: Precharge report (precedes actual precharge
@@ -332,8 +312,7 @@ void NissanPDM::Task10Ms()
    // pull, in
    //   LeafLogs/leaf_on_wotind_off.txt
 
-   if (opmode != MOD_CHARGE)  bytes[6] = 0x30;    //brake applied heavilly.
-   if (opmode == MOD_CHARGE)  bytes[6] = 0xE0;   //charging mode
+   bytes[6] = 0xE0;   //charging mode
    //In Gen 2 byte 6 is Charge status.
    //0x8C Charging interrupted
    //0xE0 Charging

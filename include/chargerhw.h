@@ -30,11 +30,11 @@ public:
    virtual void Task100Ms() {} //Default does nothing
    virtual void Task200Ms() {} //Default does nothing
    virtual void DecodeCAN(int, uint32_t*) {};
-   virtual bool ControlCharge(bool RunCh) {return false;};
+   virtual bool ControlCharge(bool) {return false;};
   // virtual void SetTorque(float torquePercent) = 0;
   // virtual float GetMotorTemperature() = 0;
   // virtual float GetInverterTemperature() = 0;
-  // virtual float GetInverterVoltage() = 0;
+   //virtual float GetInverterVoltage() = 0;
   // virtual float GetMotorSpeed() = 0;
   // virtual int GetInverterState() = 0;
    virtual void DeInit() {} //called when switching to another charger, similar to a destructor

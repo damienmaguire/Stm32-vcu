@@ -41,8 +41,8 @@ public:
    void SetCanInterface(CanHardware* c);
 
 private:
-//   static void nissan_crc(uint8_t *data, uint8_t polynomial);
-//   static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
+   static void nissan_crc(uint8_t *data, uint8_t polynomial);
+   static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
 //   uint32_t lastRecv;
 //   int16_t speed;
 //   int16_t inv_temp;
