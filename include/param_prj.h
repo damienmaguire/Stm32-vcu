@@ -207,9 +207,9 @@
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
 #define HTTYPE       "0=None, 1=Ampera, 2=VW"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
-#define CHGMODS      "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera"
+#define CHGMODS      "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera, 5=Leaf_PDM, 6=TeslaOI"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
-#define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=Leaf_PDM"
+#define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo"
 #define CAN3Spd      "0=k33.3, 1=k500"
 #define TRNMODES     "0=Manual, 1=Auto"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
@@ -278,18 +278,18 @@ enum InvModes
 enum ChargeModes
 {
     Off = 0,
-    HV_ON=1,
-    EXT_CAN=2,
-    EXT_DIGI = 3,
-    Volt_Ampera = 4
+    EXT_DIGI = 1,
+    Volt_Ampera = 2,
+    Leaf_PDM = 3,
+    TeslaOI = 4
+
 };
 
 enum ChargeInterfaces
 {
     Unused = 0,
     i3LIM = 1,
-    Chademo = 2,
-    Leaf_PDM = 3
+    Chademo = 2
 };
 
 enum ChargeControl

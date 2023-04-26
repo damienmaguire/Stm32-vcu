@@ -1,5 +1,5 @@
-#ifndef CHARGERHW_H_INCLUDED
-#define CHARGERHW_H_INCLUDED
+#ifndef CHARGERINT_H_INCLUDED
+#define CHARGERINT_H_INCLUDED
 
 /*
  * This file is part of the tumanako_vc project.
@@ -22,7 +22,7 @@
 
 #include "canhardware.h"
 
-class Chargerhw
+class Chargerint
 {
 public:
    virtual void Task1Ms() {} //Default does nothing
@@ -38,5 +38,6 @@ protected:
    CanHardware* can;
 };
 
-#endif // CHARGERHW_H_INCLUDED
+#endif // CHARGERINT_H_INCLUDED
+
 

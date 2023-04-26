@@ -53,6 +53,7 @@ static SubaruVehicle subaruVehicle;
 static GS450HClass gs450Inverter;
 static LeafINV leafInv;
 static NissanPDM chargerPDM;
+static teslaCharger ChargerTesla;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static AmperaHeater amperaHeater;
@@ -60,6 +61,7 @@ static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
 static Heater* selectedHeater = &amperaHeater;
 static Chargerhw* selectedCharger = &chargerPDM;
+//static Chargerint* selectedChargeInt = &Unused;
 
 static void RunChaDeMo()
 {
@@ -140,8 +142,6 @@ static void DigitalPotTest()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
-   if(chargerClass::HVreq==true) Param::SetInt(Param::hvChg,1);
-   if(chargerClass::HVreq==false) Param::SetInt(Param::hvChg,0);
    int opmode = Param::GetInt(Param::opmode);
 
    selectedVehicle->Task200Ms();
@@ -184,10 +184,7 @@ static void Ms200Task(void)
    }
    if(ChgSet==0 && !ChgLck) RunChg=true;//enable from webui if we are not locked out from an auto termination
    if(ChgSet==1) RunChg=false;//disable from webui
-   if(targetCharger == ChargeModes::Volt_Ampera)
-   {
-      //to be done
-   }
+
 
    if(selectedCharger->ControlCharge(RunChg) && opmode != MOD_RUN)
    {
@@ -199,31 +196,9 @@ static void Ms200Task(void)
    {
         Param::SetInt(Param::chgtyp,OFF);
         chargeMode = false;  //no charge mode
-        DigIo::inv_out.Clear();
+        DigIo::inv_out.Clear();//bodge here for testing
    }
-/*
-   if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2/3 PDM charger/DCDC/Chademo
-   {
-      if (opmode == MOD_CHARGE || opmode == MOD_RUN)  DigIo::inv_out.Set();//inverter and PDM power on if using pdm and in chg mode or in run mode
-      if (opmode == MOD_OFF)  DigIo::inv_out.Clear();//inverter and pdm off in off mode. Duh!
 
-      if(opmode != MOD_RUN)                   //only run charge logic if not in run mode.
-      {
-         if(LeafINV::ControlCharge(RunChg))
-         {
-            chargeMode = true;   //AC charge mode
-            Param::SetInt(Param::chgtyp,AC);
-            Param::SetInt(Param::Test,chargeMode);
-         }
-         else if(!LeafINV::ControlCharge(RunChg))
-         {
-            Param::SetInt(Param::Test,chargeMode);
-            chargeMode = false;  //no charge mode
-            Param::SetInt(Param::chgtyp,OFF);
-         }
-      }
-   }
-   */
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
@@ -235,11 +210,6 @@ static void Ms200Task(void)
       chargeMode = false;
    }
 
-   if(targetCharger == ChargeModes::HV_ON)
-   {
-      if(opmode != MOD_RUN)  chargeMode = true;
-
-   }
 
    if(targetCharger == ChargeModes::EXT_DIGI)
    {
@@ -289,8 +259,6 @@ static void Ms200Task(void)
 
 static void Ms100Task(void)
 {
- //  InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
-
    DigIo::led_out.Toggle();
    iwdg_reset();
    float cpuLoad = scheduler->GetCpuLoad() / 10.0f;
@@ -354,7 +322,6 @@ static void Ms100Task(void)
       if(LIMmode==i3LIMChargingState::No_Chg)
       {
          Param::SetInt(Param::chgtyp,OFF);
-         if(chargerClass::HVreq==false) chargeMode = false;//
       }
 
    }
@@ -368,8 +335,6 @@ static void Ms100Task(void)
 
    int32_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
-
-   chargerClass::Send100msMessages(RunChg, canInterface[Param::GetInt(Param::ChargerCan)]);
 
    if(targetChgint == ChargeInterfaces::Chademo) //Chademo on CAN3
    {
@@ -424,25 +389,6 @@ static void Ms10Task(void)
    int requestedDirection = Param::GetInt(Param::dir);
 
    ErrorMessage::SetTime(rtc_get_counter_val());
-/*
-   // Leaf Gen2 PDM Charger/DCDC/Chademo
-   if(targetChgint == ChargeInterfaces::Leaf_PDM &&
-      targetInverter != InvModes::Leaf_Gen1)
-   {
-      // If the Leaf PDM is in the system, always send the appropriate CAN
-      //  messages to make it happy, EXCEPT if we already sent the messages
-      //  (when Leaf Inverter is present).
-      if (opmode == MOD_RUN || opmode == MOD_CHARGE)
-      {
-         // don't send any torque (well.. there's no Leaf inverter)
-         leafInv.SetTorque(0);
-         leafInv.Task10Ms();
-      }
-   }
-*/
-
-
-
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
@@ -655,18 +601,19 @@ static void UpdateCharger()
    selectedCharger->DeInit();
    switch (Param::GetInt(Param::interface))
    {
-      case ChargeInterfaces::Unused:
-        // selectedCharger = &leafInv;
+      case ChargeModes::Off:
          break;
-      case ChargeInterfaces::i3LIM:
-        // selectedCharger = &gs450Inverter;
+      case ChargeModes::EXT_DIGI:
          break;
-     case ChargeInterfaces::Chademo:
-        // selectedCharger = &gs450Inverter;
+     case ChargeModes::Volt_Ampera:
          break;
-      case ChargeInterfaces::Leaf_PDM:
+      case ChargeModes::Leaf_PDM:
          selectedCharger = &chargerPDM;
          break;
+      case ChargeModes::TeslaOI:
+         selectedCharger = &ChargerTesla;
+         break;
+
    }
    //This will call SetCanFilters() via the Clear Callback
    canInterface[0]->ClearUserMessages();
@@ -759,9 +706,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
 {
    switch (id)
    {
-   case 0x108:
-      chargerClass::handle108(data);// HV request from an external charger
-      break;
+
    case 0x3b4:
       i3LIMClass::handle3B4(data);// Data msg from LIM
       break;

@@ -48,7 +48,7 @@
 #include "GS450H.h"
 #include "throttle.h"
 #include "utils.h"
-#include "charger.h"
+#include "teslaCharger.h"
 #include "i3LIM.h"
 #include "CANSPI.h"
 #include "chademo.h"
@@ -62,6 +62,7 @@
 #include "iomatrix.h"
 #include "bmw_sbox.h"
 #include "NissanPDM.h"
+#include "chargerint.h"
 
 typedef union {
     struct {
