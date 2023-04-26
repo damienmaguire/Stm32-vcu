@@ -56,11 +56,13 @@
 		<Unit filename="include/Can_VAG.h" />
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/MCP2515.h" />
+		<Unit filename="include/NissanPDM.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bmw_sbox.h" />
 		<Unit filename="include/chademo.h" />
 		<Unit filename="include/charger.h" />
+		<Unit filename="include/chargerhw.h" />
 		<Unit filename="include/digio_prj.h" />
 		<Unit filename="include/errormessage_prj.h" />
 		<Unit filename="include/heater.h" />
@@ -119,6 +121,7 @@
 		<Unit filename="src/Can_VAG.cpp" />
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
+		<Unit filename="src/NissanPDM.cpp" />
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
 		<Unit filename="src/chademo.cpp" />
