@@ -145,7 +145,7 @@ static void Ms200Task(void)
    int opmode = Param::GetInt(Param::opmode);
 
    selectedVehicle->Task200Ms();
-   selectedCharger->Task200Ms();
+   if(opmode==MOD_CHARGE) selectedCharger->Task200Ms();
 
    Param::SetInt(Param::Day,days);
    Param::SetInt(Param::Hour,hours);
@@ -191,15 +191,15 @@ static void Ms200Task(void)
 
    if(selectedCharger->ControlCharge(RunChg) && opmode != MOD_RUN)
    {
-       // DigIo::inv_out.Set();//
-       // chargeMode = true;   //AC charge mode
+        DigIo::inv_out.Set();//bodge here for a test
+        chargeMode = true;   //AC charge mode
         Param::SetInt(Param::chgtyp,AC);
    }
    else
    {
         Param::SetInt(Param::chgtyp,OFF);
-    //    chargeMode = false;  //no charge mode
-    //    DigIo::inv_out.Clear();
+        chargeMode = false;  //no charge mode
+        DigIo::inv_out.Clear();
    }
 /*
    if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2/3 PDM charger/DCDC/Chademo
@@ -307,7 +307,7 @@ static void Ms100Task(void)
 
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
-   selectedCharger->Task100Ms();
+   if(opmode==MOD_CHARGE) selectedCharger->Task100Ms();
    canMap->SendAll();
 
 
@@ -329,14 +329,7 @@ static void Ms100Task(void)
       IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Clear();
    }
 
-   // Leaf Gen2 PDM Charger/DCDC/Chademo
-   if(targetChgint == ChargeInterfaces::Leaf_PDM)
-   {
-      if (opmode == MOD_CHARGE)
-      {
-         leafInv.Task100Ms();
-      }
-   }
+
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
@@ -448,15 +441,6 @@ static void Ms10Task(void)
    }
 */
 
-   // Leaf Gen2 PDM Charger/DCDC/Chademo
-     if(targetChgint == ChargeInterfaces::Leaf_PDM)
-      {
-      if (opmode == MOD_CHARGE)
-      {
-         leafInv.SetTorque(0);
-         leafInv.Task10Ms();
-      }
-   }
 
 
 
@@ -506,7 +490,7 @@ static void Ms10Task(void)
    selectedVehicle->SetRevCounter(ABS(Param::GetInt(Param::speed)));
    selectedVehicle->SetTemperatureGauge(Param::GetFloat(Param::tmphs));
    selectedVehicle->Task10Ms();
-   selectedCharger->Task10Ms();
+   if(opmode==MOD_CHARGE) selectedCharger->Task10Ms();
 
    //////////////////////////////////////////////////
    //            MODE CONTROL SECTION              //
@@ -709,7 +693,7 @@ static void SetCanFilters()
    lim_can->RegisterUserMessage(0x2ef);//LIM MSG
    lim_can->RegisterUserMessage(0x272);//LIM MSG
 
-   charger_can->RegisterUserMessage(0x108);//Charger HV request
+   //charger_can->RegisterUserMessage(0x108);//Charger HV request
 }
 
 void Param::Change(Param::PARAM_NUM paramNum)
