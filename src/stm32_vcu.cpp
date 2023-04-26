@@ -54,6 +54,10 @@ static GS450HClass gs450Inverter;
 static LeafINV leafInv;
 static NissanPDM chargerPDM;
 static teslaCharger ChargerTesla;
+static notused UnUsed;
+static noCharger nochg;
+static extCharger digiCharger;
+static amperaCharger ampChg;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static AmperaHeater amperaHeater;
@@ -61,7 +65,7 @@ static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
 static Heater* selectedHeater = &amperaHeater;
 static Chargerhw* selectedCharger = &chargerPDM;
-//static Chargerint* selectedChargeInt = &Unused;
+static Chargerint* selectedChargeInt = &UnUsed;
 
 static void RunChaDeMo()
 {
@@ -205,37 +209,6 @@ static void Ms200Task(void)
       i3LIMClass::Send200msMessages(canInterface[Param::GetInt(Param::LimCan)]);
    }
 
-   if(targetCharger == ChargeModes::Off)
-   {
-      chargeMode = false;
-   }
-
-
-   if(targetCharger == ChargeModes::EXT_DIGI)
-   {
-      if((opmode != MOD_RUN) && Param::GetInt(Param::interface) == Chademo && DigIo::gp_12Vin.Get())
-      {
-         chargeMode = true;
-      }
-      else if((opmode != MOD_RUN) && (RunChg))
-      {
-         chargeMode = DigIo::HV_req.Get();//false; //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
-      }
-
-
-      if(!RunChg) chargeMode = false;
-
-      if (RunChg)
-      {
-         //enable charger digital line.
-         IOMatrix::GetPin(IOMatrix::OBCENABLE)->Set();
-      }
-      else
-      {
-         //disable charger digital line when requested by timer or webui.
-         IOMatrix::GetPin(IOMatrix::OBCENABLE)->Clear();
-      }
-   }
 
    ///////////////////////////////////////
    //Charge term logic
@@ -602,16 +575,20 @@ static void UpdateCharger()
    switch (Param::GetInt(Param::interface))
    {
       case ChargeModes::Off:
+      chargeMode = false;
+      selectedCharger = &nochg;
          break;
       case ChargeModes::EXT_DIGI:
+      selectedCharger = &digiCharger;
          break;
-     case ChargeModes::Volt_Ampera:
+      case ChargeModes::Volt_Ampera:
+      selectedCharger = &ampChg;
          break;
       case ChargeModes::Leaf_PDM:
-         selectedCharger = &chargerPDM;
+      selectedCharger = &chargerPDM;
          break;
       case ChargeModes::TeslaOI:
-         selectedCharger = &ChargerTesla;
+      selectedCharger = &ChargerTesla;
          break;
 
    }
@@ -653,6 +630,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
       break;
    case Param::Vehicle:
       UpdateVehicle();
+      break;
+   case Param::interface:
+      UpdateCharger();
       break;
    case Param::InverterCan:
    case Param::VehicleCan:

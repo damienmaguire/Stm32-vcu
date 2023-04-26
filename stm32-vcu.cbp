@@ -57,14 +57,16 @@
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/NissanPDM.h" />
+		<Unit filename="include/amperaCharger.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bmw_sbox.h" />
 		<Unit filename="include/chademo.h" />
-		<Unit filename="include/charger.h" />
 		<Unit filename="include/chargerhw.h" />
+		<Unit filename="include/chargerint.h" />
 		<Unit filename="include/digio_prj.h" />
 		<Unit filename="include/errormessage_prj.h" />
+		<Unit filename="include/extCharger.h" />
 		<Unit filename="include/heater.h" />
 		<Unit filename="include/hwdefs.h" />
 		<Unit filename="include/hwinit.h" />
@@ -73,11 +75,14 @@
 		<Unit filename="include/iomatrix.h" />
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/leafinv.h" />
+		<Unit filename="include/nocharger.h" />
+		<Unit filename="include/notused.h" />
 		<Unit filename="include/outlanderinverter.h" />
 		<Unit filename="include/param_prj.h" />
 		<Unit filename="include/stm32_vcu.h" />
 		<Unit filename="include/subaruvehicle.h" />
 		<Unit filename="include/temp_meas.h" />
+		<Unit filename="include/teslaCharger.h" />
 		<Unit filename="include/throttle.h" />
 		<Unit filename="include/utils.h" />
 		<Unit filename="include/vehicle.h" />
@@ -122,10 +127,11 @@
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
+		<Unit filename="src/amperacharger.cpp" />
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
 		<Unit filename="src/chademo.cpp" />
-		<Unit filename="src/charger.cpp" />
+		<Unit filename="src/extCharger.cpp" />
 		<Unit filename="src/hwinit.cpp" />
 		<Unit filename="src/i3LIM.cpp" />
 		<Unit filename="src/iomatrix.cpp" />
@@ -136,6 +142,7 @@
 		<Unit filename="src/subaruvehicle.cpp" />
 		<Unit filename="src/temp_meas.cpp" />
 		<Unit filename="src/terminal_prj.cpp" />
+		<Unit filename="src/teslaCharger.cpp" />
 		<Unit filename="src/throttle.cpp" />
 		<Unit filename="src/utils.cpp" />
 		<Extensions>

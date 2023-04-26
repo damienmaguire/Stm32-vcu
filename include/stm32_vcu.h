@@ -63,6 +63,10 @@
 #include "bmw_sbox.h"
 #include "NissanPDM.h"
 #include "chargerint.h"
+#include "notused.h"
+#include "nocharger.h"
+#include "extCharger.h"
+#include "amperaCharger.h"
 
 typedef union {
     struct {
