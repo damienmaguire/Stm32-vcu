@@ -52,12 +52,14 @@ static Can_VAG vagVehicle;
 static SubaruVehicle subaruVehicle;
 static GS450HClass gs450Inverter;
 static LeafINV leafInv;
+static NissanPDM chargerPDM;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static AmperaHeater amperaHeater;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
 static Heater* selectedHeater = &amperaHeater;
+static Chargerhw* selectedCharger = &chargerPDM;
 
 static void RunChaDeMo()
 {
@@ -143,6 +145,7 @@ static void Ms200Task(void)
    int opmode = Param::GetInt(Param::opmode);
 
    selectedVehicle->Task200Ms();
+   selectedCharger->Task200Ms();
 
    Param::SetInt(Param::Day,days);
    Param::SetInt(Param::Hour,hours);
@@ -186,6 +189,17 @@ static void Ms200Task(void)
       //to be done
    }
 
+   if(selectedCharger->ControlCharge(RunChg) && opmode != MOD_RUN)
+   {
+        chargeMode = true;   //AC charge mode
+        Param::SetInt(Param::chgtyp,AC);
+   }
+   else
+   {
+        Param::SetInt(Param::chgtyp,OFF);
+        chargeMode = false;  //no charge mode
+   }
+/*
    if(targetChgint == ChargeInterfaces::Leaf_PDM) //Leaf Gen2/3 PDM charger/DCDC/Chademo
    {
       if (opmode == MOD_CHARGE || opmode == MOD_RUN)  DigIo::inv_out.Set();//inverter and PDM power on if using pdm and in chg mode or in run mode
@@ -207,6 +221,7 @@ static void Ms200Task(void)
          }
       }
    }
+   */
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
    {
@@ -272,7 +287,7 @@ static void Ms200Task(void)
 
 static void Ms100Task(void)
 {
-   InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
+ //  InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
 
    DigIo::led_out.Toggle();
    iwdg_reset();
@@ -290,6 +305,7 @@ static void Ms100Task(void)
 
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
+   selectedCharger->Task100Ms();
    canMap->SendAll();
 
 
@@ -403,7 +419,7 @@ static void Ms10Task(void)
 {
    static uint32_t vehicleStartTime = 0;
 
-   InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
+  // InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
    int16_t previousSpeed=Param::GetInt(Param::speed);
    int16_t speed = 0;
    float torquePercent;
@@ -488,6 +504,7 @@ static void Ms10Task(void)
    selectedVehicle->SetRevCounter(ABS(Param::GetInt(Param::speed)));
    selectedVehicle->SetTemperatureGauge(Param::GetFloat(Param::tmphs));
    selectedVehicle->Task10Ms();
+   selectedCharger->Task10Ms();
 
    //////////////////////////////////////////////////
    //            MODE CONTROL SECTION              //
@@ -646,6 +663,29 @@ static void UpdateVehicle()
    canInterface[1]->ClearUserMessages();
 
 }
+
+static void UpdateCharger()
+{
+   selectedCharger->DeInit();
+   switch (Param::GetInt(Param::interface))
+   {
+      case ChargeInterfaces::Unused:
+        // selectedCharger = &leafInv;
+         break;
+      case ChargeInterfaces::i3LIM:
+        // selectedCharger = &gs450Inverter;
+         break;
+     case ChargeInterfaces::Chademo:
+        // selectedCharger = &gs450Inverter;
+         break;
+      case ChargeInterfaces::Leaf_PDM:
+         selectedCharger = &chargerPDM;
+         break;
+   }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+}
 //Whenever the user clears mapped can messages or changes the
 //CAN interface of a device, this will be called by the CanHardware module
 static void SetCanFilters()
@@ -658,6 +698,7 @@ static void SetCanFilters()
 
    selectedInverter->SetCanInterface(inverter_can);
    selectedVehicle->SetCanInterface(vehicle_can);
+   selectedCharger->SetCanInterface(charger_can);
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
    lim_can->RegisterUserMessage(0x3b4);//LIM MSG
@@ -754,9 +795,9 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
    default:
    if (Param::GetInt(Param::Type) == 0)  ISA::DecodeCAN(id, data);
    if (Param::GetInt(Param::Type) == 1)  SBOX::DecodeCAN(id, data);
-   if(targetChgint == ChargeInterfaces::Leaf_PDM) leafInv.DecodeCAN(id, data);
       selectedInverter->DecodeCAN(id, data);
       selectedVehicle->DecodeCAN(id, data);
+      selectedCharger->DecodeCAN(id, data);
 
       break;
    }
@@ -860,6 +901,7 @@ extern "C" int main(void)
 
    UpdateInv();
    UpdateVehicle();
+   UpdateCharger();
 
    Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;

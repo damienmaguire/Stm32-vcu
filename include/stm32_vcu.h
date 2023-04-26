@@ -56,10 +56,12 @@
 #include "amperaheater.h"
 #include "inverter.h"
 #include "vehicle.h"
+#include "chargerhw.h"
 #include "canmap.h"
 #include "terminalcommands.h"
 #include "iomatrix.h"
 #include "bmw_sbox.h"
+#include "NissanPDM.h"
 
 typedef union {
     struct {
