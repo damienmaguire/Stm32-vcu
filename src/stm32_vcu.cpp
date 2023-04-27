@@ -135,12 +135,12 @@ static void Ms200Task(void)
    if(ChgSet==1) RunChg=false;//disable from webui
 
 
-   if(selectedCharger->ControlCharge(RunChg) && opmode != MOD_RUN)
+   if(selectedCharger->ControlCharge(RunChg) && (opmode != MOD_RUN))
    {
         chargeMode = true;   //AC charge mode
         Param::SetInt(Param::chgtyp,AC);
    }
-   else
+   else if(!chargeModeDC)
    {
         Param::SetInt(Param::chgtyp,OFF);
         chargeMode = false;  //no charge mode
@@ -258,6 +258,7 @@ static void Ms100Task(void)
    {
    //Here we receive a valid DCFC startup request.
       if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
+      Param::SetInt(Param::chgtyp,DCFC);
       selectedChargeInt->Task100Ms();//and run the 100ms tasks
       chargeModeDC = true;   //DC charge mode on
    }
