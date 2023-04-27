@@ -4,6 +4,11 @@ static bool chargeAllow=false;
 
 //this mode accepts a request for HV via a 12v inputfrom a charger controller e.g. Tesla Gen2/3 M3 PCS etc.
 
+extCharger::extCharger()
+{
+    //ctor
+}
+
 bool extCharger::ControlCharge(bool RunCh)
 {
     if(RunCh)

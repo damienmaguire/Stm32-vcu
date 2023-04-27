@@ -582,7 +582,7 @@ static void UpdateCharger()
       selectedCharger = &digiCharger;
          break;
       case ChargeModes::Volt_Ampera:
-      selectedCharger = &ampChg;
+    //  selectedCharger = &ampChg;
          break;
       case ChargeModes::Leaf_PDM:
       selectedCharger = &chargerPDM;
