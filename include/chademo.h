@@ -19,41 +19,28 @@
 
 #ifndef CHADEMO_H
 #define CHADEMO_H
+#include <libopencm3/stm32/rtc.h>
 #include <stdint.h>
 #include "my_math.h"
 #include "my_fp.h"
-#include "stm32_can.h"
 #include "CANSPI.h"
+#include "chargerint.h"
+#include "params.h"
+#include "iomatrix.h"
 
-class ChaDeMo
+class FCChademo: public Chargerint
 {
    public:
-      static void Process108Message(uint32_t data[2]);
-      static void Process109Message(uint32_t data[2]);
-      /** Must be called every 100ms */
-      static void SendMessages();
+      void DecodeCAN(int id, uint32_t data[2]);
+      void Task100Ms();//Must be called every 100ms
+      bool DCFCRequest(bool RunCh);
 
-      static void SetTargetBatteryVoltage(uint16_t vtg) { targetBatteryVoltage = vtg; }
-      static void SetChargeCurrent(uint8_t cur);
-      static void SetEnabled(bool enabled);
-      /** Set vehicle in parking position, true=yes, 0=false */
-      static void SetParkPosition(bool pos) { parkingPosition = !pos; }
-      static void SetContactor(bool state) { contactorOpen = !state; }
-      static void SetGeneralFault() { fault = true; }
-      /** Set current state of charge */
-      static void SetSoC(float soC) { soc = soC * 2; }
-      static int GetChargerOutputVoltage() { return chargerOutputVoltage; }
-      static int GetChargerOutputCurrent() { return chargerOutputCurrent; }
-      static int GetChargerMaxCurrent() { return chargerMaxCurrent; }
-      static int GetChargerStatus() { return chargerStatus; }
-      static bool ConnectorLocked() { return (chargerStatus & 0x4) != 0; }
-      static bool ChargerStopRequest() { return (chargerStatus & 0x2A) != 0; }
-      static uint8_t GetRampedCurrentRequest() { return rampedCurReq; }
-      /** Must be called every 100 ms */
-      static void CheckSensorDeviation(uint16_t internalVoltage);
    protected:
 
    private:
+      static void RunChademo();
+      static void Process108Message(uint32_t data[2]);
+      static void Process109Message(uint32_t data[2]);
       static bool chargeEnabled;
       static bool parkingPosition;
       static bool fault;
@@ -68,6 +55,24 @@ class ChaDeMo
       static uint8_t soc;
       static uint32_t vtgTimeout;
       static uint32_t curTimeout;
+      static void SetTargetBatteryVoltage(uint16_t vtg) { targetBatteryVoltage = vtg; }
+      static void SetChargeCurrent(uint8_t cur);
+      static void SetEnabled(bool enabled);
+
+      static void SetParkPosition(bool pos) { parkingPosition = !pos; }//Set vehicle in parking position, true=yes, 0=false
+      static void SetContactor(bool state) { contactorOpen = !state; }
+      static void SetGeneralFault() { fault = true; }
+
+      static void SetSoC(float soC) { soc = soC * 2; }//Set current state of charge
+      static int GetChargerOutputVoltage() { return chargerOutputVoltage; }
+      static int GetChargerOutputCurrent() { return chargerOutputCurrent; }
+      static int GetChargerMaxCurrent() { return chargerMaxCurrent; }
+      static int GetChargerStatus() { return chargerStatus; }
+      static bool ConnectorLocked() { return (chargerStatus & 0x4) != 0; }
+      static bool ChargerStopRequest() { return (chargerStatus & 0x2A) != 0; }
+      static uint8_t GetRampedCurrentRequest() { return rampedCurReq; }
+
+      static void CheckSensorDeviation(uint16_t internalVoltage);//Must be called every 100 ms
 };
 
 #endif // CHADEMO_H

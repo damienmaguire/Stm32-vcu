@@ -50,6 +50,7 @@ bool teslaCharger::ControlCharge(bool RunCh)
    ChRun=RunCh;
    if(HVreq) return true;
    if(!HVreq) return false;
+   return false;
 
 }
 

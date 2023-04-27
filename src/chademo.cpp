@@ -17,22 +17,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "chademo.h"
-#include "my_math.h"
 
-bool ChaDeMo::chargeEnabled = false;
-bool ChaDeMo::parkingPosition = false;
-bool ChaDeMo::fault = false;
-bool ChaDeMo::contactorOpen = false;
-uint8_t ChaDeMo::chargerMaxCurrent;
-uint8_t ChaDeMo::chargeCurrentRequest;
-uint32_t ChaDeMo::rampedCurReq;
-uint16_t ChaDeMo::targetBatteryVoltage;
-uint16_t ChaDeMo::chargerOutputVoltage = 0;
-uint8_t ChaDeMo::chargerOutputCurrent = 0;
-uint8_t ChaDeMo::chargerStatus = 0;
-uint8_t ChaDeMo::soc;
-uint32_t ChaDeMo::vtgTimeout = 0;
-uint32_t ChaDeMo::curTimeout = 0;
+
+bool FCChademo::chargeEnabled = false;
+bool FCChademo::parkingPosition = false;
+bool FCChademo::fault = false;
+bool FCChademo::contactorOpen = false;
+bool chargeMode = false;
+uint8_t FCChademo::chargerMaxCurrent;
+uint8_t FCChademo::chargeCurrentRequest;
+uint32_t FCChademo::rampedCurReq;
+uint16_t FCChademo::targetBatteryVoltage;
+uint16_t FCChademo::chargerOutputVoltage = 0;
+uint8_t FCChademo::chargerOutputCurrent = 0;
+uint8_t FCChademo::chargerStatus = 0;
+uint8_t FCChademo::soc;
+uint32_t FCChademo::vtgTimeout = 0;
+uint32_t FCChademo::curTimeout = 0;
+static uint32_t chademoStartTime = 0;
 
 uCAN_MSG txMessage;
 
@@ -44,19 +46,19 @@ static void delay(void)
       __asm__("nop");
 }
 
-void ChaDeMo::Process108Message(uint32_t data[2])
+void FCChademo::DecodeCAN(int id, uint32_t data[2])
 {
-   chargerMaxCurrent = data[0] >> 24;
-}
-
-void ChaDeMo::Process109Message(uint32_t data[2])
+if (id == 0x108) chargerMaxCurrent = data[0] >> 24;
+if (id == 0x109)
 {
    chargerOutputVoltage = data[0] >> 8;
    chargerOutputCurrent = data[0] >> 24;
    chargerStatus = (data[1] >> 8) & 0x3F;
 }
+}
 
-void ChaDeMo::SetEnabled(bool enabled)
+
+void FCChademo::SetEnabled(bool enabled)
 {
    chargeEnabled = enabled;
 
@@ -68,7 +70,7 @@ void ChaDeMo::SetEnabled(bool enabled)
    }
 }
 
-void ChaDeMo::SetChargeCurrent(uint8_t current)
+void FCChademo::SetChargeCurrent(uint8_t current)
 {
    chargeCurrentRequest = MIN(current, chargerMaxCurrent);
 
@@ -78,7 +80,7 @@ void ChaDeMo::SetChargeCurrent(uint8_t current)
       rampedCurReq--;
 }
 
-void ChaDeMo::CheckSensorDeviation(uint16_t internalVoltage)
+void FCChademo::CheckSensorDeviation(uint16_t internalVoltage)
 {
    int vtgDev = (int)internalVoltage - (int)chargerOutputVoltage;
 
@@ -103,8 +105,9 @@ void ChaDeMo::CheckSensorDeviation(uint16_t internalVoltage)
    }
 }
 
-void ChaDeMo::SendMessages()
+void FCChademo::Task100Ms()//sends chademo messages every 100ms
 {
+   FCChademo::RunChademo();
    uint32_t data[2];
    bool curSensFault = curTimeout > 10;
    bool vtgSensFault = vtgTimeout > 50;
@@ -168,3 +171,67 @@ void ChaDeMo::SendMessages()
    CANSPI_Transmit(&txMessage);
 }
 
+
+void FCChademo::RunChademo()
+{
+   static int32_t controlledCurrent = 0;
+
+   if (chademoStartTime == 0 && Param::GetInt(Param::opmode) != MOD_CHARGE)
+   {
+      chademoStartTime = rtc_get_counter_val();
+      FCChademo::SetChargeCurrent(0);
+   }
+
+   if ((rtc_get_counter_val() - chademoStartTime) > 1 && (rtc_get_counter_val() - chademoStartTime) < 2)
+   {
+      FCChademo::SetEnabled(true);
+      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set();
+   }
+
+   if (Param::GetInt(Param::opmode) == MOD_CHARGE && FCChademo::ConnectorLocked())
+   {
+      Param::SetInt(Param::chgtyp,DCFC);
+      chargeMode = true;   //DC charge mode
+   }
+
+   if (chargeMode)
+   {
+      int udc = Param::GetInt(Param::udc);
+      int udcspnt = Param::GetInt(Param::Voltspnt);
+      int chargeLim = Param::GetInt(Param::CCS_ILim);
+      chargeLim = MIN(150, chargeLim);
+
+      if (udc < udcspnt && controlledCurrent <= chargeLim)
+         controlledCurrent++;
+      if (udc > udcspnt && controlledCurrent > 0)
+         controlledCurrent--;
+
+      FCChademo::SetChargeCurrent(controlledCurrent);
+      //TODO: fix this to not false trigger
+      //FCChademo::CheckSensorDeviation(Param::GetInt(Param::udc));
+   }
+
+   FCChademo::SetTargetBatteryVoltage(Param::GetInt(Param::Voltspnt)+10);
+   FCChademo::SetSoC(Param::GetFloat(Param::CCS_SOCLim));
+   Param::SetInt(Param::CCS_Ireq, FCChademo::GetRampedCurrentRequest());
+
+   if (Param::GetInt(Param::CCS_ILim) == 0)
+   {
+      FCChademo::SetEnabled(false);
+      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Clear();//FCChademo charge allow off
+      chargeMode = false;
+   }
+
+   Param::SetInt(Param::CCS_V, FCChademo::GetChargerOutputVoltage());
+   Param::SetInt(Param::CCS_I, FCChademo::GetChargerOutputCurrent());
+   Param::SetInt(Param::CCS_State, FCChademo::GetChargerStatus());
+   Param::SetInt(Param::CCS_I_Avail, FCChademo::GetChargerMaxCurrent());
+}
+
+bool FCChademo::DCFCRequest(bool RunCh)
+{
+
+if ((RunCh) && (DigIo::gp_12Vin.Get())) return true;
+else return false;
+
+}

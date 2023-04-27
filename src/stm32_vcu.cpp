@@ -37,7 +37,6 @@ static uint8_t ChgHrs_tmp;
 static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks=0,ChgTicks_1Min=0;
-static uint32_t chademoStartTime = 0;
 static bool StartSig=false;
 
 static volatile unsigned
@@ -58,6 +57,7 @@ static notused UnUsed;
 static noCharger nochg;
 static extCharger chgdigi;
 static amperaCharger ampChg;
+static FCChademo chademoFC;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static AmperaHeater amperaHeater;
@@ -67,62 +67,7 @@ static Heater* selectedHeater = &amperaHeater;
 static Chargerhw* selectedCharger = &chargerPDM;
 static Chargerint* selectedChargeInt = &UnUsed;
 
-static void RunChaDeMo()
-{
-   static int32_t controlledCurrent = 0;
 
-   if (chademoStartTime == 0 && Param::GetInt(Param::opmode) != MOD_CHARGE)
-   {
-      chademoStartTime = rtc_get_counter_val();
-      ChaDeMo::SetChargeCurrent(0);
-   }
-
-   if ((rtc_get_counter_val() - chademoStartTime) > 1 && (rtc_get_counter_val() - chademoStartTime) < 2)
-   {
-      ChaDeMo::SetEnabled(true);
-      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set();
-   }
-
-   if (Param::GetInt(Param::opmode) == MOD_CHARGE && ChaDeMo::ConnectorLocked())
-   {
-      chargeModeDC = true;   //DC charge mode
-      Param::SetInt(Param::chgtyp,DCFC);
-   }
-
-   if (chargeModeDC)
-   {
-      int udc = Param::GetInt(Param::udc);
-      int udcspnt = Param::GetInt(Param::Voltspnt);
-      int chargeLim = Param::GetInt(Param::CCS_ILim);
-      chargeLim = MIN(125, chargeLim);
-
-      if (udc < udcspnt && controlledCurrent <= chargeLim)
-         controlledCurrent++;
-      if (udc > udcspnt && controlledCurrent > 0)
-         controlledCurrent--;
-
-      ChaDeMo::SetChargeCurrent(controlledCurrent);
-      //TODO: fix this to not false trigger
-      //ChaDeMo::CheckSensorDeviation(Param::GetInt(Param::udc));
-   }
-
-   ChaDeMo::SetTargetBatteryVoltage(Param::GetInt(Param::Voltspnt)+10);
-   ChaDeMo::SetSoC(Param::GetFloat(Param::CCS_SOCLim));
-   Param::SetInt(Param::CCS_Ireq, ChaDeMo::GetRampedCurrentRequest());
-
-   if (Param::GetInt(Param::CCS_ILim) == 0)
-   {
-      ChaDeMo::SetEnabled(false);
-      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Clear();//Chademo charge allow off
-      chargeMode = false;
-   }
-
-   Param::SetInt(Param::CCS_V, ChaDeMo::GetChargerOutputVoltage());
-   Param::SetInt(Param::CCS_I, ChaDeMo::GetChargerOutputCurrent());
-   Param::SetInt(Param::CCS_State, ChaDeMo::GetChargerStatus());
-   Param::SetInt(Param::CCS_I_Avail, ChaDeMo::GetChargerMaxCurrent());
-   ChaDeMo::SendMessages();
-}
 
 static void DigitalPotTest()
 {
@@ -192,7 +137,6 @@ static void Ms200Task(void)
 
    if(selectedCharger->ControlCharge(RunChg) && opmode != MOD_RUN)
    {
-        //DigIo::inv_out.Set();//bodge here for a test
         chargeMode = true;   //AC charge mode
         Param::SetInt(Param::chgtyp,AC);
    }
@@ -200,8 +144,9 @@ static void Ms200Task(void)
    {
         Param::SetInt(Param::chgtyp,OFF);
         chargeMode = false;  //no charge mode
-        //DigIo::inv_out.Clear();//bodge here for testing
    }
+
+
 
 
    if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
@@ -309,21 +254,20 @@ static void Ms100Task(void)
    int32_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
 
-   if(targetChgint == ChargeInterfaces::Chademo) //Chademo on CAN3
+   if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
    {
-      if (DigIo::gp_12Vin.Get())
-      {
-         RunChaDeMo(); //if we detect chademo plug inserted off we go ...
-      }
-      else
-      {
-         chargeModeDC = false;   //DC charge mode
-         Param::SetInt(Param::chgtyp,0);
-         IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Clear();//Chademo charge allow off
-         ChaDeMo::SetEnabled(false);
-         chademoStartTime = 0;
-      }
+   //Here we receive a valid DCFC startup request.
+      if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
+      selectedChargeInt->Task100Ms();//and run the 100ms tasks
+      chargeModeDC = true;   //DC charge mode on
    }
+   else if(chargeModeDC)
+   {
+      Param::SetInt(Param::chgtyp,OFF);
+      chargeMode = false;  //no charge mode
+      chargeModeDC = false;   //DC charge mode off
+   }
+
 
    if(targetChgint != ChargeInterfaces::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
    {
@@ -596,6 +540,28 @@ static void UpdateCharger()
    canInterface[0]->ClearUserMessages();
    canInterface[1]->ClearUserMessages();
 }
+
+static void UpdateChargeInt()
+{
+   selectedChargeInt->DeInit();
+   switch (Param::GetInt(Param::interface))
+   {
+      case ChargeInterfaces::Unused:
+//      selectedChargeInt = &nochg;
+         break;
+      case ChargeInterfaces::Chademo:
+      selectedChargeInt = &chademoFC;
+         break;
+      case ChargeInterfaces::i3LIM:
+ //     selectedCharger = &LIMFC;
+         break;
+   }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+}
+
+
 //Whenever the user clears mapped can messages or changes the
 //CAN interface of a device, this will be called by the CanHardware module
 static void SetCanFilters()
@@ -609,6 +575,7 @@ static void SetCanFilters()
    selectedInverter->SetCanInterface(inverter_can);
    selectedVehicle->SetCanInterface(vehicle_can);
    selectedCharger->SetCanInterface(charger_can);
+   selectedChargeInt->SetCanInterface(lim_can);
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
    lim_can->RegisterUserMessage(0x3b4);//LIM MSG
@@ -632,6 +599,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
       break;
    case Param::chargemodes:
       UpdateCharger();
+      break;
+   case Param::interface:
+      UpdateChargeInt();
       break;
    case Param::InverterCan:
    case Param::VehicleCan:
@@ -742,10 +712,10 @@ extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
    //can cast this to uint32_t[2]. dont be an idiot! * pointer
    CANSPI_CLR_IRQ();   //Clear Rx irqs in mcp25625
    exti_reset_request(EXTI15); // clear irq
+   if((rxMessage.frame.id==0x108)||(rxMessage.frame.id==0x109)) selectedChargeInt->DecodeCAN(rxMessage.frame.id, canData);
 
-   if(rxMessage.frame.id==0x108) ChaDeMo::Process108Message(canData);
-   if(rxMessage.frame.id==0x109) ChaDeMo::Process109Message(canData);
-   //DigIo::led_out.Toggle();
+  // if(rxMessage.frame.id==0x108) ChaDeMo::Process108Message(canData);
+   //if(rxMessage.frame.id==0x109) ChaDeMo::Process109Message(canData);
 }
 
 extern "C" void rtc_isr(void)
@@ -812,6 +782,7 @@ extern "C" int main(void)
    UpdateInv();
    UpdateVehicle();
    UpdateCharger();
+   UpdateChargeInt();
 
    Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;
