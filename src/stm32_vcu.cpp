@@ -156,6 +156,8 @@ static void Ms200Task(void)
    }
 
 
+   if(chargeModeDC) selectedChargeInt->Task200Ms();
+
    ///////////////////////////////////////
    //Charge term logic
    ///////////////////////////////////////
@@ -259,7 +261,6 @@ static void Ms100Task(void)
    {
    //Here we receive a valid DCFC startup request.
       if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
-      Param::SetInt(Param::chgtyp,DCFC);
       selectedChargeInt->Task100Ms();//and run the 100ms tasks
       chargeModeDC = true;   //DC charge mode on
    }
@@ -563,6 +564,25 @@ static void UpdateChargeInt()
    canInterface[1]->ClearUserMessages();
 }
 
+static void UpdateHeater()
+{
+   selectedHeater->DeInit();
+   switch (Param::GetInt(Param::Heater))
+   {
+      case HeatType::Noheater:
+      selectedHeater = &Heaternone;
+         break;
+      case HeatType::AmpHeater:
+      selectedHeater = &amperaHeater;
+         break;
+      case HeatType::VW:
+         break;
+   }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+}
+
 
 //Whenever the user clears mapped can messages or changes the
 //CAN interface of a device, this will be called by the CanHardware module
@@ -604,6 +624,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
       break;
    case Param::interface:
       UpdateChargeInt();
+      break;
+   case Param::Heater:
+      UpdateHeater();
       break;
    case Param::InverterCan:
    case Param::VehicleCan:

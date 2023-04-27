@@ -33,12 +33,12 @@ class FCChademo: public Chargerint
    public:
       void DecodeCAN(int id, uint32_t data[2]);
       void Task100Ms();//Must be called every 100ms
+      void Task200Ms();
       bool DCFCRequest(bool RunCh);
 
    protected:
 
    private:
-      static void RunChademo();
       static void Process108Message(uint32_t data[2]);
       static void Process109Message(uint32_t data[2]);
       static bool chargeEnabled;

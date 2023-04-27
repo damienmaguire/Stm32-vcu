@@ -107,7 +107,6 @@ void FCChademo::CheckSensorDeviation(uint16_t internalVoltage)
 
 void FCChademo::Task100Ms()//sends chademo messages every 100ms
 {
-   FCChademo::RunChademo();
    uint32_t data[2];
    bool curSensFault = curTimeout > 10;
    bool vtgSensFault = vtgTimeout > 50;
@@ -172,8 +171,9 @@ void FCChademo::Task100Ms()//sends chademo messages every 100ms
 }
 
 
-void FCChademo::RunChademo()
+void FCChademo::Task200Ms()
 {
+   //formally the runchademo routine.
    static int32_t controlledCurrent = 0;
 
    if (chademoStartTime == 0 && Param::GetInt(Param::opmode) != MOD_CHARGE)
@@ -182,7 +182,7 @@ void FCChademo::RunChademo()
       FCChademo::SetChargeCurrent(0);
    }
 
-   if ((rtc_get_counter_val() - chademoStartTime) > 1 && (rtc_get_counter_val() - chademoStartTime) < 2)
+   if ((rtc_get_counter_val() - chademoStartTime) > 100 && (rtc_get_counter_val() - chademoStartTime) < 150)
    {
       FCChademo::SetEnabled(true);
       IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set();//never gets here ...

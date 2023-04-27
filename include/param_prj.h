@@ -292,6 +292,13 @@ enum ChargeInterfaces
     Chademo = 2
 };
 
+enum HeatType
+{
+    Noheater = 0,
+    AmpHeater = 1,
+    VW = 2
+};
+
 enum ChargeControl
 {
     Enable = 0,
