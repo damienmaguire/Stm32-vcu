@@ -572,7 +572,7 @@ static void UpdateVehicle()
 static void UpdateCharger()
 {
    selectedCharger->DeInit();
-   switch (Param::GetInt(Param::interface))
+   switch (Param::GetInt(Param::chargemodes))
    {
       case ChargeModes::Off:
       chargeMode = false;
@@ -617,7 +617,6 @@ static void SetCanFilters()
    lim_can->RegisterUserMessage(0x2ef);//LIM MSG
    lim_can->RegisterUserMessage(0x272);//LIM MSG
 
-   //charger_can->RegisterUserMessage(0x108);//Charger HV request
 }
 
 void Param::Change(Param::PARAM_NUM paramNum)
@@ -631,7 +630,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    case Param::Vehicle:
       UpdateVehicle();
       break;
-   case Param::interface:
+   case Param::chargemodes:
       UpdateCharger();
       break;
    case Param::InverterCan:
