@@ -192,7 +192,7 @@ static void Ms200Task(void)
 
    if(selectedCharger->ControlCharge(RunChg) && opmode != MOD_RUN)
    {
-        DigIo::inv_out.Set();//bodge here for a test
+        //DigIo::inv_out.Set();//bodge here for a test
         chargeMode = true;   //AC charge mode
         Param::SetInt(Param::chgtyp,AC);
    }
@@ -200,7 +200,7 @@ static void Ms200Task(void)
    {
         Param::SetInt(Param::chgtyp,OFF);
         chargeMode = false;  //no charge mode
-        DigIo::inv_out.Clear();//bodge here for testing
+        //DigIo::inv_out.Clear();//bodge here for testing
    }
 
 

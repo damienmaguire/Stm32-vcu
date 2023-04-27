@@ -30,8 +30,6 @@ static uint16_t Vbatt=0;
 static uint16_t VbattSP=0;
 static uint8_t counter_1db=0;
 static uint8_t counter_1dc=0;
-static uint8_t counter_11a_d6=0;
-static uint8_t counter_1d4=0;
 static uint8_t counter_1f2=0;
 static uint8_t counter_55b=0;
 static uint8_t OBCpwrSP=0;
@@ -62,9 +60,6 @@ PDM sends:
 void NissanPDM::SetCanInterface(CanHardware* c)
 {
    can = c;
-
-   can->RegisterUserMessage(0x1DA);//Leaf inv msg
-   can->RegisterUserMessage(0x55A);//Leaf inv msg
    can->RegisterUserMessage(0x679);//Leaf obc msg
    can->RegisterUserMessage(0x390);//Leaf obc msg
 }
@@ -73,23 +68,7 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
-   if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
-   {
-   //   voltage = (bytes[0] << 2) | (bytes[1] >> 6);//MEASURED VOLTAGE FROM LEAF INVERTER
-
- //     int16_t parsed_speed = (bytes[4] << 8) | bytes[5];
-//      speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
-
-//      error = (bytes[6] & 0xb0) != 0x00;//INVERTER ERROR STATE
-
-   }
-   else if (id == 0x55A)// THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
-   {
-//      inv_temp = fahrenheit_to_celsius(bytes[2]);//INVERTER TEMP
-//      motor_temp = fahrenheit_to_celsius(bytes[1]);//MOTOR TEMP
-   }
-
-   else if (id == 0x679)// THIS MSG FIRES ONCE ON CHARGE PLUG INSERT
+   if (id == 0x679)// THIS MSG FIRES ONCE ON CHARGE PLUG INSERT
    {
       uint8_t dummyVar = bytes[0];
       dummyVar = dummyVar;
@@ -133,203 +112,6 @@ void NissanPDM::Task10Ms()
 
    uint8_t bytes[8];
 
-   /////////////////////////////////////////////////////////////////////////////////////////////////
-   // CAN Messaage 0x11A
-
-   // Data taken from a gen1 inFrame where the car is starting to
-   // move at about 10% throttle: 4E400055 0000017D
-
-   // All possible gen1 values: 00 01 0D 11 1D 2D 2E 3D 3E 4D 4E
-   // MSB nibble: Selected gear (gen1/LeafLogs)
-   //   0: some kind of non-gear before driving
-   //      0: Park in Gen 2. byte 0 = 0x01 when in park and charging
-   //   1: some kind of non-gear after driving
-   //   2: R
-   //   3: N
-   //   4: D
-   // LSB nibble: ? (LeafLogs)
-   //   0: sometimes at startup, not always; never when the
-   //      inverted is powered on (0.06%)
-   //   1: this is the usual value (55% of the time in LeafLogs)
-   //   D: seems to occur for ~90ms when changing gears (0.2%)
-   //   E: this also is a usual value, but never occurs with the
-   //      non-gears 0 and 1 (44% of the time in LeafLogs)
-
-
-   //byte 0 determines motor rotation direction
-   bytes[0] = 0x01;//Car in park when charging
-   // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
-   bytes[1] = 0x80;
-   // Usually 0x00, sometimes 0x80 (LeafLogs), 0x04 seen by canmsgs
-   bytes[2] = 0x00;
-
-   // Weird value at D3:4 that goes along with the counter
-   // NOTE: Not actually needed, you can just send constant AA C0
-   const static uint8_t weird_d34_values[4][2] =
-   {
-      {0xaa, 0xc0},
-      {0x55, 0x00},
-      {0x55, 0x40},
-      {0xaa, 0x80},
-   };
-
-
-
-   bytes[3] = weird_d34_values[counter_11a_d6][0];//0xAA;
-   bytes[4] = weird_d34_values[counter_11a_d6][1];//0xC0;
-
-   // Always 0x00 (LeafLogs, canmsgs)
-   bytes[5] = 0x00;
-
-   // A 2-bit counter
-   bytes[6] = counter_11a_d6;
-
-   counter_11a_d6++;
-   if(counter_11a_d6 >= 4)
-   {
-      counter_11a_d6 = 0;
-   }
-
-
-   // Extra CRC
-   nissan_crc(bytes, 0x85);//not sure if this is really working or just making me look like a muppet.
-
-
-
-   can->Send(0x11A, (uint32_t*)bytes, 8);
-
-
-   /////////////////////////////////////////////////////////////////////////////////////////////////
-   // CAN Message 0x1D4: Target Motor Torque
-
-   // Data taken from a gen1 inFrame where the car is starting to
-   // move at about 10% throttle: F70700E0C74430D4
-
-   // Usually F7, but can have values between 9A...F7 (gen1)
-   bytes[0] = 0xF7;
-   // 2016: 6E
-   // outFrame.data.bytes[0] = 0x6E;
-
-   // Usually 07, but can have values between 07...70 (gen1)
-   bytes[1] = 0x07;
-   // 2016: 6E
-   //outFrame.data.bytes[1] = 0x6E;
-
-   // override any torque commands if not in run mode.
-
-      bytes[2] = 0x00;
-      bytes[3] = 0x00;
-
-
-   // MSB nibble: Runs through the sequence 0, 4, 8, C
-   // LSB nibble: Precharge report (precedes actual precharge
-   //             control)
-   //   0: Discharging (5%)
-   //   2: Precharge not started (1.4%)
-   //   3: Precharging (0.4%)
-   //   5: Starting discharge (3x10ms) (2.0%)
-   //   7: Precharged (93%)
-   bytes[4] = 0x07 | (counter_1d4 << 6);
-   //bytes[4] = 0x02 | (counter_1d4 << 6);
-   //Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
-
-   counter_1d4++;
-   if(counter_1d4 >= 4) counter_1d4 = 0;
-
-   // MSB nibble:
-   //   0: 35-40ms at startup when gear is 0, then at shutdown 40ms
-   //      after the car has been shut off (6% total)
-   //   4: Otherwise (94%)
-   // LSB nibble:
-   //   0: ~100ms when changing gear, along with 11A D0 b3:0 value
-   //      D (0.3%)
-   //   2: Reverse gear related (13%)
-   //   4: Forward gear related (21%)
-   //   6: Occurs always when gear 11A D0 is 01 or 11 (66%)
-   //outFrame.data.bytes[5] = 0x44;
-   //outFrame.data.bytes[5] = 0x46;
-
-   // 2016 drive cycle: 06, 46, precharge, 44, drive, 46, discharge, 06
-   // 0x46 requires ~25 torque to start
-   //outFrame.data.bytes[5] = 0x46;
-   // 0x44 requires ~8 torque to start
-   bytes[5] = 0x44;
-   //bit 6 is Main contactor status. 0x00 Not on, 0x01 on.
-
-   // MSB nibble:
-   //   In a drive cycle, this slowly changes between values (gen1):
-   //     leaf_on_off.txt:
-   //       5 7 3 2 0 1 3 7
-   //     leaf_on_rev_off.txt:
-   //       5 7 3 2 0 6
-   //     leaf_on_Dx3.txt:
-   //       5 7 3 2 0 2 3 2 0 2 3 2 0 2 3 7
-   //     leaf_on_stat_DRDRDR.txt:
-   //       0 1 3 7
-   //     leaf_on_Driveincircle_off.txt:
-   //       5 3 2 0 8 B 3 2 0 8 A B 3 2 0 8 A B A 8 0 2 3 7
-   //     leaf_on_wotind_off.txt:
-   //       3 2 0 8 A B 3 7
-   //     leaf_on_wotinr_off.txt:
-   //       5 7 3 2 0 8 A B 3 7
-   //     leaf_ac_charge.txt:
-   //       4 6 E 6
-   //   Possibly some kind of control flags, try to figure out
-   //   using:
-   //     grep 000001D4 leaf_on_wotind_off.txt | cut -d' ' -f10 | uniq | ~/projects/leaf_tools/util/hex_to_ascii_binary.py
-   //   2016:
-   //     Has different values!
-   // LSB nibble:
-   //   0: Always (gen1)
-   //   1:  (2016)
-
-   // 2016 drive cycle:
-   //   E0: to 0.15s
-   //   E1: 2 messages
-   //   61: to 2.06s (inverter is powered up and precharge
-   //                 starts and completes during this)
-   //   21: to 13.9s
-   //   01: to 17.9s
-   //   81: to 19.5s
-   //   A1: to 26.8s
-   //   21: to 31.0s
-   //   01: to 33.9s
-   //   81: to 48.8s
-   //   A1: to 53.0s
-   //   21: to 55.5s
-   //   61: 2 messages
-   //   60: to 55.9s
-   //   E0: to end of capture (discharge starts during this)
-
-   // This value has been chosen at the end of the hardest
-   // acceleration in the wide-open-throttle pull, with full-ish
-   // torque still being requested, in
-   //   LeafLogs/leaf_on_wotind_off.txt
-   //outFrame.data.bytes[6] = 0x00;
-
-   // This value has been chosen for being seen most of the time
-   // when, and before, applying throttle in the wide-open-throttle
-   // pull, in
-   //   LeafLogs/leaf_on_wotind_off.txt
-
-   bytes[6] = 0xE0;   //charging mode
-   //In Gen 2 byte 6 is Charge status.
-   //0x8C Charging interrupted
-   //0xE0 Charging
-
-   // Value chosen from a 2016 log
-   //outFrame.data.bytes[6] = 0x61;
-
-   // Value chosen from a 2016 log
-   // 2016-24kWh-ev-on-drive-park-off.pcap #12101 / 15.63s
-   // outFrame.data.bytes[6] = 0x01;
-   //byte 6 brake signal
-
-   // Extra CRC
-   nissan_crc(bytes, 0x85);
-
-   can->Send(0x1D4, (uint32_t*)bytes, 8);//send on can1
-
 
    /////////////////////////////////////////////////////////////////////////////////////////////////
    // CAN Message 0x1DB
@@ -354,8 +136,6 @@ void NissanPDM::Task10Ms()
    bytes[4] = 0x40;  //SOC for dash in Leaf. fixed val.
    bytes[5] = 0x00;
    bytes[6] = counter_1db;
-
-
 
    // Extra CRC in byte 7
    nissan_crc(bytes, 0x85);
