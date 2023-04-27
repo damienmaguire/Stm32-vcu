@@ -185,7 +185,7 @@ void FCChademo::RunChademo()
    if ((rtc_get_counter_val() - chademoStartTime) > 1 && (rtc_get_counter_val() - chademoStartTime) < 2)
    {
       FCChademo::SetEnabled(true);
-      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set();
+      IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set();//never gets here ...
    }
 
    if (Param::GetInt(Param::opmode) == MOD_CHARGE && FCChademo::ConnectorLocked())
