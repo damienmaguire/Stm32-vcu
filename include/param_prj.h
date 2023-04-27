@@ -70,7 +70,7 @@
     PARAM_ENTRY(CAT_COMM,      CAN3Speed,   CAN3Spd,   0,      1,      0,      77 ) \
     PARAM_ENTRY(CAT_CHARGER,   chargemodes, CHGMODS,   0,      4,      0,      37 ) \
     PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0.1,    250,    22,     38 ) \
-    PARAM_ENTRY(CAT_CHARGER,   interface,   CHGINT,    0,      3,      0,      39 ) \
+    PARAM_ENTRY(CAT_CHARGER,   interface,   CHGINT,    0,      2,      0,      39 ) \
     PARAM_ENTRY(CAT_CHARGER,   Voltspnt,    "V",       0,      1000,   395,    40 ) \
     PARAM_ENTRY(CAT_CHARGER,   Pwrspnt,     "W",       0,      12000,  1500,   41 ) \
     PARAM_ENTRY(CAT_CHARGER,   IdcTerm,     "A",       0,      150,    0,      56 ) \
@@ -207,7 +207,7 @@
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
 #define HTTYPE       "0=None, 1=Ampera, 2=VW"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
-#define CHGMODS      "0=Off, 1=HV_ON, 2=EXT_CAN 3=EXT_DIGI, 4=Volt_Ampera, 5=Leaf_PDM, 6=TeslaOI"
+#define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo"
 #define CAN3Spd      "0=k33.3, 1=k500"
