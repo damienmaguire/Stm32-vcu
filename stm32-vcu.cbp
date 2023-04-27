@@ -75,6 +75,7 @@
 		<Unit filename="include/iomatrix.h" />
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/leafinv.h" />
+		<Unit filename="include/noHeater.h" />
 		<Unit filename="include/nocharger.h" />
 		<Unit filename="include/notused.h" />
 		<Unit filename="include/outlanderinverter.h" />

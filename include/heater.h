@@ -23,4 +23,5 @@ protected:
    CanHardware* can;
 };
 
+
 #endif // HEATER_H

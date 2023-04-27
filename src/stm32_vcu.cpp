@@ -60,10 +60,11 @@ static amperaCharger ampChg;
 static FCChademo chademoFC;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
+static noHeater Heaternone;
 static AmperaHeater amperaHeater;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
-static Heater* selectedHeater = &amperaHeater;
+static Heater* selectedHeater = &Heaternone;
 static Chargerhw* selectedCharger = &chargerPDM;
 static Chargerint* selectedChargeInt = &UnUsed;
 

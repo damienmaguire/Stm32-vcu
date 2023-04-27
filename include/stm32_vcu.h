@@ -67,6 +67,7 @@
 #include "nocharger.h"
 #include "extCharger.h"
 #include "amperaCharger.h"
+#include "noHeater.h"
 
 typedef union {
     struct {
