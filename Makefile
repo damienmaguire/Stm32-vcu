@@ -41,7 +41,8 @@ OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.
            my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o BMW_E65.o GS450H.o temp_meas.o \
            Can_E39.o Can_VAG.o Can_OI.o MCP2515.o CANSPI.o outlanderinverter.o canhardware.o canmap.o \
            param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o i3LIM.o \
-           chademo.o amperaheater.o subaruvehicle.o iomatrix.o bmw_sbox.o NissanPDM.o teslaCharger.o amperacharger.o \
+           chademo.o amperaheater.o amperacharger.o subaruvehicle.o iomatrix.o bmw_sbox.o NissanPDM.o teslaCharger.o extCharger.o \
+           
            
 OBJS     = $(patsubst %.o,$(OUT_DIR)/%.o, $(OBJSL))
 vpath %.c src/ libopeninv/src/

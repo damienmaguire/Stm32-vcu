@@ -33,6 +33,7 @@ public:
    virtual bool ControlCharge(bool) {return false;};
    virtual void DeInit() {} //called when switching to another charger, similar to a destructor
    virtual void SetCanInterface(CanHardware* c) { can = c; }
+   virtual bool testa(bool) {return false;};
 
 protected:
    CanHardware* can;

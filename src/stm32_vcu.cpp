@@ -56,7 +56,7 @@ static NissanPDM chargerPDM;
 static teslaCharger ChargerTesla;
 static notused UnUsed;
 static noCharger nochg;
-static extCharger digiCharger;
+static extCharger chgdigi;
 static amperaCharger ampChg;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
@@ -579,10 +579,10 @@ static void UpdateCharger()
       selectedCharger = &nochg;
          break;
       case ChargeModes::EXT_DIGI:
-      selectedCharger = &digiCharger;
+      selectedCharger = &chgdigi;
          break;
       case ChargeModes::Volt_Ampera:
-    //  selectedCharger = &ampChg;
+      selectedCharger = &ampChg;
          break;
       case ChargeModes::Leaf_PDM:
       selectedCharger = &chargerPDM;

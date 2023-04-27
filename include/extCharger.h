@@ -1,6 +1,6 @@
 
-#ifndef extCharger_h
-#define extCharger_h
+#ifndef EXTCHARGER_H
+#define EXTCHARGER_H
 
 /*  This library supports the various opensource tesla charger controllers e.g. PCS , Gen2/3 etc.
 
@@ -15,13 +15,13 @@ class extCharger: public Chargerhw
 {
 
 public:
-extCharger();
 bool ControlCharge(bool RunCh);
+
 
 
 private:
 
 };
 
-#endif /* extCharger_h */
+#endif /* EXTCHARGER_H */
 
