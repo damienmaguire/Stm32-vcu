@@ -159,13 +159,13 @@ static void Ms200Task(void)
    if(chargeModeDC) selectedChargeInt->Task200Ms();
 
    ///////////////////////////////////////
-   //Charge term logic
+   //Charge term logic for AC charge
    ///////////////////////////////////////
    /*
    if we are in charge mode and battV >= setpoint and power is <= termination setpoint
        Then we end charge.
    */
-   if(opmode==MOD_CHARGE)
+   if(opmode==MOD_CHARGE && !chargeModeDC)
    {
       if(Param::GetInt(Param::udc)>=Param::GetInt(Param::Voltspnt) && Param::GetInt(Param::idc)<=Param::GetInt(Param::IdcTerm))
       {

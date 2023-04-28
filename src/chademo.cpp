@@ -175,14 +175,13 @@ void FCChademo::Task200Ms()
 {
    //formally the runchademo routine.
    static int32_t controlledCurrent = 0;
-
-   if (chademoStartTime == 0 && Param::GetInt(Param::opmode) != MOD_CHARGE)
+   if (chademoStartTime == 0)// && Param::GetInt(Param::opmode) != MOD_CHARGE)
    {
       chademoStartTime = rtc_get_counter_val();
       FCChademo::SetChargeCurrent(0);
    }
 
-   if ((rtc_get_counter_val() - chademoStartTime) > 100 && (rtc_get_counter_val() - chademoStartTime) < 150)
+   if ((rtc_get_counter_val() - chademoStartTime) > 4 && (rtc_get_counter_val() - chademoStartTime) < 8)
    {
       FCChademo::SetEnabled(true);
       IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set();//never gets here ...
@@ -205,6 +204,8 @@ void FCChademo::Task200Ms()
          controlledCurrent++;
       if (udc > udcspnt && controlledCurrent > 0)
          controlledCurrent--;
+      if(controlledCurrent>chargeLim)
+         controlledCurrent--;
 
       FCChademo::SetChargeCurrent(controlledCurrent);
       //TODO: fix this to not false trigger
@@ -217,6 +218,7 @@ void FCChademo::Task200Ms()
 
    if (Param::GetInt(Param::CCS_ILim) == 0)
    {
+      FCChademo::SetChargeCurrent(0);
       FCChademo::SetEnabled(false);
       IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Clear();//FCChademo charge allow off
       chargeMode = false;
@@ -230,8 +232,19 @@ void FCChademo::Task200Ms()
 
 bool FCChademo::DCFCRequest(bool RunCh)
 {
+   Param::SetInt(Param::Test2 , chademoStartTime);
+if ((RunCh) && (DigIo::gp_12Vin.Get()))
+{
+   return true;
+}
+else
+{
+    FCChademo::SetChargeCurrent(0);
+    FCChademo::SetEnabled(false);
+    IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Clear();//FCChademo charge allow off
+    chademoStartTime=0;
+    return false;
+}
 
-if ((RunCh) && (DigIo::gp_12Vin.Get())) return true;
-else return false;
-
+//return false;
 }

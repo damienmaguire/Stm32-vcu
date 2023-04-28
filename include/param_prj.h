@@ -171,12 +171,13 @@
     VALUE_ENTRY(ChgT,          "M",                 2068 ) \
     VALUE_ENTRY(HeatReq,       ONOFF,               2069 ) \
     VALUE_ENTRY(Test,          ONOFF,               2070 ) \
+    VALUE_ENTRY(Test2,         "dig",               2083 ) \
     VALUE_ENTRY(MG2Raw,        "dig",               2078 ) \
     VALUE_ENTRY(MG1Raw,        "dig",               2079 ) \
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2083
+//Next value Id: 2084
 
 
 #define VERSTR STRINGIFY(4=VER)
