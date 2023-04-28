@@ -370,6 +370,7 @@ static void Ms10Task(void)
    if (opmode == MOD_OFF && ((selectedVehicle->Start() && selectedVehicle->Ready()) || chargeMode))
    {
       if((selectedVehicle->Start()) && selectedVehicle->Ready()) StartSig=true;//set start signal to true to indicate key was in start pos
+
       if (!chargeMode)
       {
          DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!

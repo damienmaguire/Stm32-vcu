@@ -299,7 +299,7 @@ else if (Param::GetInt(Param::Type) == 1)
 
    if(opmode == MOD_PRECHARGE)
    {
-      if (udc < (udcsw / 2) && rtc_get_counter_val() > (oldTime + PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
+      if (udc < (udcsw) && rtc_get_counter_val() > (oldTime + PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
       {
          DigIo::prec_out.Clear();
          ErrorMessage::Post(ERR_PRECHARGE);
