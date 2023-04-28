@@ -25,6 +25,7 @@ bool FCChademo::fault = false;
 bool FCChademo::contactorOpen = false;
 bool chargeMode = false;
 uint8_t FCChademo::chargerMaxCurrent;
+uint16_t FCChademo::chargerMaxVoltage;
 uint8_t FCChademo::chargeCurrentRequest;
 uint32_t FCChademo::rampedCurReq;
 uint16_t FCChademo::targetBatteryVoltage;
@@ -48,7 +49,13 @@ static void delay(void)
 
 void FCChademo::DecodeCAN(int id, uint32_t data[2])
 {
-if (id == 0x108) chargerMaxCurrent = data[0] >> 24;
+if (id == 0x108)
+{
+    chargerMaxCurrent = data[0] >> 24;
+    chargerMaxVoltage = data[0] >> 8;
+}
+
+
 if (id == 0x109)
 {
    chargerOutputVoltage = data[0] >> 8;
@@ -213,7 +220,7 @@ void FCChademo::Task200Ms()
    }
 
    FCChademo::SetTargetBatteryVoltage(Param::GetInt(Param::Voltspnt)+10);
-   FCChademo::SetSoC(Param::GetFloat(Param::CCS_SOCLim));
+   FCChademo::SetSoC(Param::GetFloat(Param::SOCFC));
    Param::SetInt(Param::CCS_Ireq, FCChademo::GetRampedCurrentRequest());
 
    if (Param::GetInt(Param::CCS_ILim) == 0)
@@ -228,6 +235,7 @@ void FCChademo::Task200Ms()
    Param::SetInt(Param::CCS_I, FCChademo::GetChargerOutputCurrent());
    Param::SetInt(Param::CCS_State, FCChademo::GetChargerStatus());
    Param::SetInt(Param::CCS_I_Avail, FCChademo::GetChargerMaxCurrent());
+   Param::SetInt(Param::CCS_V_Avail, FCChademo::GetChargerMaxVoltage());
 }
 
 bool FCChademo::DCFCRequest(bool RunCh)

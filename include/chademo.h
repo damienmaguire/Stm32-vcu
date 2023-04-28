@@ -47,6 +47,7 @@ class FCChademo: public Chargerint
       static bool contactorOpen;
       static uint8_t chargerStatus;
       static uint8_t chargerMaxCurrent;
+      static uint16_t chargerMaxVoltage;
       static uint8_t chargeCurrentRequest;
       static uint32_t rampedCurReq;
       static uint16_t targetBatteryVoltage;
@@ -67,6 +68,7 @@ class FCChademo: public Chargerint
       static int GetChargerOutputVoltage() { return chargerOutputVoltage; }
       static int GetChargerOutputCurrent() { return chargerOutputCurrent; }
       static int GetChargerMaxCurrent() { return chargerMaxCurrent; }
+      static int GetChargerMaxVoltage() { return chargerMaxVoltage; }
       static int GetChargerStatus() { return chargerStatus; }
       static bool ConnectorLocked() { return (chargerStatus & 0x4) != 0; }
       static bool ChargerStopRequest() { return (chargerStatus & 0x2A) != 0; }
