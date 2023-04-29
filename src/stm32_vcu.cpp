@@ -38,6 +38,7 @@ static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks=0,ChgTicks_1Min=0;
 static bool StartSig=false;
+static bool thrlockout=false;
 
 static volatile unsigned
 days=0,
@@ -362,12 +363,15 @@ static void Ms10Task(void)
    //            MODE CONTROL SECTION              //
    //////////////////////////////////////////////////
    float udc = utils::ProcessUdc(vehicleStartTime, GetInt(Param::speed));
-   stt |= Param::GetInt(Param::potnom) <= 0 ? STAT_NONE : STAT_POTPRESSED;
+   stt |= Param::GetInt(Param::pot) <= Param::GetInt(Param::potmin) ? STAT_NONE : STAT_POTPRESSED;
    stt |= udc >= Param::GetFloat(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
    stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
 
+   if(Param::GetInt(Param::pot) >= Param::GetInt(Param::potmin)) thrlockout=true;
+   else thrlockout=false;
+
    //on detection of ign on or charge mode enable we commence prechage and go to mode precharge
-   if (opmode == MOD_OFF && ((selectedVehicle->Start() && selectedVehicle->Ready()) || chargeMode))
+   if (opmode == MOD_OFF && ((selectedVehicle->Start() && selectedVehicle->Ready() && !thrlockout) || chargeMode))
    {
       if((selectedVehicle->Start()) && selectedVehicle->Ready()) StartSig=true;//set start signal to true to indicate key was in start pos
 
