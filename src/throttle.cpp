@@ -272,7 +272,7 @@ void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
    if (finalSpnt >= 0)
    {
       float idcerr = idcmax - idcFiltered;
-      float res = idcerr * 5;
+      float res = idcerr * 10;
 
       res = MAX(0, res);
       finalSpnt = MIN(res, finalSpnt);
@@ -280,7 +280,7 @@ void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
    else
    {
       float idcerr = idcmin - idcFiltered;
-      float res = idcerr * 5;
+      float res = idcerr * 10;
 
       res = MIN(0, res);
       finalSpnt = MAX(res, finalSpnt);
