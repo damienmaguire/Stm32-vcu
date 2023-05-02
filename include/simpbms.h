@@ -25,10 +25,11 @@ class SimpBMS: public BMS
 {
    public:
       void DecodeCAN(int id, uint8_t * data);
-      bool ChargeAllowed();
       float MaxChargeCurrent();
       void Task100Ms();
    private:
+      bool BMSDataValid();
+      bool ChargeAllowed();
       int chargeCurrentLimit = 0;
       int timeoutCounter = 0;
       float minCellV = 0;

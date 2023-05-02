@@ -27,11 +27,17 @@
  * working correctly.
  */
 
+bool SimpBMS::BMSDataValid() {
+   // Return false if primary BMS is not sending data.
+   if(timeoutCounter < 1) return false;
+   return true;
+}
+
 // Return whether charging is currently permitted.
 bool SimpBMS::ChargeAllowed()
 {
    // Refuse to charge if the BMS is not sending data.
-   if(timeoutCounter < 1) return false;
+   if(!BMSDataValid()) return false;
 
    // Refuse to charge if the voltage or temperature is out of range.
    if(maxCellV > Param::GetFloat(Param::BMS_VmaxLimit)) return false;
@@ -49,6 +55,7 @@ bool SimpBMS::ChargeAllowed()
 // Return the maximum charge current allowed by the BMS.
 float SimpBMS::MaxChargeCurrent()
 {
+   if(!ChargeAllowed()) return 0;
    return chargeCurrentLimit / 1000.0;
 }
 
@@ -67,12 +74,6 @@ void SimpBMS::DecodeCAN(int id, uint8_t *data)
       minTempC = minTemp - 273;
       maxTempC = maxTemp - 273;
 
-      // Update informational parameters.
-      Param::SetFloat(Param::BMS_Vmin, minCellV);
-      Param::SetFloat(Param::BMS_Vmax, maxCellV);
-      Param::SetFloat(Param::BMS_Tmin, minTempC);
-      Param::SetFloat(Param::BMS_Tmax, maxTempC);
-
       // Reset timeout counter to the full timeout value
       timeoutCounter = Param::GetInt(Param::BMS_Timeout) * 10;
    }
@@ -87,6 +88,19 @@ void SimpBMS::Task100Ms() {
    if(timeoutCounter > 0) timeoutCounter--;
 
    // Update informational parameters.
-   Param::SetInt(Param::BMS_ChgEn, ChargeAllowed());
    Param::SetInt(Param::BMS_CurLim, MaxChargeCurrent());
+
+   if(BMSDataValid()) {
+      Param::SetFloat(Param::BMS_Vmin, minCellV);
+      Param::SetFloat(Param::BMS_Vmax, maxCellV);
+      Param::SetFloat(Param::BMS_Tmin, minTempC);
+      Param::SetFloat(Param::BMS_Tmax, maxTempC);
+   }
+   else
+   {
+      Param::SetFloat(Param::BMS_Vmin, 0);
+      Param::SetFloat(Param::BMS_Vmax, 0);
+      Param::SetFloat(Param::BMS_Tmin, 0);
+      Param::SetFloat(Param::BMS_Tmax, 0);
+   }
 }

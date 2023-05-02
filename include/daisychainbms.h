@@ -25,10 +25,11 @@ class DaisychainBMS: public BMS
 {
    public:
       void DecodeCAN(int id, uint8_t * data);
-      bool ChargeAllowed();
       float MaxChargeCurrent();
       void Task100Ms();
    private:
+      bool BMSDataValid();
+      bool ChargeAllowed();
       float temperature(uint16_t adc);
       int timeoutCounter[2];
       uint16_t minCell[2] = {0, 0};

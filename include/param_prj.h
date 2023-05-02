@@ -121,7 +121,6 @@
     VALUE_ENTRY(BMS_Vmax,      "V",                 2084 ) \
     VALUE_ENTRY(BMS_Tmin,      "°C",                2085 ) \
     VALUE_ENTRY(BMS_Tmax,      "°C",                2086 ) \
-    VALUE_ENTRY(BMS_ChgEn,     ONOFF,               2087 ) \
     VALUE_ENTRY(BMS_CurLim,    "A",                 2088 ) \
     VALUE_ENTRY(speed,         "rpm",               2016 ) \
     VALUE_ENTRY(Veh_Speed,     "kph",               2017 ) \

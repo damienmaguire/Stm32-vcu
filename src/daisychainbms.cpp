@@ -28,15 +28,21 @@
  * process if the BMS is not working correctly.
  */
 
+bool DaisychainBMS::BMSDataValid() {
+   // Return false if primary BMS is not sending data.
+   if(timeoutCounter[0] < 1) return false;
+
+   // Return false if we're in dual BMS mode and second BMS is not sending data.
+   if(Param::GetInt(Param::BMS_Mode) == BMSModes::BMSModeDaisychainDualBMS)
+      if(timeoutCounter[1] < 1) return false;
+
+   return true;
+}
+
 // Return whether charging is currently permitted.
 bool DaisychainBMS::ChargeAllowed()
 {
-   // Refuse to charge if primary BMS is not sending data.
-   if(timeoutCounter[0] < 1) return false;
-
-   // Refuse to charge if second BMS is not sending data.
-   if(Param::GetInt(Param::BMS_Mode) == BMSModes::BMSModeDaisychainDualBMS)
-      if(timeoutCounter[1] < 1) return false;
+   if(!BMSDataValid()) return false;
 
    // Refuse to charge if the voltage or temperature is out of range.
    if(maxCellV > Param::GetFloat(Param::BMS_VmaxLimit)) return false;
@@ -58,6 +64,7 @@ float DaisychainBMS::temperature(uint16_t adc)
 
 float DaisychainBMS::MaxChargeCurrent()
 {
+   if(!ChargeAllowed()) return 0;
    return 9998.0;
 }
 
@@ -97,12 +104,6 @@ void DaisychainBMS::DecodeCAN(int id, uint8_t *data)
       minTempC = temperature(minTemp[0]);
       maxTempC = temperature(maxTemp[0]);
    }
-
-   // Update informational parameters.
-   Param::SetFloat(Param::BMS_Vmin, minCellV);
-   Param::SetFloat(Param::BMS_Vmax, maxCellV);
-   Param::SetFloat(Param::BMS_Tmin, minTempC);
-   Param::SetFloat(Param::BMS_Tmax, maxTempC);
 }
 
 void DaisychainBMS::Task100Ms()
@@ -110,8 +111,19 @@ void DaisychainBMS::Task100Ms()
    // Decrement timeout counters.
    if(timeoutCounter[0] > 0) timeoutCounter[0]--;
    if(timeoutCounter[1] > 0) timeoutCounter[1]--;
-   
+
    // Update informational parameters.
-   Param::SetInt(Param::BMS_ChgEn, ChargeAllowed());
    Param::SetInt(Param::BMS_CurLim, MaxChargeCurrent());
+
+   if(BMSDataValid()) {
+      Param::SetFloat(Param::BMS_Vmin, minCellV);
+      Param::SetFloat(Param::BMS_Vmax, maxCellV);
+      Param::SetFloat(Param::BMS_Tmin, minTempC);
+      Param::SetFloat(Param::BMS_Tmax, maxTempC);
+   } else {
+      Param::SetFloat(Param::BMS_Vmin, 0);
+      Param::SetFloat(Param::BMS_Vmax, 0);
+      Param::SetFloat(Param::BMS_Tmin, 0);
+      Param::SetFloat(Param::BMS_Tmax, 0);
+   }
 }
