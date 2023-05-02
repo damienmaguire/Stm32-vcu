@@ -209,6 +209,7 @@ static void Ms100Task(void)
    Param::SetInt(Param::tmpaux,IsaTemp);
 
    if(targetChgint == ChargeInterfaces::i3LIM || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
+
    if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
    {
    //Here we receive a valid DCFC startup request.

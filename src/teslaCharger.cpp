@@ -36,7 +36,7 @@ void teslaCharger::Task100Ms()
    bytes[4] = ((HVspnt&0xFF00)>>8);//HV voltage setpoint highbyte
    bytes[5] = (HVpwr&0xFF);//HV voltage power setpoint lowbyte
    bytes[6] = ((HVpwr&0xFF00)>>8);//HV voltage power setpoint highbyte
-   if((ChRun)&&(Param::GetInt(Param::chgtyp)==AC))bytes[7] = ((0xA <<4)|counter_109);  //send vcu enable
+   if(ChRun)bytes[7] = ((0xA <<4)|counter_109);  //send vcu enable
    if(!ChRun)bytes[7] = ((0xC <<4)|counter_109);      //send vcu disable
    counter_109++;
    if(counter_109 >= 0xF) counter_109 = 0;

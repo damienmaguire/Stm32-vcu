@@ -563,6 +563,7 @@ void i3LIMClass::Chg_Timers()
 
 bool i3LIMClass::DCFCRequest(bool RunCh)
 {
+
       if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5||CP_Mode==0x6))  //if we have an enable and a plug in and a 5% pilot or a static pilot lets go DC charge mode.
       {
          /*
@@ -832,9 +833,9 @@ return false;
 
 bool i3LIMClass::ACRequest(bool RunCh)
 {
+
         if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2)&&RunCh)  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
 
-        //if(Param::GetBool(Param::PlugDet)&&RunCh)
         {
          lim_state=0;//return to state 0
          Param::SetInt(Param::CCS_State,lim_state);
@@ -846,7 +847,6 @@ bool i3LIMClass::ACRequest(bool RunCh)
          CHG_Req=ChargeRequest::Charge;
          CHG_Ready=ChargeReady::Rdy;
          CHG_Pwr=6500/25;//approx 6.5kw ac
-         Param::Set(Param::Test, 1);
          return true;
         }
         else
@@ -861,7 +861,7 @@ bool i3LIMClass::ACRequest(bool RunCh)
             CHG_Req=ChargeRequest::EndCharge;
             CHG_Ready=ChargeReady::NotRdy;
             CHG_Pwr=0;
-            Param::Set(Param::Test, 0);
+
             return false;
 
         }
