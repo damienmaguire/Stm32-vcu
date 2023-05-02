@@ -69,27 +69,6 @@ static Heater* selectedHeater = &Heaternone;
 static Chargerhw* selectedCharger = &chargerPDM;
 static Chargerint* selectedChargeInt = &UnUsed;
 
-
-
-static void DigitalPotTest()
-{
-   static uint8_t count_one=0;
-   static uint8_t pot_test = 0;
-
-   count_one++;
-   if(count_one==1)    //just a dummy routine that sweeps the pots for testing.
-   {
-      pot_test++;
-      DigIo::pot1_cs.Clear();
-      DigIo::pot2_cs.Clear();
-      uint8_t dummy=spi_xfer(SPI3,pot_test);//test
-      dummy=dummy;
-      DigIo::pot1_cs.Set();
-      DigIo::pot2_cs.Set();
-      count_one=0;
-   }
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
@@ -148,16 +127,14 @@ static void Ms200Task(void)
         chargeMode = false;  //no charge mode
    }
 
+   //in chademo , we do not want to run the 200ms task unless in dc charge mode
+   if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
+   //In case of the LIM we want to send it all the time if lim in use
+   if(targetChgint == ChargeInterfaces::i3LIM) selectedChargeInt->Task200Ms();
+   //and just to be thorough ...
+   if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
 
 
-
-   if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
-   {
-      i3LIMClass::Send200msMessages(canInterface[Param::GetInt(Param::LimCan)]);
-   }
-
-
-   if(chargeModeDC) selectedChargeInt->Task200Ms();
 
    ///////////////////////////////////////
    //Charge term logic for AC charge
@@ -176,7 +153,6 @@ static void Ms200Task(void)
    }
    if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
 
-   DigitalPotTest();
 }
 
 static void Ms100Task(void)
@@ -220,34 +196,6 @@ static void Ms100Task(void)
    }
 
 
-
-   if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
-   {
-      i3LIMClass::Send100msMessages(canInterface[Param::GetInt(Param::LimCan)]);
-
-      auto LIMmode=i3LIMClass::Control_Charge(RunChg);
-
-
-      if(LIMmode==i3LIMChargingState::DC_Chg)   //DC charge mode
-      {
-         if(RunChg) chargeMode = true;// activate charge mode
-         chargeModeDC = true;   //DC charge mode
-         Param::SetInt(Param::chgtyp,DCFC);
-      }
-
-      if(LIMmode==i3LIMChargingState::AC_Chg)
-      {
-         Param::SetInt(Param::chgtyp,AC);
-         if(RunChg) chargeMode = true;// activate charge mode
-      }
-
-      if(LIMmode==i3LIMChargingState::No_Chg)
-      {
-         Param::SetInt(Param::chgtyp,OFF);
-      }
-
-   }
-
    Param::SetFloat(Param::tmphs, selectedInverter->GetInverterTemperature()); //send inverter temp to web interface
    Param::SetFloat(Param::tmpm, selectedInverter->GetMotorTemperature()); //send motor temp to web interface
    Param::SetFloat(Param::InvStat, selectedInverter->GetInverterState()); //update inverter status on web interface
@@ -258,11 +206,11 @@ static void Ms100Task(void)
    int32_t IsaTemp=ISA::Temperature;
    Param::SetInt(Param::tmpaux,IsaTemp);
 
+   if(targetChgint == ChargeInterfaces::i3LIM || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
    if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
    {
    //Here we receive a valid DCFC startup request.
       if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
-      selectedChargeInt->Task100Ms();//and run the 100ms tasks
       chargeModeDC = true;   //DC charge mode on
    }
    else if(chargeModeDC)
@@ -272,6 +220,15 @@ static void Ms100Task(void)
       chargeModeDC = false;   //DC charge mode off
    }
 
+   if(selectedChargeInt->ACRequest(RunChg))//Request to run ac charge from the interface (e.g. LIM)
+   {
+      if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
+   }
+   else if(!chargeModeDC)
+   {
+      Param::SetInt(Param::chgtyp,OFF);
+      chargeMode = false;  //no charge mode
+   }
 
    if(targetChgint != ChargeInterfaces::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
    {
@@ -300,7 +257,6 @@ static void Ms10Task(void)
 {
    static uint32_t vehicleStartTime = 0;
 
-  // InvModes targetInverter = static_cast<InvModes>(Param::GetInt(Param::Inverter));//get inverter setting from menu
    int16_t previousSpeed=Param::GetInt(Param::speed);
    int16_t speed = 0;
    float torquePercent;
@@ -311,10 +267,7 @@ static void Ms10Task(void)
 
    ErrorMessage::SetTime(rtc_get_counter_val());
 
-   if(targetChgint == ChargeInterfaces::i3LIM) //BMW i3 LIM
-   {
-      i3LIMClass::Send10msMessages(canInterface[Param::GetInt(Param::LimCan)]);
-   }
+   selectedChargeInt->Task10Ms();
 
    if (Param::GetInt(Param::opmode) == MOD_RUN)
    {
@@ -421,11 +374,15 @@ static void Ms10Task(void)
 
    Param::SetInt(Param::status, stt);
 
-   if(opmode == MOD_RUN && !selectedVehicle->Ready())
+   if(opmode == MOD_RUN && !selectedVehicle->Ready())//
       opmode = MOD_OFF; //only shut off via ign command if not in charge mode
 
    if(opmode == MOD_CHARGE && !chargeMode)
       opmode = MOD_OFF; //if we are in charge mode and command charge mode off then go to mode off.
+      //logic hole here to allow a precharge hang in charge mode...
+      //lets try to plug it
+   if(opmode == MOD_PRECHARGE && (!selectedVehicle->Ready() || !chargeMode))
+      opmode = MOD_OFF;//soooo if we find ourselves in precharge with no ign on OR no charge request lets go off
 
    if (newMode != MOD_OFF)
    {
@@ -458,6 +415,8 @@ static void Ms1Task(void)
 {
    selectedInverter->Task1Ms();
    selectedVehicle->Task1Ms();
+   selectedCharger->Task1Ms();
+   selectedChargeInt->Task1Ms();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -605,11 +564,6 @@ static void SetCanFilters()
    selectedChargeInt->SetCanInterface(lim_can);
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
-   lim_can->RegisterUserMessage(0x3b4);//LIM MSG
-   lim_can->RegisterUserMessage(0x29e);//LIM MSG
-   lim_can->RegisterUserMessage(0x2b2);//LIM MSG
-   lim_can->RegisterUserMessage(0x2ef);//LIM MSG
-   lim_can->RegisterUserMessage(0x272);//LIM MSG
 
 }
 
@@ -686,21 +640,6 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
    switch (id)
    {
 
-   case 0x3b4:
-      i3LIMClass::handle3B4(data);// Data msg from LIM
-      break;
-   case 0x272:
-      i3LIMClass::handle272(data);// Data msg from LIM
-      break;
-   case 0x29e:
-      i3LIMClass::handle29E(data);// Data msg from LIM
-      break;
-   case 0x2b2:
-      i3LIMClass::handle2B2(data);// Data msg from LIM
-      break;
-   case 0x2ef:
-      i3LIMClass::handle2EF(data);// Data msg from LIM
-      break;
 
    default:
    if (Param::GetInt(Param::Type) == 0)  ISA::DecodeCAN(id, data);
@@ -708,6 +647,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
       selectedInverter->DecodeCAN(id, data);
       selectedVehicle->DecodeCAN(id, data);
       selectedCharger->DecodeCAN(id, data);
+      selectedChargeInt->DecodeCAN(id, data);
 
       break;
    }
