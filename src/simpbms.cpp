@@ -88,7 +88,7 @@ void SimpBMS::Task100Ms() {
    if(timeoutCounter > 0) timeoutCounter--;
 
    // Update informational parameters.
-   Param::SetInt(Param::BMS_CurLim, MaxChargeCurrent());
+   Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
 
    if(BMSDataValid()) {
       Param::SetFloat(Param::BMS_Vmin, minCellV);

@@ -97,7 +97,9 @@ void DaisychainBMS::DecodeCAN(int id, uint8_t *data)
 
       if(maxTemp[0] < maxTemp[1]) maxTempC = temperature(maxTemp[0]);
       else                        maxTempC = temperature(maxTemp[1]);
-   } else {
+   }
+   else
+   {
       // Single BMS mode.
       minCellV = minCell[0] / 13107.0;
       maxCellV = maxCell[0] / 13107.0;
@@ -113,14 +115,16 @@ void DaisychainBMS::Task100Ms()
    if(timeoutCounter[1] > 0) timeoutCounter[1]--;
 
    // Update informational parameters.
-   Param::SetInt(Param::BMS_CurLim, MaxChargeCurrent());
+   Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
 
    if(BMSDataValid()) {
       Param::SetFloat(Param::BMS_Vmin, minCellV);
       Param::SetFloat(Param::BMS_Vmax, maxCellV);
       Param::SetFloat(Param::BMS_Tmin, minTempC);
       Param::SetFloat(Param::BMS_Tmax, maxTempC);
-   } else {
+   }
+   else
+   {
       Param::SetFloat(Param::BMS_Vmin, 0);
       Param::SetFloat(Param::BMS_Vmax, 0);
       Param::SetFloat(Param::BMS_Tmin, 0);

@@ -25,7 +25,7 @@ void BMS::DecodeCAN(int, uint8_t*) {}
 
 void BMS::Task100Ms()
 {
-   Param::SetInt(Param::BMS_CurLim, MaxChargeCurrent());
+   Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
 }
 
 float BMS::MaxChargeCurrent()
