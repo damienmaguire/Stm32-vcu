@@ -91,14 +91,14 @@ AmperaHeater::AmperaHeater()
    //ctor
 }
 
-void AmperaHeater::SetPower(float power)
+void AmperaHeater::SetPower(uint16_t power, bool heatReq)
 {
-   if (power == 0)
+   if(power==0) isAwake = false;//if we are disabled do nothing but set isAwake to false for next wakeup ...
+   else//otherwise do everything
    {
 
-   }
 
-   if (!isAwake && power > 0)
+   if (!isAwake)
    {
       SendWakeup();
       isAwake = true;
@@ -148,7 +148,8 @@ void AmperaHeater::SetPower(float power)
       txMessage_Ampera.frame.dlc = 5;
       txMessage_Ampera.frame.data0 = 0x02;
       // map requested power to valid range of heater (0 - 0x85)
-      txMessage_Ampera.frame.data1 = utils::change(power, 0, 6500, 0, 133);//transmitt heater power command when requested
+      if(heatReq) txMessage_Ampera.frame.data1 = utils::change(power, 0, 6500, 0, 133);//transmitt heater power command when requested
+      if(!heatReq) txMessage_Ampera.frame.data1 = 0x00;//else send 0 power request.
       txMessage_Ampera.frame.data2 = 0x00;
       txMessage_Ampera.frame.data3 = 0x00;
       txMessage_Ampera.frame.data4 = 0x00;
@@ -220,6 +221,7 @@ void AmperaHeater::SetPower(float power)
       break;
    }
 }
+}
 
 #define FLASH_DELAY 9000
 static void delay(void)
@@ -251,7 +253,7 @@ void AmperaHeater::SendWakeup()
    txMessage_Ampera.frame.data6 = 0x00;
    txMessage_Ampera.frame.data7 = 0x00;
    CANSPI_Transmit(&txMessage_Ampera);
-   //may need dealy here
+   //may need delay here
    delay();
    DigIo::sw_mode0.Set();
    DigIo::sw_mode1.Set();  // set normal mode

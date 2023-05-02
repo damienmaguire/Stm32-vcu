@@ -248,12 +248,12 @@ static void ControlCabHeater(int opmode)
    {
       IOMatrix::GetPin(IOMatrix::HEATERENABLE)->Set();//Heater enable and coolant pump on
       selectedHeater->SetTargetTemperature(50); //TODO: Currently does nothing
-      selectedHeater->SetPower(Param::GetFloat(Param::HeatPwr));
+      selectedHeater->SetPower(Param::GetInt(Param::HeatPwr),Param::GetBool(Param::HeatReq));
    }
    else
    {
       IOMatrix::GetPin(IOMatrix::HEATERENABLE)->Clear(); //Disable heater and coolant pump
-      selectedHeater->SetPower(0);
+      selectedHeater->SetPower(0,0);
    }
 }
 
@@ -688,8 +688,6 @@ extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
    exti_reset_request(EXTI15); // clear irq
    if((rxMessage.frame.id==0x108)||(rxMessage.frame.id==0x109)) selectedChargeInt->DecodeCAN(rxMessage.frame.id, canData);
 
-  // if(rxMessage.frame.id==0x108) ChaDeMo::Process108Message(canData);
-   //if(rxMessage.frame.id==0x109) ChaDeMo::Process109Message(canData);
 }
 
 extern "C" void rtc_isr(void)
@@ -721,7 +719,6 @@ extern "C" int main(void)
    clock_setup();
    rtc_setup();
    ConfigureVariantIO();
-   // gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON,AFIO_MAPR_USART3_REMAP_PARTIAL_REMAP);//remap usart 3 to PC10 and PC11 for VCU HW
    gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, AFIO_MAPR_CAN2_REMAP | AFIO_MAPR_TIM1_REMAP_FULL_REMAP);//32f107
    usart2_setup();//TOYOTA HYBRID INVERTER INTERFACE
    nvic_setup();
@@ -732,7 +729,6 @@ extern "C" int main(void)
    Param::Change(Param::PARAM_LAST);
    DigIo::inv_out.Clear();//inverter power off during bootup
    DigIo::mcp_sby.Clear();//enable can3
-  // DigIo::PWM3.Set();//Enable pcs for test
 
    Terminal t(USART3, TermCmds);
    FunctionPointerCallback canCb(CanCallback, SetCanFilters);

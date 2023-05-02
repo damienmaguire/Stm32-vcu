@@ -28,10 +28,10 @@ class AmperaHeater : public Heater
       /** Default constructor */
       AmperaHeater();
       void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
-      void SetPower(float power);
+      void SetPower(uint16_t power, bool HeatReq);
 
    private:
-      bool isAwake;
+      bool isAwake=false;
       void SendWakeup();
 };
 
