@@ -39,6 +39,7 @@ static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks=0,ChgTicks_1Min=0;
 static bool StartSig=false;
 static bool thrlockout=false;
+static bool ACrequest=false;
 
 static volatile unsigned
 days=0,
@@ -223,11 +224,13 @@ static void Ms100Task(void)
    if(selectedChargeInt->ACRequest(RunChg))//Request to run ac charge from the interface (e.g. LIM)
    {
       if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
+      ACrequest=true;//flag to say our startup request for AC charge mode came from the charge interface not the charger module
    }
-   else if(!chargeModeDC)
+   else if(!chargeModeDC && ACrequest)
    {
       Param::SetInt(Param::chgtyp,OFF);
       chargeMode = false;  //no charge mode
+      ACrequest=false;
    }
 
    if(targetChgint != ChargeInterfaces::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
@@ -381,8 +384,8 @@ static void Ms10Task(void)
       opmode = MOD_OFF; //if we are in charge mode and command charge mode off then go to mode off.
       //logic hole here to allow a precharge hang in charge mode...
       //lets try to plug it
- //  if(opmode == MOD_PRECHARGE && (!selectedVehicle->Ready() || !chargeMode))
-   //   opmode = MOD_OFF;//soooo if we find ourselves in precharge with no ign on OR no charge request lets go off
+   //if(opmode == MOD_PRECHARGE && (!selectedVehicle->Ready() || !chargeMode))
+     // opmode = MOD_OFF;//soooo if we find ourselves in precharge with no ign on OR no charge request lets go off
 
    if (newMode != MOD_OFF)
    {
