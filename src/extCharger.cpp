@@ -6,10 +6,10 @@ static bool chargeAllow=false;
 
 
 
-bool extCharger::ControlCharge(bool RunCh)
+bool extCharger::ControlCharge(bool RunCh ,bool ACReq)
 {
 
-    if(RunCh)
+    if(ACReq)
         {
             chargeAllow = DigIo::HV_req.Get();
             //enable charger digital line.

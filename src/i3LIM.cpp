@@ -832,7 +832,9 @@ return false;
 
 bool i3LIMClass::ACRequest(bool RunCh)
 {
-        if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2))  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
+        //if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2)&&RunCh)  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
+
+        if(Param::GetBool(Param::PlugDet)&&RunCh)
         {
          lim_state=0;//return to state 0
          Param::SetInt(Param::CCS_State,lim_state);
@@ -844,13 +846,13 @@ bool i3LIMClass::ACRequest(bool RunCh)
          CHG_Req=ChargeRequest::Charge;
          CHG_Ready=ChargeReady::Rdy;
          CHG_Pwr=6500/25;//approx 6.5kw ac
-         if(RunCh)return true;
-
-         if(!RunCh)
-         {
-            lim_state=0;//return to state 0
-            Param::SetInt(Param::CCS_State,lim_state);
-            Chg_Phase=ChargePhase::Standby;
+         return true;
+        }
+        else
+        {
+        lim_state=0;//return to state 0
+        Param::SetInt(Param::CCS_State,lim_state);
+        Chg_Phase=ChargePhase::Standby;
             CONT_Ctrl=0x0; //dc contactor mode 0 in off
             FC_Cur=0;//ccs current request zero
             EOC_Time=0x00;
@@ -862,27 +864,5 @@ bool i3LIMClass::ACRequest(bool RunCh)
 
         }
 
-        if (!Param::GetBool(Param::PlugDet))  //if we  plug remove shut down
-        {
-         lim_state=0;//return to state 0
-         Param::SetInt(Param::CCS_State,lim_state);
-         Chg_Phase=ChargePhase::Standby;
-         CONT_Ctrl=0x0; //dc contactor mode 0 in off
-         FC_Cur=0;//ccs current request zero
-         EOC_Time=0x00;
-         CHG_Status=ChargeStatus::NotRdy;
-         CHG_Req=ChargeRequest::EndCharge;
-         CHG_Ready=ChargeReady::NotRdy;
-         CHG_Pwr=0;
-         return false;
-         }
-
-
-
-      }
-
-
-
-return false;
 }
 

@@ -35,6 +35,7 @@ class FCChademo: public Chargerint
       void Task100Ms();//Must be called every 100ms
       void Task200Ms();
       bool DCFCRequest(bool RunCh);
+      bool ACRequest(bool RunCh){return RunCh;};
 
    protected:
 

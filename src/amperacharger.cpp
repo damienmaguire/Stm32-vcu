@@ -1,9 +1,9 @@
 #include "amperacharger.h"
 
 
-bool amperaCharger::ControlCharge(bool RunCh)
+bool amperaCharger::ControlCharge(bool RunCh, bool ACReq)
 {
-if(RunCh)
+if(ACReq)
 {
 
 }

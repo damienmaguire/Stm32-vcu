@@ -84,12 +84,12 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
    }
 }
 
-bool NissanPDM::ControlCharge(bool RunCh)
+bool NissanPDM::ControlCharge(bool RunCh, bool ACReq)
 {
    int opmode = Param::GetInt(Param::opmode);
    if(opmode != MOD_CHARGE)
    {
-      if(RunCh && OBCwake)
+      if(ACReq && OBCwake)
       {
          //OBCwake = false;//reset obc wake for next time
          return true;

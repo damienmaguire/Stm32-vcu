@@ -60,6 +60,7 @@ static noCharger nochg;
 static extCharger chgdigi;
 static amperaCharger ampChg;
 static FCChademo chademoFC;
+static i3LIMClass LIMFC;
 static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static noHeater Heaternone;
@@ -117,7 +118,7 @@ static void Ms200Task(void)
    if(ChgSet==1) RunChg=false;//disable from webui
 
 
-   if(selectedCharger->ControlCharge(RunChg) && (opmode != MOD_RUN))
+   if(selectedCharger->ControlCharge(RunChg, ACrequest) && (opmode != MOD_RUN))
    {
         chargeMode = true;   //AC charge mode
         Param::SetInt(Param::chgtyp,AC);
@@ -174,7 +175,7 @@ static void Ms100Task(void)
 
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
-   if(opmode==MOD_CHARGE) selectedCharger->Task100Ms();
+   selectedCharger->Task100Ms();
    canMap->SendAll();
 
 
@@ -223,20 +224,21 @@ static void Ms100Task(void)
 
    if(selectedChargeInt->ACRequest(RunChg))//Request to run ac charge from the interface (e.g. LIM)
    {
-      if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
       ACrequest=true;//flag to say our startup request for AC charge mode came from the charge interface not the charger module
+      Param::Set(Param::Test, ACrequest);
    }
-   else if(!chargeModeDC && ACrequest)
+   else
    {
-      Param::SetInt(Param::chgtyp,OFF);
-      chargeMode = false;  //no charge mode
       ACrequest=false;
+      Param::Set(Param::Test, ACrequest);
    }
+
 
    if(targetChgint != ChargeInterfaces::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
    {
       Param::SetInt(Param::HeatReq,DigIo::gp_12Vin.Get());
    }
+
 }
 
 static void ControlCabHeater(int opmode)
@@ -523,7 +525,7 @@ static void UpdateChargeInt()
       selectedChargeInt = &chademoFC;
          break;
       case ChargeInterfaces::i3LIM:
- //     selectedCharger = &LIMFC;
+      selectedChargeInt = &LIMFC;
          break;
    }
    //This will call SetCanFilters() via the Clear Callback

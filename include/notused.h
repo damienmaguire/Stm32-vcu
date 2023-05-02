@@ -13,7 +13,7 @@ class notused: public Chargerint
 {
 
 public:
-
+bool ACRequest(bool RunCh){return RunCh;};
 
 private:
 

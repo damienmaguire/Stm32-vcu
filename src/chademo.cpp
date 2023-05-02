@@ -240,7 +240,6 @@ void FCChademo::Task200Ms()
 
 bool FCChademo::DCFCRequest(bool RunCh)
 {
-   Param::SetInt(Param::Test2 , chademoStartTime);
 if ((RunCh) && (DigIo::gp_12Vin.Get()))
 {
    return true;
@@ -254,5 +253,4 @@ else
     return false;
 }
 
-//return false;
 }

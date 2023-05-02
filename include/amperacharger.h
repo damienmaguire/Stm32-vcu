@@ -16,7 +16,7 @@ class amperaCharger: public Chargerhw
 public:
 //void DecodeCAN(int id, uint32_t data[2]);
 //void Task100Ms();
-bool ControlCharge(bool RunCh);
+bool ControlCharge(bool RunCh, bool ACreq);
 //void SetCanInterface(CanHardware* c);
 
 

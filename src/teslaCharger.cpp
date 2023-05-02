@@ -45,9 +45,9 @@ void teslaCharger::Task100Ms()
 }
 
 
-bool teslaCharger::ControlCharge(bool RunCh)
+bool teslaCharger::ControlCharge(bool RunCh, bool ACReq)
 {
-   ChRun=RunCh;
+   ChRun=ACReq;
    if(HVreq) return true;
    if(!HVreq) return false;
    return false;

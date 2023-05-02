@@ -15,7 +15,7 @@ class extCharger: public Chargerhw
 {
 
 public:
-bool ControlCharge(bool RunCh);
+bool ControlCharge(bool RunCh, bool ACReq);
 
 
 
