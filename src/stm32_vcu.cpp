@@ -225,12 +225,10 @@ static void Ms100Task(void)
    if(selectedChargeInt->ACRequest(RunChg))//Request to run ac charge from the interface (e.g. LIM)
    {
       ACrequest=true;//flag to say our startup request for AC charge mode came from the charge interface not the charger module
-      Param::Set(Param::Test, ACrequest);
    }
    else
    {
       ACrequest=false;
-      Param::Set(Param::Test, ACrequest);
    }
 
 
