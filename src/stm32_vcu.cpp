@@ -381,8 +381,8 @@ static void Ms10Task(void)
       opmode = MOD_OFF; //if we are in charge mode and command charge mode off then go to mode off.
       //logic hole here to allow a precharge hang in charge mode...
       //lets try to plug it
-   if(opmode == MOD_PRECHARGE && (!selectedVehicle->Ready() || !chargeMode))
-      opmode = MOD_OFF;//soooo if we find ourselves in precharge with no ign on OR no charge request lets go off
+ //  if(opmode == MOD_PRECHARGE && (!selectedVehicle->Ready() || !chargeMode))
+   //   opmode = MOD_OFF;//soooo if we find ourselves in precharge with no ign on OR no charge request lets go off
 
    if (newMode != MOD_OFF)
    {
