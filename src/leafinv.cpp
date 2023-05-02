@@ -433,7 +433,15 @@ void LeafINV::Task10Ms()
    //    0x65 = 0.3A
    //    0x64 = no chg
    //    so 0x64=100. 0xA0=160. so 60 decimal steps. 1 step=100W???
-   OBCpwrSP = (Param::GetInt(Param::Pwrspnt) / 100) + 0x64;
+
+   // If the BMS is allowing charing, set the charging current
+   // to the value set in the web UI. Otherwise, set it to 0.
+   // Ideally we should actually use the BMS allowed current to set the
+   // charge power, but voltage isn't known so we'll worry about that later
+   if(Param::GetInt(Param::BMS_ChargeLim) > 0)
+      OBCpwrSP = (Param::GetInt(Param::Pwrspnt) / 100) + 0x64;
+   else
+      OBCpwrSP = 0x64;
    
    // get actual voltage and voltage setpoints
    Vbatt = Param::GetInt(Param::udc);

@@ -148,6 +148,7 @@ static void RunChaDeMo()
       int udcspnt = Param::GetInt(Param::Voltspnt);
       int chargeLim = Param::GetInt(Param::CCS_ILim);
       chargeLim = MIN(125, chargeLim);
+      chargeLim = MIN(selectedBMS->MaxChargeCurrent(), chargeLim);
 
       if (udc < udcspnt && controlledCurrent <= chargeLim)
          controlledCurrent++;
