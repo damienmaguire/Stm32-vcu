@@ -567,12 +567,10 @@ bool i3LIMClass::DCFCRequest(bool RunCh)
 
       if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
       {
-<<<<<<< Updated upstream
       //removed static pilot option as was causing false entry to dc mode when ac evse used.
       //will see how this manifests...
-=======
+
           if(lim_state>19)lim_state=0;//clear from  ac test mode
->>>>>>> Stashed changes
          /*
 
          0=no pilot

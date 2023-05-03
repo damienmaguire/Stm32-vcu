@@ -225,7 +225,7 @@ static void Ms100Task(void)
       Param::SetInt(Param::Test,0);
    }
 
-   if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM)
+   if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM) if we are NOT in DC charge mode.
    {
       ACrequest=selectedChargeInt->ACRequest(RunChg);
 
