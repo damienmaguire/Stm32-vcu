@@ -215,23 +215,21 @@ static void Ms100Task(void)
    //Here we receive a valid DCFC startup request.
       if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
       chargeModeDC = true;   //DC charge mode on
+      Param::SetInt(Param::Test,1);
    }
    else if(chargeModeDC)
    {
       Param::SetInt(Param::chgtyp,OFF);
       chargeMode = false;  //no charge mode
       chargeModeDC = false;   //DC charge mode off
+      Param::SetInt(Param::Test,0);
    }
 
-   if(selectedChargeInt->ACRequest(RunChg))//Request to run ac charge from the interface (e.g. LIM)
+   if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM)
    {
-      ACrequest=true;//flag to say our startup request for AC charge mode came from the charge interface not the charger module
-   }
-   else
-   {
-      ACrequest=false;
-   }
+      ACrequest=selectedChargeInt->ACRequest(RunChg);
 
+   }
 
    if(targetChgint != ChargeInterfaces::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
    {

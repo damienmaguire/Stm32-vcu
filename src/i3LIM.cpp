@@ -267,7 +267,8 @@ void i3LIMClass::Task200Ms()
 //Possibly needed for dc ccs.
 ////////////////////////////////////
 
-   uint16_t SOC_Local=(Param::GetInt(Param::SOC))*2;
+   //uint16_t SOC_Local=(Param::GetInt(Param::SOC))*2;
+   uint16_t SOC_Local=(Param::GetInt(Param::SOCFC))*2;
    bytes[0] = 0x2c;//BMS soc msg. May need to be dynamic
    bytes[1] = 0xe2;
    bytes[2] = 0x10;
@@ -566,8 +567,12 @@ bool i3LIMClass::DCFCRequest(bool RunCh)
 
       if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x4||CP_Mode==0x5))  //if we have an enable and a plug in and a 5% pilot lets go DC charge mode.
       {
+<<<<<<< Updated upstream
       //removed static pilot option as was causing false entry to dc mode when ac evse used.
       //will see how this manifests...
+=======
+          if(lim_state>19)lim_state=0;//clear from  ac test mode
+>>>>>>> Stashed changes
          /*
 
          0=no pilot
@@ -813,7 +818,7 @@ bool i3LIMClass::DCFCRequest(bool RunCh)
          if((!RunCh)&&lim_state==9)return false;//set no charge mode if we are disabled on webui and in state 9 of dc machine
 
       }
-
+/*
         if (!Param::GetBool(Param::PlugDet))  //if we  plug remove shut down
         {
          lim_state=0;//return to state 0
@@ -828,7 +833,7 @@ bool i3LIMClass::DCFCRequest(bool RunCh)
          CHG_Pwr=0;
          return false;
          }
-
+*/
 
 return false;
 }
@@ -839,7 +844,7 @@ bool i3LIMClass::ACRequest(bool RunCh)
         if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2)&&RunCh)  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
 
         {
-         lim_state=0;//return to state 0
+         lim_state=20;//return to state 0
          Param::SetInt(Param::CCS_State,lim_state);
          Chg_Phase=ChargePhase::Standby;
          CONT_Ctrl=0x0; //dc contactor mode 0 in AC
@@ -853,7 +858,7 @@ bool i3LIMClass::ACRequest(bool RunCh)
         }
         else
         {
-        lim_state=0;//return to state 0
+        lim_state=30;//return to state 0
         Param::SetInt(Param::CCS_State,lim_state);
         Chg_Phase=ChargePhase::Standby;
             CONT_Ctrl=0x0; //dc contactor mode 0 in off
