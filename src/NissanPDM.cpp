@@ -86,6 +86,9 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
 
 bool NissanPDM::ControlCharge(bool RunCh, bool ACReq)
 {
+   bool dummy=RunCh;
+   dummy=dummy;
+
    int opmode = Param::GetInt(Param::opmode);
    if(opmode != MOD_CHARGE)
    {

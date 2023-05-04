@@ -8,6 +8,9 @@ static bool chargeAllow=false;
 
 bool extCharger::ControlCharge(bool RunCh ,bool ACReq)
 {
+    bool dummy=RunCh;
+    dummy=0;
+    dummy=dummy;
 
     if(ACReq)
         {

@@ -233,7 +233,7 @@ void SelectDirection(Vehicle* vehicle)
    Param::SetInt(Param::dir, selectedDir);
 }
 
-float ProcessUdc(uint32_t oldTime, int motorSpeed)
+float ProcessUdc(int motorSpeed)
 {
 
 if (Param::GetInt(Param::Type) == 0)
@@ -270,13 +270,12 @@ else if (Param::GetInt(Param::Type) == 1)
    Param::SetFloat(Param::idc, idc);
 }
    float udclim = Param::GetFloat(Param::udclim);
-   float udcsw = Param::GetFloat(Param::udcsw);
    float udc = Param::GetFloat(Param::udc);
    // Currently unused parameters:
    // s32fp udcmin = Param::Get(Param::udcmin);
    // s32fp udcmax = Param::Get(Param::udcmax);
 
-   int opmode = Param::GetInt(Param::opmode);
+
    //Calculate "12V" supply voltage from voltage divider on mprot pin
    //1.2/(4.7+1.2)/3.33*4095 = 250 -> make it a bit less for pin losses etc
    //HW_REV1 had 3.9k resistors

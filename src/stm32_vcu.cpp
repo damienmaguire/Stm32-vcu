@@ -38,7 +38,6 @@ static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks=0,ChgTicks_1Min=0;
 static bool StartSig=false;
-static bool thrlockout=false;
 static bool ACrequest=false;
 static bool initbyStart=false;
 static bool initbyCharge=false;
@@ -266,7 +265,6 @@ static void Ms10Task(void)
    int16_t speed = 0;
    float torquePercent;
    int opmode = Param::GetInt(Param::opmode);
-   int newMode = MOD_OFF;
    int stt = STAT_NONE;
    int requestedDirection = Param::GetInt(Param::dir);
 
@@ -320,7 +318,7 @@ static void Ms10Task(void)
    //////////////////////////////////////////////////
    //            MODE CONTROL SECTION              //
    //////////////////////////////////////////////////
-   float udc = utils::ProcessUdc(vehicleStartTime, GetInt(Param::speed));
+   float udc = utils::ProcessUdc(GetInt(Param::speed));
    stt |= Param::GetInt(Param::pot) <= Param::GetInt(Param::potmin) ? STAT_NONE : STAT_POTPRESSED;
    stt |= udc >= Param::GetFloat(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
    stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
