@@ -406,9 +406,8 @@ static void Ms10Task(void)
       StartSig=false;//reset for next time
    }
 
+
    ControlCabHeater(opmode);
-
-
    if (Param::GetInt(Param::Type) == 1)  SBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);
 
 }
