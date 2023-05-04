@@ -14,11 +14,10 @@ switch (opmode)
       initbyCharge=false;
       DigIo::inv_out.Clear();//inverter power off
       DigIo::dcsw_out.Clear();
-      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Clear();//Negative contactors off
-      IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear();//Coolant pump off
+      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Clear();//Negative contactors off if used
+      IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear();//Coolant pump off if used
       DigIo::prec_out.Clear();
-      Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown
-      Param::SetInt(Param::opmode, MOD_OFF);
+      Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown regardless of shifter pos
       selectedVehicle->DashOff();
       StartSig=false;//reset for next time
       if(Param::GetInt(Param::pot) < Param::GetInt(Param::potmin))
@@ -37,10 +36,10 @@ switch (opmode)
        vehicleStartTime = rtc_get_counter_val();
        initbyCharge=true;
       }
+      Param::SetInt(Param::opmode, opmode);
    break;
    
    case MOD_PECHARGE:
-      Param::SetInt(Param::opmode, MOD_PRECHARGE);
       if (!chargeMode)
       {
          DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
@@ -65,19 +64,20 @@ switch (opmode)
          ErrorMessage::Post(ERR_PRECHARGE);
          opmode = MOD_PCHFAIL;
       }
-      
+      Param::SetInt(Param::opmode, opmode);
    break;
    
    case MOD_PCHFAIL:
       StartSig=false
       opmode = MOD_OFF;
+      Param::SetInt(Param::opmode, opmode);
    break;
    
    case MOD_CHARGE:
       DigIo::dcsw_out.Set();
       ErrorMessage::UnpostAll();
-      Param::SetInt(Param::opmode, MOD_CHARGE);
       if(!chargeMode) opmode = MOD_OFF;
+      Param::SetInt(Param::opmode, opmode);
    break;
    
    case MOD_RUN:
@@ -85,6 +85,7 @@ switch (opmode)
       Param::SetInt(Param::opmode, MOD_RUN);
       ErrorMessage::UnpostAll();
       if(!selectedVehicle->Ready()) opmode = MOD_OFF;
+      Param::SetInt(Param::opmode, opmode);
    break;
    
    

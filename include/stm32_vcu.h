@@ -69,6 +69,8 @@
 #include "amperaCharger.h"
 #include "noHeater.h"
 
+#define PRECHARGE_TIMEOUT 5  //5s
+
 typedef union {
     struct {
         uint32_t data[2];

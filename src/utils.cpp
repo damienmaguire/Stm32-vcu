@@ -4,7 +4,6 @@ namespace utils
 {
 
 #define CAN_TIMEOUT       1  //1000ms
-#define PRECHARGE_TIMEOUT 5  //5s
 
 float SOCVal=0;
 int32_t NetWh=0;
@@ -296,7 +295,7 @@ else if (Param::GetInt(Param::Type) == 1)
       Param::SetInt(Param::opmode, MOD_OFF);
       ErrorMessage::Post(ERR_OVERVOLTAGE);
    }
-
+/*
    if(opmode == MOD_PRECHARGE)
    {
       if (udc < (udcsw) && rtc_get_counter_val() > (oldTime + PRECHARGE_TIMEOUT) && DigIo::prec_out.Get())
@@ -306,7 +305,7 @@ else if (Param::GetInt(Param::Type) == 1)
          Param::SetInt(Param::opmode, MOD_PCHFAIL);
       }
    }
-
+*/
    return udc;
 }
 
