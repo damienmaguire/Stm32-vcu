@@ -99,8 +99,8 @@ bool NissanPDM::ControlCharge(bool RunCh, bool ACReq)
       }
    }
 
-   if(PPStat) return true;
-   if(!PPStat)
+   if(PPStat && ACReq) return true;
+   if(!PPStat || !ACReq)
    {
       OBCwake = false;
       return false;
