@@ -388,7 +388,8 @@ switch (opmode)
 
    case MOD_PCHFAIL:
       StartSig=false;
-      opmode = MOD_OFF;
+      if(initbyCharge && !chargeMode) opmode = MOD_OFF;//only go to off if the signal from charge or vehicle start is removed
+      if(initbyStart && !selectedVehicle->Ready()) opmode = MOD_OFF;//this avoids oscillation in the event of a precharge system failure
       Param::SetInt(Param::opmode, opmode);
    break;
 
