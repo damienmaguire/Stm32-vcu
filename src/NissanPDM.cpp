@@ -39,7 +39,7 @@ static bool PPStat = false;
 static uint8_t OBCVoltStat=0;
 static uint8_t PlugStat=0;
 
-/*Info on running Leaf Gen 2 PDM
+/*Info on running Leaf Gen 2,3 PDM
 IDs required :
 0x1D4
 0x1DB
@@ -54,6 +54,29 @@ PDM sends:
 0x390
 0x393
 0x679 on evse plug insert
+
+For QC:
+
+From PDM to QC
+
+PDM EV CAN --------to-------QC CAN
+0x3b9                       0x100
+0x3bb                       0x101
+0x3bc                       0x102
+0x3be                       0x200
+0x4ba                       0x110
+0x4bb                       0x201
+0x4bc                       0x700
+0x4c0                       0x202
+
+From QC to PDM
+
+QC CAN----------------------PDM EV CAN
+0x108                       0x3c8
+0x109                       0x3c9
+0x208                       0x3cd
+0x209                       0x4be
+
 
 */
 
@@ -238,7 +261,7 @@ void NissanPDM::Task10Ms()
    // 0x00 chg 0ff dcdc on.
    bytes[0] = 0x30;  // msg is muxed but pdm doesn't seem to care.
    bytes[1] = OBCpwr;
-   bytes[2] = 0x20;
+   bytes[2] = 0x20;//0x20=Normal Charge
    bytes[3] = 0xAC;
    bytes[4] = 0x00;
    bytes[5] = 0x3C;
