@@ -63,11 +63,10 @@ void VWBOX::handle0BB(uint32_t data[2])  //VWBOX Current and voltages
 
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   Amperes = (((bytes[2] &0x0F)<<4) | ((bytes[4] &0xF0)>>4))*0.0065;
-   Voltage2=((bytes[5] << 4) | ((bytes[4] &0xF0) >>4))*0.5;//battery voltage
-   Voltage=((bytes[3]) | ((bytes[4] &0xF0)>>4));//output voltage
-
-
+   Amperes = (((bytes[2]&0xF)<<8) | (bytes[1]))*0.0065;
+   Amperes = (Amperes<<4) >> 4;//extend sign bit as its a 12 bit signed value in a 16bit int! AAAHHHHHH!
+   Voltage2=((bytes[5] << 4) | ((bytes[4]>>4)&0xF))*0.5;//battery voltage
+   Voltage=(((bytes[4]&0xF)<<8) | (bytes[3]))*0.21;//output voltage
 }
 
 
@@ -102,16 +101,20 @@ void VWBOX::ControlContactors(int opmode, CanHardware* can)
        bytes[7]=0x26;
          break;
       case 2://Precharge
-       bytes[2]=bytes[2] | 0x1;;//Prech and Neg contactors activated
-       bytes[1]=bytes[1] | 0x10;
+       bytes[2]=bytes[2] | 0x1;;//Neg on
+       bytes[1]=bytes[1] | 0x10;//Prech on
          break;
 
       case 1://Run
-       bytes[1]=bytes[1] | 0x40;//All contactors activated
+       bytes[2]=bytes[2] | 0x1;;//Neg on
+       bytes[1]=bytes[1] | 0x10;//Prech on
+       bytes[1]=bytes[1] | 0x40;//main on
          break;
 
       case 4://Charge
-      bytes[1]=bytes[1] | 0x40;//All contactors activated
+       bytes[2]=bytes[2] | 0x1;;//Neg on
+       bytes[1]=bytes[1] | 0x10;//Prech on
+       bytes[1]=bytes[1] | 0x40;//main on
          break;
 
       case 3://Precharge fail
