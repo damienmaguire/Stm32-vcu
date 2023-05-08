@@ -86,6 +86,7 @@
 		<Unit filename="include/teslaCharger.h" />
 		<Unit filename="include/throttle.h" />
 		<Unit filename="include/utils.h" />
+		<Unit filename="include/vag_sbox.h" />
 		<Unit filename="include/vehicle.h" />
 		<Unit filename="libopeninv/include/anain.h" />
 		<Unit filename="libopeninv/include/canhardware.h" />
@@ -146,6 +147,7 @@
 		<Unit filename="src/teslaCharger.cpp" />
 		<Unit filename="src/throttle.cpp" />
 		<Unit filename="src/utils.cpp" />
+		<Unit filename="src/vag_sbox.cpp" />
 		<Extensions>
 			<DoxyBlocks>
 				<comment_style block="0" line="0" />

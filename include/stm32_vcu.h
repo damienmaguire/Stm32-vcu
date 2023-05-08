@@ -61,6 +61,7 @@
 #include "terminalcommands.h"
 #include "iomatrix.h"
 #include "bmw_sbox.h"
+#include "vag_sbox.h"
 #include "NissanPDM.h"
 #include "chargerint.h"
 #include "notused.h"

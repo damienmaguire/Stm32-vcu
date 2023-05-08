@@ -269,6 +269,19 @@ else if (Param::GetInt(Param::Type) == 1)
    float idc = ((float)SBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
    Param::SetFloat(Param::idc, idc);
 }
+
+else if (Param::GetInt(Param::Type) == 2)
+
+{
+   float udc = ((float)VWBOX::Voltage2)/1000;//get output voltage from sbox sensor and post to parameter database
+   Param::SetFloat(Param::udc, udc);
+   float udc2 = ((float)VWBOX::Voltage)/1000;//get battery voltage from sbox sensor and post to parameter database
+   Param::SetFloat(Param::udc2, udc2);
+   float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
+   Param::SetFloat(Param::udc3, udc3);
+   float idc = ((float)VWBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
+   Param::SetFloat(Param::idc, idc);
+}
    float udclim = Param::GetFloat(Param::udclim);
    float udc = Param::GetFloat(Param::udc);
    // Currently unused parameters:
