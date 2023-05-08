@@ -98,7 +98,7 @@ void VWBOX::ControlContactors(int opmode, CanHardware* can)
    {
       case 0:
        bytes[2]=0x28;//all contactors off
-       bytes[7]=0x26;
+       bytes[1]=bytes[1] | 0x00;
          break;
       case 2://Precharge
        bytes[2]=bytes[2] | 0x1;;//Neg on
@@ -107,19 +107,17 @@ void VWBOX::ControlContactors(int opmode, CanHardware* can)
 
       case 1://Run
        bytes[2]=bytes[2] | 0x1;;//Neg on
-       bytes[1]=bytes[1] | 0x10;//Prech on
-       bytes[1]=bytes[1] | 0x40;//main on
+       bytes[1]=bytes[1] | 0x50;//main on and prech on
          break;
 
       case 4://Charge
        bytes[2]=bytes[2] | 0x1;;//Neg on
-       bytes[1]=bytes[1] | 0x10;//Prech on
-       bytes[1]=bytes[1] | 0x40;//main on
+       bytes[1]=bytes[1] | 0x50;//main on and prech on
          break;
 
       case 3://Precharge fail
        bytes[2]=0x28;//all contactors off
-       bytes[7]=0x26;
+       bytes[1]=bytes[1] | 0x00;
          break;
 
     }
