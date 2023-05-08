@@ -31,8 +31,8 @@ int16_t VWBOX::Amperes;
 int32_t VWBOX::Ah;
 int32_t VWBOX::KW;
 int32_t VWBOX::KWh;
-int16_t VWBOX::Voltage=0;
-int16_t VWBOX::Voltage2=0;
+uint16_t VWBOX::Voltage=0;
+uint16_t VWBOX::Voltage2=0;
 int32_t VWBOX::Temperature;
 uint8_t Sec1tmr=0;
 uint8_t vag_cnt0ba=0;
@@ -63,9 +63,9 @@ void VWBOX::handle0BB(uint32_t data[2])  //VWBOX Current and voltages
 
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   Amperes = ((bytes[2] &0x0F)<<4 | ((bytes[4] &0xF0)>>4))*0.0065;
-   Voltage=((bytes[5] << 4) | ((bytes[4] &0xF0) >>4))*0.5;//output voltage
-   Voltage2=((bytes[3]) | ((bytes[4] &0xF0)>>4));//battery voltage
+   Amperes = (((bytes[2] &0x0F)<<4) | ((bytes[4] &0xF0)>>4))*0.0065;
+   Voltage2=((bytes[5] << 4) | ((bytes[4] &0xF0) >>4))*0.5;//battery voltage
+   Voltage=((bytes[3]) | ((bytes[4] &0xF0)>>4));//output voltage
 
 
 }

@@ -568,6 +568,7 @@ static void SetCanFilters()
    selectedChargeInt->SetCanInterface(lim_can);
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
+   if (Param::GetInt(Param::Type) == 2)  VWBOX::RegisterCanMessages(shunt_can);//select vw sbox
 
 }
 
@@ -648,6 +649,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
    default:
    if (Param::GetInt(Param::Type) == 0)  ISA::DecodeCAN(id, data);
    if (Param::GetInt(Param::Type) == 1)  SBOX::DecodeCAN(id, data);
+   if (Param::GetInt(Param::Type) == 2)  VWBOX::DecodeCAN(id, data);
       selectedInverter->DecodeCAN(id, data);
       selectedVehicle->DecodeCAN(id, data);
       selectedCharger->DecodeCAN(id, data);
