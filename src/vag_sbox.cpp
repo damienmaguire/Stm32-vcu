@@ -31,11 +31,13 @@ int16_t VWBOX::Amperes;
 int32_t VWBOX::Ah;
 int32_t VWBOX::KW;
 int32_t VWBOX::KWh;
-uint16_t VWBOX::Voltage=0;
-uint16_t VWBOX::Voltage2=0;
+float VWBOX::Voltage=0;
+float VWBOX::Voltage2=0;
 int32_t VWBOX::Temperature;
 uint8_t Sec1tmr=0;
 uint8_t vag_cnt0ba=0;
+int16_t q12;
+
 
 
 
@@ -63,10 +65,10 @@ void VWBOX::handle0BB(uint32_t data[2])  //VWBOX Current and voltages
 
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   Amperes = (((bytes[2]&0xF)<<8) | (bytes[1]))*0.0065;
-   Amperes = (Amperes<<4) >> 4;//extend sign bit as its a 12 bit signed value in a 16bit int! AAAHHHHHH!
-   Voltage2=((bytes[5] << 4) | ((bytes[4]>>4)&0xF))*0.5;//battery voltage
-   Voltage=(((bytes[4]&0xF)<<8) | (bytes[3]))*0.21;//output voltage
+   q12 = (((bytes[2])<<4) | ((bytes[1])>>4));
+   Amperes=(q12&0x0800)?(q12|0xF800):q12;//Step1: Copy , Step2: Paste , Step3: Profit!
+   Voltage=((bytes[5] << 4) | ((bytes[4]>>4)&0xF));//output voltage
+   Voltage2=(((bytes[4]&0xF)<<8) | (bytes[3]));//battery voltage
 }
 
 

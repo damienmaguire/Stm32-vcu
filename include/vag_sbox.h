@@ -25,8 +25,8 @@ public:
     static void DecodeCAN(int id, uint32_t data[2]);
     static void ControlContactors(int opmode, CanHardware* can);
 
-    static uint16_t Voltage;
-    static uint16_t Voltage2;
+    static float Voltage;
+    static float Voltage2;
     static int32_t Temperature;
     static int16_t Amperes;   // Floating point with current in Amperes
     static int32_t KW;
