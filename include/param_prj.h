@@ -25,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 89
+//Next param id (increase when adding new parameter!): 96
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
@@ -36,6 +36,7 @@
     PARAM_ENTRY(CAT_SETUP,     ShuntCan,     CAN_DEV,  0,      1,      0,      72 ) \
     PARAM_ENTRY(CAT_SETUP,     LimCan,       CAN_DEV,  0,      1,      0,      73 ) \
     PARAM_ENTRY(CAT_SETUP,     ChargerCan,   CAN_DEV,  0,      1,      1,      74 ) \
+    PARAM_ENTRY(CAT_SETUP,     BMSCan,       CAN_DEV,  0,      1,      1,      89 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -79,6 +80,12 @@
     PARAM_ENTRY(CAT_CHARGER,   CCS_SOCLim,  "%",       0,      100,    80,     44 ) \
     PARAM_ENTRY(CAT_CHARGER,   SOCFC,       "%",       0,      100,    50,     79 ) \
     PARAM_ENTRY(CAT_CHARGER,   Chgctrl,     CHGCTRL,   0,      2,      0,      45 ) \
+    PARAM_ENTRY(CAT_BMS,       BMS_Mode,    BMSMODES,  0,      3,      0,      90 ) \
+    PARAM_ENTRY(CAT_BMS,       BMS_Timeout,  "sec",    1,      120,    10,     91 ) \
+    PARAM_ENTRY(CAT_BMS,       BMS_VminLimit, "V",     0,      10,     3.0,    92 ) \
+    PARAM_ENTRY(CAT_BMS,       BMS_VmaxLimit, "V",     0,      10,     4.2,    93 ) \
+    PARAM_ENTRY(CAT_BMS,       BMS_TminLimit, "°C",    -100,   100,    5,      94 ) \
+    PARAM_ENTRY(CAT_BMS,       BMS_TmaxLimit, "°C",    -100,   100,    50,     95 ) \
     PARAM_ENTRY(CAT_HEATER,    Heater,      HTTYPE,    0,      2,      0,      57 ) \
     PARAM_ENTRY(CAT_HEATER,    Control,     HTCTRL,    0,      2,      0,      58 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPwr,     "W",       0,      6500,   0,      59 ) \
@@ -117,6 +124,11 @@
     VALUE_ENTRY(KWh,           "kwh",               2013 ) \
     VALUE_ENTRY(AMPh,          "Ah",                2014 ) \
     VALUE_ENTRY(SOC,           "%",                 2015 ) \
+    VALUE_ENTRY(BMS_Vmin,      "V",                 2084 ) \
+    VALUE_ENTRY(BMS_Vmax,      "V",                 2085 ) \
+    VALUE_ENTRY(BMS_Tmin,      "°C",                2086 ) \
+    VALUE_ENTRY(BMS_Tmax,      "°C",                2087 ) \
+    VALUE_ENTRY(BMS_ChargeLim, "A",                 2088 ) \
     VALUE_ENTRY(speed,         "rpm",               2016 ) \
     VALUE_ENTRY(Veh_Speed,     "kph",               2017 ) \
     VALUE_ENTRY(torque,        "dig",               2018 ) \
@@ -177,7 +189,7 @@
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2084
+//Next value Id: 2089
 
 
 #define VERSTR STRINGIFY(4=VER)
@@ -191,6 +203,7 @@
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander, 6=GS300H"
 #define PLTMODES     "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru"
+#define BMSMODES     "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
 #define DOW          "0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat"
 #define CHGTYPS      "0=Off, 1=AC, 2=DCFC"
@@ -222,6 +235,7 @@
 #define CAT_SETUP    "General Setup"
 #define CAT_CLOCK    "RTC Module"
 #define CAT_HEATER   "Heater Module"
+#define CAT_BMS      "Battery Management"
 #define CAT_CRUISE   "Cruise Control"
 #define CAT_LEXUS    "Gearbox Control"
 #define CAT_CHARGER  "Charger Control"
@@ -298,6 +312,14 @@ enum HeatType
     Noheater = 0,
     AmpHeater = 1,
     VW = 2
+};
+
+enum BMSModes
+{
+    BMSModeNoBMS = 0,
+    BMSModeSimpBMS = 1,
+    BMSModeDaisychainSingleBMS = 2,
+    BMSModeDaisychainDualBMS = 3
 };
 
 enum ChargeControl
