@@ -39,7 +39,13 @@ class BMS
       virtual void DecodeCAN(int, uint8_t *) {};
       virtual void DeInit() {};
       virtual float MaxChargeCurrent() { return 9999.0; };
-      virtual void Task100Ms() {};
+      virtual void Task100Ms() {
+            Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
+            Param::SetFloat(Param::BMS_Vmin, 0);
+            Param::SetFloat(Param::BMS_Vmax, 0);
+            Param::SetFloat(Param::BMS_Tmin, 0);
+            Param::SetFloat(Param::BMS_Tmax, 0);
+      };
       virtual void SetCanInterface(CanHardware* c) { can = c; }
    protected:
       CanHardware* can;
