@@ -180,7 +180,7 @@
     VALUE_ENTRY(Hour,          "H",                 2065 ) \
     VALUE_ENTRY(Min,           "M",                 2066 ) \
     VALUE_ENTRY(Sec,           "S",                 2067 ) \
-    VALUE_ENTRY(ChgT,          "M",                 2068 ) \
+    VALUE_ENTRY(ChgT,          "M",                 2084 ) \
     VALUE_ENTRY(HeatReq,       ONOFF,               2069 ) \
     VALUE_ENTRY(Test,          ONOFF,               2070 ) \
     VALUE_ENTRY(Test2,         "dig",               2083 ) \
@@ -190,6 +190,7 @@
 
 
 //Next value Id: 2089
+
 
 
 #define VERSTR STRINGIFY(4=VER)
