@@ -69,6 +69,9 @@
 #include "extCharger.h"
 #include "amperaCharger.h"
 #include "noHeater.h"
+#include "bms.h"
+#include "simpbms.h"
+#include "daisychainbms.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 

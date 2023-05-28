@@ -72,6 +72,10 @@ static Vehicle* selectedVehicle = &vagVehicle;
 static Heater* selectedHeater = &Heaternone;
 static Chargerhw* selectedCharger = &chargerPDM;
 static Chargerint* selectedChargeInt = &UnUsed;
+static BMS BMSnone;
+static SimpBMS BMSsimp;
+static DaisychainBMS BMSdaisychain;
+static BMS* selectedBMS = &BMSnone;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
@@ -178,6 +182,7 @@ static void Ms100Task(void)
    selectedInverter->Task100Ms();
    selectedVehicle->Task100Ms();
    selectedCharger->Task100Ms();
+   selectedBMS->Task100Ms();
    canMap->SendAll();
 
 
@@ -551,6 +556,27 @@ static void UpdateHeater()
    canInterface[1]->ClearUserMessages();
 }
 
+static void UpdateBMS()
+{
+      selectedBMS->DeInit();
+      switch (Param::GetInt(Param::BMS_Mode))
+      {
+         case BMSModes::BMSModeSimpBMS:
+            selectedBMS = &BMSsimp;
+            break;
+         case BMSModes::BMSModeDaisychainSingleBMS:
+         case BMSModes::BMSModeDaisychainDualBMS:
+            selectedBMS = &BMSdaisychain;
+            break;
+         default:
+            // Default to no BMS
+            selectedBMS = &BMSnone;
+            break;
+      }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+}
 
 //Whenever the user clears mapped can messages or changes the
 //CAN interface of a device, this will be called by the CanHardware module
@@ -561,11 +587,14 @@ static void SetCanFilters()
    CanHardware* shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
    CanHardware* lim_can = canInterface[Param::GetInt(Param::LimCan)];
    CanHardware* charger_can = canInterface[Param::GetInt(Param::ChargerCan)];
+   CanHardware* bms_can = canInterface[Param::GetInt(Param::BMSCan)];
 
    selectedInverter->SetCanInterface(inverter_can);
    selectedVehicle->SetCanInterface(vehicle_can);
    selectedCharger->SetCanInterface(charger_can);
    selectedChargeInt->SetCanInterface(lim_can);
+   selectedBMS->SetCanInterface(bms_can);
+
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
    if (Param::GetInt(Param::Type) == 2)  VWBOX::RegisterCanMessages(shunt_can);//select vw sbox
@@ -591,6 +620,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
       break;
    case Param::Heater:
       UpdateHeater();
+      break;
+   case Param::BMS_Mode:
+      UpdateBMS();
       break;
    case Param::InverterCan:
    case Param::VehicleCan:
@@ -654,7 +686,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
       selectedVehicle->DecodeCAN(id, data);
       selectedCharger->DecodeCAN(id, data);
       selectedChargeInt->DecodeCAN(id, data);
-
+      selectedBMS->DecodeCAN(id, (uint8_t*)data);
       break;
    }
    return false;
@@ -755,6 +787,7 @@ extern "C" int main(void)
    UpdateVehicle();
    UpdateCharger();
    UpdateChargeInt();
+   UpdateBMS();
 
    Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;
