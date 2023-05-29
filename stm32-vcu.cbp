@@ -136,6 +136,7 @@
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
 		<Unit filename="src/chademo.cpp" />
+		<Unit filename="src/daisychainbms.cpp" />
 		<Unit filename="src/extCharger.cpp" />
 		<Unit filename="src/hwinit.cpp" />
 		<Unit filename="src/i3LIM.cpp" />
@@ -143,6 +144,7 @@
 		<Unit filename="src/isa_shunt.cpp" />
 		<Unit filename="src/leafinv.cpp" />
 		<Unit filename="src/outlanderinverter.cpp" />
+		<Unit filename="src/simpbms.cpp" />
 		<Unit filename="src/stm32_vcu.cpp" />
 		<Unit filename="src/subaruvehicle.cpp" />
 		<Unit filename="src/temp_meas.cpp" />
