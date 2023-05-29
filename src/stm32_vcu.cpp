@@ -158,6 +158,14 @@ static void Ms200Task(void)
          RunChg=false;//end charge
          ChgLck=true;//set charge lockout flag
       }
+
+      if(selectedBMS->MaxChargeCurrent()==0)//BMS can command an AC charge shutdown if its current limit is 0
+      {
+         RunChg=false;//end charge
+         ChgLck=true;//set charge lockout flag
+      }
+
+
    }
    if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
 

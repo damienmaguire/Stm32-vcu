@@ -207,6 +207,10 @@ void FCChademo::Task200Ms()
       int chargeLim = Param::GetInt(Param::CCS_ILim);
       chargeLim = MIN(150, chargeLim);
 
+      chargeLim = MIN(Param::GetInt(Param::BMS_ChargeLim), chargeLim);//BMS charge current limit for chademo
+      //Note: No need to worry about bms type as if none selected sets to 999.
+      //If chargeLim==0 chademo session will end.
+
       if (udc < udcspnt && controlledCurrent <= chargeLim)
          controlledCurrent++;
       if (udc > udcspnt && controlledCurrent > 0)

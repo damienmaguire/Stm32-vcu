@@ -10,7 +10,7 @@
 #include "params.h"
 #include "stm32_can.h"
 #include "chargerint.h"
-
+#include "my_math.h"
 
 class i3LIMClass: public Chargerint
 {

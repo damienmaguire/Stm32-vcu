@@ -10,6 +10,7 @@
 #include "my_fp.h"
 #include "params.h"
 #include "chargerhw.h"
+#include "my_math.h"
 
 class teslaCharger: public Chargerhw
 {

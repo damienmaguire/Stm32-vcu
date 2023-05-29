@@ -529,7 +529,6 @@ void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
    uint16_t Tmp_Vbatt_Spnt=Param::GetInt(Param::Voltspnt);
    uint16_t Tmp_ICCS_Lim=Param::GetInt(Param::CCS_ILim);
    uint16_t Tmp_ICCS_Avail=Param::GetInt(Param::CCS_I_Avail);
-//int16_t Tmp_Ibatt=Param::GetInt(Param::idc);
 
    if(CCSI_Spnt>Tmp_ICCS_Lim)CCSI_Spnt=Tmp_ICCS_Lim; //clamp setpoint to current lim paramater.
    if(CCSI_Spnt>150)CCSI_Spnt=150; //never exceed 150amps for now.
@@ -539,6 +538,9 @@ void i3LIMClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
    if(Tmp_Vbatt>Tmp_Vbatt_Spnt)CCSI_Spnt--;//decrement if voltage equal to or greater than setpoint.
    if(CCS_Ilim==0x1)CCSI_Spnt--;//decrement if current limit flag is set
    if(CCS_Plim==0x1)CCSI_Spnt--;//decrement if Power limit flag is set
+   //BMS charge current limit for CCS
+   //Note: No need to worry about bms type as if none selected sets to 999.
+   CCSI_Spnt = MIN(Param::GetInt(Param::BMS_ChargeLim), CCSI_Spnt);
 
    Param::SetInt(Param::CCS_Ireq,CCSI_Spnt);
 }

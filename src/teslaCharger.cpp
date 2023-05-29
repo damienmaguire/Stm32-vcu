@@ -3,6 +3,11 @@
 static bool HVreq=false;
 static bool ChRun=false;
 static uint8_t counter_109 = 0;
+static uint16_t HVvolts=0;
+static uint16_t HVspnt=0;
+static uint16_t HVpwr=0;
+static uint16_t calcBMSpwr=0;
+
 
 
 void teslaCharger::SetCanInterface(CanHardware* c)
@@ -26,9 +31,11 @@ void teslaCharger::DecodeCAN(int id, uint32_t data[2])
 void teslaCharger::Task100Ms()
 {
    uint8_t bytes[8];
-   uint16_t HVvolts=Param::GetInt(Param::udc);
-   uint16_t HVspnt=Param::GetInt(Param::Voltspnt);
-   uint16_t HVpwr=Param::GetInt(Param::Pwrspnt);
+   HVvolts=Param::GetInt(Param::udc);
+   HVspnt=Param::GetInt(Param::Voltspnt);
+   HVpwr=Param::GetInt(Param::Pwrspnt);
+   calcBMSpwr=(HVvolts * Param::GetInt(Param::BMS_ChargeLim));//BMS charge current limit but needs to be power for most AC charger types.
+   HVpwr=MIN(HVpwr,calcBMSpwr);
    bytes[0] = Param::GetInt(Param::opmode);//operation mode
    bytes[1] = (HVvolts&0xFF);//HV voltage lowbyte
    bytes[2] = ((HVvolts&0xFF00)>>8);//HV voltage highbyte
