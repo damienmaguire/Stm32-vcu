@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.00.A
+#define VER 2.01.A
 
 
 /* Entries must be ordered as follows:
