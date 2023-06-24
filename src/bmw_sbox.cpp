@@ -134,9 +134,10 @@ void SBOX::handle220(uint32_t data[2]) //SBOX Output voltage
 
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   Voltage2=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
-   Voltage2 = (Voltage2<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
-
+   if (!((bytes[7] == 0) && (bytes[5] == 0))) { //Filters for the Sbox message (as the BMW PHEV BMS Master also sends an 0x220 msg)
+      Voltage2=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
+      Voltage2 = (Voltage2<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
+   }
 }
 
 void SBOX::ControlContactors(int opmode, CanHardware* can)
