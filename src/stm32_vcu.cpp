@@ -61,6 +61,7 @@ static notused UnUsed;
 static noCharger nochg;
 static extCharger chgdigi;
 static amperaCharger ampChg;
+static outlanderCharger outChg;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static Can_OI openInv;
@@ -230,14 +231,12 @@ static void Ms100Task(void)
    //Here we receive a valid DCFC startup request.
       if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
       chargeModeDC = true;   //DC charge mode on
-      Param::SetInt(Param::Test,1);
    }
    else if(chargeModeDC)
    {
       Param::SetInt(Param::chgtyp,OFF);
       chargeMode = false;  //no charge mode
       chargeModeDC = false;   //DC charge mode off
-      Param::SetInt(Param::Test,0);
    }
 
    if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM) if we are NOT in DC charge mode.
@@ -517,6 +516,9 @@ static void UpdateCharger()
          break;
       case ChargeModes::TeslaOI:
       selectedCharger = &ChargerTesla;
+         break;
+      case ChargeModes::Out_lander:
+      selectedCharger = &outChg;
          break;
 
    }

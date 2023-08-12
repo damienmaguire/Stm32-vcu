@@ -69,7 +69,7 @@
     PARAM_ENTRY(CAT_CONTACT,   cruiselight, ONOFF,     0,      1,      0,      33 ) \
     PARAM_ENTRY(CAT_CONTACT,   errlights,   ERRLIGHTS, 0,      255,    0,      34 ) \
     PARAM_ENTRY(CAT_COMM,      CAN3Speed,   CAN3Spd,   0,      1,      0,      77 ) \
-    PARAM_ENTRY(CAT_CHARGER,   chargemodes, CHGMODS,   0,      4,      0,      37 ) \
+    PARAM_ENTRY(CAT_CHARGER,   chargemodes, CHGMODS,   0,      5,      0,      37 ) \
     PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0.1,    250,    22,     38 ) \
     PARAM_ENTRY(CAT_CHARGER,   interface,   CHGINT,    0,      2,      0,      39 ) \
     PARAM_ENTRY(CAT_CHARGER,   Voltspnt,    "V",       0,      1000,   395,    40 ) \
@@ -182,10 +182,10 @@
     VALUE_ENTRY(Sec,           "S",                 2067 ) \
     VALUE_ENTRY(ChgT,          "M",                 2084 ) \
     VALUE_ENTRY(HeatReq,       ONOFF,               2069 ) \
-    VALUE_ENTRY(Test,          ONOFF,               2070 ) \
-    VALUE_ENTRY(Test2,         "dig",               2083 ) \
-    VALUE_ENTRY(MG2Raw,        "dig",               2078 ) \
-    VALUE_ENTRY(MG1Raw,        "dig",               2079 ) \
+    VALUE_ENTRY(U12V,          "V",                 2070 ) \
+    VALUE_ENTRY(I12V,          "A",                 2083 ) \
+    VALUE_ENTRY(ChgTemp,       "°C",                2078 ) \
+    VALUE_ENTRY(AC_Volts,      "V",                 2079 ) \
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
@@ -222,7 +222,7 @@
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
 #define HTTYPE       "0=None, 1=Ampera, 2=VW"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
-#define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI"
+#define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo"
 #define CAN3Spd      "0=k33.3, 1=k500"
@@ -297,7 +297,8 @@ enum ChargeModes
     EXT_DIGI = 1,
     Volt_Ampera = 2,
     Leaf_PDM = 3,
-    TeslaOI = 4
+    TeslaOI = 4,
+    Out_lander = 5
 
 };
 

@@ -72,6 +72,7 @@
 #include "bms.h"
 #include "simpbms.h"
 #include "daisychainbms.h"
+#include "outlanderCharger.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 

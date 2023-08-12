@@ -80,8 +80,6 @@ float GS450HClass::GetMotorTemperature()
 {
    int tmpmg1 = AnaIn::MG1_Temp.Get();//in the gs450h case we must read the analog temp values from sensors in the gearbox
    int tmpmg2 = AnaIn::MG2_Temp.Get();
-   Param::SetFloat(Param::MG1Raw,tmpmg1);//-0.01982833(x) +56.678789
-   Param::SetFloat(Param::MG2Raw,tmpmg2);
 
    float t1 = (tmpmg1*(-0.02058758))+56.56512898;//Trying a best fit line approach.
    float t2 = (tmpmg2*(-0.02058758))+56.56512898;;

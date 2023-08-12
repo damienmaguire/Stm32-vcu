@@ -80,6 +80,7 @@
 		<Unit filename="include/noHeater.h" />
 		<Unit filename="include/nocharger.h" />
 		<Unit filename="include/notused.h" />
+		<Unit filename="include/outlanderCharger.h" />
 		<Unit filename="include/outlanderinverter.h" />
 		<Unit filename="include/param_prj.h" />
 		<Unit filename="include/simpbms.h" />
@@ -143,6 +144,7 @@
 		<Unit filename="src/iomatrix.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
 		<Unit filename="src/leafinv.cpp" />
+		<Unit filename="src/outlanderCharger.cpp" />
 		<Unit filename="src/outlanderinverter.cpp" />
 		<Unit filename="src/simpbms.cpp" />
 		<Unit filename="src/stm32_vcu.cpp" />
