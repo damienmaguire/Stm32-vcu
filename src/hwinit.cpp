@@ -179,7 +179,7 @@ void tim_setup()
    timer_set_oc_mode(TIM1, TIM_OC1, TIM_OCM_PWM2);
    timer_enable_oc_output(TIM1, TIM_OC1);
    timer_enable_break_main_output(TIM1);
-   timer_set_oc_value(TIM1, TIM_OC1, 1000);//duty. 1000 = 52% , 500 = 76% , 1500=28%
+   timer_set_oc_value(TIM1, TIM_OC1, 600);//duty. 1000 = 52% , 500 = 76% , 1500=28%
    timer_set_period(TIM1, 2100);
    timer_enable_counter(TIM1);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

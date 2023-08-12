@@ -81,6 +81,12 @@ void outlanderCharger::DecodeCAN(int id, uint32_t data[2])
 
 void outlanderCharger::Task100Ms()
 {
+      if(!pwmON)
+        {
+          tim_setup(); //toyota hybrid oil pump pwm timer used to supply a psuedo evse pilot to the charger
+          pwmON=true;
+        }
+
    uint8_t bytes[8];
    bytes[0] = 0x00;
    bytes[1] = 0x00;
@@ -111,11 +117,7 @@ void outlanderCharger::Task100Ms()
       if(actVolts>=Param::GetInt(Param::Voltspnt)) currentRamp--;
       if(currentRamp>=0x78) currentRamp=0x78;//clamp to max of 12A
 
-      if(!pwmON)
-        {
-          tim_setup(); //toyota hybrid oil pump pwm timer used to supply a psuedo evse pilot to the charger
-          pwmON=true;
-        }
+
 
    }
    else
@@ -123,8 +125,8 @@ void outlanderCharger::Task100Ms()
       currentRamp=0;
        if(pwmON)
        {
-       timer_disable_counter(TIM1);
-       pwmON=false;
+       //timer_disable_counter(TIM1);
+      // pwmON=false;
        }
    }
 
