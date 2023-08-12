@@ -96,16 +96,16 @@ void outlanderCharger::Task100Ms()
    bytes[5] = 0x00;
    bytes[6] = 0x00;
    bytes[7] = 0x00;
-   if(clearToStart) bytes[3] = 0xB6;//oxb6 in byte 3 enables charger
+   if(clearToStart) bytes[2] = 0xB6;//oxb6 in byte 3 enables charger
    can->Send(0x285, (uint32_t*)bytes, 8);
 
    setVolts=Param::GetInt(Param::Voltspnt)*10;
    actVolts=Param::GetInt(Param::udc);
 
-   bytes[0] = 0x00;
-   bytes[1] = setVolts >> 8;//B1+B2   = voltage setpoint    (0E74=370.0V, 0,1V/bit)
-   bytes[2] = setVolts & 0xff;
-   bytes[3] = currentRamp;//B3  = current setpoint DC-side  (78=12A -> 0,1A/bit)
+   bytes[0] = setVolts >> 8;
+   bytes[1] = setVolts & 0xff;//B1+B2   = voltage setpoint    (0E74=370.0V, 0,1V/bit)
+   bytes[2] = currentRamp;//B3  = current setpoint DC-side  (78=12A -> 0,1A/bit)
+   bytes[3] = 0x00;
    bytes[4] = 0x00;
    bytes[5] = 0x00;
    bytes[6] = 0x00;
