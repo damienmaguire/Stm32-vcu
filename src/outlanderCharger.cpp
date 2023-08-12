@@ -118,13 +118,22 @@ void outlanderCharger::Task100Ms()
           shutDownReq=true;
         }
 
-
+      if(!pwmON)
+        {
+          tim_setup(); //toyota hybrid oil pump pwm timer used to supply a psuedo evse pilot to the charger
+          pwmON=true;
+        }
 
    }
    else
    {
       currentRamp=0;
       shutDownReq=false;
+       if(pwmON)
+       {
+       timer_disable_counter(TIM1);
+       pwmON=false;
+       }
    }
 
 

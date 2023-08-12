@@ -29,6 +29,7 @@
 #include "hwinit.h"
 #include "params.h"
 #include "chargerhw.h"
+#include <libopencm3/stm32/timer.h>
 
 class outlanderCharger: public Chargerhw
 {
@@ -45,7 +46,7 @@ int opmode;
 uint16_t setVolts , actVolts , termAmps;
 int16_t actAmps;
 uint8_t currentRamp;
-bool clearToStart , shutDownReq;
+bool clearToStart , shutDownReq, pwmON;
 static uint8_t chgStatus , evseDuty , dcBusV , temp_1 , temp_2 , ACVolts , DCAmps;
 static uint16_t LV_Volts , LV_Amps;
 
