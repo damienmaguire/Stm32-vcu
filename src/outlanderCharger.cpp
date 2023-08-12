@@ -26,20 +26,19 @@
 
 uint8_t outlanderCharger::chgStatus;
 uint8_t outlanderCharger::evseDuty;
-uint8_t outlanderCharger::dcBusV;
-uint8_t outlanderCharger::temp_1;
-uint8_t outlanderCharger::temp_2;
-uint8_t outlanderCharger::ACVolts;
-uint8_t outlanderCharger::DCAmps;
-uint16_t outlanderCharger::LV_Volts;
-uint16_t outlanderCharger::LV_Amps;
+float   outlanderCharger::dcBusV;
+float   outlanderCharger::temp_1;
+float   outlanderCharger::temp_2;
+float   outlanderCharger::ACVolts;
+float   outlanderCharger::DCAmps;
+float   outlanderCharger::LV_Volts;
+float   outlanderCharger::LV_Amps;
 
 
 bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
 {
    if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
    {
-     if(shutDownReq) return false;
      clearToStart=true;
      return true;
    }
@@ -48,6 +47,7 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
      clearToStart=false;
      return false;
    }
+
 
 
 
@@ -95,12 +95,10 @@ void outlanderCharger::Task100Ms()
 
    setVolts=Param::GetInt(Param::Voltspnt)*10;
    actVolts=Param::GetInt(Param::udc);
-   actAmps=Param::GetInt(Param::idc);
-   termAmps=Param::GetInt(Param::IdcTerm);
 
    bytes[0] = 0x00;
-   bytes[1] = setVolts & 0xff;;//B1+B2   = voltage setpoint    (0E74=370.0V, 0,1V/bit)
-   bytes[2] = setVolts >> 8;
+   bytes[1] = setVolts >> 8;//B1+B2   = voltage setpoint    (0E74=370.0V, 0,1V/bit)
+   bytes[2] = setVolts & 0xff;
    bytes[3] = currentRamp;//B3  = current setpoint DC-side  (78=12A -> 0,1A/bit)
    bytes[4] = 0x00;
    bytes[5] = 0x00;
@@ -112,11 +110,6 @@ void outlanderCharger::Task100Ms()
       if(actVolts<Param::GetInt(Param::Voltspnt)) currentRamp++;
       if(actVolts>=Param::GetInt(Param::Voltspnt)) currentRamp--;
       if(currentRamp>=0x78) currentRamp=0x78;//clamp to max of 12A
-      if(actAmps<=termAmps)
-        {
-          currentRamp=0;
-          shutDownReq=true;
-        }
 
       if(!pwmON)
         {
@@ -128,7 +121,6 @@ void outlanderCharger::Task100Ms()
    else
    {
       currentRamp=0;
-      shutDownReq=false;
        if(pwmON)
        {
        timer_disable_counter(TIM1);
@@ -143,10 +135,10 @@ void outlanderCharger::handle377(uint32_t data[2])
 
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   LV_Volts = ((bytes[1]<<8) | (bytes[0]))*0.01;
-   LV_Amps = ((bytes[3]<<8) | (bytes[2]))*0.1;
-   Param::SetInt(Param::U12V , LV_Volts);
-   Param::SetInt(Param::I12V , LV_Amps);
+   LV_Volts = ((bytes[0]<<8) | (bytes[1]))*0.01;
+   LV_Amps = ((bytes[2]<<8) | (bytes[3]))*0.1;
+   Param::SetFloat(Param::U12V , LV_Volts);
+   Param::SetFloat(Param::I12V , LV_Amps);
 
 }
 
@@ -156,7 +148,7 @@ void outlanderCharger::handle389(uint32_t data[2])
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    ACVolts = bytes[1]; //AC voltage measured at charger. Scale 1 to 1.
    DCAmps = bytes[2] * 0.1; //Current in Amps from charger to battery. scale 0.1.
-   Param::SetInt(Param::AC_Volts , ACVolts);
+   Param::SetFloat(Param::AC_Volts , ACVolts);
 }
 
 void outlanderCharger::handle38A(uint32_t data[2])
@@ -166,9 +158,9 @@ void outlanderCharger::handle38A(uint32_t data[2])
    chgStatus = bytes[4];
    evseDuty = bytes[3];
    dcBusV = bytes[2]*2;// Volts scale 2
-   temp_1 = bytes[0]+45;//degC bias -45
-   temp_2 = bytes[1]+45;//degC bias -45
-   Param::SetInt(Param::ChgTemp , MAX(temp_1 , temp_2));
+   temp_1 = bytes[0]-45;//degC bias -45
+   temp_2 = bytes[1]-45;//degC bias -45
+   Param::SetFloat(Param::ChgTemp , MAX(temp_1 , temp_2));
 }
 
 
