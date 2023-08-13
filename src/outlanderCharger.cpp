@@ -30,6 +30,7 @@ float   outlanderCharger::dcBusV;
 float   outlanderCharger::temp_1;
 float   outlanderCharger::temp_2;
 float   outlanderCharger::ACVolts;
+float   outlanderCharger::ACAmps;
 float   outlanderCharger::DCAmps;
 float   outlanderCharger::LV_Volts;
 float   outlanderCharger::LV_Amps;
@@ -81,11 +82,6 @@ void outlanderCharger::DecodeCAN(int id, uint32_t data[2])
 
 void outlanderCharger::Task100Ms()
 {
-      if(!pwmON)
-        {
-          tim_setup(); //toyota hybrid oil pump pwm timer used to supply a psuedo evse pilot to the charger
-          pwmON=true;
-        }
 
    uint8_t bytes[8];
    bytes[0] = 0x00;
@@ -116,7 +112,11 @@ void outlanderCharger::Task100Ms()
       if(actVolts<Param::GetInt(Param::Voltspnt)) currentRamp++;
       if(actVolts>=Param::GetInt(Param::Voltspnt)) currentRamp--;
       if(currentRamp>=0x78) currentRamp=0x78;//clamp to max of 12A
-
+      if(!pwmON)
+        {
+          tim_setup(); //toyota hybrid oil pump pwm timer used to supply a psuedo evse pilot to the charger
+          pwmON=true;
+        }
 
 
    }
@@ -125,8 +125,8 @@ void outlanderCharger::Task100Ms()
       currentRamp=0;
        if(pwmON)
        {
-       //timer_disable_counter(TIM1);
-      // pwmON=false;
+       timer_disable_counter(TIM1);
+       pwmON=false;
        }
    }
 
@@ -149,8 +149,10 @@ void outlanderCharger::handle389(uint32_t data[2])
 {
    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    ACVolts = bytes[1]; //AC voltage measured at charger. Scale 1 to 1.
+   ACAmps = bytes[6] * 0.1; //Current in Amps from mains. scale 0.1.
    DCAmps = bytes[2] * 0.1; //Current in Amps from charger to battery. scale 0.1.
    Param::SetFloat(Param::AC_Volts , ACVolts);
+   Param::SetFloat(Param::AC_Amps , ACAmps);
 }
 
 void outlanderCharger::handle38A(uint32_t data[2])

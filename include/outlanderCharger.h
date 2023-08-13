@@ -48,7 +48,7 @@ int16_t actAmps;
 uint8_t currentRamp;
 bool clearToStart=false , shutDownReq=false, pwmON=false;
 static uint8_t chgStatus , evseDuty;
-static float dcBusV , temp_1 , temp_2 , ACVolts , DCAmps;
+static float dcBusV , temp_1 , temp_2 , ACVolts , DCAmps , ACAmps;
 static float LV_Volts , LV_Amps;
 
 static void handle377(uint32_t data[2]);

@@ -95,7 +95,7 @@
     PARAM_ENTRY(CAT_CLOCK,     Set_Sec,     "Secs",    0,      59,     0,      49 ) \
     PARAM_ENTRY(CAT_CLOCK,     Chg_Hrs,     "Hours",   0,      23,     0,      50 ) \
     PARAM_ENTRY(CAT_CLOCK,     Chg_Min,     "Mins",    0,      59,     0,      51 ) \
-    PARAM_ENTRY(CAT_CLOCK,     Chg_Dur,     "Mins",    0,      300,    0,      52 ) \
+    PARAM_ENTRY(CAT_CLOCK,     Chg_Dur,     "Mins",    0,      600,    0,      52 ) \
     PARAM_ENTRY(CAT_CLOCK,     Pre_Hrs,     "Hours",   0,      59,     0,      53 ) \
     PARAM_ENTRY(CAT_CLOCK,     Pre_Min,     "Mins",    0,      59,     0,      54 ) \
     PARAM_ENTRY(CAT_CLOCK,     Pre_Dur,     "Mins",    0,      60,     0,      55 ) \
@@ -186,10 +186,11 @@
     VALUE_ENTRY(I12V,          "A",                 2083 ) \
     VALUE_ENTRY(ChgTemp,       "°C",                2078 ) \
     VALUE_ENTRY(AC_Volts,      "V",                 2079 ) \
+    VALUE_ENTRY(AC_Amps,       "A",                 2089 ) \
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2089
+//Next value Id: 2090
 
 
 
