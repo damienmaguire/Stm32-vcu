@@ -42,6 +42,7 @@
 #include "NoVehicle.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
+#include "PWMHeater.h"
 #include "TeslaDCDC.h"
 #include "VWAirHeater.h"
 #include "VWCoolantHeater.h"
@@ -178,6 +179,7 @@ static mgCoolantHeater heaterCoolantMG;
 static vwAirHeater heaterAirVW;
 static NoVehicle VehicleNone;
 static V_Classic classVehicle;
+static PWMHeater pwmHeater;
 static Inverter *selectedInverter = &openInv;
 static Vehicle *selectedVehicle = &VehicleNone;
 static Heater *selectedHeater = &Heaternone;
@@ -511,6 +513,20 @@ static void ControlCabHeater(int opmode) {
     selectedHeater->SetTargetTemperature(50); // TODO: Currently does nothing
     selectedHeater->SetPower(Param::GetInt(Param::HeatPwr),
                              Param::GetBool(Param::HeatReq));
+  } else if (opmode == MOD_RUN && Param::GetInt(Param::Control) == 3) {
+    // Analog Input Controlled Heater
+    // Use the raw readings to avoid doing thermistor math.
+    uint16_t heater_temp =
+        IOMatrix::GetAnaloguePin(IOMatrix::CAB_HEAT_TEMP)->Get();
+    Param::SetInt(Param::HeatTemp, heater_temp);
+    // Check heater_temp is above min to be sure the thermistor is plugged in
+    if (Param::GetBool(Param::HeatReq) &&
+        (heater_temp < Param::GetInt(Param::HeatTempMax)) &&
+        heater_temp > Param::GetInt(Param::HeatTempMin)) {
+      selectedHeater->SetPower(Param::GetInt(Param::HeatPwr), true);
+    } else {
+      selectedHeater->SetPower(0, 0);
+    }
   } else {
     IOMatrix::GetPin(IOMatrix::HEATERENABLE)
         ->Clear(); // Disable heater and coolant pump
@@ -920,6 +936,9 @@ static void UpdateHeater() {
   case HeatType::OutlanderHeater:
     selectedHeater = &outlanderCanHeater;
     OutlanderCAN = true;
+    break;
+  case HeatType::PWM:
+    selectedHeater = &pwmHeater;
     break;
   }
   // This will call SetCanFilters() via the Clear Callback

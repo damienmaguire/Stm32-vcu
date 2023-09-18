@@ -53,7 +53,13 @@ public: // order of these matters!
     LAST
   };
   // order of these matters!
-  enum analoguepinfuncs { NONE_ANAL, PILOT_PROX, VAC_SENSOR, LAST_ANAL };
+  enum analoguepinfuncs {
+    NONE_ANAL,
+    PILOT_PROX,
+    VAC_SENSOR,
+    CAB_HEAT_TEMP,
+    LAST_ANAL
+  };
 
   static void AssignFromParams();
   static void AssignFromParamsAnalogue();
