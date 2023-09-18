@@ -246,11 +246,7 @@ static void Ms100Task(void)
 
    }
 
-   if(targetChgint != ChargeInterfaces::Chademo) //If we are not using Chademo then gp in can be used as a cabin heater request from the vehicle
-   {
-      Param::SetInt(Param::HeatReq,DigIo::gp_12Vin.Get());
-   }
-
+   Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
 }
 
 static void ControlCabHeater(int opmode)

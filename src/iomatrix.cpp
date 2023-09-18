@@ -20,7 +20,8 @@
 
 DigIo* const IOMatrix::paramToPin[] = { &DigIo::gp_out1, &DigIo::gp_out2, &DigIo::gp_out3,
                                         &DigIo::SL1_out, &DigIo::SL2_out,
-                                        &DigIo::PWM1, &DigIo::PWM2, &DigIo::PWM3 };
+                                        &DigIo::PWM1, &DigIo::PWM2, &DigIo::PWM3,
+                                        &DigIo::HV_req, &DigIo::gp_12Vin, };
 DigIo* IOMatrix::functionToPin[];
 
 void IOMatrix::AssignFromParams()
