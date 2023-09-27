@@ -33,6 +33,9 @@
 #include <libopencm3/stm32/rtc.h>
 #include "hwdefs.h"
 #include "hwinit.h"
+#include "params.h"
+#include "iomatrix.h"
+#include "digio.h"
 
 /**
 * Start clocks of all needed peripherals
@@ -219,6 +222,31 @@ void tim2_setup()
 
 void tim3_setup()
 {
+   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+   // Setup all 3 PWM ports to output a 1khz 50% duty cycle PWM signal
+   // General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3 Chan 3 PB0.
+   // General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3 Chan 2 PA7.
+   // General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3 Chan 1 PA6.
+   ////////////////////////////////////////////////////////////////////////
+   if (Param::GetInt(Param::PWM3Func) == IOMatrix::PWM_TIM3) {
+      gpio_set_mode(GPIOB,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
+                    GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO0);	// GPIOB0=TIM3.CH3
+   } else {
+      DigIo::PWM3.Configure(GPIOB,GPIO0,PinMode::OUTPUT);
+   }
+   if (Param::GetInt(Param::PWM2Func) == IOMatrix::PWM_TIM3) {
+      gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
+                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO7);	// GPIOE9=TIM3.CH2
+   } else {
+      DigIo::PWM2.Configure(GPIOA,GPIO7,PinMode::OUTPUT);
+   }
+   if (Param::GetInt(Param::PWM1Func) == IOMatrix::PWM_TIM3) {
+      gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
+                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO6);	// GPIOA6=TIM3.CH1
+   } else {
+      DigIo::PWM1.Configure(GPIOA,GPIO6,PinMode::OUTPUT);
+   }
+
    timer_disable_counter(TIM3);
    //edge aligned PWM
    timer_set_alignment(TIM3, TIM_CR1_CMS_EDGE);
@@ -237,9 +265,11 @@ void tim3_setup()
    timer_enable_oc_output(TIM3, TIM_OC1);
    timer_enable_oc_output(TIM3, TIM_OC2);
    timer_enable_oc_output(TIM3, TIM_OC3);
-   timer_set_period(TIM3, 7200); //default to 10 kHz
-   timer_set_oc_value(TIM3, TIM_OC1, 3600); //50%
+   timer_set_period(TIM3, Param::GetInt(Param::Tim3_Period));
+   timer_set_oc_value(TIM3, TIM_OC1, Param::GetInt(Param::Tim3_1_OC));
+   timer_set_oc_value(TIM3, TIM_OC2, Param::GetInt(Param::Tim3_2_OC));
+   timer_set_oc_value(TIM3, TIM_OC3, Param::GetInt(Param::Tim3_3_OC));
    timer_generate_event(TIM3, TIM_EGR_UG);
-   timer_set_prescaler(TIM3, 719); //100 kHz base speed
+   timer_set_prescaler(TIM3,Param::GetInt(Param::Tim3_Presc));
    timer_enable_counter(TIM3);
 }

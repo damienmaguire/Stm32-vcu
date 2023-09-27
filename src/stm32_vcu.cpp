@@ -645,6 +645,16 @@ void Param::Change(Param::PARAM_NUM paramNum)
       CANSPI_Initialize();// init the MCP25625 on CAN3
       CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
       break;
+   case Param::Tim3_Presc:
+   case Param::Tim3_Period:
+   case Param::Tim3_1_OC:
+   case Param::Tim3_2_OC:
+   case Param::Tim3_3_OC:
+   case Param::PWM1Func:
+   case Param::PWM2Func:
+   case Param::PWM3Func:
+      tim3_setup();
+      break;
    default:
       break;
    }
