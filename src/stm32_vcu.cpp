@@ -798,6 +798,7 @@ extern "C" int main(void)
    UpdateCharger();
    UpdateChargeInt();
    UpdateBMS();
+   UpdateHeater();
 
    Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;
