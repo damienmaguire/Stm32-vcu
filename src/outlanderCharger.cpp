@@ -49,10 +49,6 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
      return false;
    }
 
-
-
-
-
 }
 
 

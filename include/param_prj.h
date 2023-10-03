@@ -180,7 +180,7 @@
     VALUE_ENTRY(Hour,          "H",                 2065 ) \
     VALUE_ENTRY(Min,           "M",                 2066 ) \
     VALUE_ENTRY(Sec,           "S",                 2067 ) \
-    VALUE_ENTRY(ChgT,          "M",                 2084 ) \
+    VALUE_ENTRY(ChgT,          "M",                 2090 ) \
     VALUE_ENTRY(HeatReq,       ONOFF,               2069 ) \
     VALUE_ENTRY(U12V,          "V",                 2070 ) \
     VALUE_ENTRY(I12V,          "A",                 2083 ) \
@@ -190,7 +190,7 @@
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2090
+//Next value Id: 2091
 
 
 
