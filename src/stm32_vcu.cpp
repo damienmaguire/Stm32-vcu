@@ -77,6 +77,7 @@ static BMS BMSnone;
 static SimpBMS BMSsimp;
 static DaisychainBMS BMSdaisychain;
 static BMS* selectedBMS = &BMSnone;
+static Can_OBD2 canOBD2;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
@@ -598,12 +599,14 @@ static void SetCanFilters()
    CanHardware* lim_can = canInterface[Param::GetInt(Param::LimCan)];
    CanHardware* charger_can = canInterface[Param::GetInt(Param::ChargerCan)];
    CanHardware* bms_can = canInterface[Param::GetInt(Param::BMSCan)];
+   CanHardware* obd2_can = canInterface[Param::GetInt(Param::OBD2Can)];
 
    selectedInverter->SetCanInterface(inverter_can);
    selectedVehicle->SetCanInterface(vehicle_can);
    selectedCharger->SetCanInterface(charger_can);
    selectedChargeInt->SetCanInterface(lim_can);
    selectedBMS->SetCanInterface(bms_can);
+   canOBD2.SetCanInterface(obd2_can);
 
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
@@ -686,7 +689,9 @@ static bool CanCallback(uint32_t id, uint32_t data[2]) //This is where we go whe
 {
    switch (id)
    {
-
+      case 0x7DF:
+        canOBD2.DecodeCAN(id,data);
+        break;
 
    default:
    if (Param::GetInt(Param::Type) == 0)  ISA::DecodeCAN(id, data);
@@ -789,6 +794,8 @@ extern "C" int main(void)
    canInterface[0] = &c;
    canInterface[1] = &c2;
    CanHardware* shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
+
+   canOBD2.SetCanInterface(canInterface[Param::GetInt(Param::OBD2Can)]);
 
    CANSPI_Initialize();// init the MCP25625 on CAN3
    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
