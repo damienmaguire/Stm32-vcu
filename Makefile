@@ -83,11 +83,14 @@ $(BINARY): $(OBJS) $(LDSCRIPT)
 
 $(OUT_DIR)/%.o: %.c Makefile
 	@printf "  CC      $(subst $(shell pwd)/,,$(@))\n"
-	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+	$(Q)$(CC) $(CFLAGS) -MMD -MP -o $@ -c $<
 
 $(OUT_DIR)/%.o: %.cpp Makefile
 	@printf "  CPP     $(subst $(shell pwd)/,,$(@))\n"
-	$(Q)$(CPP) $(CPPFLAGS) -o $@ -c $<
+	$(Q)$(CPP) $(CPPFLAGS) -MMD -MP -o $@ -c $<
+
+DEP = $(OBJS:%.o=%.d)
+-include $(DEP)
 
 clean:
 	@printf "  CLEAN   ${OUT_DIR}\n"
