@@ -244,7 +244,7 @@ void FCChademo::Task200Ms()
 
 bool FCChademo::DCFCRequest(bool RunCh)
 {
-if ((RunCh) && (DigIo::gp_12Vin.Get()))
+if ((RunCh) && (IOMatrix::GetPin(IOMatrix::DCFCREQUEST)->Get()))
 {
    return true;
 }

@@ -14,7 +14,7 @@ bool extCharger::ControlCharge(bool RunCh ,bool ACReq)
 
     if(ACReq)
         {
-            chargeAllow = DigIo::HV_req.Get();
+            chargeAllow = IOMatrix::GetPin(IOMatrix::HVREQ)->Get();
             //enable charger digital line.
             IOMatrix::GetPin(IOMatrix::OBCENABLE)->Set();
             return chargeAllow;
