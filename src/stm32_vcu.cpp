@@ -779,7 +779,13 @@ extern "C" int main(void)
    FunctionPointerCallback canCb(CanCallback, SetCanFilters);
    Stm32Can c(CAN1, CanHardware::Baud500);
    Stm32Can c2(CAN2, CanHardware::Baud500, true);
-   CanMap cm(&c);
+   Stm32Can *CanMapDev = &c;
+   if (Param::GetInt(Param::CanMapCan) == 0) {
+      CanMapDev = &c;
+   } else { 
+      CanMapDev = &c2;
+   }
+   CanMap cm(CanMapDev);
 
    // Set up CAN 1 callback and messages to listen for
    c.AddReceiveCallback(&canCb);
