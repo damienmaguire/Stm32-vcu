@@ -40,8 +40,8 @@ void OutlanderInverter::DecodeCAN(int id, uint32_t data[2])
    switch (id)
    {
    case 0x289:
-      speed = (data[0] >> 16) - 20000;
-      voltage = data[1] & 0xFFFF;
+      speed = (((data[0] >> 8)& 0xFF00) | ((data[0] >> 24) & 0xFF))- 20000;
+      voltage = ((data[1] & 0xFF) << 8) | ((data[1] >> 8) & 0xFF);
       break;
    case 0x299:
       inv_temp = MAX((data[1] & 0xFF), ((data[0] >> 8) & 0xFF)) - 40;
@@ -56,6 +56,7 @@ void OutlanderInverter::SetTorque(float torquePercent)
 {
    final_torque_request = (torquePercent * 2000) / 100.0f + 10000;
 
+
    Param::SetInt(Param::torque,final_torque_request);//post processed final torque value sent to inv to web interface
 }
 
@@ -69,8 +70,9 @@ void OutlanderInverter::Task10Ms()
       uint32_t data[2];
       run10ms = 0;
 
-      data[0] = final_torque_request << 16;
-      data[1] = 0;
+      data[0] = (final_torque_request & 0xff)<<24 | (final_torque_request & 0xff00)<<8; // swap high and low bytes and shift 16 bit left
+	  // enable inverter. Byte 6 0x0 to disable inverter, 0x3 for drive ( torque > 0 )
+	  data[1] = (final_torque_request == 10000 ? 0x00 : 0x03)<<16;
 
       can->Send(0x287, data, 8);
    }
@@ -78,16 +80,19 @@ void OutlanderInverter::Task10Ms()
 
 void OutlanderInverter::Task100Ms()
 {
-   uint32_t data[2];
+    uint32_t data[8];
 
-   data[0] = 48;
+   data[0] = 0x00000030;
+   data[1] = 0x00000000;
 
    can->Send(0x371, data, 8);
-
-   data[0] = 0x39100000;
-   data[1] = 0x100CFE8F;
+    int opmode = Param::GetInt(Param::opmode);
+  if(opmode==MOD_RUN)
+      {
+      data[0] = 0x39140000; // inverter enabled B2 0x10 - 0x1F
 
    can->Send(0x285, data, 8);
+       }
 
    data[0] = 0x3D000000;
    data[1] = 0x00210000;
