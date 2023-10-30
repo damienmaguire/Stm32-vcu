@@ -89,8 +89,11 @@ void outlanderCharger::Task100Ms()
    bytes[6] = 0x00;
    bytes[7] = 0x00;
    if(clearToStart) bytes[2] = 0xB6;//oxb6 in byte 3 enables charger
+   int opmode = Param::GetInt(Param::opmode);
+  if(opmode==MOD_RUN)
+      {
    can->Send(0x285, (uint32_t*)bytes, 8);
-
+      }
    setVolts=Param::GetInt(Param::Voltspnt)*10;
    actVolts=Param::GetInt(Param::udc);
 
