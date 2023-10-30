@@ -29,6 +29,7 @@ class IOMatrix
       {
          NONE, CHADEMOALLOW, OBCENABLE, HEATERENABLE, RUNINDICATION, WARNINDICATION,
          COOLANTPUMP, NEGCONTACTOR, BRAKELIGHT, REVERSELIGHT, HEATREQ, HVREQ, DCFCREQUEST,
+         GEARINDICATION,
          LAST
       };
 
@@ -37,7 +38,7 @@ class IOMatrix
 
    private:
       static DigIo* functionToPin[LAST];
-      static const int numPins = 10;
+      static const int numPins = 11;
       static DigIo* const paramToPin[numPins];
 };
 
