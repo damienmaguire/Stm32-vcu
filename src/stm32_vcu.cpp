@@ -612,6 +612,8 @@ static void SetCanFilters()
    selectedChargeInt->SetCanInterface(lim_can);
    selectedBMS->SetCanInterface(bms_can);
    canOBD2.SetCanInterface(obd2_can);
+   canInterface[1]->RegisterUserMessage(0x601); //CanSDO
+   canInterface[0]->RegisterUserMessage(0x601); //CanSDO
 
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
