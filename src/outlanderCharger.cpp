@@ -38,6 +38,23 @@ float   outlanderCharger::LV_Amps;
 
 bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
 {
+  int chgmode = Param::GetInt(Param::interface);
+  switch(chgmode)
+    {
+   case Unused:
+   if (evseDuty > 0 && RunCh)
+   {
+       clearToStart=true;
+       return true;
+   }
+    else
+    {
+        clearToStart=false;
+        return false;
+    }
+
+    break;
+   case i3LIM:
    if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
    {
      clearToStart=true;
@@ -48,7 +65,23 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
      clearToStart=false;
      return false;
    }
+    break;
 
+    case Chademo:
+   if (RunCh && ACReq)
+   {
+       clearToStart=true;
+       return true;
+   }
+    else
+    {
+        clearToStart=false;
+        return false;
+    }
+
+    break;
+
+    }
 }
 
 
@@ -78,6 +111,12 @@ void outlanderCharger::DecodeCAN(int id, uint32_t data[2])
 
 void outlanderCharger::Task100Ms()
 {
+  int opmode = Param::GetInt(Param::opmode);
+  if(opmode==MOD_CHARGE)
+  {
+   setVolts=Param::GetInt(Param::Voltspnt)*10;
+   actVolts=Param::GetInt(Param::udc);
+
 
    uint8_t bytes[8];
    bytes[0] = 0x00;
@@ -88,11 +127,12 @@ void outlanderCharger::Task100Ms()
    bytes[5] = 0x00;
    bytes[6] = 0x00;
    bytes[7] = 0x00;
-   if(clearToStart) bytes[2] = 0xB6;//oxb6 in byte 3 enables charger
-   can->Send(0x285, (uint32_t*)bytes, 8);
+   if(clearToStart)
+      {
+          bytes[2] = 0xB6;//oxb6 in byte 3 enables charger
+          can->Send(0x285, (uint32_t*)bytes, 8);
+      }
 
-   setVolts=Param::GetInt(Param::Voltspnt)*10;
-   actVolts=Param::GetInt(Param::udc);
 
    bytes[0] = setVolts >> 8;
    bytes[1] = setVolts & 0xff;//B1+B2   = voltage setpoint    (0E74=370.0V, 0,1V/bit)
@@ -126,7 +166,7 @@ void outlanderCharger::Task100Ms()
        }
    }
 
-
+  }
 }
 
 void outlanderCharger::handle377(uint32_t data[2])
