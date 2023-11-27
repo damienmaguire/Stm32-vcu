@@ -67,7 +67,7 @@
 #include "notused.h"
 #include "nocharger.h"
 #include "extCharger.h"
-#include "amperaCharger.h"
+#include "amperacharger.h"
 #include "noHeater.h"
 #include "bms.h"
 #include "simpbms.h"
