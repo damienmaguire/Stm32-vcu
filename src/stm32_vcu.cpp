@@ -205,6 +205,15 @@ static void Ms100Task(void)
       IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Clear();
    }
 
+    if (Param::GetInt(Param::dir) != 0)
+   {
+      IOMatrix::GetPin(IOMatrix::InGear)->Set();
+   }
+   else
+   {
+      IOMatrix::GetPin(IOMatrix::InGear)->Clear();
+   }
+
    if(opmode==MOD_RUN)
    {
       IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Set();
@@ -792,7 +801,7 @@ extern "C" int main(void)
    Stm32Can *CanMapDev = &c;
    if (Param::GetInt(Param::CanMapCan) == 0) {
       CanMapDev = &c;
-   } else { 
+   } else {
       CanMapDev = &c2;
    }
    CanMap cm(CanMapDev);
