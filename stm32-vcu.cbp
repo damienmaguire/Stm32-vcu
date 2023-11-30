@@ -58,7 +58,6 @@
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/NissanPDM.h" />
-		<Unit filename="include/amperaCharger.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bms.h" />

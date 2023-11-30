@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.02.A
+#define VER 2.03.A
 
 
 /* Entries must be ordered as follows:
@@ -196,10 +196,11 @@
     VALUE_ENTRY(ChgTemp,       "°C",                2078 ) \
     VALUE_ENTRY(AC_Volts,      "V",                 2079 ) \
     VALUE_ENTRY(AC_Amps,       "A",                 2089 ) \
+    VALUE_ENTRY(canctr,        "dig",               2091 ) \
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
 
 
-//Next value Id: 2091
+//Next value Id: 2092
 
 
 

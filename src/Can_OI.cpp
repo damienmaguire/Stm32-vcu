@@ -16,6 +16,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *New implementation as of V2.02. See : https://openinverter.org/wiki/CAN_communication
  */
 
 #include "Can_OI.h"
@@ -67,21 +69,9 @@ void Can_OI::DecodeCAN(int id, uint32_t data[2])
 
 void Can_OI::SetTorque(float torquePercent)
 {
-   uint8_t bytes[8];
    final_torque_request = torquePercent * 10;
-
-//Here we send the CAN throttle message
-   bytes[0]=final_torque_request & 0xFF;//throttle lsb
-   bytes[1]=final_torque_request >> 8;//throttle msb
-
-   can->Send(0x64, (uint32_t*)bytes,2);//send 0x64 (100 decimal)
-
    Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
-}
-
-void Can_OI::Task100Ms()
-{
-   uint8_t bytes[8];
+   int opmode = Param::GetInt(Param::opmode);
    uint8_t tempIO=0;
 //Here we send the CANIO message to the OI comprising of :
    // Bit 0: cruise
@@ -91,15 +81,29 @@ void Can_OI::Task100Ms()
    // Bit 4: reverse
    // Bit 5: bms
    //1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms
-   if(Param::GetBool(Param::din_forward)) tempIO+=8;
-   if(Param::GetBool(Param::din_reverse)) tempIO+=16;
+   if(Param::GetBool(Param::din_forward) && opmode==MOD_RUN) tempIO+=8;//only send direction data if in run mode
+   if(Param::GetBool(Param::din_reverse) && opmode==MOD_RUN) tempIO+=16;//only send direction data if in run mode
    if(Param::GetBool(Param::din_brake)) tempIO+=4;
-   if(Param::GetBool(Param::din_start)) tempIO+=2;
-   bytes[0] = tempIO;
+   if(Param::GetBool(Param::din_start)) tempIO+=2;//may not work. investigate.
 
-   can->Send(0x12C, (uint32_t*)bytes,1);//send 0x12C (300 decimal)
-   run100ms = (run100ms + 1) & 3;
+   uint32_t data[2];
+   uint32_t pot = Param::GetInt(Param::pot) & 0xFFF;
+   uint32_t pot2 = Param::GetInt(Param::pot2) & 0xFFF;
+   uint32_t canio = tempIO & 0x3F;
+   uint32_t ctr = Param::GetInt(Param::canctr) & 0x3;
+   uint32_t cruise = Param::GetInt(Param::cruisespeed) & 0x3FFF;
+   uint32_t regen = 0x00;//Param::GetInt(Param::potbrake) & 0x7F;
+
+   data[0] = pot | (pot2 << 12) | (canio << 24) | (ctr << 30);
+   data[1] = cruise | (ctr << 14) | (regen << 16);
+
+   crc_reset();
+   uint32_t crc = crc_calculate_block(data, 2) & 0xFF;
+   data[1] |= crc << 24;
+
+   can->Send(0x3F,data);//send 0x3F
 }
+
 
 
 
