@@ -76,8 +76,12 @@ static Chargerint* selectedChargeInt = &UnUsed;
 static BMS BMSnone;
 static SimpBMS BMSsimp;
 static DaisychainBMS BMSdaisychain;
+static DCDC DCDCnone;
+static TeslaDCDC DCDCTesla;
 static BMS* selectedBMS = &BMSnone;
+static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
@@ -586,6 +590,31 @@ static void UpdateBMS()
    canInterface[1]->ClearUserMessages();
 }
 
+static void UpdateDCDC()
+{
+      selectedBMS->DeInit();
+      switch (Param::GetInt(Param::DCdc_Type))
+      {
+         case DCDCModes::NoDCDC:
+            selectedDCDC = &DCDCnone;
+            break;
+
+        case DCDCModes::TeslaG2:
+            selectedDCDC = &DCDCTesla;
+            break;
+
+         default:
+            // Default to no DCDC
+            selectedDCDC = &DCDCnone;
+            break;
+      }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+}
+
+
+
 //Whenever the user clears mapped can messages or changes the
 //CAN interface of a device, this will be called by the CanHardware module
 static void SetCanFilters()
@@ -597,12 +626,14 @@ static void SetCanFilters()
    CanHardware* charger_can = canInterface[Param::GetInt(Param::ChargerCan)];
    CanHardware* bms_can = canInterface[Param::GetInt(Param::BMSCan)];
    CanHardware* obd2_can = canInterface[Param::GetInt(Param::OBD2Can)];
+   CanHardware* dcdc_can = canInterface[Param::GetInt(Param::DCDCCan)];
 
    selectedInverter->SetCanInterface(inverter_can);
    selectedVehicle->SetCanInterface(vehicle_can);
    selectedCharger->SetCanInterface(charger_can);
    selectedChargeInt->SetCanInterface(lim_can);
    selectedBMS->SetCanInterface(bms_can);
+   selectedDCDC->SetCanInterface(dcdc_can);
    canOBD2.SetCanInterface(obd2_can);
 
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
@@ -633,6 +664,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
       break;
    case Param::BMS_Mode:
       UpdateBMS();
+      break;
+   case Param::DCdc_Type:
+      UpdateDCDC();
       break;
    case Param::InverterCan:
    case Param::VehicleCan:
@@ -709,6 +743,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
       selectedCharger->DecodeCAN(id, data);
       selectedChargeInt->DecodeCAN(id, data);
       selectedBMS->DecodeCAN(id, (uint8_t*)data);
+      selectedDCDC->DecodeCAN(id, (uint8_t*)data);
       break;
    }
    return false;

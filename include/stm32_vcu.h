@@ -75,6 +75,9 @@
 #include "daisychainbms.h"
 #include "outlanderCharger.h"
 #include "Can_OBD2.h"
+#include "dcdc.h"
+#include "TeslaDCDC.h"
+#include "BMW_E31.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 

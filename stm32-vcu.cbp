@@ -58,6 +58,7 @@
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/NissanPDM.h" />
+		<Unit filename="include/TeslaDCDC.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bms.h" />
@@ -66,6 +67,7 @@
 		<Unit filename="include/chargerhw.h" />
 		<Unit filename="include/chargerint.h" />
 		<Unit filename="include/daisychainbms.h" />
+		<Unit filename="include/dcdc.h" />
 		<Unit filename="include/digio_prj.h" />
 		<Unit filename="include/errormessage_prj.h" />
 		<Unit filename="include/extCharger.h" />

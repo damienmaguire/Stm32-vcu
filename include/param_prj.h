@@ -25,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 105
+//Next param id (increase when adding new parameter!): 108
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
@@ -39,6 +39,7 @@
     PARAM_ENTRY(CAT_SETUP,     BMSCan,       CAN_DEV,  0,      1,      1,      89 ) \
     PARAM_ENTRY(CAT_SETUP,     OBD2Can,      CAN_DEV,  0,      1,      0,      96 ) \
     PARAM_ENTRY(CAT_SETUP,     CanMapCan,    CAN_DEV,  0,      1,      0,      97 ) \
+    PARAM_ENTRY(CAT_SETUP,     DCDCCan,      CAN_DEV,  0,      1,      1,      107 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -82,6 +83,8 @@
     PARAM_ENTRY(CAT_CHARGER,   CCS_SOCLim,  "%",       0,      100,    80,     44 ) \
     PARAM_ENTRY(CAT_CHARGER,   SOCFC,       "%",       0,      100,    50,     79 ) \
     PARAM_ENTRY(CAT_CHARGER,   Chgctrl,     CHGCTRL,   0,      2,      0,      45 ) \
+    PARAM_ENTRY(CAT_DCDC,      DCdc_Type,   DCDCTYPES, 0,      1,      0,      105 ) \
+    PARAM_ENTRY(CAT_DCDC,      DCSetPnt,    "V",       9,      15,     14,     106 ) \
     PARAM_ENTRY(CAT_BMS,       BMS_Mode,    BMSMODES,  0,      3,      0,      90 ) \
     PARAM_ENTRY(CAT_BMS,       BMS_Timeout,  "sec",    1,      120,    10,     91 ) \
     PARAM_ENTRY(CAT_BMS,       BMS_VminLimit, "V",     0,      10,     3.0,    92 ) \
@@ -215,11 +218,12 @@
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander, 6=GS300H"
 #define PLTMODES     "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
-#define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru"
+#define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru, 8=BMW_E31"
 #define BMSMODES     "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
 #define DOW          "0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat"
 #define CHGTYPS      "0=Off, 1=AC, 2=DCFC"
+#define DCDCTYPES    "0=NoDCDC, 1=TeslaG2"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define CCS_STATUS   "0=NotRdy, 1=ready, 2=SWoff, 3=interruption, 4=Prech, 5=insulmon, 6=estop, 7=malfunction, 15=invalid"
 #define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
@@ -252,6 +256,7 @@
 #define CAT_CRUISE   "Cruise Control"
 #define CAT_LEXUS    "Gearbox Control"
 #define CAT_CHARGER  "Charger Control"
+#define CAT_DCDC     "DC-DC Converter"
 #define CAT_SHUNT    "ISA Shunt Control"
 #define CAT_IOPINS   "General Purpose I/O"
 #define CAT_PWM      "PWM Control"
@@ -337,6 +342,13 @@ enum BMSModes
     BMSModeDaisychainDualBMS = 3
 };
 
+enum DCDCModes
+{
+    NoDCDC = 0,
+    TeslaG2 = 1
+
+};
+
 enum ChargeControl
 {
     Enable = 0,
@@ -359,7 +371,8 @@ enum vehicles
     None = 4,
     BMW_E39 = 5,
     VAG = 6,
-    SUBARU = 7
+    SUBARU = 7,
+    BMW_E31 = 8
 };
 
 enum _potmodes
