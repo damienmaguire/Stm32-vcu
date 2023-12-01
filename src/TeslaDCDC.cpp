@@ -43,16 +43,20 @@ void TeslaDCDC::DecodeCAN(int id, uint8_t *data)
 void TeslaDCDC::Task100Ms() {
 
 int opmode = Param::GetInt(Param::opmode);
-static float DCSetVal=Param::GetFloat(Param::DCSetPnt);
-static float Payload;
-uint8_t* bytes = (uint8_t*)Payload;
+//static float DCSetVal=Param::GetFloat(Param::DCSetPnt);
+//static float Payload;
+// Declare data frame array.
+uint8_t bytes[8];
 
    if(opmode==MOD_RUN || opmode==MOD_CHARGE)
    {
    timer500++;
    if(timer500==5)
    {
-   Payload=(byteswap((DCSetVal-9)*146)+0x4)<<8;//prob going to not work :)
+//   Payload=(byteswap((DCSetVal-9)*146)+0x4)<<8;//prob going to not work :)
+   bytes[0]=0x15;//just bodge it to 14.4v for getting running
+   bytes[1]=0x07;
+   bytes[2]=0x00;
    can->Send(0x3D8, bytes, 3);
    timer500=0;
    }

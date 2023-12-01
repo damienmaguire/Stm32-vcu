@@ -20,6 +20,8 @@
 #ifndef DCDC_H
 #define DCDC_H
 #include <stdint.h>
+#include "canhardware.h"
+#include "params.h"
 
 class DCDC
 {

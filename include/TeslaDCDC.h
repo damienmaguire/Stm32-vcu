@@ -20,6 +20,7 @@
 #ifndef TeslaDCDC_H
 #define TeslaDCDC_H
 #include <stdint.h>
+#include "dcdc.h"
 
 /* This is an interface for The Tesla GEN2 DCDC converter
  * https://openinverter.org/wiki/Tesla_Model_S/X_DC/DC_Converter
@@ -28,10 +29,10 @@
 class TeslaDCDC: public DCDC
 {
    public:
-      virtual void DecodeCAN(int, uint8_t *) {};
+      virtual void DecodeCAN(int, uint8_t *);
       virtual void DeInit() {};
-      virtual void Task100Ms() {};
-      virtual void SetCanInterface(CanHardware* c) { can = c; }
+      virtual void Task100Ms();
+      virtual void SetCanInterface(CanHardware* c);
    protected:
       CanHardware* can;
    private:

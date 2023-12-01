@@ -49,6 +49,7 @@
 		<Unit filename="Makefile">
 			<Option target="STM32F107" />
 		</Unit>
+		<Unit filename="include/BMW_E31.h" />
 		<Unit filename="include/BMW_E65.h" />
 		<Unit filename="include/CANSPI.h" />
 		<Unit filename="include/Can_E39.h" />
@@ -127,6 +128,7 @@
 		<Unit filename="libopeninv/src/stm32scheduler.cpp" />
 		<Unit filename="libopeninv/src/terminal.cpp" />
 		<Unit filename="libopeninv/src/terminalcommands.cpp" />
+		<Unit filename="src/BMW_E31.cpp" />
 		<Unit filename="src/BMW_E65.cpp" />
 		<Unit filename="src/CANSPI.cpp" />
 		<Unit filename="src/Can_E39.cpp" />
@@ -136,6 +138,7 @@
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
+		<Unit filename="src/TeslaDCDC.cpp" />
 		<Unit filename="src/amperacharger.cpp" />
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
