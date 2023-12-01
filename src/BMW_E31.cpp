@@ -17,7 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  #include "BMW_E31.h"
-
+/*
+*E31 840CI Tacho:
+*1000RPM = 70Hz
+*2000RPM = 140Hz
+*5000RPM = 345Hz
+*6000RPM = 413Hz
+*/
 
  void BMW_E31::Task10Ms()
 {

@@ -34,7 +34,7 @@ void TeslaDCDC::DecodeCAN(int id, uint8_t *data)
    {
        Param::SetFloat(Param::U12V,data[5]*0.1);//Display 12v system voltage as read from the dcdc
        Param::SetFloat(Param::I12V,data[4]);//Display 12v system current as read from the dcdc
-       Param::SetFloat(Param::ChgTemp,(data[2]*0.5)+40);//Display dcdc coolant temp
+       Param::SetFloat(Param::ChgTemp,(data[2]*0.5)-40);//Display dcdc coolant temp
 
    }
 
@@ -48,7 +48,7 @@ int opmode = Param::GetInt(Param::opmode);
 // Declare data frame array.
 uint8_t bytes[8];
 
-   if(opmode==MOD_RUN || opmode==MOD_CHARGE)
+   if(opmode==MOD_RUN)
    {
    timer500++;
    if(timer500==5)

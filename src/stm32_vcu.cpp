@@ -197,6 +197,7 @@ static void Ms100Task(void)
    selectedVehicle->Task100Ms();
    selectedCharger->Task100Ms();
    selectedBMS->Task100Ms();
+   selectedDCDC->Task100Ms();
    canMap->SendAll();
 
 
@@ -858,6 +859,7 @@ extern "C" int main(void)
    UpdateChargeInt();
    UpdateBMS();
    UpdateHeater();
+   UpdateDCDC();
 
    Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;
