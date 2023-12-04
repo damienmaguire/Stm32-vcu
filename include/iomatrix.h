@@ -21,6 +21,7 @@
 
 #include "digio.h"
 #include "params.h"
+#include "anain.h"
 
 class IOMatrix
 {
@@ -33,13 +34,24 @@ class IOMatrix
          LAST
       };
 
+      enum analoguepinfuncs
+      {
+         NONE_ANAL, PILOT_PROX, LAST_ANAL
+      };
+
       static void AssignFromParams();
+      static void AssignFromParamsAnalogue();
       static DigIo* GetPin(pinfuncs f) { return functionToPin[f]; }
+      static AnaIn* GetAnaloguePin(analoguepinfuncs f) { return functionToPinAnalgoue[f]; }
 
    private:
       static DigIo* functionToPin[LAST];
       static const int numPins = 10;
       static DigIo* const paramToPin[numPins];
+
+      static AnaIn* functionToPinAnalgoue[LAST_ANAL];
+      static const int numAnaloguePins = 2;
+      static AnaIn* const paramToPinAnalgue[numAnaloguePins];
 };
 
 #endif // IOMATRIX_H

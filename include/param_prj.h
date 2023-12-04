@@ -114,6 +114,9 @@
     PARAM_ENTRY(CAT_IOPINS,    PWM3Func,    PINFUNCS,  0,      13,     2,      87 ) \
     PARAM_ENTRY(CAT_IOPINS,    GP12VInFunc, PINFUNCS,  0,      12,     12,     98 ) \
     PARAM_ENTRY(CAT_IOPINS,    HVReqFunc,   PINFUNCS,  0,      12,     11,     99 ) \
+    PARAM_ENTRY(CAT_IOPINS,    GPA1Func,    APINFUNCS, 0,      1,      0,      110 ) \
+    PARAM_ENTRY(CAT_IOPINS,    GPA2Func,    APINFUNCS, 0,      1,      0,      111 ) \
+    PARAM_ENTRY(CAT_IOPINS,    ppthresh,    "dig",     0,      4095,   2500,   114 ) \
     PARAM_ENTRY(CAT_SHUNT,     IsaInit,     ONOFF,     0,      1,      0,      75 ) \
     PARAM_ENTRY(CAT_SHUNT,     Type,        SHNTYPE,   0,      2,      0,      88 ) \
     PARAM_ENTRY(CAT_PWM,       Tim3_Presc,  "",        1,      72000,  719,    100 ) \
@@ -201,7 +204,7 @@
     VALUE_ENTRY(AC_Amps,       "A",                 2089 ) \
     VALUE_ENTRY(canctr,        "dig",               2091 ) \
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
-
+    VALUE_ENTRY(PPVal,         "dig",               2094 ) \
 
 //Next value Id: 2092
 
@@ -211,6 +214,7 @@
 #define PINFUNCS     "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, 5=WarnIndication," \
                      "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, 11=HVRequest," \
                      "12=DCFCRequest, 13=PwmTim3"
+#define APINFUNCS    "0=None, 1=ProxPilot"
 #define SHNTYPE      "0=ISA, 1=SBOX, 2=VAG"
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleChannel, 1=DualChannel"
@@ -265,7 +269,7 @@
 #define CAN_PERIOD_10MS     1
 
 #define FIRST_IO_PARAM Param::Out1Func
-
+#define FIRST_AI_PARAM Param::GPA1Func
 enum modes
 {
     MOD_OFF = 0,
