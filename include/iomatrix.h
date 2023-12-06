@@ -30,13 +30,13 @@ class IOMatrix
       {
          NONE, CHADEMOALLOW, OBCENABLE, HEATERENABLE, RUNINDICATION, WARNINDICATION,
          COOLANTPUMP, NEGCONTACTOR, BRAKELIGHT, REVERSELIGHT, HEATREQ, HVREQ,
-         DCFCREQUEST, PWM_TIM3,
+         DCFCREQUEST, BRAKEVACPUMP, PWM_TIM3,
          LAST
       };
 
       enum analoguepinfuncs
       {
-         NONE_ANAL, PILOT_PROX, LAST_ANAL
+         NONE_ANAL, PILOT_PROX, VAC_SENSOR, LAST_ANAL
       };
 
       static void AssignFromParams();

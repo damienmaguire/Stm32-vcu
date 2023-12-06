@@ -189,8 +189,25 @@ static void Ms200Task(void)
 
 
    }
-   if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
+   if(opmode==MOD_RUN) {
+      ChgLck=false;//reset charge lockout flag when we drive off
 
+      //Brake Vac Sensor
+      if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR || Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR ) {
+         int brkVacThresh = Param::GetInt(Param::BrkVacThresh);
+         int BrkVacHyst = Param::GetInt(Param::BrkVacHyst);
+
+         int brkVacVal = IOMatrix::GetAnaloguePin(IOMatrix::VAC_SENSOR)->Get();
+         Param::SetInt(Param::BrkVacVal, brkVacVal);
+
+         //enable pump
+         if (brkVacVal > brkVacThresh) {
+            IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+         } else if (brkVacVal < BrkVacHyst) {
+            IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+         }
+      }
+   }
 }
 
 static void Ms100Task(void)
