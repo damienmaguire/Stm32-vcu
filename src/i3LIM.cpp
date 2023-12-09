@@ -626,7 +626,7 @@ bool i3LIMClass::DCFCRequest(bool RunCh)
             if(CP_Mode==0x6) lim_state=0; //Reset to state 0 if we get a static pilot
             //if(I_avail_tmp>10 && I_avail_tmp<500) lim_stateCnt++;
 
-            if(ChargeType==0x09) lim_stateCnt++;
+            if(ChargeType==0x04 || ChargeType==0x28|| ChargeType==0x09) lim_stateCnt++;
             if(lim_stateCnt>25)//2 secs efacec critical! 20 works. 50 does not.
             {
                lim_state++; //next state after 4 secs
