@@ -129,6 +129,22 @@ static void Ms200Task(void)
    if(ChgSet==0 && !ChgLck) RunChg=true;//enable from webui if we are not locked out from an auto termination
    if(ChgSet==1) RunChg=false;//disable from webui
 
+  //Handle PP on the Charging port
+   if(Param::GetInt(Param::GPA1Func) == IOMatrix::PILOT_PROX || Param::GetInt(Param::GPA2Func) == IOMatrix::PILOT_PROX ) {
+      int ppThresh = Param::GetInt(Param::ppthresh);
+
+      int ppValue = IOMatrix::GetAnaloguePin(IOMatrix::PILOT_PROX)->Get();
+      Param::SetInt(Param::PPVal, ppValue);
+
+
+      //if PP is less than threshold and currently disabled and not already finished
+      if (ppValue < ppThresh && ChgSet==1 && !ChgLck) {
+         RunChg=true;
+      } else if (ppValue > ppThresh) {
+         //even if timer was enabled, change to disabled, we've unplugged
+         RunChg=false;
+      }
+   }
 
    if(selectedCharger->ControlCharge(RunChg, ACrequest) && (opmode != MOD_RUN))
    {
@@ -173,8 +189,25 @@ static void Ms200Task(void)
 
 
    }
-   if(opmode==MOD_RUN) ChgLck=false;//reset charge lockout flag when we drive off
+   if(opmode==MOD_RUN) {
+      ChgLck=false;//reset charge lockout flag when we drive off
 
+      //Brake Vac Sensor
+      if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR || Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR ) {
+         int brkVacThresh = Param::GetInt(Param::BrkVacThresh);
+         int BrkVacHyst = Param::GetInt(Param::BrkVacHyst);
+
+         int brkVacVal = IOMatrix::GetAnaloguePin(IOMatrix::VAC_SENSOR)->Get();
+         Param::SetInt(Param::BrkVacVal, brkVacVal);
+
+         //enable pump
+         if (brkVacVal > brkVacThresh) {
+            IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+         } else if (brkVacVal < BrkVacHyst) {
+            IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+         }
+      }
+   }
 }
 
 static void Ms100Task(void)
@@ -724,6 +757,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
    ChgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
    ChgTicks = (GetInt(Param::Chg_Dur)*300);//number of 200ms ticks that equates to charge timer in minutes
    IOMatrix::AssignFromParams();
+   IOMatrix::AssignFromParamsAnalogue();
 }
 
 

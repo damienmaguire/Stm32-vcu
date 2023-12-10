@@ -22,6 +22,11 @@ DigIo* const IOMatrix::paramToPin[] = { &DigIo::gp_out1, &DigIo::gp_out2, &DigIo
                                         &DigIo::SL1_out, &DigIo::SL2_out,
                                         &DigIo::PWM1, &DigIo::PWM2, &DigIo::PWM3,
                                         &DigIo::HV_req, &DigIo::gp_12Vin, };
+
+AnaIn* const IOMatrix::paramToPinAnalgue[] = {
+   &AnaIn::GP_analog1, &AnaIn::GP_analog2
+};
+
 DigIo* IOMatrix::functionToPin[];
 
 void IOMatrix::AssignFromParams()
@@ -34,5 +39,20 @@ void IOMatrix::AssignFromParams()
    for (int i = 0; i < numPins; i++)
    {
       functionToPin[Param::GetInt((Param::PARAM_NUM)(FIRST_IO_PARAM + i))] = paramToPin[i];
+   }
+}
+
+AnaIn* IOMatrix::functionToPinAnalgoue[];
+
+void IOMatrix::AssignFromParamsAnalogue()
+{
+   for (int i = 0; i < LAST_ANAL; i++)
+   {
+      functionToPinAnalgoue[i] = &AnaIn::dummyAnal;
+   }
+
+   for (int i = 0; i < numAnaloguePins; i++)
+   {
+      functionToPinAnalgoue[Param::GetInt((Param::PARAM_NUM)(FIRST_AI_PARAM + i))] = paramToPinAnalgue[i];
    }
 }

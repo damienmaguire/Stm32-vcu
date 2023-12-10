@@ -21,6 +21,7 @@
 
 #include "digio.h"
 #include "params.h"
+#include "anain.h"
 
 class IOMatrix
 {
@@ -29,17 +30,28 @@ class IOMatrix
       {
          NONE, CHADEMOALLOW, OBCENABLE, HEATERENABLE, RUNINDICATION, WARNINDICATION,
          COOLANTPUMP, NEGCONTACTOR, BRAKELIGHT, REVERSELIGHT, HEATREQ, HVREQ,
-         DCFCREQUEST, PWM_TIM3,
+         DCFCREQUEST, BRAKEVACPUMP, PWM_TIM3,
          LAST
       };
 
+      enum analoguepinfuncs
+      {
+         NONE_ANAL, PILOT_PROX, VAC_SENSOR, LAST_ANAL
+      };
+
       static void AssignFromParams();
+      static void AssignFromParamsAnalogue();
       static DigIo* GetPin(pinfuncs f) { return functionToPin[f]; }
+      static AnaIn* GetAnaloguePin(analoguepinfuncs f) { return functionToPinAnalgoue[f]; }
 
    private:
       static DigIo* functionToPin[LAST];
       static const int numPins = 10;
       static DigIo* const paramToPin[numPins];
+
+      static AnaIn* functionToPinAnalgoue[LAST_ANAL];
+      static const int numAnaloguePins = 2;
+      static AnaIn* const paramToPinAnalgue[numAnaloguePins];
 };
 
 #endif // IOMATRIX_H
