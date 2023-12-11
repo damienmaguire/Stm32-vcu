@@ -119,6 +119,8 @@
     PARAM_ENTRY(CAT_IOPINS,    ppthresh,    "dig",     0,      4095,   2500,   114 ) \
     PARAM_ENTRY(CAT_IOPINS,    BrkVacThresh,"dig",     0,      4095,   2500,   115 ) \
     PARAM_ENTRY(CAT_IOPINS,    BrkVacHyst,  "dig",     0,      4095,   2500,   116 ) \
+    PARAM_ENTRY(CAT_IOPINS,    DigiPot1Step,"dig",     0,      255,    0,      117 ) \
+    PARAM_ENTRY(CAT_IOPINS,    DigiPot2Step,"dig",     0,      255,    0,      118 ) \
     PARAM_ENTRY(CAT_SHUNT,     IsaInit,     ONOFF,     0,      1,      0,      75 ) \
     PARAM_ENTRY(CAT_SHUNT,     Type,        SHNTYPE,   0,      2,      0,      88 ) \
     PARAM_ENTRY(CAT_PWM,       Tim3_Presc,  "",        1,      72000,  719,    100 ) \

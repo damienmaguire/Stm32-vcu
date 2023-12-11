@@ -82,7 +82,6 @@ static BMS* selectedBMS = &BMSnone;
 static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
@@ -285,6 +284,10 @@ static void Ms100Task(void)
    }
 
    Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+
+   DigiPot::SetPot1Step();
+   DigiPot::SetPot2Step();
+
 }
 
 static void ControlCabHeater(int opmode)

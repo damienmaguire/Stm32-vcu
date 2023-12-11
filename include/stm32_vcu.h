@@ -78,6 +78,7 @@
 #include "dcdc.h"
 #include "TeslaDCDC.h"
 #include "BMW_E31.h"
+#include "DigiPot.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
