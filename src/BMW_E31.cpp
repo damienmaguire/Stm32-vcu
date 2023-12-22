@@ -25,9 +25,20 @@
 *6000RPM = 413Hz
 */
 
- void BMW_E31::Task10Ms()
+//We use this as an init function
+void BMW_E31::SetCanInterface(CanHardware* c)
+{
+   c = c;
+
+
+
+}
+
+
+ void BMW_E31::Task1Ms()
 {
    uint16_t speed_input = speed;
+
 }
 
 

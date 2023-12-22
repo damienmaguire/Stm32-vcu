@@ -32,7 +32,8 @@ class BMW_E31: public Vehicle
 
 public:
    void SetCanInterface(CanHardware* c);
-   void Task10Ms();
+   void Task10Ms() {};
+   void Task1Ms();
    void SetRevCounter(int s) { speed = s; }
    void SetTemperatureGauge(float temp);
    void DecodeCAN(int id, uint32_t* data);

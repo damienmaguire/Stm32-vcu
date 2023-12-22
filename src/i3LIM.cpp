@@ -488,7 +488,8 @@ void i3LIMClass::Task100Ms()
    uint16_t V_limit=0;
 //if(lim_state==6) V_limit=401*10;//set to 400v in energy transfer state
 //if(lim_state!=6) V_limit=Param::GetInt(Param::udc)*10;
-   if(lim_state==4) V_limit=Param::GetInt(Param::udc)*10;// drop vlim only during precharge
+   //if(lim_state==4) V_limit=Param::GetInt(Param::udc)*10;// drop vlim only during precharge
+   if(lim_state==4 || lim_state==5) V_limit=Param::GetInt(Param::udc)*10;// drop vlim only during precharge
    else V_limit=415*10;//set to 415v in all other states
    uint8_t I_limit=125;//125A limit. may not work
    bytes[0] = V_limit & 0xFF;  //Charge voltage limit LSB. 14 bit signed int.scale 0.1 0xfa2=4002*.1=400.2Volts
