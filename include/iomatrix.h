@@ -33,7 +33,7 @@ class IOMatrix
          DCFCREQUEST, BRAKEVACPUMP, PWM_TIM3,
          LAST
       };
-
+            //order of these matters!
       enum analoguepinfuncs
       {
          NONE_ANAL, PILOT_PROX, VAC_SENSOR, LAST_ANAL

@@ -208,6 +208,7 @@ static void Ms200Task(void)
          }
       }
    }
+
 }
 
 static void Ms100Task(void)
@@ -434,6 +435,7 @@ switch (opmode)
 
    case MOD_PCHFAIL:
       StartSig=false;
+      DigIo::prec_out.Clear();//explicitly turn off precharge relay in a fail condition
       if(initbyCharge && !chargeMode) opmode = MOD_OFF;//only go to off if the signal from charge or vehicle start is removed
       if(initbyStart && !selectedVehicle->Ready()) opmode = MOD_OFF;//this avoids oscillation in the event of a precharge system failure
       Param::SetInt(Param::opmode, opmode);
@@ -569,7 +571,7 @@ static void UpdateChargeInt()
    switch (Param::GetInt(Param::interface))
    {
       case ChargeInterfaces::Unused:
-//      selectedChargeInt = &nochg;
+      selectedChargeInt = &UnUsed;
          break;
       case ChargeInterfaces::Chademo:
       selectedChargeInt = &chademoFC;

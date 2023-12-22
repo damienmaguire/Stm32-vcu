@@ -82,6 +82,7 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
     break;
 
     }
+    return false;
 }
 
 
