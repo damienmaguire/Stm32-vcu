@@ -15,6 +15,7 @@
 #include "bmw_sbox.h"
 #include "vag_sbox.h"
 #include "vehicle.h"
+#include "shifter.h"
 
 namespace utils
 {
@@ -25,7 +26,7 @@ namespace utils
     void CalcSOC();
     void GetDigInputs(CanHardware*);
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
-    void SelectDirection(Vehicle*);
+    void SelectDirection(Vehicle* , Shifter*);
     void displayThrottle();
     void ProcessCruiseControlButtons();
 }

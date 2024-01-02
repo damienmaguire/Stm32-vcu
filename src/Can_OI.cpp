@@ -39,9 +39,9 @@ void Can_OI::SetCanInterface(CanHardware* c)
 {
    can = c;
 
-   can->RegisterUserMessage(0x190);//Open Inv Msg
-   can->RegisterUserMessage(0x19A);//Open Inv Msg
-   can->RegisterUserMessage(0x1A4);//Open Inv Msg
+   can->RegisterUserMessage(0x190);//Open Inv Msg. Dec 400 for RPM.
+   can->RegisterUserMessage(0x19A);//Open Inv Msg. Dec 410 for temps
+   can->RegisterUserMessage(0x1A4);//Open Inv Msg. Dec 420 for Voltage.
 }
 
 void Can_OI::DecodeCAN(int id, uint32_t data[2])
@@ -73,18 +73,12 @@ void Can_OI::SetTorque(float torquePercent)
    Param::SetInt(Param::torque,final_torque_request);//post processed final torue value sent to inv to web interface
    int opmode = Param::GetInt(Param::opmode);
    uint8_t tempIO=0;
-//Here we send the CANIO message to the OI comprising of :
-   // Bit 0: cruise
-   // Bit 1: start
-   // Bit 2: brake
-   // Bit 3: forward
-   // Bit 4: reverse
-   // Bit 5: bms
-   //1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms
+
    if(Param::GetBool(Param::din_forward) && opmode==MOD_RUN) tempIO+=8;//only send direction data if in run mode
    if(Param::GetBool(Param::din_reverse) && opmode==MOD_RUN) tempIO+=16;//only send direction data if in run mode
    if(Param::GetBool(Param::din_brake)) tempIO+=4;
    if(Param::GetBool(Param::din_start)) tempIO+=2;//may not work. investigate.
+   //Work but requires key to be held on. Will use a bool here.
 
    uint32_t data[2];
    uint32_t pot = Param::GetInt(Param::pot) & 0xFFF;

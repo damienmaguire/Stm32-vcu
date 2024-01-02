@@ -56,6 +56,7 @@
 		<Unit filename="include/Can_OBD2.h" />
 		<Unit filename="include/Can_OI.h" />
 		<Unit filename="include/Can_VAG.h" />
+		<Unit filename="include/F30_Lever.h" />
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/NissanPDM.h" />
@@ -81,11 +82,13 @@
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/leafinv.h" />
 		<Unit filename="include/noHeater.h" />
+		<Unit filename="include/no_Lever.h" />
 		<Unit filename="include/nocharger.h" />
 		<Unit filename="include/notused.h" />
 		<Unit filename="include/outlanderCharger.h" />
 		<Unit filename="include/outlanderinverter.h" />
 		<Unit filename="include/param_prj.h" />
+		<Unit filename="include/shifter.h" />
 		<Unit filename="include/simpbms.h" />
 		<Unit filename="include/stm32_vcu.h" />
 		<Unit filename="include/subaruvehicle.h" />
@@ -135,6 +138,7 @@
 		<Unit filename="src/Can_OBD2.cpp" />
 		<Unit filename="src/Can_OI.cpp" />
 		<Unit filename="src/Can_VAG.cpp" />
+		<Unit filename="src/F30_Lever.cpp" />
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />

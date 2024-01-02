@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.03.A
+#define VER 2.04.A
 
 
 /* Entries must be ordered as follows:
@@ -25,11 +25,11 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 108
+//Next param id (increase when adding new parameter!): 109
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
-    PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      7,      0,      6  ) \
+    PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      8,      0,      6  ) \
     PARAM_ENTRY(CAT_SETUP,     Transmission, TRNMODES, 0,      1,      0,      78 ) \
     PARAM_ENTRY(CAT_SETUP,     InverterCan,  CAN_DEV,  0,      1,      0,      70 ) \
     PARAM_ENTRY(CAT_SETUP,     VehicleCan,   CAN_DEV,  0,      1,      1,      71 ) \
@@ -40,6 +40,7 @@
     PARAM_ENTRY(CAT_SETUP,     OBD2Can,      CAN_DEV,  0,      1,      0,      96 ) \
     PARAM_ENTRY(CAT_SETUP,     CanMapCan,    CAN_DEV,  0,      1,      0,      97 ) \
     PARAM_ENTRY(CAT_SETUP,     DCDCCan,      CAN_DEV,  0,      1,      1,      107 ) \
+    PARAM_ENTRY(CAT_SETUP,     GearLvr,      SHIFTERS, 0,      1,      0,      108 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -218,6 +219,7 @@
                      "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, 11=HVRequest," \
                      "12=DCFCRequest, 13=BrakeVacPump, 14=PwmTim3"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor"
+#define SHIFTERS     "0=None, 1=BMW_F30"
 #define SHNTYPE      "0=ISA, 1=SBOX, 2=VAG"
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleChannel, 1=DualChannel"
@@ -233,7 +235,7 @@
 #define DCDCTYPES    "0=NoDCDC, 1=TeslaG2"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define CCS_STATUS   "0=NotRdy, 1=ready, 2=SWoff, 3=interruption, 4=Prech, 5=insulmon, 6=estop, 7=malfunction, 15=invalid"
-#define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
+#define DIRS         "-1=Reverse, 0=Neutral, 1=Drive, 2=Park"
 #define ONOFF        "0=Off, 1=On, 2=na"
 #define LOWHIGH      "0=LOW, 1=HIGH, 2=AUTO"
 #define OKERR        "0=Error, 1=Ok, 2=na"
@@ -353,6 +355,13 @@ enum DCDCModes
 {
     NoDCDC = 0,
     TeslaG2 = 1
+
+};
+
+enum ShifterModes
+{
+    NoShifter = 0,
+    BMWF30 = 1
 
 };
 

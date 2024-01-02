@@ -35,6 +35,7 @@ public:
    int GetInverterState();
    void DeInit() { setTimerState(false); } //called when switching to another inverter, similar to a destructor
 
+
    //Lexus/Toyota specific functions
    void SetPrius();
    void SetGS450H();

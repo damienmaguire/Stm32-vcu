@@ -49,6 +49,7 @@ hours=0, minutes=0, seconds=0,
 alarm=0;			// != 0 when alarm is pending
 
 // Instantiate Classes
+static Bmw_E31 e31Vehicle;
 static BMWE65 e65Vehicle;
 static Can_E39 e39Vehicle;
 static Can_VAG vagVehicle;
@@ -68,11 +69,14 @@ static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static noHeater Heaternone;
 static AmperaHeater amperaHeater;
+static no_Lever NoGearLever;
+static F30_Lever F30GearLever;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
 static Heater* selectedHeater = &Heaternone;
 static Chargerhw* selectedCharger = &chargerPDM;
 static Chargerint* selectedChargeInt = &UnUsed;
+static Shifter* selectedShifter = &NoGearLever;
 static BMS BMSnone;
 static SimpBMS BMSsimp;
 static DaisychainBMS BMSdaisychain;
@@ -81,6 +85,8 @@ static TeslaDCDC DCDCTesla;
 static BMS* selectedBMS = &BMSnone;
 static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
+static Shifter shifterNone;
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -219,7 +225,7 @@ static void Ms100Task(void)
    Param::SetFloat(Param::cpuload, cpuLoad);
    Param::SetInt(Param::lasterr, ErrorMessage::GetLastError());
    int opmode = Param::GetInt(Param::opmode);
-   utils::SelectDirection(selectedVehicle);
+   utils::SelectDirection(selectedVehicle , selectedShifter);
    utils::CalcSOC();
 
    Param::SetInt(Param::cruisestt, selectedVehicle->GetCruiseState());
@@ -232,6 +238,7 @@ static void Ms100Task(void)
    selectedCharger->Task100Ms();
    selectedBMS->Task100Ms();
    selectedDCDC->Task100Ms();
+   selectedShifter->Task100Ms();
    canMap->SendAll();
 
 
@@ -361,6 +368,8 @@ static void Ms10Task(void)
    selectedVehicle->SetRevCounter(ABS(Param::GetInt(Param::speed)));
    selectedVehicle->SetTemperatureGauge(Param::GetFloat(Param::tmphs));
    selectedVehicle->Task10Ms();
+   selectedDCDC->Task10Ms();
+   selectedShifter->Task10Ms();
    if(opmode==MOD_CHARGE) selectedCharger->Task10Ms();
    if(opmode==MOD_RUN) Param::SetInt(Param::canctr, (Param::GetInt(Param::canctr) + 1) & 0xF);//Update the OI can counter in RUN mode only
 
@@ -471,6 +480,8 @@ static void Ms1Task(void)
    selectedVehicle->Task1Ms();
    selectedCharger->Task1Ms();
    selectedChargeInt->Task1Ms();
+   selectedShifter->Task1Ms();
+   selectedDCDC->Task1Ms();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -527,6 +538,10 @@ static void UpdateVehicle()
       case SUBARU:
          selectedVehicle = &subaruVehicle;
          break;
+     case BMW_E31:
+         selectedVehicle = &e31Vehicle;
+         break;
+
    }
    //This will call SetCanFilters() via the Clear Callback
    canInterface[0]->ClearUserMessages();
@@ -650,6 +665,29 @@ static void UpdateDCDC()
 }
 
 
+static void UpdateShifter()
+{
+
+      switch (Param::GetInt(Param::GearLvr))
+      {
+         case ShifterModes::NoShifter:
+            selectedShifter = &shifterNone;
+            break;
+
+        case ShifterModes::BMWF30:
+            selectedShifter = &F30GearLever;
+            break;
+
+         default:
+            // Default to no shifter
+            selectedShifter = &shifterNone;
+            break;
+      }
+   //This will call SetCanFilters() via the Clear Callback
+   canInterface[0]->ClearUserMessages();
+   canInterface[1]->ClearUserMessages();
+}
+
 
 //Whenever the user clears mapped can messages or changes the
 //CAN interface of a device, this will be called by the CanHardware module
@@ -670,6 +708,7 @@ static void SetCanFilters()
    selectedChargeInt->SetCanInterface(lim_can);
    selectedBMS->SetCanInterface(bms_can);
    selectedDCDC->SetCanInterface(dcdc_can);
+   selectedShifter->SetCanInterface(vehicle_can);
    canOBD2.SetCanInterface(obd2_can);
 
    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
@@ -703,6 +742,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
       break;
    case Param::DCdc_Type:
       UpdateDCDC();
+      break;
+   case Param::GearLvr:
+      UpdateShifter();
       break;
    case Param::InverterCan:
    case Param::VehicleCan:
@@ -765,6 +807,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
 
 static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is where we go when a defined CAN message is received.
 {
+   dlc = dlc;
    switch (id)
    {
       case 0x7DF:
@@ -781,6 +824,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
       selectedChargeInt->DecodeCAN(id, data);
       selectedBMS->DecodeCAN(id, (uint8_t*)data);
       selectedDCDC->DecodeCAN(id, (uint8_t*)data);
+      selectedShifter->DecodeCAN(id,data);
       break;
    }
    return false;
@@ -896,6 +940,7 @@ extern "C" int main(void)
    UpdateBMS();
    UpdateHeater();
    UpdateDCDC();
+   UpdateShifter();
 
    Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
    scheduler = &s;

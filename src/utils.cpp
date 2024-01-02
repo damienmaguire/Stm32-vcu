@@ -160,9 +160,10 @@ float GetUserThrottleCommand()
 }
 
 
-void SelectDirection(Vehicle* vehicle)
+void SelectDirection(Vehicle* vehicle, Shifter* shifter)
 {
    Vehicle::gear gear;
+   Shifter::Sgear gearS;
    int8_t selectedDir = Param::GetInt(Param::dir);
    int8_t userDirSelection = 0;
    int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
@@ -173,7 +174,7 @@ void SelectDirection(Vehicle* vehicle)
       switch (gear)
       {
       case Vehicle::PARK:
-         selectedDir = 0; // Park
+         selectedDir = 2; // Park
          break;
       case Vehicle::REVERSE:
          selectedDir = -1; // Reverse
@@ -186,6 +187,26 @@ void SelectDirection(Vehicle* vehicle)
          break;
       }
    }
+   else if (shifter->GetGear(gearS))
+   {
+      // if the shifter class supplies gear selection then use that
+      switch (gearS)
+      {
+      case Shifter::PARK:
+         selectedDir = 2; // Park
+         break;
+      case Shifter::REVERSE:
+         selectedDir = -1; // Reverse
+         break;
+      case Shifter::NEUTRAL:
+         selectedDir = 0; // Neutral
+         break;
+      case Shifter::DRIVE:
+         selectedDir = 1; // Drive
+         break;
+      }
+   }
+
    else
    {
       // otherwise use the traditional inputs
