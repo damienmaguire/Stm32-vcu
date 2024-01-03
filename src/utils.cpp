@@ -150,6 +150,9 @@ float GetUserThrottleCommand()
    if (direction == 0)
       return 0.0;
 
+   if (direction == 2)//No throttle val if in PARK also.
+      return 0.0;
+
    // calculate the throttle depending on the channel we've decided to use
    if (useChannel == 0)
       return Throttle::CalcThrottle(pot1val, 0, brake);
