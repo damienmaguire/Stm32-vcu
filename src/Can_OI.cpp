@@ -34,6 +34,9 @@ bool Can_OI::error=false;
 int16_t Can_OI::inv_temp;
 int16_t Can_OI::motor_temp;
 int16_t Can_OI::final_torque_request;
+static bool statusInv = 0;
+uint8_t Inv_Opmode=0;
+int opmode;
 
 void Can_OI::SetCanInterface(CanHardware* c)
 {
@@ -42,6 +45,7 @@ void Can_OI::SetCanInterface(CanHardware* c)
    can->RegisterUserMessage(0x190);//Open Inv Msg. Dec 400 for RPM.
    can->RegisterUserMessage(0x19A);//Open Inv Msg. Dec 410 for temps
    can->RegisterUserMessage(0x1A4);//Open Inv Msg. Dec 420 for Voltage.
+   can->RegisterUserMessage(0x1AE);//Open Inv Msg. Dec 430 for Opmode.
 }
 
 void Can_OI::DecodeCAN(int id, uint32_t data[2])
@@ -64,6 +68,14 @@ void Can_OI::DecodeCAN(int id, uint32_t data[2])
    {
       inv_temp = ((bytes[1]<<8)|(bytes[0]))/10;//INVERTER TEMP
       motor_temp = 0;//MOTOR TEMP
+   }
+
+      else if (id == 0x1AE)// THIS MSG CONTAINS OPMODE
+   {
+      Inv_Opmode = bytes[0];//INVERTER OPMODE
+      //0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat
+
+
    }
 }
 
@@ -99,9 +111,22 @@ void Can_OI::SetTorque(float torquePercent)
 }
 
 
+int Can_OI::GetInverterState()
+{
+   if(Inv_Opmode==0) statusInv = 0;
+   if(Inv_Opmode==1) statusInv = 1;
+   if(opmode==MOD_OFF) statusInv = 0;//Resort to off if vcu is in off state.
+   return statusInv;
+}
 
 
 
+
+void Can_OI::Task100Ms()
+{
+opmode = Param::GetInt(Param::opmode);
+
+}
 
 
 

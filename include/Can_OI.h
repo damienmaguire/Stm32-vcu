@@ -29,14 +29,14 @@
 class Can_OI: public Inverter
 {
 public:
-   void Task100Ms() {};
+   void Task100Ms();
    void DecodeCAN(int, uint32_t*);
    void SetTorque(float torquePercent);
    float GetMotorTemperature() { return motor_temp; }
    float GetInverterTemperature() { return inv_temp; }
    float GetInverterVoltage() { return voltage; }
    float GetMotorSpeed() { return speed; }
-   int GetInverterState() { return error; }
+   int GetInverterState();
    void SetCanInterface(CanHardware* c);
 
 private:
@@ -49,6 +49,7 @@ private:
    static uint8_t run100ms;
    static uint32_t lastRecv;
    static int16_t final_torque_request;
+
 };
 
 #endif // CAN_OI_H
