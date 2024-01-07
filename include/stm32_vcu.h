@@ -81,6 +81,7 @@
 #include "shifter.h"
 #include "F30_Lever.h"
 #include "no_Lever.h"
+#include "rearoutlanderinverter.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
