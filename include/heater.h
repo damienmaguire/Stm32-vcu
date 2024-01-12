@@ -19,6 +19,7 @@ public:
    virtual void DeInit() {} //called when switching to another heater, similar to a destructor
    virtual void SetCanInterface(CanHardware* c) { can = c; }
 
+
 protected:
    CanHardware* can;
 };

@@ -69,6 +69,7 @@ static Can_OI openInv;
 static OutlanderInverter outlanderInv;
 static noHeater Heaternone;
 static AmperaHeater amperaHeater;
+static vwHeater heaterVW;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
 static Inverter* selectedInverter = &openInv;
@@ -86,6 +87,7 @@ static BMS* selectedBMS = &BMSnone;
 static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
 static Shifter shifterNone;
+static LinBus* lin;
 
 
 
@@ -293,6 +295,7 @@ static void Ms100Task(void)
    }
 
    Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+
 }
 
 static void ControlCabHeater(int opmode)
@@ -308,7 +311,7 @@ static void ControlCabHeater(int opmode)
    else
    {
       IOMatrix::GetPin(IOMatrix::HEATERENABLE)->Clear(); //Disable heater and coolant pump
-      selectedHeater->SetPower(0,0);
+      //selectedHeater->SetPower(0,0);
    }
 }
 
@@ -612,6 +615,8 @@ static void UpdateHeater()
       selectedHeater = &amperaHeater;
          break;
       case HeatType::VW:
+      selectedHeater = &heaterVW;
+      heaterVW.SetLinInterface(lin);
          break;
    }
    //This will call SetCanFilters() via the Clear Callback
@@ -932,6 +937,9 @@ extern "C" int main(void)
 
    CANSPI_Initialize();// init the MCP25625 on CAN3
    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
+
+   LinBus l(USART1, 19200);
+   lin = &l;
 
    UpdateInv();
    UpdateVehicle();

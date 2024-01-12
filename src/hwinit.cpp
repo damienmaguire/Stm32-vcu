@@ -57,6 +57,7 @@ void clock_setup(void)
    rcc_periph_clock_enable(RCC_GPIOE);
    rcc_periph_clock_enable(RCC_USART3);
    rcc_periph_clock_enable(RCC_USART2);//GS450H Inverter Comms
+   rcc_periph_clock_enable(RCC_USART1);//LIN Comms
    rcc_periph_clock_enable(RCC_TIM1); //GS450H oil pump pwm
    rcc_periph_clock_enable(RCC_TIM2); //GS450H 500khz usart clock
    rcc_periph_clock_enable(RCC_TIM3); //PWM outputs
@@ -120,6 +121,24 @@ void usart2_setup(void)
    usart_set_flow_control(USART2, USART_FLOWCONTROL_NONE);
    usart_enable(USART2);
 }
+
+void usart1_setup(void)
+{
+   /* Setup GPIO pin GPIO_USART1_TX and GPIO_USART1_RX. */
+   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+                 GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
+   gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+                 GPIO_CNF_INPUT_FLOAT, GPIO_USART1_RX);
+   usart_set_baudrate(USART1, 19200);
+   usart_set_databits(USART1, 8);
+   usart_set_stopbits(USART1, USART_STOPBITS_1);
+   usart_set_mode(USART1, USART_MODE_TX_RX);
+   usart_set_parity(USART1, USART_PARITY_NONE);
+   usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+   usart_enable(USART1);
+}
+
+
 
 /**
 * Enable Timer refresh and break interrupts

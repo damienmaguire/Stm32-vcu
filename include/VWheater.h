@@ -1,9 +1,7 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the Zombieverter VCU project.
  *
- * Copyright (C) 2010 Johannes Huebner <contact@johanneshuebner.com>
- * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
- * Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
+ * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,31 +15,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Controls the VW LIN based heater as : https://openinverter.org/wiki/Volkswagen_Heater
  */
+#ifndef VWHEATER_H
+#define VWHEATER_H
 
-#ifndef HWINIT_H_INCLUDED
-#define HWINIT_H_INCLUDED
+//#include <libopencm3/stm32/usart.h>
+#include <heater.h>
+#include "linbus.h"
 
 
-#ifdef __cplusplus
-extern "C"
+class vwHeater : public Heater
 {
-#endif
+   public:
+      void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
+      void SetPower(uint16_t power, bool HeatReq);
+      void SetLinInterface(LinBus* l);
 
-void clock_setup(void);
-void usart_setup(void);
-void usart2_setup(void);
-void usart1_setup(void);
-void nvic_setup(void);
-void rtc_setup(void);
-void tim_setup(void);
-void tim2_setup(void);
-void tim3_setup(void);
-void spi2_setup(void);
-void spi3_setup(void);
+   private:
+      bool isAwake=false;
+      LinBus* lin;
+};
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif // HWINIT_H_INCLUDED
+#endif // VWHEATER_H
