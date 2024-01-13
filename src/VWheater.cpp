@@ -21,6 +21,10 @@
  *
  * ID : 48 (dec) Response. Length 8. Byte 0 : Power 13=770W , 26 = 1540W. Byte 6 Temp in , Byte 7 Temp out.
  *
+ * Observed return data on 0x30 : 0x00 , 0xFF, 0xE7, 0x80, 0x8D, 0x39, 0x34, 0x34
+ * 8 bytes
+ * Command was : 0x5A, 0x01, 0x00 , 0x00
+ * Observed data with heater running approx 4kw : 0x32, 0xFC, 0x80, 0x80, 0x8D, 0x5D, 0x7A, 0x77
  */
 
  #include <VWheater.h>
@@ -40,38 +44,39 @@
  void vwHeater::SetPower(uint16_t power, bool HeatReq)
 {
     TenCount++;
-    if(TenCount==10)//slow down to 100ms as this is called in 10ms task.
+    if(TenCount==5)//slow down to 50ms as this is called in 10ms task.
     {
     //DigIo::led_out.Toggle();
     TenCount=0;
     HeatReq=HeatReq;
    //going to ignore heatreq just for test.
 
-   if(power>=2530) power = 2530;//Constrain power to max for VW heater.
-   processedPower=power/10;
+   if(power>=255) power = 255;//Constrain power to max for VW heater.
+   processedPower=power;//10;
 
    static bool read = true;
 
-   if (lin->HasReceived(48, 8))
+   if (lin->HasReceived(48, 8))//0x30 hex address
    {
       uint8_t* data = lin->GetReceivedBytes();
 
-      Param::SetInt(Param::tmpheater, data[7]);
-      Param::SetInt(Param::udcheater, data[6]/10);
-      Param::SetFloat(Param::powerheater,data[2]*30);
+      Param::SetFloat(Param::tmpheater, data[7]/10);//0x34 = 52 dec =5.2C?
+      Param::SetFloat(Param::udcheater, data[4]/10);//0x8D = 141 dec /10 =14.1V ?
+      Param::SetFloat(Param::powerheater,data[0]*30);
    }
 
    if (read)
    {
-      lin->Request(48, 0, 0);
+      lin->Request(48, 0, 0);//0x30 hex address
    }
    else
    {
-      uint8_t lindata[2];
+      uint8_t lindata[4];
       lindata[0] = processedPower;//
       lindata[1] = 1;//Always on for test. Can use heatreq here.
-
-      lin->Request(28, lindata, sizeof(lindata));
+      lindata[2] = 0;
+      lindata[3] = 0;
+      lin->Request(28, lindata, sizeof(lindata));//0x1C hex address
    }
 
    read = !read;
