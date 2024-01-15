@@ -60,9 +60,9 @@
    {
       uint8_t* data = lin->GetReceivedBytes();
 
-      Param::SetFloat(Param::tmpheater, data[7]/10);//0x34 = 52 dec =5.2C?
-      Param::SetFloat(Param::udcheater, data[4]/10);//0x8D = 141 dec /10 =14.1V ?
-      Param::SetFloat(Param::powerheater,data[0]*30);
+      Param::SetFloat(Param::tmpheater, data[6]-47);//Looks like the temp val has an offset prob for neg vals. Need to get it more accurate
+      Param::SetFloat(Param::udcheater, data[4]/10);//0x8D = 141 dec /10 =14.1V ? 12v system voltage.
+      Param::SetFloat(Param::powerheater,data[0]*80);//actual power used by heater. again, needs some more experiments to get more accurate
    }
 
    if (read)
