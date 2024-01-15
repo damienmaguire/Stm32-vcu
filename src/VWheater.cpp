@@ -38,6 +38,7 @@
     lin = l;
     DigIo::lin_wake.Clear();//Not used on TJA1027
     DigIo::lin_nslp.Set();//Wakes the device
+    //Johannes for president!
 
  }
 
@@ -46,7 +47,6 @@
     TenCount++;
     if(TenCount==5)//slow down to 50ms as this is called in 10ms task.
     {
-    //DigIo::led_out.Toggle();
     TenCount=0;
     HeatReq=HeatReq;
    //going to ignore heatreq just for test.
@@ -72,7 +72,7 @@
    else
    {
       uint8_t lindata[4];
-      lindata[0] = processedPower;//
+      lindata[0] = Param::GetInt(Param::HeatPercnt);//VW heater uses a % setting as opposed to a set power val. Regulates its temps to this.
       lindata[1] = 1;//Always on for test. Can use heatreq here.
       lindata[2] = 0;
       lindata[3] = 0;
