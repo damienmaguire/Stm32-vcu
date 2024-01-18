@@ -37,6 +37,7 @@ int16_t Can_OI::final_torque_request;
 static bool statusInv = 0;
 uint8_t Inv_Opmode=0;
 int opmode;
+uint16_t InvStartTimeout=0;
 
 void Can_OI::SetCanInterface(CanHardware* c)
 {
@@ -75,7 +76,6 @@ void Can_OI::DecodeCAN(int id, uint32_t data[2])
       Inv_Opmode = bytes[0];//INVERTER OPMODE
       //0=Off, 1=Run, 2=ManualRun, 3=Boost, 4=Buck, 5=Sine, 6=AcHeat
 
-
    }
 }
 
@@ -89,8 +89,17 @@ void Can_OI::SetTorque(float torquePercent)
    if(Param::GetBool(Param::din_forward) && opmode==MOD_RUN) tempIO+=8;//only send direction data if in run mode
    if(Param::GetBool(Param::din_reverse) && opmode==MOD_RUN) tempIO+=16;//only send direction data if in run mode
    if(Param::GetBool(Param::din_brake)) tempIO+=4;
-   if(Param::GetBool(Param::din_start)) tempIO+=2;//may not work. investigate.
-   //Work but requires key to be held on. Will use a bool here.
+   //if(Param::GetBool(Param::din_start)) tempIO+=2;
+   if(opmode==MOD_RUN && InvStartTimeout!=0)//Set the start signal true for 3 seconds on vcu entering run mode.
+    {
+      InvStartTimeout--;
+      tempIO+=2;//inv start signal on for 3 secs once enter vcu run mode
+    }
+
+   if(opmode==MOD_OFF)
+   {
+     InvStartTimeout=300;
+   }
 
    uint32_t data[2];
    uint32_t pot = Param::GetInt(Param::pot) & 0xFFF;
@@ -125,6 +134,15 @@ int Can_OI::GetInverterState()
 void Can_OI::Task100Ms()
 {
 opmode = Param::GetInt(Param::opmode);
+if(opmode==MOD_OFF)
+{
+  voltage=0;//Clear all vals when in off mode to ensure real vals are displayed on next start
+  speed=0;
+  inv_temp=0;
+  motor_temp=0;
+  Inv_Opmode=0;
+  final_torque_request=0;
+}
 
 }
 

@@ -33,7 +33,7 @@ class Bmw_E31: public Vehicle
 
 public:
    void SetCanInterface(CanHardware* c);
-   void Task10Ms() {};
+   void Task10Ms();
    void Task100Ms();
    void Task1Ms();
    void SetRevCounter(int s);
@@ -47,6 +47,8 @@ private:
    uint16_t speed;
    uint32_t timerPeriod;
    bool timerIsRunning=false;
+   void Msg43F(int8_t gear);
+   void Msg43B();
 
 };
 
