@@ -27,6 +27,7 @@
 #include "vehicle.h"
 #include "digio.h"
 #include "utils.h"
+#include "stm32_can.h"
 
 class Bmw_E31: public Vehicle
 {
@@ -47,8 +48,8 @@ private:
    uint16_t speed;
    uint32_t timerPeriod;
    bool timerIsRunning=false;
-   void Msg43F(int8_t gear);
-   void Msg43B();
+   void EGSMsg43F(int8_t gear);
+   void EGSMsg43B();
 
 };
 

@@ -32,7 +32,7 @@
 //We use this as an init function
 void Bmw_E31::SetCanInterface(CanHardware* c)
 {
-   c = c;
+   can = c;
    tim_setup();//Fire up timer one...
    timer_disable_counter(TIM1);//...but disable until needed
    //note we are trying to reuse the lexus gs450h oil pump pwm output here to drive the tach
@@ -79,7 +79,7 @@ void Bmw_E31::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void Bmw_E31::Msg43B()  //EGS1
+void Bmw_E31::EGSMsg43B()  //EGS1
 {
 
    uint8_t bytes[3];
@@ -91,7 +91,7 @@ void Bmw_E31::Msg43B()  //EGS1
    can->Send(0x43B, (uint32_t*)bytes,3);
 }
 
-void Bmw_E31::Msg43F(int8_t gear)
+void Bmw_E31::EGSMsg43F(int8_t gear)
 {
    //Can bus data packet values to be sent
    uint8_t bytes[8];
@@ -160,9 +160,9 @@ void Bmw_E31::Msg43F(int8_t gear)
 
  void Bmw_E31::Task10Ms()
 {
-   Msg43B();//EGS1
+   EGSMsg43B();//EGS1
    if (Param::GetBool(Param::Transmission))
-      Msg43F(Param::GetInt(Param::dir));
+      EGSMsg43F(Param::GetInt(Param::dir));
 
 }
 
