@@ -41,7 +41,7 @@ static bool StartSig=false;
 static bool ACrequest=false;
 static bool initbyStart=false;
 static bool initbyCharge=false;
-
+static uint8_t rlyDly=25;
 
 static volatile unsigned
 days=0,
@@ -415,6 +415,7 @@ switch (opmode)
        initbyCharge=true;
       }
       Param::SetInt(Param::opmode, opmode);
+      rlyDly=25;//Recharge sequence timer
    break;
 
    case MOD_PRECHARGE:
@@ -424,15 +425,21 @@ switch (opmode)
       }
       IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
       IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
-      DigIo::prec_out.Set();//commence precharge
+      if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
+      if(rlyDly==0) DigIo::prec_out.Set();//commence precharge
       if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
       {
          if(StartSig)
          {
          opmode = MOD_RUN;
          StartSig=false;//reset for next time
+         rlyDly=25;//Recharge sequence timer
          }
-         else if(chargeMode) opmode = MOD_CHARGE;
+         else if(chargeMode)
+         {
+          opmode = MOD_CHARGE;
+          rlyDly=25;//Recharge sequence timer
+         }
       }
       if(initbyCharge && !chargeMode) opmode = MOD_OFF;// These two statements catch a precharge hang from either start mode or run mode.
       if(initbyStart && !selectedVehicle->Ready()) opmode = MOD_OFF;
@@ -454,14 +461,16 @@ switch (opmode)
    break;
 
    case MOD_CHARGE:
-      DigIo::dcsw_out.Set();
+      if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
+      if(rlyDly==0) DigIo::dcsw_out.Set();
       ErrorMessage::UnpostAll();
       if(!chargeMode) opmode = MOD_OFF;
       Param::SetInt(Param::opmode, opmode);
    break;
 
    case MOD_RUN:
-      DigIo::dcsw_out.Set();
+      if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
+      if(rlyDly==0) DigIo::dcsw_out.Set();
       DigIo::inv_out.Set();//inverter power on
       Param::SetInt(Param::opmode, MOD_RUN);
       ErrorMessage::UnpostAll();
