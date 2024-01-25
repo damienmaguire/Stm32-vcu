@@ -420,7 +420,7 @@ switch (opmode)
    case MOD_PRECHARGE:
       if (!chargeMode)
       {
-         DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
+         if(selectedInverter != &openInv)DigIo::inv_out.Set();//inverter power on but not if we are in charge mode and not if OI
       }
       IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
       IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
@@ -462,6 +462,7 @@ switch (opmode)
 
    case MOD_RUN:
       DigIo::dcsw_out.Set();
+      DigIo::inv_out.Set();//inverter power on
       Param::SetInt(Param::opmode, MOD_RUN);
       ErrorMessage::UnpostAll();
       if(!selectedVehicle->Ready()) opmode = MOD_OFF;
