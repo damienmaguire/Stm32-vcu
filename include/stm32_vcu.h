@@ -83,6 +83,7 @@
 #include "no_Lever.h"
 #include "VWheater.h"
 #include "linbus.h"
+#include "rearoutlanderinverter.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 

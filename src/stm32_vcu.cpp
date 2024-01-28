@@ -88,6 +88,7 @@ static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
 static Shifter shifterNone;
 static LinBus* lin;
+static RearOutlanderInverter rearoutlanderInv;
 
 
 
@@ -523,6 +524,9 @@ static void UpdateInv()
          break;
       case InvModes::OpenI:
          selectedInverter = &openInv;
+         break;
+      case InvModes::RearOutlander:
+         selectedInverter = &rearoutlanderInv;
          break;
    }
    //This will call SetCanFilters() via the Clear Callback
