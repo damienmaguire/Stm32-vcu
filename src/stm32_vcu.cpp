@@ -41,7 +41,7 @@ static bool StartSig=false;
 static bool ACrequest=false;
 static bool initbyStart=false;
 static bool initbyCharge=false;
-static uint8_t rlyDly=25;
+
 
 static volatile unsigned
 days=0,
@@ -58,6 +58,7 @@ static GS450HClass gs450Inverter;
 static LeafINV leafInv;
 static NissanPDM chargerPDM;
 static teslaCharger ChargerTesla;
+static ElconCharger ChargerElcon;
 static notused UnUsed;
 static noCharger nochg;
 static extCharger chgdigi;
@@ -65,11 +66,12 @@ static amperaCharger ampChg;
 static outlanderCharger outChg;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
+static CPCClass CPCcan;
 static Can_OI openInv;
+static NoInverterClass NoInverter;
 static OutlanderInverter outlanderInv;
 static noHeater Heaternone;
 static AmperaHeater amperaHeater;
-static vwHeater heaterVW;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
 static Inverter* selectedInverter = &openInv;
@@ -87,7 +89,6 @@ static BMS* selectedBMS = &BMSnone;
 static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
 static Shifter shifterNone;
-static LinBus* lin;
 
 
 
@@ -168,7 +169,7 @@ static void Ms200Task(void)
    //in chademo , we do not want to run the 200ms task unless in dc charge mode
    if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
    //In case of the LIM we want to send it all the time if lim in use
-   if(targetChgint == ChargeInterfaces::i3LIM) selectedChargeInt->Task200Ms();
+   if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)) selectedChargeInt->Task200Ms();
    //and just to be thorough ...
    if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
 
@@ -291,11 +292,9 @@ static void Ms100Task(void)
    if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM) if we are NOT in DC charge mode.
    {
       ACrequest=selectedChargeInt->ACRequest(RunChg);
-
    }
 
    Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
-
 }
 
 static void ControlCabHeater(int opmode)
@@ -311,7 +310,7 @@ static void ControlCabHeater(int opmode)
    else
    {
       IOMatrix::GetPin(IOMatrix::HEATERENABLE)->Clear(); //Disable heater and coolant pump
-      //selectedHeater->SetPower(0,0);
+      selectedHeater->SetPower(0,0);
    }
 }
 
@@ -415,31 +414,24 @@ switch (opmode)
        initbyCharge=true;
       }
       Param::SetInt(Param::opmode, opmode);
-      rlyDly=25;//Recharge sequence timer
    break;
 
    case MOD_PRECHARGE:
       if (!chargeMode)
       {
-         if(selectedInverter != &openInv)DigIo::inv_out.Set();//inverter power on but not if we are in charge mode and not if OI
+         DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
       }
       IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
       IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
-      if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
-      if(rlyDly==0) DigIo::prec_out.Set();//commence precharge
+      DigIo::prec_out.Set();//commence precharge
       if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
       {
          if(StartSig)
          {
          opmode = MOD_RUN;
          StartSig=false;//reset for next time
-         rlyDly=25;//Recharge sequence timer
          }
-         else if(chargeMode)
-         {
-          opmode = MOD_CHARGE;
-          rlyDly=25;//Recharge sequence timer
-         }
+         else if(chargeMode) opmode = MOD_CHARGE;
       }
       if(initbyCharge && !chargeMode) opmode = MOD_OFF;// These two statements catch a precharge hang from either start mode or run mode.
       if(initbyStart && !selectedVehicle->Ready()) opmode = MOD_OFF;
@@ -461,17 +453,14 @@ switch (opmode)
    break;
 
    case MOD_CHARGE:
-      if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
-      if(rlyDly==0) DigIo::dcsw_out.Set();
+      DigIo::dcsw_out.Set();
       ErrorMessage::UnpostAll();
       if(!chargeMode) opmode = MOD_OFF;
       Param::SetInt(Param::opmode, opmode);
    break;
 
    case MOD_RUN:
-      if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
-      if(rlyDly==0) DigIo::dcsw_out.Set();
-      DigIo::inv_out.Set();//inverter power on
+      DigIo::dcsw_out.Set();
       Param::SetInt(Param::opmode, MOD_RUN);
       ErrorMessage::UnpostAll();
       if(!selectedVehicle->Ready()) opmode = MOD_OFF;
@@ -503,6 +492,9 @@ static void UpdateInv()
    selectedInverter->DeInit();
    switch (Param::GetInt(Param::Inverter))
    {
+      case InvModes::NoInv:
+         selectedInverter = &NoInverter;
+         break;
       case InvModes::Leaf_Gen1:
          selectedInverter = &leafInv;
          break;
@@ -587,6 +579,10 @@ static void UpdateCharger()
       selectedCharger = &outChg;
          break;
 
+               case ChargeModes::Elcon:
+      selectedCharger = &ChargerElcon;
+         break;
+
    }
    //This will call SetCanFilters() via the Clear Callback
    canInterface[0]->ClearUserMessages();
@@ -607,6 +603,9 @@ static void UpdateChargeInt()
       case ChargeInterfaces::i3LIM:
       selectedChargeInt = &LIMFC;
          break;
+               case ChargeInterfaces::CPC:
+      selectedChargeInt = &CPCcan;
+         break;
    }
    //This will call SetCanFilters() via the Clear Callback
    canInterface[0]->ClearUserMessages();
@@ -625,8 +624,6 @@ static void UpdateHeater()
       selectedHeater = &amperaHeater;
          break;
       case HeatType::VW:
-      selectedHeater = &heaterVW;
-      heaterVW.SetLinInterface(lin);
          break;
    }
    //This will call SetCanFilters() via the Clear Callback
@@ -947,9 +944,6 @@ extern "C" int main(void)
 
    CANSPI_Initialize();// init the MCP25625 on CAN3
    CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
-
-   LinBus l(USART1, 19200);
-   lin = &l;
 
    UpdateInv();
    UpdateVehicle();

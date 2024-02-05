@@ -81,13 +81,13 @@
 #include "shifter.h"
 #include "F30_Lever.h"
 #include "no_Lever.h"
-#include "VWheater.h"
-#include "linbus.h"
+#include "CPC.h"
+#include "NoInverter.h"
+#include "ElconCharger.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
 #define PRINT_JSON 0
-
 
 typedef union {
     struct {
