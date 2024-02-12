@@ -208,13 +208,26 @@ static void Ms200Task(void)
          int brkVacVal = IOMatrix::GetAnaloguePin(IOMatrix::VAC_SENSOR)->Get();
          Param::SetInt(Param::BrkVacVal, brkVacVal);
 
-         //enable pump
-         if (brkVacVal > brkVacThresh) {
-            IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
-         } else if (brkVacVal < BrkVacHyst) {
-            IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+         // if brkVacThresh > BrkVacHyst then sensor reads higher with more vacuum else other way round
+         if (brkVacThresh > BrkVacHyst) {
+            //enable pump
+            if (brkVacVal > brkVacThresh) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+            } else if (brkVacVal < BrkVacHyst) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+            }
+         } else {
+            //enable pump
+            if (brkVacVal < brkVacThresh) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+            } else if (brkVacVal > BrkVacHyst) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+            }
          }
+
       }
+   } else {
+      IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
    }
 
 }
