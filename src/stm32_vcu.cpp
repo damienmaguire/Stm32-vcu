@@ -442,13 +442,13 @@ switch (opmode)
       if(rlyDly==0) DigIo::prec_out.Set();//commence precharge
       if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
       {
-         if(StartSig)
+         if(StartSig && rlyDly==0)
          {
          opmode = MOD_RUN;
          StartSig=false;//reset for next time
          rlyDly=25;//Recharge sequence timer
          }
-         else if(chargeMode)
+         else if(chargeMode && rlyDly==0)
          {
           opmode = MOD_CHARGE;
           rlyDly=25;//Recharge sequence timer
@@ -483,8 +483,11 @@ switch (opmode)
 
    case MOD_RUN:
       if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
-      if(rlyDly==0) DigIo::dcsw_out.Set();
+      if(rlyDly==0)
+      {
+      DigIo::dcsw_out.Set();
       DigIo::inv_out.Set();//inverter power on
+      }
       Param::SetInt(Param::opmode, MOD_RUN);
       ErrorMessage::UnpostAll();
       if(!selectedVehicle->Ready()) opmode = MOD_OFF;
