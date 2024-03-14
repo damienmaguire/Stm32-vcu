@@ -368,6 +368,7 @@ float ProcessThrottle(int speed)
 
    finalSpnt = Throttle::RampThrottle(finalSpnt);
 
+
    Throttle::UdcLimitCommand(finalSpnt,Param::GetFloat(Param::udc));
    Throttle::IdcLimitCommand(finalSpnt, ABS(Param::GetFloat(Param::idc)));
    Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));

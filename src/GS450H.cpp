@@ -467,7 +467,7 @@ void GS450HClass::Task1Ms()
          dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
          statusInv=1;
          dc_bus_voltage=(((mth_data[117]|mth_data[118]<<8))/2);
-         temp_inv_water=(mth_data[20]|mth_data[21]<<8);
+         temp_inv_water=int8_t(mth_data[20]);
          temp_inv_inductor=(mth_data[25]|mth_data[26]<<8);
          mg1_speed=mth_data[10]|mth_data[11]<<8;
          mg2_speed=mth_data[43]|mth_data[44]<<8;
@@ -523,6 +523,7 @@ void GS450HClass::Task1Ms()
          htm_data[26]=(mg2_torque/2) & 0xFF; //positive is forward
          htm_data[27]=((mg2_torque/2)>>8) & 0xFF;
       }
+
 */
       //This data has moved!
 
