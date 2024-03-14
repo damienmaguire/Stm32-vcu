@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.10.T
+#define VER 2.06.A
 
 
 /* Entries must be ordered as follows:
@@ -31,8 +31,8 @@
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      8,      0,      6  ) \
     PARAM_ENTRY(CAT_SETUP,     Transmission, TRNMODES, 0,      1,      0,      78 ) \
-    PARAM_ENTRY(CAT_SETUP,   interface,   CHGINT,    0,      3,      0,      39 ) \
-     PARAM_ENTRY(CAT_SETUP,   chargemodes, CHGMODS,   0,      6,      0,      37 ) \
+    PARAM_ENTRY(CAT_SETUP,     interface,    CHGINT,    0,      3,      0,      39 ) \
+     PARAM_ENTRY(CAT_SETUP,    chargemodes,  CHGMODS,   0,      6,      0,      37 ) \
     PARAM_ENTRY(CAT_SETUP,     InverterCan,  CAN_DEV,  0,      1,      0,      70 ) \
     PARAM_ENTRY(CAT_SETUP,     VehicleCan,   CAN_DEV,  0,      1,      1,      71 ) \
     PARAM_ENTRY(CAT_SETUP,     ShuntCan,     CAN_DEV,  0,      1,      0,      72 ) \
@@ -47,8 +47,8 @@
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2max,     "dig",     0,      4095,   4095,   10 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regenrpm, "rpm",       0,      10000,    1500,     60 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regenmax,    "%",       -100,   0,     -10,     61 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenrpm,    "rpm",       0,      10000,    1500,     60 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenmax,     "%",       -100,   0,     -10,     61 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenBrake,    "%",       -100,   0,     -10,     122 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    100,    68 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmode,     POTMODES,  0,      1,      0,      11 ) \
