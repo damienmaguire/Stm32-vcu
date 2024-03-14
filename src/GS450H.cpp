@@ -350,7 +350,6 @@ void GS450HClass::Task1Ms()
          statusInv=1;
          dc_bus_voltage=(((mth_data[100]|mth_data[101]<<8)-5)/2);
          temp_inv_water=(mth_data[42]|mth_data[43]<<8);
-         if(temp_inv_water>120) temp_inv_water=120;//bodge to prevernt overtemp wrap until is fixed properly.
          temp_inv_inductor=(mth_data[86]|mth_data[87]<<8);
          mg1_speed=mth_data[6]|mth_data[7]<<8;
          mg2_speed=mth_data[38]|mth_data[39]<<8;

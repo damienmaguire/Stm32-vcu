@@ -32,7 +32,7 @@
 //We use this as an init function
 void Bmw_E31::SetCanInterface(CanHardware* c)
 {
-   can = c;
+   c = c;
    tim_setup();//Fire up timer one...
    timer_disable_counter(TIM1);//...but disable until needed
    //note we are trying to reuse the lexus gs450h oil pump pwm output here to drive the tach
@@ -79,93 +79,11 @@ void Bmw_E31::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void Bmw_E31::EGSMsg43B()  //EGS1
-{
-
-   uint8_t bytes[3];
-
-   bytes[0]=0x46;
-   bytes[1]=0x00;
-   bytes[2]=0x00;
-
-   can->Send(0x43B, (uint32_t*)bytes,3);
-}
-
-void Bmw_E31::EGSMsg43F(int8_t gear)
-{
-   //Can bus data packet values to be sent
-   uint8_t bytes[8];
-   // Source: https://www.bimmerforums.com/forum/showthread.php?1887229-E46-Can-bus-project&p=30055342#post30055342
-   // byte 0 = 0x81 //doesn't do anything to the ike
-   bytes[0] = 0x81;
-   // byte 1 = 0x01 where;
-   // 01 = first gear
-   // 02= second gear
-   // 03 = third gear
-   // 04 = fourth gear
-   // 05 = D
-   // 06 = N
-   // 07 = R
-   // 08 = P
-   // 09 = 5
-   // 0A = 6
-   switch (gear)
-   {
-   case -1 /* Reverse */:
-      bytes[1] = 0x07;
-      break;
-   case 0 /* Neutral */:
-      bytes[1] = 0x06;
-      break;
-   case 1 /* Drive */:
-      bytes[1] = 0x05;
-      break;
-   default:
-      bytes[1] = 0x08;
-      break;
-   }
-
-   // byte 2 = 0xFF where;
-   // FF = no display
-   // 00 = E
-   // 39 = M
-   // 40 = S
-   bytes[2] = 0xFF;
-
-   // byte 3 = 0xFF //doesn't do anything to the ike
-   bytes[3] = 0xFF;
-
-   // byte 4 = 0x00 //doesn't do anything to the ike
-   bytes[4] = 0x00;
-
-   // byte 5 = 0x80 where;
-   // 80 = clears the gear warning picture - all other values bring it on
-   bytes[5] = 0x80;
-
-   // byte 6 = 0xFF //doesn't do anything to the ike
-   bytes[6] = 0xFF;
-
-   // byte 7 = 0x00 //doesn't do anything to the ike
-   bytes[7] = 0xFF;
-
-   can->Send(0x43F, bytes, 8);
-}
-
  void Bmw_E31::Task1Ms()
 {
 
 
 }
-
-
- void Bmw_E31::Task10Ms()
-{
-   EGSMsg43B();//EGS1
-   if (Param::GetBool(Param::Transmission))
-      EGSMsg43F(Param::GetInt(Param::dir));
-
-}
-
 
 void Bmw_E31::Task100Ms()
 {

@@ -31,8 +31,6 @@ class no_Lever: public Shifter
 {
 public:
 
-
-
 private:
 
 };
