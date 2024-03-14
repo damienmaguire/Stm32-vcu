@@ -25,9 +25,10 @@
 
 int Throttle::potmin[2];
 int Throttle::potmax[2];
-float Throttle::regenTravel;
+float Throttle::regenRpm;
 float Throttle::brknompedal;
 float Throttle::regenmax;
+float Throttle::regenBrake;
 float Throttle::brkcruise;
 int Throttle::idleSpeed;
 int Throttle::cruiseSpeed;
@@ -37,6 +38,7 @@ int Throttle::speedFiltered;
 float Throttle::idleThrotLim;
 float Throttle::potnomFiltered;
 float Throttle::throtmax;
+float Throttle::throtmaxRev;
 float Throttle::throtmin;
 float Throttle::throtdead;
 float Throttle::regenRamp;
@@ -49,6 +51,11 @@ float Throttle::idcmin;
 float Throttle::idcmax;
 int Throttle::speedLimit;
 
+// internal variable, reused every time the function is called
+static float throttleRamped = 0.0;
+
+static float regenlim;
+
 /**
  * @brief Check the throttle input for sanity and limit the range to min/max values
  *
@@ -59,27 +66,27 @@ int Throttle::speedLimit;
  */
 bool Throttle::CheckAndLimitRange(int* potval, int potIdx)
 {
-   // The range check accounts for inverted throttle pedals, where the minimum
-   // value is higher than the maximum. To accomodate for that, the potMin and potMax
-   // variables are set for internal use.
-   int potMin = potmax[potIdx] > potmin[potIdx] ? potmin[potIdx] : potmax[potIdx];
-   int potMax = potmax[potIdx] > potmin[potIdx] ? potmax[potIdx] : potmin[potIdx];
+    // The range check accounts for inverted throttle pedals, where the minimum
+    // value is higher than the maximum. To accomodate for that, the potMin and potMax
+    // variables are set for internal use.
+    int potMin = potmax[potIdx] > potmin[potIdx] ? potmin[potIdx] : potmax[potIdx];
+    int potMax = potmax[potIdx] > potmin[potIdx] ? potmax[potIdx] : potmin[potIdx];
 
-   if (((*potval + POT_SLACK) < potMin) || (*potval > (potMax + POT_SLACK)))
-   {
-      *potval = potMin;
-      return false;
-   }
-   else if (*potval < potMin)
-   {
-      *potval = potMin;
-   }
-   else if (*potval > potMax)
-   {
-      *potval = potMax;
-   }
+    if (((*potval + POT_SLACK) < potMin) || (*potval > (potMax + POT_SLACK)))
+    {
+        *potval = potMin;
+        return false;
+    }
+    else if (*potval < potMin)
+    {
+        *potval = potMin;
+    }
+    else if (*potval > potMax)
+    {
+        *potval = potMax;
+    }
 
-   return true;
+    return true;
 }
 
 /**
@@ -93,13 +100,14 @@ bool Throttle::CheckAndLimitRange(int* potval, int potIdx)
  */
 float Throttle::NormalizeThrottle(int potval, int potIdx)
 {
-   if(potIdx < 0 || potIdx > 1)
-      return 0.0f;
+    if(potIdx < 0 || potIdx > 1)
+        return 0.0f;
 
-   if(potmin[potIdx] == potmax[potIdx])
-      return 0.0f;
+    if(potmin[potIdx] == potmax[potIdx])
+        return 0.0f;
 
-   return 100.0f * ((float)(potval - potmin[potIdx]) / (float)(potmax[potIdx] - potmin[potIdx]));
+
+    return 100.0f * ((float)(potval - potmin[potIdx]) / (float)(potmax[potIdx] - potmin[potIdx]));
 }
 
 /**
@@ -118,55 +126,77 @@ float Throttle::NormalizeThrottle(int potval, int potIdx)
  */
 float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 {
-   float potnom = 0.0f;  // normalize potval against the potmin and potmax values
+    int speed = Param::GetInt(Param::speed);
+    int dir = Param::GetInt(Param::dir);
+    float potnom = 0.0f;  // normalize potval against the potmin and potmax values
 
-   if (brkpedal)
-   {
-      // no regen for now, just command zero throttle when braking
-      potnom = 0.0f;
-      return potnom;
-   }
+    if(speed< 0)//make sure speed is not negative
+    {
+        speed *= -1;
+    }
 
-   // substract offset, bring potval to the potmin-potmax scale and make a percentage
-   potnom = NormalizeThrottle(potval, potIdx);
+    if(dir == 0)//neutral no torque command
+    {
+        return 0;
+    }
 
-   // Apply the deadzone parameter. To avoid that we lose the range between
-   // 0 and throtdead, the scale of potnom is mapped from the [0.0, 100.0] scale
-   // to the [throtdead, 100.0] scale.
-   if(potnom < throtdead)
-      potnom = 0.0f;
-   else
-      potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
+    if (brkpedal)
+    {
+        if(speed < 100)
+        {
+            return 0;
+        }
+        else
+        {
+            potnom = utils::change(speed, 100, regenRpm, 0, regenBrake);//taper regen according to speed
+            return potnom;
+        }
+    }
 
-   return potnom;
+    // substract offset, bring potval to the potmin-potmax scale and make a percentage
+    potnom = NormalizeThrottle(potval, potIdx);
 
-   // float potnom;
-   // float scaledBrkMax = brkpedal ? brknompedal : regenmax;
+    // Apply the deadzone parameter. To avoid that we lose the range between
+    // 0 and throtdead, the scale of potnom is mapped from the [0.0, 100.0] scale
+    // to the [throtdead, 100.0] scale.
+    if(potnom < throtdead)
+    {
+        potnom = 0.0f;
+    }
+    else
+    {
+        potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
+    }
 
-   // if (pot2val >= potmin[1])
-   // {
-   //    potnom = (100.0f * (pot2val - potmin[1])) / (potmax[1] - potmin[1]);
-   //    //Never reach 0, because that can spin up the motor
-   //    scaledBrkMax = -0.1f + (scaledBrkMax * potnom) / 100.0f;
-   // }
+    //Do clever bits for regen and such.
 
-   // if (brkpedal)
-   // {
-   //    potnom = scaledBrkMax;
-   // }
-   // else
-   // {
-   //    potnom = potval - potmin[0];
-   //    potnom = ((100.0f + regenTravel) * potnom) / (potmax[0] - potmin[0]);
-   //    potnom -= regenTravel;
+    if(speed < 100)//No regen under 100 rpm
+    {
+        regenlim = 0;
+    }
+    else if(speed < regenRpm)
+    {
+        regenlim = utils::change(speed, 100, regenRpm, 0, regenmax);//taper regen according to speed
+    }
+    else
+    {
+        regenlim = regenmax;
+    }
 
-   //    if (potnom < 0)
-   //    {
-   //       potnom = -(potnom * scaledBrkMax / regenTravel);
-   //    }
-   // }
+    //potnom = (potnom * (throtmax-regenlim))/100+regenlim; //Map function
+    if(dir == 1)//Forward
+    {
+        potnom = utils::change(potnom,0,100,regenlim,throtmax);
+    }
+    else //Reverse, as neutral already exited function
+    {
+        potnom = utils::change(potnom,0,100,regenlim,throtmaxRev);
+    }
 
-   // return potnom;
+    Param::SetInt(Param::ChgTemp, potnom);
+
+
+    return potnom;
 }
 
 /**
@@ -177,142 +207,139 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
  */
 float Throttle::RampThrottle(float potnom)
 {
-   // internal variable, reused every time the function is called
-   static float throttleRamped = 0.0;
+    // make sure potnom is within the boundaries of [throtmin, throtmax]
+    potnom = MIN(potnom, throtmax);
+    potnom = MAX(potnom, throtmin);
 
-   // make sure potnom is within the boundaries of [throtmin, throtmax]
-   potnom = MIN(potnom, throtmax);
-   potnom = MAX(potnom, throtmin);
+    if (potnom >= throttleRamped) // higher throttle command than currently applied
+    {
+        throttleRamped = RAMPUP(throttleRamped, potnom, throttleRamp);
+        potnom = throttleRamped;
+    }
+    else if (potnom < throttleRamped && potnom > 0) // lower throttle command than currently applied
+    {
+        throttleRamped = potnom; //No ramping from high throttle to low throttle
+    }
+    else //potnom < throttleRamped && potnom <= 0
+    {
+        //throttleRamped = MIN(0, throttleRamped); //start ramping at 0
+        throttleRamped = RAMPDOWN(throttleRamped, potnom, regenRamp);
+        potnom = throttleRamped;
+    }
 
-   if (potnom >= throttleRamped) // higher throttle command than currently applied
-   {
-      throttleRamped = RAMPUP(throttleRamped, potnom, throttleRamp);
-      potnom = throttleRamped;
-   }
-   else if (potnom < throttleRamped && potnom > 0) // lower throttle command than currently applied
-   {
-      throttleRamped = potnom; //No ramping from high throttle to low throttle
-   }
-   else //potnom < throttleRamped && potnom <= 0
-   {
-      throttleRamped = MIN(0, throttleRamped); //start ramping at 0
-      throttleRamped = RAMPDOWN(throttleRamped, potnom, regenRamp);
-      potnom = throttleRamped;
-   }
-
-   return potnom;
+    return potnom;
 }
 
 float Throttle::CalcIdleSpeed(int speed)
 {
-   int speederr = idleSpeed - speed;
-   return MIN(idleThrotLim, speedkp * speederr);
+    int speederr = idleSpeed - speed;
+    return MIN(idleThrotLim, speedkp * speederr);
 }
 
 float Throttle::CalcCruiseSpeed(int speed)
 {
-   speedFiltered = IIRFILTER(speedFiltered, speed, speedflt);
-   int speederr = cruiseSpeed - speedFiltered;
+    speedFiltered = IIRFILTER(speedFiltered, speed, speedflt);
+    int speederr = cruiseSpeed - speedFiltered;
 
-   float potnom = speedkp * speederr;
-   potnom = MIN(100, potnom);
-   potnom = MAX(brkcruise, potnom);
+    float potnom = speedkp * speederr;
+    potnom = MIN(100, potnom);
+    potnom = MAX(brkcruise, potnom);
 
-   return potnom;
+    return potnom;
 }
 
 bool Throttle::TemperatureDerate(float temp, float tempMax, float& finalSpnt)
 {
-   float limit = 0;
+    float limit = 0;
 
-   if (temp <= tempMax)
-      limit = 100.0f;
-   else if (temp < (tempMax + 2.0f))
-      limit = 50.0f;
+    if (temp <= tempMax)
+        limit = 100.0f;
+    else if (temp < (tempMax + 2.0f))
+        limit = 50.0f;
 
-   if (finalSpnt >= 0)
-      finalSpnt = MIN(finalSpnt, limit);
-   else
-      finalSpnt = MAX(finalSpnt, -limit);
+    if (finalSpnt >= 0)
+        finalSpnt = MIN(finalSpnt, limit);
+    else
+        finalSpnt = MAX(finalSpnt, -limit);
 
-   return limit < 100.0f;
+    return limit < 100.0f;
 }
 
 void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
 {
-   if(udcmin>0)    //ignore if set to zero. useful for bench testing without isa shunt
-   {
-      if (finalSpnt >= 0)
-      {
-         float udcErr = udc - udcmin;
-         float res = udcErr * 5;
-         res = MAX(0, res);
-         finalSpnt = MIN(finalSpnt, res);
-      }
-      else
-      {
-         float udcErr = udc - udcmax;
-         float res = udcErr * 5;
-         res = MIN(0, res);
-         finalSpnt = MAX(finalSpnt, res);
-      }
-   }
-   else
-   {
-      finalSpnt = finalSpnt;
-   }
+    if(udcmin>0)    //ignore if set to zero. useful for bench testing without isa shunt
+    {
+        if (finalSpnt >= 0)
+        {
+            float udcErr = udc - udcmin;
+            float res = udcErr * 5;
+            res = MAX(0, res);
+            finalSpnt = MIN(finalSpnt, res);
+        }
+        else
+        {
+            float udcErr = udc - udcmax;
+            float res = udcErr * 3.5;
+            res = MIN(0, res);
+            finalSpnt = MAX(finalSpnt, res);
+        }
+    }
+    else
+    {
+        finalSpnt = finalSpnt;
+    }
 }
 
 void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
 {
-   static float idcFiltered = 0;
+    static float idcFiltered = 0;
 
-   idcFiltered = IIRFILTERF(idcFiltered, idc, 4);
+    idcFiltered = IIRFILTERF(idcFiltered, idc, 4);
 
-   if (finalSpnt >= 0)
-   {
-      float idcerr = idcmax - idcFiltered;
-      float res = idcerr * 10;
+    if (finalSpnt >= 0)
+    {
+        float idcerr = idcmax - idcFiltered;
+        float res = idcerr * 10;
 
-      res = MAX(0, res);
-      finalSpnt = MIN(res, finalSpnt);
-   }
-   else
-   {
-      float idcerr = idcmin - idcFiltered;
-      float res = idcerr * 10;
+        res = MAX(0, res);
+        finalSpnt = MIN(res, finalSpnt);
+    }
+    else
+    {
+        float idcerr = idcmin - idcFiltered;
+        float res = idcerr * 10;
 
-      res = MIN(0, res);
-      finalSpnt = MAX(res, finalSpnt);
-   }
+        res = MIN(0, res);
+        finalSpnt = MAX(res, finalSpnt);
+    }
 }
 
 void Throttle::SpeedLimitCommand(float& finalSpnt, int speed)
 {
-   static int speedFiltered = 0;
+    static int speedFiltered = 0;
 
-   speedFiltered = IIRFILTER(speedFiltered, speed, 4);
+    speedFiltered = IIRFILTER(speedFiltered, speed, 4);
 
-   if (finalSpnt > 0)
-   {
-      int speederr = speedLimit - speedFiltered;
-      int res = speederr / 4;
+    if (finalSpnt > 0)
+    {
+        int speederr = speedLimit - speedFiltered;
+        int res = speederr / 4;
 
-      res = MAX(0, res);
-      finalSpnt = MIN(res, finalSpnt);
-   }
+        res = MAX(0, res);
+        finalSpnt = MIN(res, finalSpnt);
+    }
 }
 
 void Throttle::RegenRampDown(float& finalSpnt, int speed)
 {
-   const float rampStart = 150.0f; //rpm
-   const float noRegen = 50.0f; //cut off regen below this
-   float absSpeed = ABS(speed);
+    const float rampStart = 150.0f; //rpm
+    const float noRegen = 50.0f; //cut off regen below this
+    float absSpeed = ABS(speed);
 
-   if (finalSpnt < 0 && absSpeed < rampStart) //regen
-   {
-      float ratio = (absSpeed - noRegen) / (rampStart - noRegen);
-      ratio = MAX(0, ratio);
-      finalSpnt = finalSpnt * ratio;
-   }
+    if (finalSpnt < 0 && absSpeed < rampStart) //regen
+    {
+        float ratio = (absSpeed - noRegen) / (rampStart - noRegen);
+        ratio = MAX(0, ratio);
+        finalSpnt = finalSpnt * ratio;
+    }
 }

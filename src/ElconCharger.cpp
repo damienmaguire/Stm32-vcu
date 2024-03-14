@@ -20,13 +20,23 @@ void ElconCharger::SetCanInterface(CanHardware* c)
 
 void ElconCharger::DecodeCAN(int id, uint32_t data[2])
 {
-    uint8_t* bytes = (uint8_t*)data;
-    if (id == 0x18FF50E5)
+    switch (id)
     {
-        ChargerHVbatteryVolts = (bytes[0] * 256 + bytes[1]) * 0.1;
-        ChargerHVcurrent = (bytes[2] * 256 + bytes[3]) * 0.1;
-        ChargerStatus = bytes[4];
+    case 0x18FF50E5:
+        ElconCharger::handle18FF50E5(data);
+        break;
+
+    default:
+        break;
     }
+}
+
+void ElconCharger::handle18FF50E5(uint32_t data[2])
+{
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes.
+    ChargerHVbatteryVolts = (bytes[0] * 256 + bytes[1]) * 0.1;
+    ChargerHVcurrent = (bytes[2] * 256 + bytes[3]) * 0.1;
+    ChargerStatus = bytes[4];
 }
 
 void ElconCharger::Task200Ms()

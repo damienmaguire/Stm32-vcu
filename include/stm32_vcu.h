@@ -84,6 +84,7 @@
 #include "CPC.h"
 #include "NoInverter.h"
 #include "ElconCharger.h"
+#include "rearoutlanderinverter.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 

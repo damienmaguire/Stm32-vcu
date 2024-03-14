@@ -523,15 +523,15 @@ void GS450HClass::Task1Ms()
          htm_data[26]=(mg2_torque/2) & 0xFF; //positive is forward
          htm_data[27]=((mg2_torque/2)>>8) & 0xFF;
       }
-
+*/
       //This data has moved!
 
-      htm_data[85]=(-5000)&0xFF;  // regen ability of battery
-      htm_data[86]=((-5000)>>8);
+      htm_data[79]=(-5000)&0xFF;  // regen ability of battery
+      htm_data[80]=((-5000)>>8);
 
-      htm_data[87]=(-10000)&0xFF;  // discharge ability of battery
-      htm_data[88]=((-10000)>>8);
-
+      htm_data[81]=(10000)&0xFF;  // discharge ability of battery
+      htm_data[82]=((10000)>>8);
+/*
       //checksum
      if(++frame_count & 0x01)
       {
