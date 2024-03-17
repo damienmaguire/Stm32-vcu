@@ -83,6 +83,8 @@
 #include "no_Lever.h"
 #include "CPC.h"
 #include "NoInverter.h"
+#include "linbus.h"
+#include "VWheater.h"
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
 

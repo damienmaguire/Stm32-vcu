@@ -51,6 +51,8 @@ days=0,
 hours=0, minutes=0, seconds=0,
 alarm=0;			// != 0 when alarm is pending
 
+static uint8_t rlyDly=25;
+
 // Instantiate Classes
 static Bmw_E31 e31Vehicle;
 static BMWE65 e65Vehicle;
@@ -77,6 +79,7 @@ static noHeater Heaternone;
 static AmperaHeater amperaHeater;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
+static vwHeater heaterVW;
 static Inverter* selectedInverter = &openInv;
 static Vehicle* selectedVehicle = &vagVehicle;
 static Heater* selectedHeater = &Heaternone;
@@ -93,7 +96,7 @@ static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
 static Shifter shifterNone;
 static RearOutlanderInverter rearoutlanderInv;
-
+static LinBus* lin;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -206,30 +209,38 @@ static void Ms200Task(void)
 
 
     }
-    if(opmode==MOD_RUN)
-    {
-        ChgLck=false;//reset charge lockout flag when we drive off
+   if(opmode==MOD_RUN) {
+      ChgLck=false;//reset charge lockout flag when we drive off
 
-        //Brake Vac Sensor
-        if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR || Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR )
-        {
-            int brkVacThresh = Param::GetInt(Param::BrkVacThresh);
-            int BrkVacHyst = Param::GetInt(Param::BrkVacHyst);
+      //Brake Vac Sensor
+      if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR || Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR ) {
+         int brkVacThresh = Param::GetInt(Param::BrkVacThresh);
+         int BrkVacHyst = Param::GetInt(Param::BrkVacHyst);
 
-            int brkVacVal = IOMatrix::GetAnaloguePin(IOMatrix::VAC_SENSOR)->Get();
-            Param::SetInt(Param::BrkVacVal, brkVacVal);
+         int brkVacVal = IOMatrix::GetAnaloguePin(IOMatrix::VAC_SENSOR)->Get();
+         Param::SetInt(Param::BrkVacVal, brkVacVal);
 
+         // if brkVacThresh > BrkVacHyst then sensor reads higher with more vacuum else other way round
+         if (brkVacThresh > BrkVacHyst) {
             //enable pump
-            if (brkVacVal > brkVacThresh)
-            {
-                IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+            if (brkVacVal > brkVacThresh) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+            } else if (brkVacVal < BrkVacHyst) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
             }
-            else if (brkVacVal < BrkVacHyst)
-            {
-                IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+         } else {
+            //enable pump
+            if (brkVacVal < brkVacThresh) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+            } else if (brkVacVal > BrkVacHyst) {
+               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
             }
-        }
-    }
+         }
+
+      }
+   } else {
+      IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+   }
 
 
 }
@@ -433,6 +444,7 @@ static void Ms10Task(void)
             initbyCharge=true;
         }
         Param::SetInt(Param::opmode, opmode);
+        rlyDly=25;//Recharge sequence timer
         break;
 
     case MOD_PRECHARGE:
@@ -442,15 +454,22 @@ static void Ms10Task(void)
         }
         IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
         IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
-        DigIo::prec_out.Set();//commence precharge
+        if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
+        if(rlyDly==0) DigIo::prec_out.Set();//commence precharge
         if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
-        {
-            if(StartSig)
-            {
-                opmode = MOD_RUN;
-                StartSig=false;//reset for next time
-            }
-            else if(chargeMode) opmode = MOD_CHARGE;
+         {
+         if(StartSig)
+         {
+         opmode = MOD_RUN;
+         StartSig=false;//reset for next time
+         rlyDly=25;//Recharge sequence timer
+         }
+         else if(chargeMode)
+         {
+          opmode = MOD_CHARGE;
+          rlyDly=25;//Recharge sequence timer
+         }
+
         }
         if(initbyCharge && !chargeMode) opmode = MOD_OFF;// These two statements catch a precharge hang from either start mode or run mode.
         if(initbyStart && !selectedVehicle->Ready()) opmode = MOD_OFF;
@@ -472,14 +491,16 @@ static void Ms10Task(void)
         break;
 
     case MOD_CHARGE:
-        DigIo::dcsw_out.Set();
+        if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
+        if(rlyDly==0) DigIo::dcsw_out.Set();
         ErrorMessage::UnpostAll();
         if(!chargeMode) opmode = MOD_OFF;
         Param::SetInt(Param::opmode, opmode);
         break;
 
     case MOD_RUN:
-        DigIo::dcsw_out.Set();
+        if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
+        if(rlyDly==0) DigIo::dcsw_out.Set();
         Param::SetInt(Param::opmode, MOD_RUN);
         ErrorMessage::UnpostAll();
         if(!selectedVehicle->Ready()) opmode = MOD_OFF;
@@ -646,8 +667,9 @@ static void UpdateHeater()
     case HeatType::AmpHeater:
         selectedHeater = &amperaHeater;
         break;
-    case HeatType::VW:
-        break;
+      case HeatType::VW:
+      selectedHeater = &heaterVW;
+      heaterVW.SetLinInterface(lin);
     }
     //This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
@@ -977,6 +999,9 @@ extern "C" int main(void)
 
     CANSPI_Initialize();// init the MCP25625 on CAN3
     CANSPI_ENRx_IRQ();  //init CAN3 Rx IRQ
+
+    LinBus l(USART1, 19200);
+    lin = &l;
 
     UpdateInv();
     UpdateVehicle();

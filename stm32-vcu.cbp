@@ -64,6 +64,7 @@
 		<Unit filename="include/NissanPDM.h" />
 		<Unit filename="include/NoInverter.h" />
 		<Unit filename="include/TeslaDCDC.h" />
+		<Unit filename="include/VWheater.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bms.h" />
@@ -148,6 +149,7 @@
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
 		<Unit filename="src/TeslaDCDC.cpp" />
+		<Unit filename="src/VWheater.cpp" />
 		<Unit filename="src/amperacharger.cpp" />
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
