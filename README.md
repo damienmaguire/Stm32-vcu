@@ -10,6 +10,8 @@ V1.11a On dyno with GS450h / BMW E39 : https://vimeo.com/802405172
 
 V2.00a now available : https://vimeo.com/824494783?share=copy
 
+V2.05a now available.
+
 # Features
 
 - Nissan Leaf Gen1/2/3 inverter via CAN
@@ -65,7 +67,7 @@ I use CodeBlocks IDE :  https://www.codeblocks.org/
 
 Sept 21 : V1 hardware and firmware from "Master" branch now running in my E46 Touring and E39 vehicles.
 
-March 24 : V1.1 Hardware and V2.05A firmware not running in 3 vehicles :
+March 24 : V1.1 Hardware and V2.05A firmware now running in 3 vehicles :
 
 -BMW E39 with Lexus GS450H Drivetrain, Tesla PCS, ISA Shunt , Chademo Fast Charge
 
