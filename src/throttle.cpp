@@ -146,10 +146,15 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
         {
             return 0;
         }
-        else
+        else if (speed < regenRpm)
         {
             potnom = utils::change(speed, 100, regenRpm, 0, regenBrake);//taper regen according to speed
             return potnom;
+        }
+        else
+        {
+           potnom = regenBrake;
+           return potnom;
         }
     }
 
