@@ -23,89 +23,93 @@
 
 RearOutlanderInverter::RearOutlanderInverter()
 {
-   //ctor
+    //ctor
 }
 
 void RearOutlanderInverter::SetCanInterface(CanHardware* c)
 {
-   can = c;
+    can = c;
 
-   can->RegisterUserMessage(0x289);//Outlander Inv Msg
-   can->RegisterUserMessage(0x299);//Outlander Inv Msg
-   can->RegisterUserMessage(0x733);//Outlander Inv Msg
+    can->RegisterUserMessage(0x289);//Outlander Inv Msg
+    can->RegisterUserMessage(0x299);//Outlander Inv Msg
+    can->RegisterUserMessage(0x733);//Outlander Inv Msg
 }
 
 void RearOutlanderInverter::DecodeCAN(int id, uint32_t data[2])
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   switch (id)
-   {
-   case 0x289:
-      //speed = (((data[0] >> 8)& 0xFF00) | ((data[0] >> 24) & 0x0FF)) - 20000;
-      //voltage = ((data[1] & 0xFF) << 8) | ((data[1] >> 8) & 0xFF);
-      speed = (bytes[2] * 256 | bytes[3]) - 20000;
-      voltage = (bytes[4] * 256) + bytes[5];
-      break;
-   case 0x299:
-      //motor_temp = bytes[0] -40;
-      inv_temp = ((bytes[1]-40) + (bytes[4] - 40)) / 2;
-      break;
-   case 0x733:
-      motor_temp = bytes[0] -40; //
-      break;
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+    switch (id)
+    {
+    case 0x289:
+        //speed = (((data[0] >> 8)& 0xFF00) | ((data[0] >> 24) & 0x0FF)) - 20000;
+        //voltage = ((data[1] & 0xFF) << 8) | ((data[1] >> 8) & 0xFF);
+        speed = (bytes[2] * 256 | bytes[3]) - 20000;
+        voltage = (bytes[4] * 256) + bytes[5];
+        break;
+    case 0x299:
+        //motor_temp = bytes[0] -40;
+        inv_temp = ((bytes[1]-40) + (bytes[4] - 40)) / 2;
+        break;
+    case 0x733:
+        motor_temp = bytes[0] -40; //
+        break;
 
 
-   }
+    }
 }
 
 
 
 void RearOutlanderInverter::SetTorque(float torquePercent)
 {
-   final_torque_request = (((torquePercent * 2000) / 100.0f ) * -1) + 10000; // *-1 reverses torque direction
+    final_torque_request = ((torquePercent * 2000) / 100.0f ); //!! Moved into parameter *-1 reverses torque direction
 
-
-   Param::SetInt(Param::torque,final_torque_request);//post processed final torque value sent to inv to web interface
+    if(Param::GetInt(Param::reversemotor) == 1)
+    {
+        final_torque_request *= -1;//reverse torque request to flip motor rotation
+    }
+    final_torque_request += 10000;
+    Param::SetInt(Param::torque,final_torque_request);//post processed final torque value sent to inv to web interface
 }
 
 void RearOutlanderInverter::Task10Ms()
 {
-   run10ms++;
+    run10ms++;
 
-   //Run every 50 ms
-   if (run10ms == 5)
-   {
-      uint32_t data[2];
-      run10ms = 0;
+    //Run every 50 ms
+    if (run10ms == 5)
+    {
+        uint32_t data[2];
+        run10ms = 0;
 
-      data[0] = (final_torque_request & 0xff)<<24 | (final_torque_request & 0xff00)<<8; // swap high and low bytes and shift 16 bit left
-	  // enable inverter. Byte 6 0x0 to disable inverter, 0x3 for drive ( torque > 0 )
-	  data[1] = (final_torque_request == 10000 ? 0x00 : 0x03)<<16;
+        data[0] = (final_torque_request & 0xff)<<24 | (final_torque_request & 0xff00)<<8; // swap high and low bytes and shift 16 bit left
+        // enable inverter. Byte 6 0x0 to disable inverter, 0x3 for drive ( torque > 0 )
+        data[1] = (final_torque_request == 10000 ? 0x00 : 0x03)<<16;
 
-      can->Send(0x287, data, 8);
-   }
+        can->Send(0x287, data, 8);
+    }
 }
 
 void RearOutlanderInverter::Task100Ms()
 {
-  int opmode = Param::GetInt(Param::opmode);
-  if(opmode==MOD_RUN)
-      {
-    uint32_t data[8];
+    int opmode = Param::GetInt(Param::opmode);
+    if(opmode==MOD_RUN)
+    {
+        uint32_t data[8];
 
-   data[0] = 0x00000030;
-   data[1] = 0x00000000;
+        data[0] = 0x00000030;
+        data[1] = 0x00000000;
 
-   can->Send(0x371, data, 8);
+        can->Send(0x371, data, 8);
 
-   data[0] = 0x39140000; // inverter enabled B2 0x10 - 0x1F
+        data[0] = 0x39140000; // inverter enabled B2 0x10 - 0x1F
 
-   can->Send(0x285, data, 8);
+        can->Send(0x285, data, 8);
 
-   data[0] = 0x3D000000;
-   data[1] = 0x00210000;
+        data[0] = 0x3D000000;
+        data[1] = 0x00210000;
 
-   can->Send(0x286, data, 8);
+        can->Send(0x286, data, 8);
 
-      }
+    }
 }

@@ -98,6 +98,7 @@ static Shifter shifterNone;
 static RearOutlanderInverter rearoutlanderInv;
 static LinBus* lin;
 
+uCAN_MSG xMessage;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
@@ -209,38 +210,51 @@ static void Ms200Task(void)
 
 
     }
-   if(opmode==MOD_RUN) {
-      ChgLck=false;//reset charge lockout flag when we drive off
+    if(opmode==MOD_RUN)
+    {
+        ChgLck=false;//reset charge lockout flag when we drive off
 
-      //Brake Vac Sensor
-      if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR || Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR ) {
-         int brkVacThresh = Param::GetInt(Param::BrkVacThresh);
-         int BrkVacHyst = Param::GetInt(Param::BrkVacHyst);
+        //Brake Vac Sensor
+        if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR || Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR )
+        {
+            int brkVacThresh = Param::GetInt(Param::BrkVacThresh);
+            int BrkVacHyst = Param::GetInt(Param::BrkVacHyst);
 
-         int brkVacVal = IOMatrix::GetAnaloguePin(IOMatrix::VAC_SENSOR)->Get();
-         Param::SetInt(Param::BrkVacVal, brkVacVal);
+            int brkVacVal = IOMatrix::GetAnaloguePin(IOMatrix::VAC_SENSOR)->Get();
+            Param::SetInt(Param::BrkVacVal, brkVacVal);
 
-         // if brkVacThresh > BrkVacHyst then sensor reads higher with more vacuum else other way round
-         if (brkVacThresh > BrkVacHyst) {
-            //enable pump
-            if (brkVacVal > brkVacThresh) {
-               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
-            } else if (brkVacVal < BrkVacHyst) {
-               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+            // if brkVacThresh > BrkVacHyst then sensor reads higher with more vacuum else other way round
+            if (brkVacThresh > BrkVacHyst)
+            {
+                //enable pump
+                if (brkVacVal > brkVacThresh)
+                {
+                    IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+                }
+                else if (brkVacVal < BrkVacHyst)
+                {
+                    IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+                }
             }
-         } else {
-            //enable pump
-            if (brkVacVal < brkVacThresh) {
-               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
-            } else if (brkVacVal > BrkVacHyst) {
-               IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+            else
+            {
+                //enable pump
+                if (brkVacVal < brkVacThresh)
+                {
+                    IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+                }
+                else if (brkVacVal > BrkVacHyst)
+                {
+                    IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+                }
             }
-         }
 
-      }
-   } else {
-      IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
-   }
+        }
+    }
+    else
+    {
+        IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+    }
 
 
 }
@@ -320,6 +334,22 @@ static void Ms100Task(void)
     }
 
     Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+
+
+    ///!!!! TOM CHEATING CODE for FT CAN!!////
+
+    xMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+    xMessage.frame.id = 0x130;
+    xMessage.frame.dlc = 5;
+    xMessage.frame.data0 = 0x45;
+    xMessage.frame.data1 = 0x40;
+    xMessage.frame.data2 = 0x21;
+    xMessage.frame.data3 = 0x8F;
+    xMessage.frame.data4 = 0xFE;
+    xMessage.frame.data5 = 0x00;
+    xMessage.frame.data6 = 0x00;
+    xMessage.frame.data7 = 0x00;
+    CANSPI_Transmit(&xMessage);
 }
 
 static void ControlCabHeater(int opmode)
@@ -349,6 +379,7 @@ static void Ms10Task(void)
     int opmode = Param::GetInt(Param::opmode);
     int stt = STAT_NONE;
     int requestedDirection = Param::GetInt(Param::dir);
+int rollingDirection = 0;
 
     ErrorMessage::SetTime(rtc_get_counter_val());
 
@@ -356,31 +387,38 @@ static void Ms10Task(void)
 
     if (Param::GetInt(Param::opmode) == MOD_RUN)
     {
-        torquePercent = utils::ProcessThrottle(previousSpeed); //run the throttle reading and checks and then generate Potnom
+        torquePercent = utils::ProcessThrottle(ABS(previousSpeed)); //run the throttle reading and checks and then generate Potnom
 
-        //! logic below is superseded by regen tapering
+
         //When requesting regen we need to be careful. If the car is not rolling
         //in the same direction as the selected gear, we will actually accelerate!
         //Exclude openinverter here because that has its own regen logic
-        /*
+
         if (torquePercent < 0 && Param::GetInt(Param::Inverter) != InvModes::OpenI)
         {
-            int rollingDirection = previousSpeed >= 0 ? 1 : -1;
-
+            if(Param::GetInt(Param::reversemotor) == 0)
+            {
+                rollingDirection = previousSpeed >= 0 ? 1 : -1;
+            }
+            else
+            {
+                rollingDirection = previousSpeed >= 0 ? -1 : 1;
+            }
             //When rolling backward while in forward gear, apply POSITIVE torque to slow down backward motion
             //Vice versa when in reverse gear and rolling forward.
             if (rollingDirection != requestedDirection)
             {
                 torquePercent = -torquePercent;
             }
+
         }
         else if (torquePercent >= 0)
         {
             torquePercent *= requestedDirection;
         }
-        */
 
-        torquePercent *= requestedDirection; //torque requests invert when reverse direction is selected
+
+        //torquePercent *= requestedDirection; //torque requests invert when reverse direction is selected
 
         selectedInverter->Task10Ms();
     }
@@ -392,12 +430,13 @@ static void Ms10Task(void)
 
 
     selectedInverter->SetTorque(torquePercent);
-    speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface
+    //speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface NO ABS allowed on speed as we need to know direction
+    speed = selectedInverter->GetMotorSpeed();//set motor rpm on interface
 
     Param::SetInt(Param::speed, speed);
     utils::GetDigInputs(canInterface[Param::GetInt(Param::InverterCan)]);
 
-    selectedVehicle->SetRevCounter(ABS(Param::GetInt(Param::speed)));
+    selectedVehicle->SetRevCounter(ABS(speed)); //ABS allowed here to keep number from rolling over.
     selectedVehicle->SetTemperatureGauge(Param::GetFloat(Param::tmphs));
     selectedVehicle->Task10Ms();
     selectedDCDC->Task10Ms();
@@ -408,7 +447,7 @@ static void Ms10Task(void)
     //////////////////////////////////////////////////
     //            MODE CONTROL SECTION              //
     //////////////////////////////////////////////////
-    float udc = utils::ProcessUdc(GetInt(Param::speed));
+    float udc = utils::ProcessUdc(speed);
     stt |= Param::GetInt(Param::pot) <= Param::GetInt(Param::potmin) ? STAT_NONE : STAT_POTPRESSED;
     stt |= udc >= Param::GetFloat(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
     stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
@@ -457,18 +496,18 @@ static void Ms10Task(void)
         if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
         if(rlyDly==0) DigIo::prec_out.Set();//commence precharge
         if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
-         {
-         if(StartSig)
-         {
-         opmode = MOD_RUN;
-         StartSig=false;//reset for next time
-         rlyDly=25;//Recharge sequence timer
-         }
-         else if(chargeMode)
-         {
-          opmode = MOD_CHARGE;
-          rlyDly=25;//Recharge sequence timer
-         }
+        {
+            if(StartSig)
+            {
+                opmode = MOD_RUN;
+                StartSig=false;//reset for next time
+                rlyDly=25;//Recharge sequence timer
+            }
+            else if(chargeMode)
+            {
+                opmode = MOD_CHARGE;
+                rlyDly=25;//Recharge sequence timer
+            }
 
         }
         if(initbyCharge && !chargeMode) opmode = MOD_OFF;// These two statements catch a precharge hang from either start mode or run mode.
@@ -667,9 +706,9 @@ static void UpdateHeater()
     case HeatType::AmpHeater:
         selectedHeater = &amperaHeater;
         break;
-      case HeatType::VW:
-      selectedHeater = &heaterVW;
-      heaterVW.SetLinInterface(lin);
+    case HeatType::VW:
+        selectedHeater = &heaterVW;
+        heaterVW.SetLinInterface(lin);
     }
     //This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
@@ -837,6 +876,14 @@ void Param::Change(Param::PARAM_NUM paramNum)
     Throttle::potmin[1] = Param::GetInt(Param::pot2min);
     Throttle::potmax[1] = Param::GetInt(Param::pot2max);
     Throttle::regenRpm = Param::GetFloat(Param::regenrpm);
+    Throttle::regenendRpm = Param::GetFloat(Param::regenendrpm);
+    if (Throttle::regenRpm < Throttle::regenendRpm)
+    {
+        Throttle::regenRpm = 1500;
+        Throttle::regenendRpm = 100;
+        Param::SetFloat(Param::regenrpm, 1500);
+        Param::SetFloat(Param::regenendrpm, 100);
+    }
     Throttle::regenmax = Param::GetFloat(Param::regenmax);
     Throttle::throtmax = Param::GetFloat(Param::throtmax);
     Throttle::throtmin = Param::GetFloat(Param::throtmin);

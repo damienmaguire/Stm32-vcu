@@ -92,6 +92,7 @@
 		<Unit filename="include/outlanderCharger.h" />
 		<Unit filename="include/outlanderinverter.h" />
 		<Unit filename="include/param_prj.h" />
+		<Unit filename="include/rearoutlanderinverter.h" />
 		<Unit filename="include/shifter.h" />
 		<Unit filename="include/simpbms.h" />
 		<Unit filename="include/stm32_vcu.h" />
@@ -148,6 +149,7 @@
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
+		<Unit filename="src/RearOutlanderinverter.cpp" />
 		<Unit filename="src/TeslaDCDC.cpp" />
 		<Unit filename="src/VWheater.cpp" />
 		<Unit filename="src/amperacharger.cpp" />

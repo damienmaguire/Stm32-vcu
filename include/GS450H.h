@@ -51,6 +51,7 @@ private:
    uint8_t VerifyMTHChecksum(uint16_t );
    void CalcHTMChecksum(uint16_t);
    void setTimerState(bool);
+   void GS450Hgear();
 };
 
 #endif /* GS450H_h */
