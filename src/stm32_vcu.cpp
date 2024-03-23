@@ -98,8 +98,6 @@ static Shifter shifterNone;
 static RearOutlanderInverter rearoutlanderInv;
 static LinBus* lin;
 
-uCAN_MSG xMessage;
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
 {
@@ -334,22 +332,6 @@ static void Ms100Task(void)
     }
 
     Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
-
-
-    ///!!!! TOM CHEATING CODE for FT CAN!!////
-
-    xMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
-    xMessage.frame.id = 0x130;
-    xMessage.frame.dlc = 5;
-    xMessage.frame.data0 = 0x45;
-    xMessage.frame.data1 = 0x40;
-    xMessage.frame.data2 = 0x21;
-    xMessage.frame.data3 = 0x8F;
-    xMessage.frame.data4 = 0xFE;
-    xMessage.frame.data5 = 0x00;
-    xMessage.frame.data6 = 0x00;
-    xMessage.frame.data7 = 0x00;
-    CANSPI_Transmit(&xMessage);
 }
 
 static void ControlCabHeater(int opmode)
@@ -410,15 +392,9 @@ int rollingDirection = 0;
             {
                 torquePercent = -torquePercent;
             }
-
-        }
-        else if (torquePercent >= 0)
-        {
-            torquePercent *= requestedDirection;
         }
 
-
-        //torquePercent *= requestedDirection; //torque requests invert when reverse direction is selected
+        torquePercent *= requestedDirection; //torque requests invert when reverse direction is selected
 
         selectedInverter->Task10Ms();
     }
