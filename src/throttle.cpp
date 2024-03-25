@@ -26,6 +26,7 @@
 int Throttle::potmin[2];
 int Throttle::potmax[2];
 float Throttle::regenRpm;
+float Throttle::regenendRpm;
 float Throttle::brknompedal;
 float Throttle::regenmax;
 float Throttle::regenBrake;
@@ -55,6 +56,9 @@ int Throttle::speedLimit;
 static float throttleRamped = 0.0;
 
 static float regenlim;
+static float PedalPos;
+static float LastPedalPos;
+static bool PedalChange;
 
 /**
  * @brief Check the throttle input for sanity and limit the range to min/max values
@@ -148,13 +152,13 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
         }
         else if (speed < regenRpm)
         {
-            potnom = utils::change(speed, 100, regenRpm, 0, regenBrake);//taper regen according to speed
+            potnom = utils::change(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
             return potnom;
         }
         else
         {
-           potnom = regenBrake;
-           return potnom;
+            potnom =  regenBrake;
+            return potnom;
         }
     }
 
@@ -172,6 +176,17 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     {
         potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
     }
+    PedalPos = potnom; //save comparison next time to check if pedal had moved
+
+
+    if((PedalPos+ throtdead) < LastPedalPos)//Check pedal is release compared to last time
+    {
+        PedalChange = 1; //pedal is released enough
+    }
+    else
+    {
+        PedalChange = 0; //pedal not released
+    }
 
     //Do clever bits for regen and such.
 
@@ -181,12 +196,13 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     }
     else if(speed < regenRpm)
     {
-        regenlim = utils::change(speed, 100, regenRpm, 0, regenmax);//taper regen according to speed
+        regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
     }
     else
     {
         regenlim = regenmax;
     }
+
 
     //potnom = (potnom * (throtmax-regenlim))/100+regenlim; //Map function
     if(dir == 1)//Forward
@@ -198,9 +214,16 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
         potnom = utils::change(potnom,0,100,regenlim,throtmaxRev);
     }
 
-    Param::SetInt(Param::ChgTemp, potnom);
+// if the pedal has not been deemed to be release no regen is wanted
+    if(PedalChange == 1 && potnom < 0)
+    {
+        potnom = 0;
+    }
+
+    Param::SetFloat(Param::ChgTemp, PedalChange);
 
 
+    LastPedalPos = PedalPos; //Save current pedal position for next loop.
     return potnom;
 }
 

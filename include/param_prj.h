@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.06.A
+#define VER 2.09.XX
 
 
 /* Entries must be ordered as follows:
@@ -25,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 125
+//Next param id (increase when adding new parameter!): 128
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
@@ -48,11 +48,13 @@
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2max,     "dig",     0,      4095,   4095,   10 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenrpm,    "rpm",       0,      10000,    1500,     60 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenendrpm,"rpm",     0,      10000,  100,  126 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenmax,     "%",       -100,   0,     -10,     61 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenBrake,    "%",       -100,   0,     -10,     122 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    100,    68 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmode,     POTMODES,  0,      1,      0,      11 ) \
     PARAM_ENTRY(CAT_THROTTLE,  dirmode,     DIRMODES,  0,      4,      1,      12 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  reversemotor,  ONOFF,  0,      1,      0,      127 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramp,   "%/10ms",  0.1,    100,    100,    13 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramprpm,"rpm",     0,      20000,  20000,  14 ) \
     PARAM_ENTRY(CAT_THROTTLE,  revlim,      "rpm",     0,      20000,  6000,   15 ) \
@@ -76,7 +78,7 @@
     PARAM_ENTRY(CAT_CONTACT,   udcsw,       "V",       0,      1000,   330,    32 ) \
     PARAM_ENTRY(CAT_CONTACT,   cruiselight, ONOFF,     0,      1,      0,      33 ) \
     PARAM_ENTRY(CAT_CONTACT,   errlights,   ERRLIGHTS, 0,      255,    0,      34 ) \
-    PARAM_ENTRY(CAT_COMM,      CAN3Speed,   CAN3Spd,   0,      1,      0,      77 ) \
+    PARAM_ENTRY(CAT_COMM,      CAN3Speed,   CAN3Spd,   0,      2,      0,      77 ) \
     PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0.1,    250,    22,     38 ) \
     PARAM_ENTRY(CAT_CHARGER,   Voltspnt,    "V",       0,      1000,   395,    40 ) \
     PARAM_ENTRY(CAT_CHARGER,   Pwrspnt,     "W",       0,      12000,  1500,   41 ) \
@@ -258,7 +260,7 @@
 #define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander 6=Elcon"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC"
-#define CAN3Spd      "0=k33.3, 1=k500"
+#define CAN3Spd      "0=k33.3, 1=k500. 2=k100"
 #define TRNMODES     "0=Manual, 1=Auto"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
