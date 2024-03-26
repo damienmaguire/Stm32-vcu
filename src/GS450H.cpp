@@ -65,15 +65,27 @@ uint8_t  htm_data_Init_GS300H[6][105]=
 
 void GS450HClass::SetTorque(float torquePercent)
 {
+    uint8_t MotorActive = Param::GetInt(Param::MotActive);
     if(DriveType == GS450H)
     {
         if(!TorqueCut)
         {
             scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
             mg2_torque = this->scaledTorqueTarget;
+            mg1_torque=((mg2_torque*5)/4);
 
-            if (scaledTorqueTarget < 0) mg1_torque = 0;
-            else mg1_torque=((mg2_torque*5)/4);
+            if(MotorActive == 0) //Both motors
+            {
+                if (scaledTorqueTarget < 0) mg1_torque = 0;
+            }
+            else if(MotorActive == 1)//Only Mg1 active
+            {
+                mg2_torque = 0;
+            }
+            else if(MotorActive == 2)//Only Mg2 active
+            {
+                mg1_torque = 0;
+            }
         }
         else
         {
@@ -87,9 +99,20 @@ void GS450HClass::SetTorque(float torquePercent)
         {
             scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
             mg2_torque = this->scaledTorqueTarget;
+            mg1_torque=((mg2_torque*5)/4);
 
-            if (scaledTorqueTarget < 0) mg1_torque = 0;
-            else mg1_torque=((mg2_torque*5)/4);
+            if(MotorActive == 0) //Both motors
+            {
+                if (scaledTorqueTarget < 0) mg1_torque = 0;
+            }
+            else if(MotorActive == 1)//Only Mg1 active
+            {
+                mg2_torque = 0;
+            }
+            else if(MotorActive == 2)//Only Mg2 active
+            {
+                mg1_torque = 0;
+            }
         }
         else
         {
@@ -103,9 +126,20 @@ void GS450HClass::SetTorque(float torquePercent)
         {
             scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
             mg2_torque = this->scaledTorqueTarget;
+            mg1_torque=((mg2_torque*5)/4);
 
-            if (scaledTorqueTarget < 0) mg1_torque = 0;
-            else mg1_torque=((mg2_torque*5)/4);
+            if(MotorActive == 0) //Both motors
+            {
+                if (scaledTorqueTarget < 0) mg1_torque = 0;
+            }
+            else if(MotorActive == 1)//Only Mg1 active
+            {
+                mg2_torque = 0;
+            }
+            else if(MotorActive == 2)//Only Mg2 active
+            {
+                mg1_torque = 0;
+            }
         }
         else
         {
@@ -455,7 +489,7 @@ void GS450HClass::Task1Ms()
             htm_data[27]=((mg2_torque/2)>>8) & 0xFF;
         }
 
-        //This data has moved!
+        //Battery Limits
 
         htm_data[85]=(-5000)&0xFF;  // regen ability of battery
         htm_data[86]=((-5000)>>8);
@@ -535,15 +569,6 @@ void GS450HClass::Task1Ms()
         //speed feedback
         speedSum=mg2_speed+mg1_speed;
         speedSum/=113;
-        //Possibly not needed
-        //uint8_t speedSum2=speedSum;
-        //htm_data[0]=speedSum2;
-
-        //these bytes are used, and seem to be MG1 for startup, but can't work out the relatino to the
-        //bytes earlier in the stream, possibly the byte order has been flipped on these 2 bytes
-        //could be a software bug ?
-        // htm_data[76]=(mg1_torque*4) & 0xFF;
-        // htm_data[75]=((mg1_torque*4)>>8) & 0xFF;
 
         //mg1
         htm_data[5]=(mg1_torque*-1)&0xFF;  //negative is forward
@@ -556,40 +581,14 @@ void GS450HClass::Task1Ms()
         htm_data[32]=((mg2_torque)>>8);
         htm_data[37]=htm_data[26];
         htm_data[38]=htm_data[27];
-        /*
-              if(scaledTorqueTarget > 0)
-              {
-                 //forward direction these bytes should match
-                 htm_data[26]=htm_data[30];
-                 htm_data[27]=htm_data[31];
-                 htm_data[28]=(mg2_torque/2) & 0xFF; //positive is forward
-                 htm_data[29]=((mg2_torque/2)>>8) & 0xFF;
-              }
 
-              if(scaledTorqueTarget < 0)
-              {
-                 //reverse direction these bytes should match
-                 htm_data[28]=htm_data[30];
-                 htm_data[29]=htm_data[31];
-                 htm_data[26]=(mg2_torque/2) & 0xFF; //positive is forward
-                 htm_data[27]=((mg2_torque/2)>>8) & 0xFF;
-              }
-
-        */
-        //This data has moved!
+        //Battery Limits
 
         htm_data[79]=(-5000)&0xFF;  // regen ability of battery
         htm_data[80]=((-5000)>>8);
 
         htm_data[81]=(10000)&0xFF;  // discharge ability of battery
         htm_data[82]=((10000)>>8);
-        /*
-              //checksum
-             if(++frame_count & 0x01)
-              {
-                 htm_data[94]++;
-              }
-        */
         CalcHTMChecksum(105);
 
         htm_state=10;
