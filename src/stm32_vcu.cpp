@@ -361,7 +361,7 @@ static void Ms10Task(void)
     int opmode = Param::GetInt(Param::opmode);
     int stt = STAT_NONE;
     int requestedDirection = Param::GetInt(Param::dir);
-int rollingDirection = 0;
+    int rollingDirection = 0;
 
     ErrorMessage::SetTime(rtc_get_counter_val());
 
@@ -406,6 +406,18 @@ int rollingDirection = 0;
 
 
     selectedInverter->SetTorque(torquePercent);
+
+    //Brake light based on regen being below the set threshold
+    if(torquePercent < Param::GetFloat(Param::RegenBrakeLight))
+    {
+        //enable Brake Light Ouput
+        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+    }
+    else
+    {
+        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+    }
+
     //speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface NO ABS allowed on speed as we need to know direction
     speed = selectedInverter->GetMotorSpeed();//set motor rpm on interface
 
