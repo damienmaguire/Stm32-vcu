@@ -434,7 +434,8 @@ void GS450HClass::Task1Ms()
             dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
             statusInv=1;
             dc_bus_voltage=(((mth_data[100]|mth_data[101]<<8)-5)/2);
-            temp_inv_water=(mth_data[42]|mth_data[43]<<8);
+            //temp_inv_water=0x10;//(mth_data[42]|mth_data[43]<<8);
+            temp_inv_water=int8_t(mth_data[20]);//from 300h
             temp_inv_inductor=(mth_data[86]|mth_data[87]<<8);
             mg1_speed=mth_data[6]|mth_data[7]<<8;
             mg2_speed=mth_data[38]|mth_data[39]<<8;
