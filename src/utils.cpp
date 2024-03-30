@@ -363,10 +363,10 @@ float ProcessThrottle(int speed)
         Throttle::speedkp = 0.25f;
         Throttle::cruiseSpeed = Param::GetInt(Param::cruisespeed);
         float cruiseThrottle = Throttle::CalcCruiseSpeed(ABS(Param::GetInt(Param::speed)));
-                               finalSpnt = MAX(cruiseThrottle, finalSpnt);
+        finalSpnt = MAX(cruiseThrottle, finalSpnt);
     }
 
-                           finalSpnt = Throttle::RampThrottle(finalSpnt);
+    finalSpnt = Throttle::RampThrottle(finalSpnt);
 
 
     Throttle::UdcLimitCommand(finalSpnt,Param::GetFloat(Param::udc));
