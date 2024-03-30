@@ -179,7 +179,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     PedalPos = potnom; //save comparison next time to check if pedal had moved
 
 
-    if((PedalPos+ throtdead) < LastPedalPos)//Check pedal is release compared to last time
+    if((PedalPos + throtdead) < LastPedalPos )//Check pedal is release compared to last time
     {
         PedalChange = 1; //pedal is released enough
     }
@@ -204,14 +204,18 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     }
 
 
-    //potnom = (potnom * (throtmax-regenlim))/100+regenlim; //Map function
+    //!!!potnom is throttle position up to this point//
+
     if(dir == 1)//Forward
     {
-        potnom = utils::change(potnom,0,100,regenlim,throtmax);
+        //change limits to uint32, multiply by 10 then 0.1 to add a decimal to remove the hard edges
+        potnom = utils::change(potnom,0,100,regenlim*10,throtmax*10);
+        potnom *= 0.1;
     }
     else //Reverse, as neutral already exited function
     {
-        potnom = utils::change(potnom,0,100,regenlim,throtmaxRev);
+        potnom = utils::change(potnom,0,100,regenlim*10,throtmaxRev*10);
+        potnom *= 0.1;
     }
 
 // if the pedal has not been deemed to be release no regen is wanted
@@ -219,9 +223,6 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     {
         potnom = 0;
     }
-
-    Param::SetFloat(Param::ChgTemp, PedalChange);
-
 
     LastPedalPos = PedalPos; //Save current pedal position for next loop.
     return potnom;
@@ -241,18 +242,32 @@ float Throttle::RampThrottle(float potnom)
 
     if (potnom >= throttleRamped) // higher throttle command than currently applied
     {
-        throttleRamped = RAMPUP(throttleRamped, potnom, throttleRamp);
-        potnom = throttleRamped;
+        if(potnom > 0)
+        {
+            throttleRamped = RAMPUP(throttleRamped, potnom, throttleRamp);
+            potnom = throttleRamped;
+        }
+        else
+        {
+            throttleRamped = RAMPUP(throttleRamped, potnom, regenRamp);
+            potnom = throttleRamped;
+        }
     }
-    else if (potnom < throttleRamped && potnom > 0) // lower throttle command than currently applied
+    else //(potnom < throttleRamped) // lower throttle command than currently applied
     {
-        throttleRamped = potnom; //No ramping from high throttle to low throttle
-    }
-    else //potnom < throttleRamped && potnom <= 0
-    {
-        //throttleRamped = MIN(0, throttleRamped); //start ramping at 0
-        throttleRamped = RAMPDOWN(throttleRamped, potnom, regenRamp);
-        potnom = throttleRamped;
+        if(potnom >= 0)
+        {
+            throttleRamped = potnom; //No ramping from high throttle to low throttle
+        }
+        else
+        {
+            if(throttleRamped > 0)
+            {
+                throttleRamped = 0;
+            }
+            throttleRamped = RAMPDOWN(throttleRamped, potnom, regenRamp);
+            potnom = throttleRamped;
+        }
     }
 
     return potnom;
