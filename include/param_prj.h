@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.11.XX
+#define VER 2.12.XX
 
 
 /* Entries must be ordered as follows:
@@ -25,7 +25,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 130
+//Next param id (increase when adding new parameter!): 131
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
@@ -72,6 +72,7 @@
     PARAM_ENTRY(CAT_THROTTLE,  throtmaxRev,    "%",       0,      100,    30,    123 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtdead,   "%",       0,      50,     10,     76 ) \
     PARAM_ENTRY(CAT_THROTTLE,  RegenBrakeLight,   "%",    -100,     0,     -15,      128 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  throtrpmfilt,   "rpm/10ms",  0.1,    200,    15,    131 ) \
     PARAM_ENTRY(CAT_LEXUS,     Gear,        LOWHIGH,   0,      2,      0,      27 ) \
     PARAM_ENTRY(CAT_LEXUS,     OilPump,     "%",       0,      100,    50,     28 ) \
     PARAM_ENTRY(CAT_CRUISE,    cruisestep,  "rpm",     1,      1000,   200,    29 ) \

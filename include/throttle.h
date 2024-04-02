@@ -66,6 +66,7 @@ public:
     static float idcmax;
     static int speedLimit;
     static float regenendRpm;
+    static float ThrotRpmFilt;
 
 private:
     static int speedFiltered;

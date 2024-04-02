@@ -51,9 +51,11 @@ float Throttle::udcmax;
 float Throttle::idcmin;
 float Throttle::idcmax;
 int Throttle::speedLimit;
+float Throttle::ThrotRpmFilt;
 
 // internal variable, reused every time the function is called
 static float throttleRamped = 0.0;
+static float SpeedFiltered = 0.0;
 
 static float regenlim;
 static float PedalPos;
@@ -138,6 +140,28 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     {
         speed *= -1;
     }
+
+    //limiting speed change rate
+    if(ABS(speed-SpeedFiltered)>ThrotRpmFilt)
+    {
+        if(speed > SpeedFiltered)
+        {
+            SpeedFiltered +=  ThrotRpmFilt;
+        }
+        else
+        {
+            SpeedFiltered -=  ThrotRpmFilt;
+        }
+    }
+    else
+    {
+        SpeedFiltered = speed;
+    }
+
+    speed = SpeedFiltered;
+
+    Param::SetFloat(Param::AC_Volts, speed);
+    ///////////////////////
 
     if(dir == 0)//neutral no torque command
     {

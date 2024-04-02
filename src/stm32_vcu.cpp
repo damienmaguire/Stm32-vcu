@@ -865,6 +865,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
     Throttle::potmax[1] = Param::GetInt(Param::pot2max);
     Throttle::regenRpm = Param::GetFloat(Param::regenrpm);
     Throttle::regenendRpm = Param::GetFloat(Param::regenendrpm);
+    Throttle::ThrotRpmFilt = Param::GetFloat(Param::throtrpmfilt);
     if (Throttle::regenRpm < Throttle::regenendRpm)
     {
         Throttle::regenRpm = 1500;
