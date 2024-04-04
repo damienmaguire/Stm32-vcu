@@ -37,7 +37,6 @@ public:
     static void IdcLimitCommand(float& finalSpnt, float idc);
     static void SpeedLimitCommand(float& finalSpnt, int speed);
     static float RampThrottle(float finalSpnt);
-    static void RegenRampDown(float& finalSpnt, int speed);
     static int potmin[2];
     static int potmax[2];
     static float regenRpm;
@@ -72,6 +71,7 @@ private:
     static int speedFiltered;
     static float potnomFiltered;
     static float brkRamped;
+    static float AveragePos(float Pos);
 };
 
 #endif // THROTTLE_H

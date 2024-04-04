@@ -25,8 +25,10 @@ static uint8_t GearSW;
 static int16_t mg1_torque, mg2_torque, speedSum;
 static bool statusInv=0;
 static bool TorqueCut=0;
+static uint8_t TorqueShiftRamp = 0;
 static uint16_t Lexus_Oil2=0;
 static uint8_t speedSum2;
+static uint8_t gearAct, gearReq, gearStep=0;
 
 static void dma_read(uint8_t *data, int size);
 static void dma_write(uint8_t *data, int size);
@@ -68,23 +70,18 @@ void GS450HClass::SetTorque(float torquePercent)
     uint8_t MotorActive = Param::GetInt(Param::MotActive);
     if(DriveType == GS450H)
     {
-        if(!TorqueCut)
+        GS450Hgear();//check if we need to shift - can modify torque limits so needs to ran before calculating requests
+
+        if(!TorqueCut)//Cut torque only when shifting for now
         {
+            torquePercent = TorqueShiftRamp * torquePercent *0.01; //multiply by the torque ramp for when shifting
             scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
             mg2_torque = this->scaledTorqueTarget;
             mg1_torque=((mg2_torque*5)/4);
 
-            if(MotorActive == 0) //Both motors
+            if(TorqueShiftRamp < 100)//ramp torque back in after shifting
             {
-                if (scaledTorqueTarget < 0) mg1_torque = 0;
-            }
-            else if(MotorActive == 1)//Only Mg1 active
-            {
-                mg2_torque = 0;
-            }
-            else if(MotorActive == 2)//Only Mg2 active
-            {
-                mg1_torque = 0;
+                TorqueShiftRamp += 10;//ramp back in 10% every time this is ran, every 10ms - possibly reduce
             }
         }
         else
@@ -92,10 +89,23 @@ void GS450HClass::SetTorque(float torquePercent)
             mg2_torque =0;
             mg1_torque=0;
         }
+
+        if(MotorActive == 0) //Both motors
+        {
+            if (scaledTorqueTarget < 0) mg1_torque = 0;
+        }
+        else if(MotorActive == 1)//Only Mg1 active
+        {
+            mg2_torque = 0;
+        }
+        else if(MotorActive == 2)//Only Mg2 active
+        {
+            mg1_torque = 0;
+        }
     }
     else if(DriveType == PRIUS)
     {
-        if(!TorqueCut)
+        if(!TorqueCut)//should not trigger at all, only used for shifting GS450h
         {
             scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
             mg2_torque = this->scaledTorqueTarget;
@@ -122,7 +132,7 @@ void GS450HClass::SetTorque(float torquePercent)
     }
     else if(DriveType == IS300H)
     {
-        if(!TorqueCut)
+        if(!TorqueCut)//should not trigger at all, only used for shifting GS450h
         {
             scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
             mg2_torque = this->scaledTorqueTarget;
@@ -167,33 +177,65 @@ void GS450HClass::Task100Ms()
 {
     if(DriveType == GS450H)
     {
-        GS450Hgear();
+        GS450Houtput();
     }
 }
 
-void GS450HClass::GS450Hgear()
+void GS450HClass::GS450Hgear()//!!! should be ran every 10ms - ran before calculating torque request
 {
     //Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update inverter status on web interface
     gear=(Param::GetInt(Param::Gear));
 
-    if (gear == 1)
+    if(gear == 2)//!!!Auto Shifting using code from AK - Always start in low gear when powered on
+    {
+        if(gearAct == 0 && mg2_speed > 7000) //Shift up when in low gear and mg2 is over 7000rpm
+        {
+            gearReq = 1;//request high gear
+        }
+        else if(gearAct == 1 && mg2_speed < 2000 ) //Shift down when in high gear and mg2 is under 8000rpm
+        {
+            gearReq = 0;//request high gear
+        }
+
+        if(gearAct != gearReq)//check if we need to shift gears
+        {
+            TorqueCut = true; //Cut Torque to motor
+            TorqueShiftRamp = 0; //Zero torque Limiter
+            gearStep++;//increase gearStep by 1 adds 10ms delay before shifting
+            if(gearStep == 2)
+            {
+                gear = gearReq; //change the outputs
+            }
+            else if(gearStep == 3)
+            {
+                gearAct = gearReq; //we have now shifted gear
+                gearStep = 0; //reset shift loop
+                TorqueCut = false;//allow torque again
+            }
+        }
+        else//no shifting needed so gear should be gearAct
+        {
+            gear = gearAct;
+        }
+    }
+
+    if (gear == 1)//!!!High gear
     {
         DigIo::SP_out.Clear();
         DigIo::SL1_out.Clear();
         DigIo::SL2_out.Clear();
-
-
     }
 
-    if (gear == 0)
+    if (gear == 0)//!!!Low gear
     {
         DigIo::SP_out.Clear();
         DigIo::SL1_out.Set();
         DigIo::SL2_out.Set();
-
-
     }
+}
 
+void GS450HClass::GS450Houtput()//!!! should be ran every 10ms
+{
     if (Param::GetInt(Param::opmode) == MOD_OFF)
     {
         //setTimerState(false);
@@ -215,6 +257,7 @@ void GS450HClass::GS450Hgear()
     if(GearSW==6) Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
     if(GearSW==5) Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Dilbert's code here
@@ -434,8 +477,7 @@ void GS450HClass::Task1Ms()
             dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
             statusInv=1;
             dc_bus_voltage=(((mth_data[100]|mth_data[101]<<8)-5)/2);
-            //temp_inv_water=0x10;//(mth_data[42]|mth_data[43]<<8);
-            temp_inv_water=int8_t(mth_data[20]);//from 300h
+            temp_inv_water=(mth_data[42]|mth_data[43]<<8);
             temp_inv_inductor=(mth_data[86]|mth_data[87]<<8);
             mg1_speed=mth_data[6]|mth_data[7]<<8;
             mg2_speed=mth_data[38]|mth_data[39]<<8;

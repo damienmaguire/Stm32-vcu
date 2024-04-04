@@ -859,6 +859,14 @@ void Param::Change(Param::PARAM_NUM paramNum)
         break;
     }
 
+    if(Param::GetInt(Param::reversemotor) != 0)
+    {
+        if(Param::GetInt(Param::Inverter) != InvModes::Leaf_Gen1 ||Param::GetInt(Param::Inverter) != InvModes::RearOutlander)
+        {
+            Param::SetInt(Param::reversemotor,0);
+        }
+    }
+
     Throttle::potmin[0] = Param::GetInt(Param::potmin);
     Throttle::potmax[0] = Param::GetInt(Param::potmax);
     Throttle::potmin[1] = Param::GetInt(Param::pot2min);
@@ -883,6 +891,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
     Throttle::udcmax = Param::GetFloat(Param::udclim);
     Throttle::speedLimit = Param::GetInt(Param::revlim);
     Throttle::regenRamp = Param::GetFloat(Param::regenramp);
+    Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
     Throttle::throtmaxRev = Param::GetFloat(throtmaxRev);
     Throttle::regenBrake = Param::GetFloat(Param::regenBrake);
 

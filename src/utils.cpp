@@ -292,8 +292,6 @@ float ProcessUdc(int motorSpeed)
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)SBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
         Param::SetFloat(Param::idc, idc);
-        float kw = (udc*idc)/1000;//get power from isa sensor and post to parameter database
-        Param::SetFloat(Param::power, kw);
     }
 
     else if (Param::GetInt(Param::Type) == 2)
@@ -352,9 +350,13 @@ float ProcessThrottle(int speed)
     float finalSpnt;
 
     if (speed < Param::GetInt(Param::throtramprpm))
-        Throttle::throttleRamp = Param::Get(Param::throtramp);
+    {
+        Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
+    }
     else
+    {
         Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
+    }
 
     finalSpnt = utils::GetUserThrottleCommand();
 
