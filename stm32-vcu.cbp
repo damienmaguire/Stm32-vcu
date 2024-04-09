@@ -60,9 +60,12 @@
 		<Unit filename="include/ElconCharger.h" />
 		<Unit filename="include/F30_Lever.h" />
 		<Unit filename="include/GS450H.h" />
+		<Unit filename="include/JLR_G1.h" />
+		<Unit filename="include/JLR_G2.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/NissanPDM.h" />
 		<Unit filename="include/NoInverter.h" />
+		<Unit filename="include/NoVehicle.h" />
 		<Unit filename="include/TeslaDCDC.h" />
 		<Unit filename="include/VWheater.h" />
 		<Unit filename="include/amperaheater.h" />
@@ -147,6 +150,8 @@
 		<Unit filename="src/ElconCharger.cpp" />
 		<Unit filename="src/F30_Lever.cpp" />
 		<Unit filename="src/GS450H.cpp" />
+		<Unit filename="src/JLR_G1.cpp" />
+		<Unit filename="src/JLR_G2.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
 		<Unit filename="src/RearOutlanderinverter.cpp" />

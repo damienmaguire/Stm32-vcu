@@ -79,9 +79,12 @@ static noHeater Heaternone;
 static AmperaHeater amperaHeater;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
+static JLR_G1 JLRG1shift;
+static JLR_G2 JLRG2shift;
 static vwHeater heaterVW;
+static NoVehicle VehicleNone;
 static Inverter* selectedInverter = &openInv;
-static Vehicle* selectedVehicle = &vagVehicle;
+static Vehicle* selectedVehicle = &VehicleNone;
 static Heater* selectedHeater = &Heaternone;
 static Chargerhw* selectedCharger = &chargerPDM;
 static Chargerint* selectedChargeInt = &UnUsed;
@@ -597,32 +600,35 @@ static void UpdateVehicle()
 {
     switch (Param::GetInt(Param::Vehicle))
     {
-    case BMW_E39:
+    case vehicles::None:
+        selectedVehicle = &VehicleNone;
+        break;
+    case vehicles::BMW_E39:
         selectedVehicle = &e39Vehicle;
         e39Vehicle.SetE46(false);
         break;
-    case BMW_E46:
+    case vehicles::BMW_E46:
         selectedVehicle = &e39Vehicle;
         e39Vehicle.SetE46(true);
         break;
-    case BMW_E65:
+    case vehicles::BMW_E65:
         selectedVehicle = &e65Vehicle;
         break;
-    case VAG:
+    case vehicles::VAG:
         selectedVehicle = &vagVehicle;
         break;
-    case SUBARU:
+    case vehicles::SUBARU:
         selectedVehicle = &subaruVehicle;
         break;
-    case BMW_E31:
+    case vehicles::BMW_E31:
         selectedVehicle = &e31Vehicle;
         break;
-
     }
     //This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
     canInterface[1]->ClearUserMessages();
 
+    Param::SetFloat(Param::AC_Amps, Param::Vehicle);
 }
 
 static void UpdateCharger()
@@ -649,7 +655,6 @@ static void UpdateCharger()
     case ChargeModes::Out_lander:
         selectedCharger = &outChg;
         break;
-
     case ChargeModes::Elcon:
         selectedCharger = &ChargerElcon;
         break;
@@ -760,6 +765,14 @@ static void UpdateShifter()
 
     case ShifterModes::BMWF30:
         selectedShifter = &F30GearLever;
+        break;
+
+    case ShifterModes::JLRG1:
+        selectedShifter = &JLRG1shift;
+        break;
+
+    case ShifterModes::JLRG2:
+        selectedShifter = &JLRG2shift;
         break;
 
     default:

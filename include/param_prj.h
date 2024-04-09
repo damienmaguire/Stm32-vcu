@@ -42,7 +42,7 @@
     PARAM_ENTRY(CAT_SETUP,     OBD2Can,      CAN_DEV,  0,      1,      0,      96 ) \
     PARAM_ENTRY(CAT_SETUP,     CanMapCan,    CAN_DEV,  0,      1,      0,      97 ) \
     PARAM_ENTRY(CAT_SETUP,     DCDCCan,      CAN_DEV,  0,      1,      1,      107 ) \
-    PARAM_ENTRY(CAT_SETUP,     GearLvr,      SHIFTERS, 0,      1,      0,      108 ) \
+    PARAM_ENTRY(CAT_SETUP,     GearLvr,      SHIFTERS, 0,      3,      0,      108 ) \
     PARAM_ENTRY(CAT_SETUP,     MotActive,    MotorsAct, 0,      2,      0,      129 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
@@ -232,7 +232,7 @@
                      "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, 11=HVRequest," \
                      "12=DCFCRequest, 13=BrakeVacPump, 14=PwmTim3"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor"
-#define SHIFTERS     "0=None, 1=BMW_F30"
+#define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2"
 #define SHNTYPE      "0=ISA, 1=SBOX, 2=VAG"
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleChannel, 1=DualChannel"
@@ -378,7 +378,9 @@ enum DCDCModes
 enum ShifterModes
 {
     NoShifter = 0,
-    BMWF30 = 1
+    BMWF30 = 1,
+    JLRG1 = 2,
+    JLRG2 =3
 
 };
 
