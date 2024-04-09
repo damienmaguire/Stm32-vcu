@@ -57,10 +57,17 @@ float Throttle::ThrotRpmFilt;
 static float throttleRamped = 0.0;
 static float SpeedFiltered = 0.0;
 
-static float regenlim;
+static float regenlim, PrevRegenlim =0;
+
+#define PedalPosArrLen 50
 static float PedalPos;
 static float LastPedalPos;
-static bool PedalChange;
+static float PedalChange =0;
+static float PedalPosTot =0;
+static float PedalPosArr[PedalPosArrLen];
+static uint8_t PedalPosIdx = 0;
+static int8_t PedalReq = 0; //positive is accel negative is decell
+
 
 /**
  * @brief Check the throttle input for sanity and limit the range to min/max values
@@ -200,32 +207,62 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     {
         potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
     }
+
+//!! pedal command intent coding
+
     PedalPos = potnom; //save comparison next time to check if pedal had moved
 
+    Param::SetFloat(Param::AC_Amps, PedalPos);
 
-    if((PedalPos + throtdead) < LastPedalPos )//Check pedal is release compared to last time
+    float TempAvgPos = AveragePos(PedalPos); //get an rolling average pedal position over the last 50 measurements for smoothing
+
+    PedalChange = PedalPos - TempAvgPos; //current pedal position compared to average
+
+    Param::SetFloat(Param::ChgTemp, PedalChange*10);
+
+    if(PedalChange < -1.0 )//Check pedal is release compared to last time
     {
-        PedalChange = 1; //pedal is released enough
+        PedalReq = -1; //pedal is released enough - Commanding regen or slowing
     }
-    else
+    else if(PedalChange > 1.0 )//Check pedal is increased compared to last time
     {
-        PedalChange = 0; //pedal not released
+        PedalReq = 1; //pedal pressed - Commanding accelerating - thus always more power
     }
+    else//pedal not changed
+    {
+        potnom = TempAvgPos; //use the averaged pedal
+    }
+
 
     //Do clever bits for regen and such.
-
     if(speed < 100)//No regen under 100 rpm
     {
         regenlim = 0;
     }
     else if(speed < regenRpm)
     {
-        regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
+        if(PedalReq == -1)//we want to regen
+        {
+            regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
+        }
+        else
+        {
+            regenlim = PrevRegenlim;
+        }
     }
     else
     {
-        regenlim = regenmax;
+        if(PedalReq == -1)//we want to regen
+        {
+            regenlim = regenmax;
+        }
+        else
+        {
+            regenlim = PrevRegenlim;
+        }
     }
+
+    PrevRegenlim = regenlim;
 
 
     //!!!potnom is throttle position up to this point//
@@ -240,12 +277,6 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     {
         potnom = utils::change(potnom,0,100,regenlim*10,throtmaxRev*10);
         potnom *= 0.1;
-    }
-
-// if the pedal has not been deemed to be release no regen is wanted
-    if(PedalChange == 1 && potnom < 0)
-    {
-        potnom = 0;
     }
 
     LastPedalPos = PedalPos; //Save current pedal position for next loop.
@@ -397,16 +428,16 @@ void Throttle::SpeedLimitCommand(float& finalSpnt, int speed)
     }
 }
 
-void Throttle::RegenRampDown(float& finalSpnt, int speed)
+float Throttle::AveragePos(float Pos)
 {
-    const float rampStart = 150.0f; //rpm
-    const float noRegen = 50.0f; //cut off regen below this
-    float absSpeed = ABS(speed);
-
-    if (finalSpnt < 0 && absSpeed < rampStart) //regen
+    PedalPosIdx++; //next average arrray positon
+    if(PedalPosIdx >= PedalPosArrLen)
     {
-        float ratio = (absSpeed - noRegen) / (rampStart - noRegen);
-        ratio = MAX(0, ratio);
-        finalSpnt = finalSpnt * ratio;
+        PedalPosIdx = 0;
     }
+    PedalPosTot -= PedalPosArr[PedalPosIdx];
+    PedalPosTot += Pos;
+    PedalPosArr[PedalPosIdx] = Pos;
+
+    return PedalPosTot/PedalPosArrLen;
 }
