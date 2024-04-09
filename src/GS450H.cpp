@@ -77,11 +77,20 @@ void GS450HClass::SetTorque(float torquePercent)
             torquePercent = TorqueShiftRamp * torquePercent *0.01; //multiply by the torque ramp for when shifting
             scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
             mg2_torque = this->scaledTorqueTarget;
-            mg1_torque=((mg2_torque*5)/4);
+            mg1_torque = ((mg2_torque*5)/4);
 
             if(TorqueShiftRamp < 100)//ramp torque back in after shifting
             {
                 TorqueShiftRamp += 10;//ramp back in 10% every time this is ran, every 10ms - possibly reduce
+            }
+
+            if (gear == 0)//!!!Low gear
+            {
+                if(torquePercent < 0)
+                {
+                    mg2_torque *= 0.5;
+                    mg1_torque *= 0.5;
+                }
             }
         }
         else
