@@ -81,7 +81,7 @@ void GS450HClass::SetTorque(float torquePercent)
 
             if(TorqueShiftRamp < 100)//ramp torque back in after shifting
             {
-                TorqueShiftRamp += 10;//ramp back in 10% every time this is ran, every 10ms - possibly reduce
+                TorqueShiftRamp += 5;//ramp back in 5% every time this is ran, every 10ms - Increased from 10.
             }
 
             if (gear == 0)//!!!Low gear
@@ -95,8 +95,8 @@ void GS450HClass::SetTorque(float torquePercent)
         }
         else
         {
-            mg2_torque =0;
-            mg1_torque=0;
+            mg2_torque = 0;
+            mg1_torque = 0;
         }
 
         if(MotorActive == 0) //Both motors
@@ -135,8 +135,8 @@ void GS450HClass::SetTorque(float torquePercent)
         }
         else
         {
-            mg2_torque =0;
-            mg1_torque=0;
+            mg2_torque = 0;
+            mg1_torque = 0;
         }
     }
     else if(DriveType == IS300H)
@@ -162,8 +162,8 @@ void GS450HClass::SetTorque(float torquePercent)
         }
         else
         {
-            mg2_torque =0;
-            mg1_torque=0;
+            mg2_torque = 0;
+            mg1_torque = 0;
         }
     }
 }
@@ -211,11 +211,11 @@ void GS450HClass::GS450Hgear()//!!! should be ran every 10ms - ran before calcul
             TorqueCut = true; //Cut Torque to motor
             TorqueShiftRamp = 0; //Zero torque Limiter
             gearStep++;//increase gearStep by 1 adds 10ms delay before shifting
-            if(gearStep == 2)
+            if(gearStep == 4)//wait some cycles before changing
             {
                 gear = gearReq; //change the outputs
             }
-            else if(gearStep == 3)
+            else if(gearStep == 5)
             {
                 gearAct = gearReq; //we have now shifted gear
                 gearStep = 0; //reset shift loop

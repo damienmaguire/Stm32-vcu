@@ -212,13 +212,10 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 
     PedalPos = potnom; //save comparison next time to check if pedal had moved
 
-    Param::SetFloat(Param::AC_Amps, PedalPos);
-
     float TempAvgPos = AveragePos(PedalPos); //get an rolling average pedal position over the last 50 measurements for smoothing
 
     PedalChange = PedalPos - TempAvgPos; //current pedal position compared to average
 
-    Param::SetFloat(Param::ChgTemp, PedalChange*10);
 
     if(PedalChange < -1.0 )//Check pedal is release compared to last time
     {
