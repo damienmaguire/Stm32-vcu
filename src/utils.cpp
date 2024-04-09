@@ -355,6 +355,7 @@ float ProcessThrottle(int speed)
     {
         Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
     }
+
     else
     {
         Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
