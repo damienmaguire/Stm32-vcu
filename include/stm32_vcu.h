@@ -80,6 +80,8 @@
 #include "BMW_E31.h"
 #include "shifter.h"
 #include "F30_Lever.h"
+#include "JLR_G1.h"
+#include "JLR_G2.h"
 #include "no_Lever.h"
 #include "CPC.h"
 #include "NoInverter.h"
@@ -87,6 +89,7 @@
 #include "VWheater.h"
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
+#include "NoVehicle.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
