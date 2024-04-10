@@ -40,7 +40,7 @@
 #include "cansdo.h"
 #include "leafinv.h"
 #include "isa_shunt.h"
-#include "Can_E39.h"
+#include "BMW_E39.h"
 #include "BMW_E65.h"
 #include "subaruvehicle.h"
 #include "Can_OI.h"

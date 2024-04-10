@@ -54,9 +54,9 @@ alarm=0;			// != 0 when alarm is pending
 static uint8_t rlyDly=25;
 
 // Instantiate Classes
-static Bmw_E31 e31Vehicle;
-static BMWE65 e65Vehicle;
-static Can_E39 e39Vehicle;
+static BMW_E31 e31Vehicle;
+static BMW_E65 e65Vehicle;
+static BMW_E39 e39Vehicle;
 static Can_VAG vagVehicle;
 static SubaruVehicle subaruVehicle;
 static GS450HClass gs450Inverter;
@@ -607,24 +607,24 @@ static void UpdateVehicle()
     case vehicles::None:
         selectedVehicle = &VehicleNone;
         break;
-    case vehicles::BMW_E39:
+    case vehicles::vBMW_E39:
         selectedVehicle = &e39Vehicle;
         e39Vehicle.SetE46(false);
         break;
-    case vehicles::BMW_E46:
+    case vehicles::vBMW_E46:
         selectedVehicle = &e39Vehicle;
         e39Vehicle.SetE46(true);
         break;
-    case vehicles::BMW_E65:
+    case vehicles::vBMW_E65:
         selectedVehicle = &e65Vehicle;
         break;
-    case vehicles::VAG:
+    case vehicles::vVAG:
         selectedVehicle = &vagVehicle;
         break;
-    case vehicles::SUBARU:
+    case vehicles::vSUBARU:
         selectedVehicle = &subaruVehicle;
         break;
-    case vehicles::BMW_E31:
+    case vehicles::vBMW_E31:
         selectedVehicle = &e31Vehicle;
         break;
     }

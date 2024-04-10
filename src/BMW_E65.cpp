@@ -17,7 +17,7 @@ uint8_t BA5=0x4d;//0x0BA first counter byte(byte 5)
 uint8_t BA6=0x80;//0x0BA second counter byte(byte 6)
 
 
-void BMWE65::SetCanInterface(CanHardware* c)
+void BMW_E65::SetCanInterface(CanHardware* c)
 {
     can = c;
 
@@ -28,21 +28,21 @@ void BMWE65::SetCanInterface(CanHardware* c)
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////Handle incomming pt can messages from the car here
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void BMWE65::DecodeCAN(int id, uint32_t* data)
+void BMW_E65::DecodeCAN(int id, uint32_t* data)
 {
 
     switch (id)
     {
     case 0x130:
-        BMWE65::handle130(data);
+        BMW_E65::handle130(data);
         break;
 
     case 0x192:
-        BMWE65::handle192(data);
+        BMW_E65::handle192(data);
         break;
 
     case 0x480:
-        BMWE65::handle480(data);
+        BMW_E65::handle480(data);
         break;
 
     default:
@@ -50,7 +50,7 @@ void BMWE65::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void BMWE65::handle130(uint32_t data[2])
+void BMW_E65::handle130(uint32_t data[2])
 {
     uint8_t* bytes = (uint8_t*)data;
     /*
@@ -101,7 +101,7 @@ void BMWE65::handle130(uint32_t data[2])
     }
 }
 
-void BMWE65::handle192(uint32_t data[2])
+void BMW_E65::handle192(uint32_t data[2])
 {
     uint32_t GLeaver = data[0] & 0x00ffffff;  //unsigned int to contain result of message 0x192. Gear selector lever position
 
@@ -134,7 +134,7 @@ void BMWE65::handle192(uint32_t data[2])
     }
 }
 
-void BMWE65::handle480(uint32_t data[2])
+void BMW_E65::handle480(uint32_t data[2])
 {
     uint8_t* bytes = (uint8_t*)data;
 
@@ -148,7 +148,7 @@ void BMWE65::handle480(uint32_t data[2])
     }
 }
 
-void BMWE65::Task10Ms()
+void BMW_E65::Task10Ms()
 {
     if(CANWake)
     {
@@ -166,7 +166,7 @@ void BMWE65::Task10Ms()
     }
 }
 
-void BMWE65::Task100Ms()
+void BMW_E65::Task100Ms()
 {
     if(CANWake)
     {
@@ -184,11 +184,11 @@ void BMWE65::Task100Ms()
             this->dashInit=true;
         }
 
-        BMWE65::Engine_Data();
+        BMW_E65::Engine_Data();
     }
 }
 
-void BMWE65::Task200Ms()
+void BMW_E65::Task200Ms()
 {
     if(CANWake)
     {
@@ -244,12 +244,12 @@ void BMWE65::Task200Ms()
     }
 }
 
-void BMWE65::DashOff()
+void BMW_E65::DashOff()
 {
     this->dashInit=false;
 }
 
-void BMWE65::SendAbsDscMessages(bool Brake_In)
+void BMW_E65::SendAbsDscMessages(bool Brake_In)
 {
 
 //////////send abs/dsc messages////////////////////////
@@ -328,7 +328,7 @@ void BMWE65::SendAbsDscMessages(bool Brake_In)
 
 }
 
-void BMWE65::Engine_Data()
+void BMW_E65::Engine_Data()
 {
     uint8_t bytes[8];
 
@@ -371,7 +371,7 @@ void BMWE65::Engine_Data()
 
 }
 
-bool BMWE65::GetGear(Vehicle::gear& outGear)
+bool BMW_E65::GetGear(Vehicle::gear& outGear)
 {
     if (isE90)
     {
