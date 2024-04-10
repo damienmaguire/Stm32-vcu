@@ -400,14 +400,14 @@ enum Gear
 
 enum vehicles
 {
-    BMW_E46 = 0,
-    BMW_E65 = 1,
+    vBMW_E46 = 0,
+    vBMW_E65 = 1,
     Classic = 2, //used as a flag
     None = 4,
-    BMW_E39 = 5,
-    VAG = 6,
-    SUBARU = 7,
-    BMW_E31 = 8
+    vBMW_E39 = 5,
+    vVAG = 6,
+    vSUBARU = 7,
+    vBMW_E31 = 8
 };
 
 enum _potmodes

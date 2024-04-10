@@ -29,7 +29,7 @@
 #include "utils.h"
 #include "stm32_can.h"
 
-class Bmw_E31: public Vehicle
+class BMW_E31: public Vehicle
 {
 
 public:

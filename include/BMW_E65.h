@@ -10,10 +10,10 @@
 #include "vehicle.h"
 #include "my_math.h"
 
-class BMWE65: public Vehicle
+class BMW_E65: public Vehicle
 {
 public:
-   BMWE65() : terminal15On(false), dashInit(false), gear(PARK) { }
+   BMW_E65() : terminal15On(false), dashInit(false), gear(PARK) { }
    void SetCanInterface(CanHardware*);
    void Task10Ms();
    void Task100Ms();
