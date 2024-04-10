@@ -480,7 +480,7 @@ static void Ms10Task(void)
     case MOD_PRECHARGE:
         if (!chargeMode)
         {
-            DigIo::inv_out.Set();//inverter power on but not if we are in charge mode!
+            if(selectedInverter != &openInv)DigIo::inv_out.Set();//inverter power on but not if we are in charge mode and not if OI
         }
         IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
         IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
@@ -530,7 +530,11 @@ static void Ms10Task(void)
 
     case MOD_RUN:
         if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
-        if(rlyDly==0) DigIo::dcsw_out.Set();
+        if(rlyDly==0)
+        {
+        DigIo::dcsw_out.Set();
+        DigIo::inv_out.Set();//inverter power on
+        }
         Param::SetInt(Param::opmode, MOD_RUN);
         ErrorMessage::UnpostAll();
         if(!selectedVehicle->Ready()) opmode = MOD_OFF;
