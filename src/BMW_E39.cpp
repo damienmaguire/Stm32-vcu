@@ -433,6 +433,7 @@ void BMW_E39::DecodeCAN(int id, uint32_t* data)
         float road_speed = 0.0625f * (((bytes[2] << 8) | (bytes[1])) - 0x160);
 
         Param::SetFloat(Param::Veh_Speed, road_speed);
+		AbsCANalive = true;
     }
 
     if (id == 0x1F3)// ASC3 contains traction control info also last one on bus before shutdown.
