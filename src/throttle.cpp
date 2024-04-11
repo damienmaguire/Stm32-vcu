@@ -57,7 +57,7 @@ float Throttle::ThrotRpmFilt;
 static float throttleRamped = 0.0;
 static float SpeedFiltered = 0.0;
 
-static float regenlim, PrevRegenlim =0;
+static float regenlim =0;
 
 #define PedalPosArrLen 50
 static float PedalPos;
@@ -238,28 +238,12 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     }
     else if(speed < regenRpm)
     {
-        if(PedalReq == -1)//we want to regen
-        {
-            regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
-        }
-        else
-        {
-            regenlim = PrevRegenlim;
-        }
+        regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
     }
     else
     {
-        if(PedalReq == -1)//we want to regen
-        {
-            regenlim = regenmax;
-        }
-        else
-        {
-            regenlim = PrevRegenlim;
-        }
+        regenlim = regenmax;
     }
-
-    PrevRegenlim = regenlim;
 
 
     //!!!potnom is throttle position up to this point//
