@@ -81,7 +81,7 @@ void GS450HClass::SetTorque(float torquePercent)
 
             if(TorqueShiftRamp < 100)//ramp torque back in after shifting
             {
-                TorqueShiftRamp += 5;//ramp back in 5% every time this is ran, every 10ms - Increased from 10.
+                TorqueShiftRamp += Param::GetFloat(Param::throtramp);//ramp back in 5% every time this is ran, every 10ms - Increased from 10.
             }
 
             if (gear == 0)//!!!Low gear
