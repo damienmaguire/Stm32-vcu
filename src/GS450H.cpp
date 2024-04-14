@@ -24,8 +24,8 @@ static uint8_t frame_count;
 static uint8_t GearSW;
 static int16_t mg1_torque, mg2_torque, speedSum;
 static bool statusInv=0;
-static bool TorqueCut=0;
-static uint8_t TorqueShiftRamp = 0;
+static bool TorqueCut, ShiftInit = 0;
+static int8_t TorqueShiftRamp = 0;
 static uint16_t Lexus_Oil2=0;
 static uint8_t speedSum2;
 static uint8_t gearAct, gearReq, gearStep=0;
@@ -79,9 +79,22 @@ void GS450HClass::SetTorque(float torquePercent)
             mg2_torque = this->scaledTorqueTarget;
             mg1_torque = ((mg2_torque*5)/4);
 
-            if(TorqueShiftRamp < 100)//ramp torque back in after shifting
+            if(ShiftInit == true && TorqueShiftRamp > 0)
+            {
+                TorqueShiftRamp -= (5*Param::GetFloat(Param::throtramp)); //ramp down 5 x throtramp
+                if(TorqueShiftRamp < 0)
+                {
+                    TorqueShiftRamp = 0; //if we go below 0 force it to zero to signify finishing ramp down
+                }
+            }
+
+            if(TorqueShiftRamp < 100 && ShiftInit == false)//ramp torque back in after shifting - Note this also runs on first power on so theoretically reduced throttle on start
             {
                 TorqueShiftRamp += Param::GetFloat(Param::throtramp);//ramp back in 5% every time this is ran, every 10ms - Increased from 10.
+                if(TorqueShiftRamp > 100)
+                {
+                    TorqueShiftRamp = 100; //keep it limited to 100
+                }
             }
 
             if (gear == 0)//!!!Low gear
@@ -208,9 +221,13 @@ void GS450HClass::GS450Hgear()//!!! should be ran every 10ms - ran before calcul
 
         if(gearAct != gearReq)//check if we need to shift gears
         {
-            TorqueCut = true; //Cut Torque to motor
-            TorqueShiftRamp = 0; //Zero torque Limiter
-            gearStep++;//increase gearStep by 1 adds 10ms delay before shifting
+            //TorqueCut = true; //Cut Torque to motor
+            //TorqueShiftRamp = 0; //Zero torque Limiter
+            ShiftInit = true;
+            if(TorqueShiftRamp == 0)
+            {
+                gearStep++;//increase gearStep by 1 adds 10ms delay before shifting
+            }
             if(gearStep == 4)//wait some cycles before changing
             {
                 gear = gearReq; //change the outputs
@@ -219,12 +236,14 @@ void GS450HClass::GS450Hgear()//!!! should be ran every 10ms - ran before calcul
             {
                 gearAct = gearReq; //we have now shifted gear
                 gearStep = 0; //reset shift loop
-                TorqueCut = false;//allow torque again
+                //TorqueCut = false;//allow torque again
+                ShiftInit = false; //Allow troque ramping we are done shifting
             }
         }
         else//no shifting needed so gear should be gearAct
         {
             gear = gearAct;
+            ShiftInit = false; //always force it into false when not trying to shift. In case of exiting shifting boundries during process
         }
     }
 
