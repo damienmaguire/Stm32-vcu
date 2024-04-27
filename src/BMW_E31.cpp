@@ -160,7 +160,7 @@ void BMW_E31::Task1Ms()
 
 void BMW_E31::Task10Ms()
 {
-    if(Param::GetInt(Param::T15Stat))
+    if(DigIo::t15_digi.Get() == 1)
     {
         EGSMsg43B();//EGS1
         if (Param::GetBool(Param::Transmission))

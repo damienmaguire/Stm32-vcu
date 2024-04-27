@@ -44,7 +44,7 @@ void BMW_E39::Task10Ms()
 
 void BMW_E39::Task100Ms()
 {
-    if(AbsCANalive == true)//check if 100ms if ABS can frame 0x1F3 has been recieved to say CAN is on
+    if(AbsCANalive == true || DigIo::t15_digi.Get())//check if 100ms if ABS can frame 0x1F3 has been recieved to say CAN is on
     {
         SendCAN = true;
     }
