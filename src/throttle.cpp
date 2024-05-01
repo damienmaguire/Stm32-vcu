@@ -167,7 +167,6 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 
     speed = SpeedFiltered;
 
-    Param::SetFloat(Param::AC_Volts, speed);
     ///////////////////////
 
     if(dir == 0)//neutral no torque command
