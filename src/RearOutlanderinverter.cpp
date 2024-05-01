@@ -58,17 +58,19 @@ void RearOutlanderInverter::DecodeCAN(int id, uint32_t data[2])
     }
 }
 
-
-
 void RearOutlanderInverter::SetTorque(float torquePercent)
 {
-    final_torque_request = ((torquePercent * 2000) / 100.0f ); //!! Moved into parameter *-1 reverses torque direction
 
-    if(Param::GetInt(Param::reversemotor) == 1)
+    if(Param::GetInt(Param::reversemotor) == 0)
     {
-        final_torque_request *= -1;//reverse torque request to flip motor rotation
+
+        final_torque_request = 10000 + (torquePercent * 20); //!! Moved into parameter *-1 reverses torque direction
     }
-    final_torque_request += 10000;
+    else
+    {
+        final_torque_request = 10000 - (torquePercent * 20);
+    }
+
     Param::SetInt(Param::torque,final_torque_request);//post processed final torque value sent to inv to web interface
 }
 

@@ -532,8 +532,8 @@ static void Ms10Task(void)
         if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
         if(rlyDly==0)
         {
-        DigIo::dcsw_out.Set();
-        DigIo::inv_out.Set();//inverter power on
+            DigIo::dcsw_out.Set();
+            DigIo::inv_out.Set();//inverter power on
         }
         Param::SetInt(Param::opmode, MOD_RUN);
         ErrorMessage::UnpostAll();
@@ -631,8 +631,6 @@ static void UpdateVehicle()
     //This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
     canInterface[1]->ClearUserMessages();
-
-    Param::SetFloat(Param::AC_Amps, Param::Vehicle);
 }
 
 static void UpdateCharger()
@@ -878,7 +876,11 @@ void Param::Change(Param::PARAM_NUM paramNum)
 
     if(Param::GetInt(Param::reversemotor) != 0)
     {
-        if(Param::GetInt(Param::Inverter) != InvModes::Leaf_Gen1 ||Param::GetInt(Param::Inverter) != InvModes::RearOutlander)
+        if(Param::GetInt(Param::Inverter) == InvModes::RearOutlander)
+        {
+
+        }
+        else
         {
             Param::SetInt(Param::reversemotor,0);
         }
