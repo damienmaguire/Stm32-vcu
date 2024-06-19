@@ -15,7 +15,7 @@ uint8_t A90=0xe9;//0x0A9 first counter byte
 uint8_t A91=0x00;//0x0A9 second counter byte
 uint8_t BA5=0x4d;//0x0BA first counter byte(byte 5)
 uint8_t BA6=0x80;//0x0BA second counter byte(byte 6)
-
+uint8_t AA1=0x0F;//0x0AA first counter byte(byte 1)
 
 void BMW_E65::SetCanInterface(CanHardware* c)
 {
@@ -152,15 +152,34 @@ void BMW_E65::Task10Ms()
 {
     if(CANWake)
     {
+        uint8_t data[8]; 
+        int rpm = 0;
         if (Ready())
         {
-            uint32_t data[2];
-            int rpm = MAX(750, revCounter) * 4; // rpm value for E65
-
-            data[0] = 0xff595f;
-            data[1] = 0x99800000 | rpm;
-            can->Send(0x0AA, data); //Send on CAN2
+            data[1] = 0x50 | AA1;  //Counter for 0xAA Byte 1
+            data[2] = 0x07;
+            data[6] = 0x94;
+            data[7] = 0x00;
+            rpm =  MAX(750, revCounter) * 4; // rpm value for E65
+            rpm = MIN(rpm, 16383); // prevent an overflow for (very) high RPMs
+        } else {
+            data[1] = 0x30 | AA1;  //Counter for 0xAA Byte 1
+            data[2] = 0xFE;
+            data[6] = 0x84;
+            data[7] = 0x00;
         }
+
+
+        data[3] = 0x00;  //Pedal position 0-255
+        data[4] = (uint8_t)(rpm & 0x00FF);   //lowByte(RPM_A);
+        data[5] = (uint8_t)((rpm & 0xFF00) >> 8);  //highByte(RPM_A);
+
+        int16_t check_AA = (data[1] + data[2] + data[3] + data[4] + data[5] + data[6] + data[7] + 0xAA);
+        check_AA = (check_AA / 0x100) + (check_AA & 0xff);
+        check_AA = check_AA & 0xff;
+        data[0] = check_AA;  //checksum
+
+        can->Send(0x0AA, (uint32_t*)data, 8); 
 
         SendAbsDscMessages(Param::GetBool(Param::din_brake));
     }
@@ -315,6 +334,7 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
     A91++;
     BA5++;
     BA6++;
+    AA1++;
 
     if (BA5==0x5C) //reload initial condition
     {
@@ -324,6 +344,7 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
         A91=0x00;//0x0A9 second counter byte
         BA5=0x4d;//0x0BA first counter byte(byte 5)
         BA6=0x80;//0x0BA second counter byte(byte 6)
+        AA1=0x00;
     }
 
 }
