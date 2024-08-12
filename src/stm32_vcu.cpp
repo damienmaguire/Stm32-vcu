@@ -92,6 +92,7 @@ static Shifter* selectedShifter = &NoGearLever;
 static BMS BMSnone;
 static SimpBMS BMSsimp;
 static DaisychainBMS BMSdaisychain;
+static EMUSBMS BMSEMUS;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
 static BMS* selectedBMS = &BMSnone;
@@ -722,6 +723,8 @@ static void UpdateBMS()
     case BMSModes::BMSModeDaisychainDualBMS:
         selectedBMS = &BMSdaisychain;
         break;
+        case BMSModes::BMSModeEMUSBMS:
+        selectedBMS = &BMSEMUS;
     default:
         // Default to no BMS
         selectedBMS = &BMSnone;

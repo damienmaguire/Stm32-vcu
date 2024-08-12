@@ -365,7 +365,8 @@ enum BMSModes
     BMSModeNoBMS = 0,
     BMSModeSimpBMS = 1,
     BMSModeDaisychainSingleBMS = 2,
-    BMSModeDaisychainDualBMS = 3
+    BMSModeDaisychainDualBMS = 3,
+    BMSModeEMUSBMS = 4
 };
 
 enum DCDCModes
