@@ -72,6 +72,7 @@ static outlanderCharger outChg;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
+static FocciClass Foccican;
 static Can_OI openInv;
 static NoInverterClass NoInverter;
 static OutlanderInverter outlanderInv;
@@ -108,6 +109,9 @@ static void Ms200Task(void)
 
     selectedVehicle->Task200Ms();
     if(opmode==MOD_CHARGE) selectedCharger->Task200Ms();
+
+    //if(opmode==MOD_CHARGE) utils::CpSpoofOutput;
+    utils::CpSpoofOutput();
 
     Param::SetInt(Param::Day,days);
     Param::SetInt(Param::Hour,hours);
@@ -182,7 +186,7 @@ static void Ms200Task(void)
     //in chademo , we do not want to run the 200ms task unless in dc charge mode
     if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
     //In case of the LIM we want to send it all the time if lim in use
-    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)) selectedChargeInt->Task200Ms();
+    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)|| (targetChgint == ChargeInterfaces::Focci)) selectedChargeInt->Task200Ms();
     //and just to be thorough ...
     if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
 
@@ -314,7 +318,7 @@ static void Ms100Task(void)
     int32_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
 
-    if(targetChgint == ChargeInterfaces::i3LIM || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
+    if(targetChgint == ChargeInterfaces::i3LIM || targetChgint == ChargeInterfaces::Focci || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
 
     if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
     {
@@ -684,6 +688,9 @@ static void UpdateChargeInt()
     case ChargeInterfaces::CPC:
         selectedChargeInt = &CPCcan;
         break;
+            case ChargeInterfaces::Focci:
+        selectedChargeInt = &Foccican;
+        break;
     }
     //This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
@@ -869,6 +876,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
     case Param::PWM2Func:
     case Param::PWM3Func:
         tim3_setup();
+        break;
+    case Param::CP_PWM:
+        //timer_set_oc_value(TIM3, TIM_OC3, (Param::GetInt(Param::CP_PWM)*66)-16);//No duty set here
         break;
     default:
         break;
@@ -1085,6 +1095,7 @@ extern "C" int main(void)
     s.AddTask(Ms200Task, 200);
 
     if(Param::GetInt(Param::IsaInit)==1) ISA::initialize(shunt_can);//only call this once if a new sensor is fitted.
+
 
     Param::SetInt(Param::version, 4); //backward compatibility
     Param::SetInt(Param::opmode, MOD_OFF);//always off at startup

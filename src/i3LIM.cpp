@@ -858,7 +858,6 @@ bool i3LIMClass::ACRequest(bool RunCh)
 {
 
     if (Param::GetBool(Param::PlugDet)&&(CP_Mode==0x1||CP_Mode==0x2)&&RunCh)  //if we have an enable and a plug in and a std ac pilot lets go AC charge mode.
-
     {
         lim_state=20;//return to state 0
         Param::SetInt(Param::CCS_State,lim_state);

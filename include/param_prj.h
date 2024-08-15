@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.17.A
+#define VER 2.20.TB
 
 
 /* Entries must be ordered as follows:
@@ -25,13 +25,13 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 131
+//Next param id (increase when adding new parameter!): 134
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
     PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      8,      0,      6  ) \
     PARAM_ENTRY(CAT_SETUP,     Transmission, TRNMODES, 0,      1,      0,      78 ) \
-    PARAM_ENTRY(CAT_SETUP,     interface,    CHGINT,    0,     3,      0,      39 ) \
+    PARAM_ENTRY(CAT_SETUP,     interface,    CHGINT,    0,     4,      0,      39 ) \
     PARAM_ENTRY(CAT_SETUP,     chargemodes,  CHGMODS,   0,     6,      0,      37 ) \
     PARAM_ENTRY(CAT_SETUP,     InverterCan,  CAN_DEV,  0,      1,      0,      70 ) \
     PARAM_ENTRY(CAT_SETUP,     VehicleCan,   CAN_DEV,  0,      1,      1,      71 ) \
@@ -93,6 +93,7 @@
     PARAM_ENTRY(CAT_CHARGER,   Chgctrl,     CHGCTRL,   0,      2,      0,      45 ) \
     PARAM_ENTRY(CAT_CHARGER,   ChgAcVolt,   "Vac",     0,      250,   240,     120 ) \
     PARAM_ENTRY(CAT_CHARGER,   ChgEff,     "%",       0,      100,   90,      121) \
+    PARAM_ENTRY(CAT_CHARGER,   ConfigFocci,  ONOFF,     0,      1,      0,     133) \
     PARAM_ENTRY(CAT_DCDC,      DCdc_Type,   DCDCTYPES, 0,      1,      0,      105 ) \
     PARAM_ENTRY(CAT_DCDC,      DCSetPnt,    "V",       9,      15,     14,     106 ) \
     PARAM_ENTRY(CAT_BMS,       BMS_Mode,    BMSMODES,  0,      3,      0,      90 ) \
@@ -137,6 +138,7 @@
     PARAM_ENTRY(CAT_PWM,       Tim3_1_OC,   "",        1,      100000, 3600,   102 ) \
     PARAM_ENTRY(CAT_PWM,       Tim3_2_OC,   "",        1,      100000, 3600,   103 ) \
     PARAM_ENTRY(CAT_PWM,       Tim3_3_OC,   "",        1,      100000, 3600,   104 ) \
+    PARAM_ENTRY(CAT_PWM,       CP_PWM,   "",        1,      100, 10,   132 ) \
     VALUE_ENTRY(version,       VERSTR,              2000 ) \
     VALUE_ENTRY(opmode,        OPMODES,             2002 ) \
     VALUE_ENTRY(chgtyp,        CHGTYPS,             2003 ) \
@@ -230,7 +232,7 @@
 #define VERSTR STRINGIFY(4=VER)
 #define PINFUNCS     "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, 5=WarnIndication," \
                      "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, 11=HVRequest," \
-                     "12=DCFCRequest, 13=BrakeVacPump, 14=PwmTim3"
+                     "12=DCFCRequest, 13=BrakeVacPump, 14=PwmTim3, 15=CpSpoof"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor"
 #define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2"
 #define SHNTYPE      "0=ISA, 1=SBOX, 2=VAG"
@@ -262,7 +264,7 @@
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
 #define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander 6=Elcon"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
-#define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC"
+#define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Focci"
 #define CAN3Spd      "0=k33.3, 1=k500. 2=k100"
 #define TRNMODES     "0=Manual, 1=Auto"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
@@ -350,7 +352,8 @@ enum ChargeInterfaces
     Unused = 0,
     i3LIM = 1,
     Chademo = 2,
-    CPC = 3
+    CPC = 3,
+    Focci = 4
 };
 
 enum HeatType

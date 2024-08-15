@@ -517,4 +517,24 @@ void ProcessCruiseControlButtons()
     }
 }
 
-} // namespace utils
+void CpSpoofOutput()
+{
+    uint16_t CpVal = 0;
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::CP_SPOOF)
+    {
+
+        if(Param::GetInt(Param::interface) == ChargeInterfaces::i3LIM || Param::GetInt(Param::interface) == ChargeInterfaces::CPC || Param::GetInt(Param::interface) == ChargeInterfaces::Focci)
+        {
+            CpVal = float(Param::GetInt(Param::PilotLim) *1.6667);
+            Param::SetInt(Param::CP_PWM,CpVal);
+        }
+
+        CpVal = (Param::GetInt(Param::CP_PWM)*66)-16;
+
+        /* Strange reasons this does not work. Okay to only have PWM3 as CP Spoof*/
+
+        timer_set_oc_value(TIM3, TIM_OC3,CpVal);//No duty set here
+    }
+}
+
+}// namespace utils
