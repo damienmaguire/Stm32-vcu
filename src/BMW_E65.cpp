@@ -15,6 +15,7 @@ uint8_t A90=0xe9;//0x0A9 first counter byte
 uint8_t A91=0x00;//0x0A9 second counter byte
 uint8_t BA5=0x4d;//0x0BA first counter byte(byte 5)
 uint8_t BA6=0x80;//0x0BA second counter byte(byte 6)
+uint8_t AA1=0x00;//0x0AA First counter byte
 
 
 void BMW_E65::SetCanInterface(CanHardware* c)
@@ -152,6 +153,7 @@ void BMW_E65::Task10Ms()
 {
     if(CANWake)
     {
+        /*
         if (Ready())
         {
             uint32_t data[2];
@@ -161,7 +163,7 @@ void BMW_E65::Task10Ms()
             data[1] = 0x99800000 | rpm;
             can->Send(0x0AA, data); //Send on CAN2
         }
-
+        */
         SendAbsDscMessages(Param::GetBool(Param::din_brake));
     }
 }
@@ -253,8 +255,40 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
 {
 
 //////////send abs/dsc messages////////////////////////
-    uint8_t a8_brake;
     uint8_t bytes[8];
+
+    uint16_t RPM_A = 0;
+    if (Ready())
+    {
+        RPM_A = 750 * 4;
+        bytes[1] = 0x50 | AA1;  //Counter for 0xAA Byte 0
+        bytes[2] = 0x07;
+        bytes[6] = 0x94;
+        bytes[7] = 0x00;
+    }
+    else
+    {
+        bytes[1] = 0x30 | AA1;  //Counter for 0xAA Byte 0
+        bytes[2] = 0xFE;
+        bytes[6] = 0x84;
+        bytes[7] = 0x00;
+    }
+    bytes[3] = 0x00;             //Pedal position 0-255
+    bytes[4] = RPM_A & 0xff;   //lowByte(RPM_A);
+    bytes[5] = RPM_A>>8 & 0xff;;  //highByte(RPM_A);
+
+
+    ///Check sum math for 0x0AA///
+    int16_t check_AA = (bytes[1] + bytes[2] + bytes[3] + bytes[4] + bytes[5] + bytes[6] + bytes[7] + 0xAA);
+    check_AA = (check_AA / 0x100) + (check_AA & 0xff);
+    check_AA = check_AA & 0xff;
+    bytes[0] = check_AA;  //checksum
+
+    can->Send(0x0AA, bytes, 8); //Send on CAN
+
+
+    uint8_t a8_brake;
+
 
     if(Brake_In)
     {
@@ -279,7 +313,7 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
     bytes[6]=0x0f;
     bytes[7]=a8_brake;  //brake off =0x04 , brake on = 0x64.
 
-    can->Send(0x0A8, bytes, 8); //Send on CAN2
+    can->Send(0x0A8, bytes, 8); //Send on CAN
 
     bytes[0]=A90; //first counter byte
     bytes[1]=A91; //second counter byte
@@ -290,7 +324,7 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
     bytes[6]=0xe0;
     bytes[7]=0x21;
 
-    can->Send(0x0A9, bytes, 8); //Send on CAN2
+    can->Send(0x0A9, bytes, 8); //Send on CAN
 
     int16_t check_BA = (gear_BA+0xff+0x0f+BA6+0x0ba);
     check_BA = (check_BA / 0x100)+ (check_BA & 0xff);
@@ -309,6 +343,7 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
 ////////////////////////////////////////
 ////here we increment the abs/dsc msg counters
 
+    AA1++;
     A80++;
     A81++;
     A90++;
@@ -318,6 +353,7 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
 
     if (BA5==0x5C) //reload initial condition
     {
+        AA1 = 0x0;  //0x0AA second counter byte
         A80=0xbe;//0x0A8 first counter byte
         A81=0x00;//0x0A8 second counter byte
         A90=0xe9;//0x0A9 first counter byte
@@ -357,9 +393,9 @@ void BMW_E65::Engine_Data()
     can->Send(0x1D0,bytes,8); //Send on CAN2
 
     if (C1D00 == C1D01)
-{
-    C1D00++;
-    if (C1D00 == 0x0F)
+    {
+        C1D00++;
+        if (C1D00 == 0x0F)
         {
             C1D00 = 0x00;
         }
