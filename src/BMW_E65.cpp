@@ -2,7 +2,6 @@
 #include "stm32_can.h"
 #include "params.h"
 
-
 uint8_t  Gcount; //gear display counter byte
 uint8_t shiftPos=0xe1; //contains byte to display gear position on dash.default to park
 uint8_t gear_BA=0x03; //set to park as initial condition
@@ -36,10 +35,6 @@ void BMW_E65::DecodeCAN(int id, uint32_t* data)
     {
     case 0x130:
         BMW_E65::handle130(data);
-        break;
-
-    case 0x192:
-        BMW_E65::handle192(data);
         break;
 
     case 0x480:
@@ -102,38 +97,6 @@ void BMW_E65::handle130(uint32_t data[2])
     }
 }
 
-void BMW_E65::handle192(uint32_t data[2])
-{
-    uint32_t GLeaver = data[0] & 0x00ffffff;  //unsigned int to contain result of message 0x192. Gear selector lever position
-
-    switch (GLeaver)
-    {
-    case 0x80506a:  //park button pressed
-        this->gear = PARK;
-        gear_BA = 0x03;
-        shiftPos = 0xe1;
-        break;
-    case 0x80042d: //R+ position
-        this->gear = REVERSE;
-        gear_BA = 0x02;
-        shiftPos = 0xd2;
-        break;
-    case 0x800374:  //D+ pressed
-        this->gear = DRIVE;
-        gear_BA = 0x08;
-        shiftPos = 0x78;
-        break;
-    case 0x80006a:  //not pressed
-    case 0x800147:  //R position
-    case 0x800259:  //D pressed
-    case 0x81006a:  //Left Back button pressed
-    case 0x82006a:  //Left Front button pressed
-    case 0x84006a:  //right Back button pressed
-    case 0x88006a:  //right Front button pressed
-    case 0xa0006a:  //  S-M-D button pressed
-        break;
-    }
-}
 
 void BMW_E65::handle480(uint32_t data[2])
 {
@@ -153,17 +116,6 @@ void BMW_E65::Task10Ms()
 {
     if(CANWake)
     {
-        /*
-        if (Ready())
-        {
-            uint32_t data[2];
-            int rpm = MAX(750, revCounter) * 4; // rpm value for E65
-
-            data[0] = 0xff595f;
-            data[1] = 0x99800000 | rpm;
-            can->Send(0x0AA, data); //Send on CAN2
-        }
-        */
         SendAbsDscMessages(Param::GetBool(Param::din_brake));
     }
 }
@@ -194,34 +146,29 @@ void BMW_E65::Task200Ms()
 {
     if(CANWake)
     {
+        //update shitPos
+        int selectedDir = Param::GetInt(Param::dir);
 
-        if (isE90)
+        if (selectedDir == 0)
         {
-            //update shitPos
-            int selectedDir = Param::GetInt(Param::dir);
-
-            if (selectedDir == 0)
-            {
-                //neutral/park
-                this->gear = PARK;
-                gear_BA = 0x03;
-                shiftPos = 0xe1;
-            }
-            else if (selectedDir == -1)
-            {
-                //reverse
-                this->gear = REVERSE;
-                gear_BA = 0x02;
-                shiftPos = 0xd2;
-            }
-            else if (selectedDir == 1)
-            {
-                //forward
-                this->gear = DRIVE;
-                gear_BA = 0x08;
-                shiftPos = 0x78;
-            }
-
+            //neutral/park
+            this->gear = PARK;
+            gear_BA = 0x03;
+            shiftPos = 0xe1;
+        }
+        else if (selectedDir == -1)
+        {
+            //reverse
+            this->gear = REVERSE;
+            gear_BA = 0x02;
+            shiftPos = 0xd2;
+        }
+        else if (selectedDir == 1)
+        {
+            //forward
+            this->gear = DRIVE;
+            gear_BA = 0x08;
+            shiftPos = 0x78;
         }
 
         uint8_t bytes[8];
@@ -409,10 +356,5 @@ void BMW_E65::Engine_Data()
 
 bool BMW_E65::GetGear(Vehicle::gear& outGear)
 {
-    if (isE90)
-    {
-        return false;
-    }
-    outGear = gear;    //send the shifter pos
-    return true; //Let caller know we set a valid gear
+    return false;
 }
