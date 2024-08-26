@@ -29,10 +29,10 @@
 class TeslaDCDC: public DCDC
 {
    public:
-      virtual void DecodeCAN(int, uint8_t *);
-      virtual void DeInit() {};
-      virtual void Task100Ms();
-      virtual void SetCanInterface(CanHardware* c);
+      void DecodeCAN(int, uint8_t *);
+      void DeInit() {};
+      void Task100Ms();
+      void SetCanInterface(CanHardware* c);
    protected:
       CanHardware* can;
    private:

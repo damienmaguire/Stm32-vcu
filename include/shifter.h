@@ -1,7 +1,7 @@
 /*
- * This file is part of the ZombieVerter project.
+ * This file is part of the tumanako_vc project.
  *
- * Copyright (C) 2023 Damien Maguire
+ * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,24 +16,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef DCDC_H
-#define DCDC_H
+#ifndef SHIFTER_H_INCLUDED
+#define SHIFTER_H_INCLUDED
 #include <stdint.h>
 #include "canhardware.h"
 #include "params.h"
 
-class DCDC
+class Shifter
 {
-   public:
-      virtual void DecodeCAN(int, uint8_t *) {};
-      virtual void DeInit() {};
-      virtual void Task1Ms() {};
-      virtual void Task10Ms() {};
-      virtual void Task100Ms() {};
-      virtual void SetCanInterface(CanHardware* c) { can = c; }
-   protected:
-      CanHardware* can;
+public:
+   enum Sgear { PARK, REVERSE, NEUTRAL, DRIVE };
+
+   virtual void Task1Ms() {} //Default does nothing
+   virtual void Task10Ms() {} //Default does nothing
+   virtual void Task100Ms() {} //Default does nothing
+   virtual void Task200Ms() {} //Default does nothing
+   virtual void DecodeCAN(int, uint32_t*) {};
+   virtual bool GetGear(Sgear&) { return false; } //if shifter class knows gear return true and set dir
+   virtual void SetCanInterface(CanHardware* c) { can = c; }
+
+protected:
+   CanHardware* can;
 };
-#endif // DCDC_H
+
+#endif // SHIFTER_H_INCLUDED
 

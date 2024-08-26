@@ -35,6 +35,7 @@ public:
    int GetInverterState();
    void DeInit() { setTimerState(false); } //called when switching to another inverter, similar to a destructor
 
+
    //Lexus/Toyota specific functions
    void SetPrius();
    void SetGS450H();
@@ -50,6 +51,8 @@ private:
    uint8_t VerifyMTHChecksum(uint16_t );
    void CalcHTMChecksum(uint16_t);
    void setTimerState(bool);
+   void GS450Hgear();
+   void GS450Houtput();
 };
 
 #endif /* GS450H_h */

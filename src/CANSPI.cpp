@@ -148,6 +148,13 @@ if(Param::GetInt(Param::CAN3Speed)==1)
       MCP2515_Write_Byte(MCP2515_CNF3, 0x83);
 }
 
+if(Param::GetInt(Param::CAN3Speed)==2)
+{
+   MCP2515_Write_Byte(MCP2515_CNF1, 0x03);//100kbps at 16HMz xtal.
+   MCP2515_Write_Byte(MCP2515_CNF2, 0xFA);
+   MCP2515_Write_Byte(MCP2515_CNF3, 0x87);
+}
+
 if(Param::GetInt(Param::CAN3Speed)==0)
 {
    MCP2515_Write_Byte(MCP2515_CNF1, 0x4E);//33kbps at 16HMz xtal.

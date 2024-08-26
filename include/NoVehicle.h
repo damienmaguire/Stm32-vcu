@@ -1,7 +1,7 @@
 /*
- * This file is part of the ZombieVerter project.
+ * This file is part of the tumanako_vc project.
  *
- * Copyright (C) 2023 Damien Maguire
+ * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,24 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef NOVEHICLE_H_INCLUDED
+#define NOVEHICLE_H_INCLUDED
 
-#ifndef DCDC_H
-#define DCDC_H
-#include <stdint.h>
-#include "canhardware.h"
-#include "params.h"
+#include <vehicle.h>
 
-class DCDC
+
+class NoVehicle : public Vehicle
 {
-   public:
-      virtual void DecodeCAN(int, uint8_t *) {};
-      virtual void DeInit() {};
-      virtual void Task1Ms() {};
-      virtual void Task10Ms() {};
-      virtual void Task100Ms() {};
-      virtual void SetCanInterface(CanHardware* c) { can = c; }
-   protected:
-      CanHardware* can;
-};
-#endif // DCDC_H
+public:
+   void SetRevCounter(int speed) {speed = speed;}
+   void SetTemperatureGauge(float temp){temp = temp;}
+   bool Ready() { return DigIo::t15_digi.Get();}
+   bool Start() { return Param::GetBool(Param::din_start); }
+protected:
 
+};
+
+#endif // VEHICLE_H_INCLUDED

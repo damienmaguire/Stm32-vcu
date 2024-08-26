@@ -1,7 +1,7 @@
 /*
  * This file is part of the ZombieVerter project.
  *
- * Copyright (C) 2012-2020 Johannes Huebner <dev@johanneshuebner.com> 
+ * Copyright (C) 2012-2020 Johannes Huebner <dev@johanneshuebner.com>
  *               2021-2022 Damien Maguire <info@evbmw.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@
 #define THROTTLE_H
 
 #include "my_fp.h"
+#include "utils.h"
 
 class Throttle
 {
@@ -36,14 +37,15 @@ public:
     static void IdcLimitCommand(float& finalSpnt, float idc);
     static void SpeedLimitCommand(float& finalSpnt, int speed);
     static float RampThrottle(float finalSpnt);
-    static void RegenRampDown(float& finalSpnt, int speed);
     static int potmin[2];
     static int potmax[2];
-    static float regenTravel;
+    static float regenRpm;
     static float brknompedal;
     static float regenmax;
+    static float regenBrake;
     static float brkcruise;
     static float throtmax;
+    static float throtmaxRev;
     static float throtmin;
     static float throtdead;
     static int idleSpeed;
@@ -62,11 +64,14 @@ public:
     static float idcmin;
     static float idcmax;
     static int speedLimit;
+    static float regenendRpm;
+    static float ThrotRpmFilt;
 
 private:
     static int speedFiltered;
     static float potnomFiltered;
     static float brkRamped;
+    static float AveragePos(float Pos);
 };
 
 #endif // THROTTLE_H

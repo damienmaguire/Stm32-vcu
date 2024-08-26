@@ -15,6 +15,9 @@
 #include "bmw_sbox.h"
 #include "vag_sbox.h"
 #include "vehicle.h"
+#include "shifter.h"
+#include <libopencm3/stm32/timer.h>
+#include "iomatrix.h"
 
 namespace utils
 {
@@ -25,9 +28,10 @@ namespace utils
     void CalcSOC();
     void GetDigInputs(CanHardware*);
     void PostErrorIfRunning(ERROR_MESSAGE_NUM);
-    void SelectDirection(Vehicle*);
+    void SelectDirection(Vehicle* , Shifter*);
     void displayThrottle();
     void ProcessCruiseControlButtons();
+    void CpSpoofOutput();
 }
 
 #endif

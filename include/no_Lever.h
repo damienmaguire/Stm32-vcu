@@ -15,44 +15,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Based on the work of Tom de Bree : https://github.com/Tom-evnut/BMW-F-Series-Shifter
+ * All credits to the Orignal Reverse engineering work and documenation
+ * Project Gus and a forum post from Bimmerwelt
+ * Based on info from https://openinverter.org/wiki/BMW_F-Series_Gear_Lever
  */
-#ifndef BMW_E31_h
-#define BMW_E31_h
 
-/*  This library supports the BMW E31 8 series. Will include some EGS/DME Can and driving analog instruments
+#ifndef no_Lever_h
+#define no_Lever_h
 
-*/
+#include "shifter.h"
 
-#include <stdint.h>
-#include "vehicle.h"
-#include "digio.h"
-#include "utils.h"
-#include "stm32_can.h"
-
-class BMW_E31: public Vehicle
+class no_Lever: public Shifter
 {
-
 public:
-   void SetCanInterface(CanHardware* c);
-   void Task10Ms();
-   void Task100Ms();
-   void Task1Ms();
-   void SetRevCounter(int s);
-   void SetTemperatureGauge(float temp);
-   void DecodeCAN(int id, uint32_t* data);
-   bool Ready();
-   bool Start();
-
 
 private:
-   uint16_t speed;
-   uint32_t timerPeriod;
-   bool timerIsRunning=false;
-   void EGSMsg43F(int8_t gear);
-   void EGSMsg43B();
 
 };
 
-#endif /* BMW_E31_h */
 
+#endif // F30_Lever_INCLUDED
 

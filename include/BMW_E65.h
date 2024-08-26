@@ -10,10 +10,10 @@
 #include "vehicle.h"
 #include "my_math.h"
 
-class BMWE65: public Vehicle
+class BMW_E65: public Vehicle
 {
 public:
-   BMWE65() : terminal15On(false), dashInit(false), gear(PARK) { }
+   BMW_E65() : terminal15On(false), dashInit(false), gear(PARK) { }
    void SetCanInterface(CanHardware*);
    void Task10Ms();
    void Task100Ms();
@@ -25,15 +25,25 @@ public:
    bool Start() { return terminal15On; }
    bool GetGear(Vehicle::gear& outGear);
    void DashOff();
+   void handle130(uint32_t data[2]);
+   void handle192(uint32_t data[2]);
+   void handle480(uint32_t data[2]);
+   void SetE90(bool e90) { isE90 = e90; }
+   void Engine_Data();
 
 private:
    void SendAbsDscMessages(bool Brake_In);
 
    bool terminal15On;
+   bool terminalROn;
+   bool terminal50On;
    bool dashInit;
    Vehicle::gear gear;
    int revCounter;
    float temperature;
+   bool  CANWake;
+   bool  StartButt;
+   bool isE90;
 };
 
 #endif /* BMW_E65_h */

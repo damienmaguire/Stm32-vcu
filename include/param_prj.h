@@ -17,7 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.03.A
+
+#define VER 2.20.TC
+
 
 
 /* Entries must be ordered as follows:
@@ -25,12 +27,14 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 108
+//Next param id (increase when adding new parameter!): 134
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
-    PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      6,      0,      5  ) \
-    PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      7,      0,      6  ) \
+    PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
+    PARAM_ENTRY(CAT_SETUP,     Vehicle,      VEHMODES, 0,      8,      0,      6  ) \
     PARAM_ENTRY(CAT_SETUP,     Transmission, TRNMODES, 0,      1,      0,      78 ) \
+    PARAM_ENTRY(CAT_SETUP,     interface,    CHGINT,    0,     4,      0,      39 ) \
+    PARAM_ENTRY(CAT_SETUP,     chargemodes,  CHGMODS,   0,     6,      0,      37 ) \
     PARAM_ENTRY(CAT_SETUP,     InverterCan,  CAN_DEV,  0,      1,      0,      70 ) \
     PARAM_ENTRY(CAT_SETUP,     VehicleCan,   CAN_DEV,  0,      1,      1,      71 ) \
     PARAM_ENTRY(CAT_SETUP,     ShuntCan,     CAN_DEV,  0,      1,      0,      72 ) \
@@ -40,16 +44,21 @@
     PARAM_ENTRY(CAT_SETUP,     OBD2Can,      CAN_DEV,  0,      1,      0,      96 ) \
     PARAM_ENTRY(CAT_SETUP,     CanMapCan,    CAN_DEV,  0,      1,      0,      97 ) \
     PARAM_ENTRY(CAT_SETUP,     DCDCCan,      CAN_DEV,  0,      1,      1,      107 ) \
+    PARAM_ENTRY(CAT_SETUP,     GearLvr,      SHIFTERS, 0,      4,      0,      108 ) \
+    PARAM_ENTRY(CAT_SETUP,     MotActive,    MotorsAct, 0,      2,      0,      129 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2max,     "dig",     0,      4095,   4095,   10 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regentravel, "%",       0,      100,    30,     60 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regenmax,    "%",       -100,   0,     -30,     61 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    100,    68 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenrpm,    "rpm",    100,      10000,    1500,     60 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenendrpm,"rpm",     100,      10000,  100,  126 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenmax,     "%",     -30,   0,     -10,     61 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenBrake,    "%",    -30,   0,     -10,     122 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    1,      68 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmode,     POTMODES,  0,      1,      0,      11 ) \
     PARAM_ENTRY(CAT_THROTTLE,  dirmode,     DIRMODES,  0,      4,      1,      12 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  throtramp,   "%/10ms",  0.1,    100,    100,    13 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  reversemotor,  ONOFF,   0,      1,      0,      127 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  throtramp,   "%/10ms",  1,    100,    10,     13 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramprpm,"rpm",     0,      20000,  20000,  14 ) \
     PARAM_ENTRY(CAT_THROTTLE,  revlim,      "rpm",     0,      20000,  6000,   15 ) \
     PARAM_ENTRY(CAT_THROTTLE,  bmslimhigh,  "%",       0,      100,    50,     17 ) \
@@ -62,7 +71,10 @@
     PARAM_ENTRY(CAT_THROTTLE,  tmpmmax,     "°C",      70,     300,    300,    24 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtmax,    "%",       0,      100,    100,    25 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtmin,    "%",      -100,    0,     -100,    26 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  throtmaxRev,    "%",       0,      100,    30,    123 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtdead,   "%",       0,      50,     10,     76 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  RegenBrakeLight,   "%",    -100,     0,     -15,      128 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  throtrpmfilt,   "rpm/10ms",  0.1,    200,    15,    131 ) \
     PARAM_ENTRY(CAT_LEXUS,     Gear,        LOWHIGH,   0,      2,      0,      27 ) \
     PARAM_ENTRY(CAT_LEXUS,     OilPump,     "%",       0,      100,    50,     28 ) \
     PARAM_ENTRY(CAT_CRUISE,    cruisestep,  "rpm",     1,      1000,   200,    29 ) \
@@ -71,10 +83,8 @@
     PARAM_ENTRY(CAT_CONTACT,   udcsw,       "V",       0,      1000,   330,    32 ) \
     PARAM_ENTRY(CAT_CONTACT,   cruiselight, ONOFF,     0,      1,      0,      33 ) \
     PARAM_ENTRY(CAT_CONTACT,   errlights,   ERRLIGHTS, 0,      255,    0,      34 ) \
-    PARAM_ENTRY(CAT_COMM,      CAN3Speed,   CAN3Spd,   0,      1,      0,      77 ) \
-    PARAM_ENTRY(CAT_CHARGER,   chargemodes, CHGMODS,   0,      5,      0,      37 ) \
+    PARAM_ENTRY(CAT_COMM,      CAN3Speed,   CAN3SPD,   0,      2,      0,      77 ) \
     PARAM_ENTRY(CAT_CHARGER,   BattCap,     "kWh",     0.1,    250,    22,     38 ) \
-    PARAM_ENTRY(CAT_CHARGER,   interface,   CHGINT,    0,      2,      0,      39 ) \
     PARAM_ENTRY(CAT_CHARGER,   Voltspnt,    "V",       0,      1000,   395,    40 ) \
     PARAM_ENTRY(CAT_CHARGER,   Pwrspnt,     "W",       0,      12000,  1500,   41 ) \
     PARAM_ENTRY(CAT_CHARGER,   IdcTerm,     "A",       0,      150,    0,      56 ) \
@@ -83,6 +93,9 @@
     PARAM_ENTRY(CAT_CHARGER,   CCS_SOCLim,  "%",       0,      100,    80,     44 ) \
     PARAM_ENTRY(CAT_CHARGER,   SOCFC,       "%",       0,      100,    50,     79 ) \
     PARAM_ENTRY(CAT_CHARGER,   Chgctrl,     CHGCTRL,   0,      2,      0,      45 ) \
+    PARAM_ENTRY(CAT_CHARGER,   ChgAcVolt,   "Vac",     0,      250,   240,     120 ) \
+    PARAM_ENTRY(CAT_CHARGER,   ChgEff,     "%",       0,      100,   90,      121) \
+    PARAM_ENTRY(CAT_CHARGER,   ConfigFocci,  ONOFF,     0,      1,      0,     133) \
     PARAM_ENTRY(CAT_DCDC,      DCdc_Type,   DCDCTYPES, 0,      1,      0,      105 ) \
     PARAM_ENTRY(CAT_DCDC,      DCSetPnt,    "V",       9,      15,     14,     106 ) \
     PARAM_ENTRY(CAT_BMS,       BMS_Mode,    BMSMODES,  0,      3,      0,      90 ) \
@@ -94,6 +107,7 @@
     PARAM_ENTRY(CAT_HEATER,    Heater,      HTTYPE,    0,      2,      0,      57 ) \
     PARAM_ENTRY(CAT_HEATER,    Control,     HTCTRL,    0,      2,      0,      58 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPwr,     "W",       0,      6500,   0,      59 ) \
+    PARAM_ENTRY(CAT_HEATER,    HeatPercnt,  "%",       0,      100,    0,      124 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Min,     "Mins",    0,      59,     0,      48 ) \
@@ -128,6 +142,7 @@
     PARAM_ENTRY(CAT_PWM,       Tim3_1_OC,   "",        1,      100000, 3600,   102 ) \
     PARAM_ENTRY(CAT_PWM,       Tim3_2_OC,   "",        1,      100000, 3600,   103 ) \
     PARAM_ENTRY(CAT_PWM,       Tim3_3_OC,   "",        1,      100000, 3600,   104 ) \
+    PARAM_ENTRY(CAT_PWM,       CP_PWM,   "",        1,      100, 10,   132 ) \
     VALUE_ENTRY(version,       VERSTR,              2000 ) \
     VALUE_ENTRY(opmode,        OPMODES,             2002 ) \
     VALUE_ENTRY(chgtyp,        CHGTYPS,             2003 ) \
@@ -210,24 +225,29 @@
     VALUE_ENTRY(cpuload,       "%",                 2063 ) \
     VALUE_ENTRY(PPVal,         "dig",               2094 ) \
     VALUE_ENTRY(BrkVacVal,     "dig",               2095 ) \
+    VALUE_ENTRY(tmpheater,     "°C",                2096 ) \
+    VALUE_ENTRY(udcheater,     "V",                 2097 ) \
+    VALUE_ENTRY(powerheater,   "W",                 2098 ) \
 
-//Next value Id: 2092
+//Next value Id: 2099
 
 
 
 #define VERSTR STRINGIFY(4=VER)
+
 #define PINFUNCS     "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, 5=WarnIndication," \
                      "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, 11=HVRequest," \
-                     "12=DCFCRequest, 13=BrakeVacPump, 14=PwmTim3"
+                     "12=DCFCRequest, 13=BrakeVacPump, 14=PwmTim3, 15=CpSpoof"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor"
+#define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE      "0=ISA, 1=SBOX, 2=VAG"
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleChannel, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"
 #define DIRMODES     "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
-#define INVMODES     "0=Leaf_Gen1, 1=GS450H, 2=UserCAN, 3=OpenI, 4=Prius_Gen3, 5=Outlander, 6=GS300H"
+#define INVMODES     "0=None, 1=Leaf_Gen1, 2=GS450H, 3=UserCAN, 4=OpenI, 5=Prius_Gen3, 6=Outlander, 7=GS300H, 8=RearOutlander"
 #define PLTMODES     "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
-#define VEHMODES     "0=BMW_E46, 1=BMW_E65, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru, 8=BMW_E31"
+#define VEHMODES     "0=BMW_E46, 1=BMW_E6x+, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru, 8=BMW_E31"
 #define BMSMODES     "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual"
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge"
 #define DOW          "0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat"
@@ -235,7 +255,7 @@
 #define DCDCTYPES    "0=NoDCDC, 1=TeslaG2"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define CCS_STATUS   "0=NotRdy, 1=ready, 2=SWoff, 3=interruption, 4=Prech, 5=insulmon, 6=estop, 7=malfunction, 15=invalid"
-#define DIRS         "-1=Reverse, 0=Neutral, 1=Forward"
+#define DIRS         "-1=Reverse, 0=Neutral, 1=Drive, 2=Park"
 #define ONOFF        "0=Off, 1=On, 2=na"
 #define LOWHIGH      "0=LOW, 1=HIGH, 2=AUTO"
 #define OKERR        "0=Error, 1=Ok, 2=na"
@@ -247,10 +267,10 @@
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
 #define HTTYPE       "0=None, 1=Ampera, 2=VW"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
-#define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander"
+#define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, 6=Elcon"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
-#define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo"
-#define CAN3Spd      "0=k33.3, 1=k500"
+#define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Focci"
+#define CAN3Spd      "0=k33.3, 1=k500. 2=k100"
 #define TRNMODES     "0=Manual, 1=Auto"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
@@ -269,6 +289,7 @@
 #define CAT_SHUNT    "ISA Shunt Control"
 #define CAT_IOPINS   "General Purpose I/O"
 #define CAT_PWM      "PWM Control"
+#define MotorsAct    "0=Mg1and2, 1=Mg1, 2=Mg2"
 
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
@@ -309,13 +330,15 @@ enum _dirmodes
 
 enum InvModes
 {
-    Leaf_Gen1 = 0,
-    GS450H = 1,
-    UserCAN = 2,
-    OpenI = 3,
-    Prius_Gen3 = 4,
-    Outlander = 5,
-    GS300H = 6
+    NoInv =0,
+    Leaf_Gen1 = 1,
+    GS450H = 2,
+    UserCAN = 3,
+    OpenI = 4,
+    Prius_Gen3 = 5,
+    Outlander = 6,
+    GS300H = 7,
+    RearOutlander = 8
 };
 
 enum ChargeModes
@@ -325,15 +348,17 @@ enum ChargeModes
     Volt_Ampera = 2,
     Leaf_PDM = 3,
     TeslaOI = 4,
-    Out_lander = 5
-
+    Out_lander = 5,
+    Elcon = 6
 };
 
 enum ChargeInterfaces
 {
     Unused = 0,
     i3LIM = 1,
-    Chademo = 2
+    Chademo = 2,
+    CPC = 3,
+    Focci = 4
 };
 
 enum HeatType
@@ -358,6 +383,16 @@ enum DCDCModes
 
 };
 
+enum ShifterModes
+{
+    NoShifter = 0,
+    BMWF30 = 1,
+    JLRG1 = 2,
+    JLRG2 =3,
+    BMWE65 =4
+
+};
+
 enum ChargeControl
 {
     Enable = 0,
@@ -374,14 +409,14 @@ enum Gear
 
 enum vehicles
 {
-    BMW_E46 = 0,
-    BMW_E65 = 1,
+    vBMW_E46 = 0,
+    vBMW_E65 = 1,
     Classic = 2, //used as a flag
     None = 4,
-    BMW_E39 = 5,
-    VAG = 6,
-    SUBARU = 7,
-    BMW_E31 = 8
+    vBMW_E39 = 5,
+    vVAG = 6,
+    vSUBARU = 7,
+    vBMW_E31 = 8
 };
 
 enum _potmodes

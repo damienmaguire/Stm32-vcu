@@ -1,7 +1,7 @@
 /*
- * This file is part of the ZombieVerter project.
+ * This file is part of the Zombieverter VCU project.
  *
- * Copyright (C) 2023 Damien Maguire
+ * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,25 +15,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Controls the VW LIN based heater as : https://openinverter.org/wiki/Volkswagen_Heater
  */
+#ifndef VWHEATER_H
+#define VWHEATER_H
 
-#ifndef DCDC_H
-#define DCDC_H
-#include <stdint.h>
-#include "canhardware.h"
-#include "params.h"
+//#include <libopencm3/stm32/usart.h>
+#include <heater.h>
+#include "linbus.h"
 
-class DCDC
+
+class vwHeater : public Heater
 {
    public:
-      virtual void DecodeCAN(int, uint8_t *) {};
-      virtual void DeInit() {};
-      virtual void Task1Ms() {};
-      virtual void Task10Ms() {};
-      virtual void Task100Ms() {};
-      virtual void SetCanInterface(CanHardware* c) { can = c; }
-   protected:
-      CanHardware* can;
-};
-#endif // DCDC_H
+      void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
+      void SetPower(uint16_t power, bool HeatReq);
+      void SetLinInterface(LinBus* l);
 
+   private:
+      bool isAwake=false;
+      LinBus* lin;
+};
+
+#endif // VWHEATER_H
