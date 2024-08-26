@@ -57,6 +57,7 @@
 		<Unit filename="include/Can_OBD2.h" />
 		<Unit filename="include/Can_OI.h" />
 		<Unit filename="include/Can_VAG.h" />
+		<Unit filename="include/E65_Lever.h" />
 		<Unit filename="include/ElconCharger.h" />
 		<Unit filename="include/F30_Lever.h" />
 		<Unit filename="include/Focci.h" />
@@ -148,6 +149,7 @@
 		<Unit filename="src/Can_OBD2.cpp" />
 		<Unit filename="src/Can_OI.cpp" />
 		<Unit filename="src/Can_VAG.cpp" />
+		<Unit filename="src/E65_Lever.cpp" />
 		<Unit filename="src/ElconCharger.cpp" />
 		<Unit filename="src/F30_Lever.cpp" />
 		<Unit filename="src/Focci.cpp" />

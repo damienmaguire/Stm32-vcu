@@ -80,6 +80,7 @@ static noHeater Heaternone;
 static AmperaHeater amperaHeater;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
+static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
 static vwHeater heaterVW;
@@ -688,7 +689,8 @@ static void UpdateChargeInt()
     case ChargeInterfaces::CPC:
         selectedChargeInt = &CPCcan;
         break;
-            case ChargeInterfaces::Focci:
+    case ChargeInterfaces::Focci:
+
         selectedChargeInt = &Foccican;
         break;
     }
@@ -782,6 +784,10 @@ static void UpdateShifter()
 
     case ShifterModes::JLRG2:
         selectedShifter = &JLRG2shift;
+        break;
+
+            case ShifterModes::BMWE65:
+        selectedShifter = &E65GearLever;
         break;
 
     default:
