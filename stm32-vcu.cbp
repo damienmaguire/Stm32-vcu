@@ -50,15 +50,16 @@
 			<Option target="STM32F107" />
 		</Unit>
 		<Unit filename="include/BMW_E31.h" />
+		<Unit filename="include/BMW_E39.h" />
 		<Unit filename="include/BMW_E65.h" />
 		<Unit filename="include/CANSPI.h" />
 		<Unit filename="include/CPC.h" />
-		<Unit filename="include/Can_E39.h" />
 		<Unit filename="include/Can_OBD2.h" />
 		<Unit filename="include/Can_OI.h" />
 		<Unit filename="include/Can_VAG.h" />
 		<Unit filename="include/ElconCharger.h" />
 		<Unit filename="include/F30_Lever.h" />
+		<Unit filename="include/Focci.h" />
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/JLR_G1.h" />
 		<Unit filename="include/JLR_G2.h" />
@@ -140,15 +141,16 @@
 		<Unit filename="libopeninv/src/terminal.cpp" />
 		<Unit filename="libopeninv/src/terminalcommands.cpp" />
 		<Unit filename="src/BMW_E31.cpp" />
+		<Unit filename="src/BMW_E39.cpp" />
 		<Unit filename="src/BMW_E65.cpp" />
 		<Unit filename="src/CANSPI.cpp" />
 		<Unit filename="src/CPC.cpp" />
-		<Unit filename="src/Can_E39.cpp" />
 		<Unit filename="src/Can_OBD2.cpp" />
 		<Unit filename="src/Can_OI.cpp" />
 		<Unit filename="src/Can_VAG.cpp" />
 		<Unit filename="src/ElconCharger.cpp" />
 		<Unit filename="src/F30_Lever.cpp" />
+		<Unit filename="src/Focci.cpp" />
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/JLR_G1.cpp" />
 		<Unit filename="src/JLR_G2.cpp" />
