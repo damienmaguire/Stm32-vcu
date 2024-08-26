@@ -690,6 +690,7 @@ static void UpdateChargeInt()
         selectedChargeInt = &CPCcan;
         break;
     case ChargeInterfaces::Focci:
+
         selectedChargeInt = &Foccican;
         break;
     }
