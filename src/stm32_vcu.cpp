@@ -340,6 +340,9 @@ static void Ms100Task(void)
     }
 
     Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+  
+    DigiPot::SetPot1Step();
+    DigiPot::SetPot2Step();
 }
 
 static void ControlCabHeater(int opmode)

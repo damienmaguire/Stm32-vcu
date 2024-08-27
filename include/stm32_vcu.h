@@ -78,6 +78,7 @@
 #include "dcdc.h"
 #include "TeslaDCDC.h"
 #include "BMW_E31.h"
+#include "DigiPot.h"
 #include "shifter.h"
 #include "F30_Lever.h"
 #include "E65_Lever.h"
