@@ -270,7 +270,7 @@
 #define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, 6=Elcon"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Focci"
-#define CAN3Spd      "0=k33.3, 1=k500. 2=k100"
+#define CAN3SPD      "0=k33.3, 1=k500. 2=k100"
 #define TRNMODES     "0=Manual, 1=Auto"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
