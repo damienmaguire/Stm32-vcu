@@ -228,8 +228,9 @@
     VALUE_ENTRY(tmpheater,     "°C",                2096 ) \
     VALUE_ENTRY(udcheater,     "V",                 2097 ) \
     VALUE_ENTRY(powerheater,   "W",                 2098 ) \
+	VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
 
-//Next value Id: 2099
+//Next value Id: 2101
 
 
 
