@@ -224,7 +224,7 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In)
     uint16_t RPM_A = 0;
     if (Ready())
     {
-        RPM_A = 750 * 4;
+        RPM_A = MAX(750, Param::GetInt(Param::speed)) * 4;
         bytes[1] = 0x50 | AA1;  //Counter for 0xAA Byte 0
         bytes[2] = 0x07;
         bytes[6] = 0x94;
