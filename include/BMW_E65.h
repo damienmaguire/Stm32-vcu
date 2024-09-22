@@ -27,6 +27,7 @@ public:
    void DashOff();
    void handle130(uint32_t data[2]);
    void handle192(uint32_t data[2]);
+   void handle2FC(uint32_t data[2]);
    void handle480(uint32_t data[2]);
    void SetE90(bool e90) { isE90 = e90; }
    void Engine_Data();
