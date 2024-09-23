@@ -8,6 +8,8 @@ namespace utils
 float SOCVal=0;
 int32_t NetWh=0;
 
+bool Timer1Run = false;
+
 
 int32_t change(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
 {
@@ -259,8 +261,7 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
 
 float ProcessUdc(int motorSpeed)
 {
-
-    if (Param::GetInt(Param::Type) == 0)
+    if (Param::GetInt(Param::ShuntType) == 1)
     {
         float udc = ((float)ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
@@ -280,9 +281,7 @@ float ProcessUdc(int motorSpeed)
         float deltaVolts2 = (udc2 + udc3) - udc;
         Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
     }
-
-    else if (Param::GetInt(Param::Type) == 1)
-
+    else if (Param::GetInt(Param::ShuntType) == 2)
     {
         float udc = ((float)SBOX::Voltage2)/1000;//get output voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
@@ -295,9 +294,7 @@ float ProcessUdc(int motorSpeed)
         float kw = (udc*idc)/1000;//get power from isa sensor and post to parameter database
         Param::SetFloat(Param::power, kw);
     }
-
-    else if (Param::GetInt(Param::Type) == 2)
-
+    else if (Param::GetInt(Param::ShuntType) == 3)
     {
         float udc = ((float)VWBOX::Voltage)*0.5;//get output voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
@@ -308,17 +305,16 @@ float ProcessUdc(int motorSpeed)
         float idc = ((float)VWBOX::Amperes)*0.1;//get current from sbox sensor and post to parameter database
         Param::SetFloat(Param::idc, idc);
     }
+
+    //This way we can have ShuntType 0 and still pull latests info
     float udclim = Param::GetFloat(Param::udclim);
     float udc = Param::GetFloat(Param::udc);
-    // Currently unused parameters:
-    // s32fp udcmin = Param::Get(Param::udcmin);
-    // s32fp udcmax = Param::Get(Param::udcmax);
 
 
     //Calculate "12V" supply voltage from voltage divider on mprot pin
     //1.2/(4.7+1.2)/3.33*4095 = 250 -> make it a bit less for pin losses etc
     //HW_REV1 had 3.9k resistors
-    int uauxGain = 210;
+    int uauxGain = 210; //!! hard coded AUX gain
     Param::SetFloat(Param::uaux, ((float)AnaIn::uaux.Get()) / uauxGain);
 
     if (udc > udclim)
@@ -520,20 +516,87 @@ void ProcessCruiseControlButtons()
 void CpSpoofOutput()
 {
     uint16_t CpVal = 0;
+
+    if(Param::GetInt(Param::interface) == ChargeInterfaces::i3LIM || Param::GetInt(Param::interface) == ChargeInterfaces::CPC || Param::GetInt(Param::interface) == ChargeInterfaces::Focci)
+    {
+        CpVal = float(Param::GetInt(Param::PilotLim) *1.6667);
+        Param::SetInt(Param::CP_PWM,CpVal);
+        CpVal = (Param::GetInt(Param::CP_PWM)*66)-16;
+    }
+
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::CP_SPOOF)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,CpVal);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::CP_SPOOF)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,CpVal);//No duty set here
+    }
     if(Param::GetInt(Param::PWM3Func) == IOMatrix::CP_SPOOF)
     {
+        timer_set_oc_value(TIM3, TIM_OC3,CpVal);//No duty set here
+    }
+}
 
-        if(Param::GetInt(Param::interface) == ChargeInterfaces::i3LIM || Param::GetInt(Param::interface) == ChargeInterfaces::CPC || Param::GetInt(Param::interface) == ChargeInterfaces::Focci)
+void SpeedoStart()
+{
+    if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
+    {
+        tim_setup();//Fire up timer one...
+        timer_disable_counter(TIM1);//...but disable until needed
+        Timer1Run = false;
+    }
+}
+
+void SpeedoSet(uint16_t speed)
+{
+    if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
+    {
+        float PulseGain = Param::GetInt(Param::TachoPPR);
+
+        if(speed == 0)
         {
-            CpVal = float(Param::GetInt(Param::PilotLim) *1.6667);
-            Param::SetInt(Param::CP_PWM,CpVal);
+            timer_disable_counter(TIM1);
+            Timer1Run = false;
         }
 
-        CpVal = (Param::GetInt(Param::CP_PWM)*66)-16;
+        if(speed > 0)
+        {
+            if(Timer1Run == false)
+            {
+                timer_enable_counter(TIM1);
+                Timer1Run = true;
+            }
 
-        /* Strange reasons this does not work. Okay to only have PWM3 as CP Spoof*/
+            uint32_t timerPeriod = float((33000000)*2) / float(speed * PulseGain);
+            timer_set_period(TIM1, timerPeriod);
+            timer_set_oc_value(TIM1, TIM_OC1, timerPeriod / 2); //always stay at 50% duty cycle
+        }
+    }
+}
 
-        timer_set_oc_value(TIM3, TIM_OC3,CpVal);//No duty set here
+void GS450hOilPump(uint16_t pumpdc)
+{
+    if(Param::GetInt(Param::PumpPWM) == 0)//If Pump PWM out is set to Oil Pump
+    {
+        pumpdc = utils::change(pumpdc, 10, 80, 425, 1875); //map oil pump pwm to timer
+        pumpdc = pumpdc * 0.5;//Scalar increase 2x so duty is period is halved and so is DC.
+        timer_set_oc_value(TIM1, TIM_OC1, pumpdc);//duty. 1000 = 52% , 500 = 76% , 1500=28%
+    }
+
+    uint16_t pumpduty = (pumpdc*66)-16;
+
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::GS450HOIL)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,pumpduty);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::GS450HOIL)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,pumpduty);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::GS450HOIL)
+    {
+        timer_set_oc_value(TIM3, TIM_OC3,pumpduty);//No duty set here
     }
 }
 

@@ -23,7 +23,6 @@ public:
    void DecodeCAN(int, uint32_t* data);
    bool Ready() { return terminal15On; }
    bool Start() { return terminal15On; }
-   bool GetGear(Vehicle::gear& outGear);
    void DashOff();
    void handle130(uint32_t data[2]);
    void handle192(uint32_t data[2]);

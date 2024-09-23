@@ -72,6 +72,7 @@
 #include "noHeater.h"
 #include "bms.h"
 #include "simpbms.h"
+#include "leafbms.h"
 #include "daisychainbms.h"
 #include "outlanderCharger.h"
 #include "Can_OBD2.h"
@@ -93,6 +94,7 @@
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
 #include "NoVehicle.h"
+#include "V_Classic.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 

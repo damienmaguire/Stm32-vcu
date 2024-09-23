@@ -1,7 +1,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "BMW_E65.h"
 #include "my_fp.h"
 #include "my_math.h"
 #include "errormessage.h"
@@ -18,6 +17,7 @@
 #include "shifter.h"
 #include <libopencm3/stm32/timer.h>
 #include "iomatrix.h"
+#include "hwinit.h"
 
 namespace utils
 {
@@ -32,6 +32,9 @@ namespace utils
     void displayThrottle();
     void ProcessCruiseControlButtons();
     void CpSpoofOutput();
+    void SpeedoSet(uint16_t speed);
+    void SpeedoStart();
+    void GS450hOilPump(uint16_t pumpdc);
 }
 
 #endif
