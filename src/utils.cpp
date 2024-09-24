@@ -1,5 +1,14 @@
 #include "utils.h"
 
+#include "iomatrix.h"
+#include "throttle.h"
+#include "vag_sbox.h"
+#include "bmw_sbox.h"
+#include "isa_shunt.h"
+#include "my_math.h"
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/rtc.h>
+
 namespace utils
 {
 
@@ -7,12 +16,6 @@ namespace utils
 
 float SOCVal=0;
 int32_t NetWh=0;
-
-
-int32_t change(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
-{
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
 
 void PostErrorIfRunning(ERROR_MESSAGE_NUM err)
 {

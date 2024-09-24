@@ -26,6 +26,14 @@
 
 using namespace std;
 
+void Param::Change(Param::PARAM_NUM p)
+{
+   // Dummy function - we ignore parameter changes in these tests
+}
+
+// Include a dummy error list to allow the tests to link. It is unused.
+const char* errorListString = "";
+
 static void TestSetup()
 {
    //percentage of deadzone

@@ -18,6 +18,7 @@
  */
 #include "BMW_E31.h"
 #include "hwinit.h"
+#include "my_math.h"
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/gpio.h>
 /*
