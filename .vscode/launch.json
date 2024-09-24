@@ -36,6 +36,23 @@
             ],
             "externalConsole": false,
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "test_vcu debug with gdb",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test_vcu",
+            "cwd": "${workspaceFolder}",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "text": "set output-radix 16"
+                }
+            ]
         }
     ]
 }

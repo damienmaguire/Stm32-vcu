@@ -2,8 +2,8 @@ CC		= gcc
 CPP	= g++
 LD		= g++
 CP		= cp
-CFLAGS    = -std=c99 -g -I../include -I../libopeninv/include
-CPPFLAGS    = -g -I../include -I../libopeninv/include
+CFLAGS    = -std=c99 -ggdb -I../include -I../libopeninv/include
+CPPFLAGS    = -ggdb -I../include -I../libopeninv/include
 LDFLAGS     = -g
 BINARY		= test_vcu
 OBJS		= test_main.o my_string.o params.o throttle.o test_throttle.o
