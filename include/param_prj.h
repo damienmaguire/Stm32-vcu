@@ -148,6 +148,7 @@
     VALUE_ENTRY(chgtyp,        CHGTYPS,             2003 ) \
     VALUE_ENTRY(lasterr,       errorListString,     2004 ) \
     VALUE_ENTRY(status,        STATUS,              2005 ) \
+    VALUE_ENTRY(TorqDerate,    LIMITREASON,         2102 ) \
     VALUE_ENTRY(udc,           "V",                 2006 ) \
     VALUE_ENTRY(udc2,          "V",                 2007 ) \
     VALUE_ENTRY(udc3,          "V",                 2008 ) \
@@ -231,7 +232,7 @@
     VALUE_ENTRY(powerheater,   "W",                 2098 ) \
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
 
-//Next value Id: 2101
+//Next value Id: 2102
 
 //Dead params
 /*
@@ -298,6 +299,13 @@
 #define CAT_PWM      "PWM Control"
 #define MotorsAct    "0=Mg1and2, 1=Mg1, 2=Mg2"
 #define PumpOutType  "0=GS450hOil, 1=TachoOut"
+#define LIMITREASON  "0=None, 1=UDClimLow, 2=UDClimHigh, 3=UDClimHigh+UDClimHigh, 4=IDClimLow, 5=UDClimLow+IDClimLow, 6=UDClimHigh+IDClimLow,"\
+                     "7=UDClimLow+UDClimHigh+IDClimLow, 8=IDClimHigh, 9=UDClimLow+IDClimHigh, 10=UDClimHigh+IDClimHigh, 11=UDClimHigh+UDClimHigh+IDClimHigh,"\
+                     "12=IDClimLow+IDClimHigh, 13=UDClimHigh+IDClimLow+IDClimHigh 14=UDClimHigh+IDClimLow+IDClimHigh, 15=UDClimLow+UDClimHigh+IDClimLow+IDClimHigh,"\
+                     "16=TempLim, 17=UDClimLow+TempLim, 18=UDClimHigh+TempLim, 19=UDClimHigh+UDClimHigh+TempLim, 20=IDClimLow+TempLim, 21=UDClimLow+IDClimLow+TempLim,"\
+                     "22=UDClimHigh+IDClimLow+TempLim, 23=UDClimLow+UDClimHigh+IDClimLow+TempLim, 24=IDClimHigh+TempLim, 25=UDClimLow+IDClimHigh+TempLim,"\
+                     "26=UDClimHigh+IDClimHigh+TempLim, 27=UDClimHigh+UDClimHigh+IDClimHigh+TempLim, 28=IDClimLow+IDClimHigh+TempLim,"\
+                     "29=UDClimHigh+IDClimLow+IDClimHigh+TempLim, 30=UDClimHigh+IDClimLow+IDClimHigh+TempLim,31=UDClimLow+UDClimHigh+IDClimLow+IDClimHigh+TempLim"
 
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1

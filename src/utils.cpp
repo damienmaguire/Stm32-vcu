@@ -261,7 +261,17 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
 
 float ProcessUdc(int motorSpeed)
 {
-    if (Param::GetInt(Param::ShuntType) == 1)
+    float udc = Param::GetFloat(Param::udc);
+
+    if (Param::GetInt(Param::ShuntType) == 0)
+    {
+        //This way we can have ShuntType 0 and still pull latests info
+        if(Param::GetInt(Param::opmode) == MOD_OFF)
+        {
+            udc = 0; //ensure we reset udc during off state to keep precharge working
+        }
+    }
+    else if (Param::GetInt(Param::ShuntType) == 1)//ISA shunt
     {
         float udc = ((float)ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
@@ -281,12 +291,13 @@ float ProcessUdc(int motorSpeed)
         float deltaVolts2 = (udc2 + udc3) - udc;
         Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
     }
-    else if (Param::GetInt(Param::ShuntType) == 2)
+    else if (Param::GetInt(Param::ShuntType) == 2)//BMs Sbox
     {
         float udc = ((float)SBOX::Voltage2)/1000;//get output voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
         float udc2 = ((float)SBOX::Voltage)/1000;//get battery voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc2, udc2);
+        Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
         float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)SBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
@@ -294,21 +305,18 @@ float ProcessUdc(int motorSpeed)
         float kw = (udc*idc)/1000;//get power from isa sensor and post to parameter database
         Param::SetFloat(Param::power, kw);
     }
-    else if (Param::GetInt(Param::ShuntType) == 3)
+    else if (Param::GetInt(Param::ShuntType) == 3)//VW
     {
         float udc = ((float)VWBOX::Voltage)*0.5;//get output voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
         float udc2 = ((float)VWBOX::Voltage2)*0.0625;//get battery voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc2, udc2);
+        Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
         float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)VWBOX::Amperes)*0.1;//get current from sbox sensor and post to parameter database
         Param::SetFloat(Param::idc, idc);
     }
-
-    //This way we can have ShuntType 0 and still pull latests info
-    float udclim = Param::GetFloat(Param::udclim);
-    float udc = Param::GetFloat(Param::udc);
 
 
     //Calculate "12V" supply voltage from voltage divider on mprot pin
@@ -316,6 +324,8 @@ float ProcessUdc(int motorSpeed)
     //HW_REV1 had 3.9k resistors
     int uauxGain = 210; //!! hard coded AUX gain
     Param::SetFloat(Param::uaux, ((float)AnaIn::uaux.Get()) / uauxGain);
+
+    float udclim = Param::GetFloat(Param::udclim);
 
     if (udc > udclim)
     {

@@ -233,7 +233,9 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 
 
     //Do clever bits for regen and such.
-    if(speed < 100 || speed < regenendRpm)//No regen under 100 rpm
+
+
+    if(speed < 100 || speed <regenendRpm)//No regen under 100 rpm or speed under regenendRpm
     {
         regenlim = 0;
     }
@@ -334,12 +336,19 @@ float Throttle::CalcCruiseSpeed(int speed)
 
 bool Throttle::TemperatureDerate(float temp, float tempMax, float& finalSpnt)
 {
+    uint16_t DerateReason = Param::GetInt(Param::TorqDerate);
     float limit = 0;
 
     if (temp <= tempMax)
+    {
         limit = 100.0f;
+    }
     else if (temp < (tempMax + 2.0f))
+    {
         limit = 50.0f;
+        DerateReason |= 16;
+        Param::SetInt(Param::TorqDerate,DerateReason);
+    }
 
     if (finalSpnt >= 0)
         finalSpnt = MIN(finalSpnt, limit);
@@ -353,6 +362,8 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
 {
     udcmin = Param::GetFloat(Param::udcmin);//Made dynamic
     udcmax = Param::GetFloat(Param::udclim);
+
+    uint16_t DerateReason = Param::GetInt(Param::TorqDerate);
 
     if(udcmin>0)    //ignore if set to zero. useful for bench testing without isa shunt
     {
@@ -368,6 +379,8 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
             if(UDCprevspnt > UDCres) //if udc limit potnom spnt is lower ramp down to it
             {
                 UDCprevspnt = RAMPDOWN(UDCprevspnt, UDCres, throttleRamp);
+                DerateReason |= 1;
+                Param::SetInt(Param::TorqDerate,DerateReason);
             }
             else if(UDCprevspnt < finalSpnt)//if out UDCprevspnt is under the final spnt increase this back up
             {
@@ -388,6 +401,8 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
             if(UDCprevspnt < UDCres)
             {
                 UDCprevspnt = RAMPUP(UDCprevspnt, UDCres, regenRamp);
+                DerateReason |= 2;
+                Param::SetInt(Param::TorqDerate,DerateReason);
             }
             else if(UDCprevspnt > finalSpnt)//if out UDCprevspnt is over the final spnt decrease to meet finalspnt
             {
@@ -415,6 +430,8 @@ void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
     idcmax = Param::GetFloat(Param::idcmax);//Made dynamic
     idcmin = Param::GetFloat(Param::idcmin);
 
+    uint16_t DerateReason = Param::GetInt(Param::TorqDerate);
+
     if(idcmax>0)    //ignore if set to zero. useful for bench testing without isa shunt
     {
         Param::SetFloat(Param::powerheater, finalSpnt);
@@ -427,6 +444,8 @@ void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
             if(IDCprevspnt> IDCres)
             {
                 IDCprevspnt = RAMPDOWN(IDCprevspnt, IDCres, throttleRamp);
+                DerateReason |= 8;
+                Param::SetInt(Param::TorqDerate,DerateReason);
             }
             else if(IDCprevspnt < finalSpnt)//if out UDCprevspnt is under the final spnt increase this back up
             {
@@ -448,6 +467,8 @@ void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
             if(finalSpnt < IDCres)
             {
                 IDCprevspnt = RAMPUP(IDCprevspnt, IDCres, regenRamp);
+                DerateReason |= 4;
+                Param::SetInt(Param::TorqDerate,DerateReason);
             }
             else if(IDCprevspnt > finalSpnt)//if out UDCprevspnt is over the final spnt decrease to meet finalspnt
             {

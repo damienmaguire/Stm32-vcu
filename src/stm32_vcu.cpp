@@ -346,9 +346,9 @@ static void Ms100Task(void)
     }
 
     Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
-  
-    DigiPot::SetPot1Step();
-    DigiPot::SetPot2Step();
+
+    DigiPot::SetPot1Step(); //just for dev
+    DigiPot::SetPot2Step(); //just for dev
 
     //Cooling Fan Control//
     if(opmode==MOD_CHARGE || opmode==MOD_RUN)
@@ -543,11 +543,13 @@ static void Ms10Task(void)
                 opmode = MOD_RUN;
                 StartSig=false;//reset for next time
                 rlyDly=25;//Recharge sequence timer
+                Param::SetInt(Param::TorqDerate,0);//clear torque derate reason
             }
             else if(chargeMode)
             {
                 opmode = MOD_CHARGE;
                 rlyDly=25;//Recharge sequence timer
+                Param::SetInt(Param::TorqDerate,0);//clear torque derate reason
             }
 
         }
