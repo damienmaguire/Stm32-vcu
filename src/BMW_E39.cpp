@@ -20,6 +20,7 @@
 #include "stm32_can.h"
 #include "utils.h"
 #include "digio.h"
+#include "my_math.h"
 
 static uint8_t counter_329 = 0;
 static uint8_t ABSMsg = 0;
