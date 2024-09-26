@@ -1,6 +1,7 @@
 #include <BMW_E65.h>
 #include "stm32_can.h"
 #include "params.h"
+#include "utils.h"
 
 uint8_t  Gcount; //gear display counter byte
 uint8_t shiftPos=0xe1; //contains byte to display gear position on dash.default to park
@@ -15,7 +16,7 @@ uint8_t A91=0x00;//0x0A9 second counter byte
 uint8_t BA5=0x4d;//0x0BA first counter byte(byte 5)
 uint8_t BA6=0x80;//0x0BA second counter byte(byte 6)
 uint8_t AA1=0x00;//0x0AA First counter byte
-
+uint8_t engineLights = 0;
 
 void BMW_E65::SetCanInterface(CanHardware* c)
 {
@@ -24,6 +25,7 @@ void BMW_E65::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x130);//E65 CAS
     can->RegisterUserMessage(0x2FC);//E90 Enclosure status
     can->RegisterUserMessage(0x480);//Network Management
+    can->RegisterUserMessage(0x1A0);//Speed
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////Handle incomming pt can messages from the car here
@@ -35,6 +37,10 @@ void BMW_E65::DecodeCAN(int id, uint32_t* data)
     {
     case 0x130:
         BMW_E65::handle130(data);
+        break;
+
+    case 0x1A0:
+        BMW_E65::handle1A0(data);
         break;
 
     case 0x2FC:
@@ -101,6 +107,14 @@ void BMW_E65::handle130(uint32_t data[2])
     }
 }
 
+void BMW_E65::handle1A0(uint32_t data[2])
+{
+    uint8_t* bytes = (uint8_t*)data;
+
+    float kph = (bytes[0] + uint16_t((bytes[1]&0x0F)<<8)) * 0.1;
+    Param::SetFloat(Param::Veh_Speed, kph * 0.621371f);
+}
+
 void BMW_E65::handle2FC(uint32_t data[2])
 {
     uint8_t* bytes = (uint8_t*)data;
@@ -110,10 +124,9 @@ void BMW_E65::handle2FC(uint32_t data[2])
     }
     else if (bytes[0] == 0x81)//Unlocked
     {
-       Param::SetInt(Param::VehLockSt,0);
+        Param::SetInt(Param::VehLockSt,0);
     }
 }
-
 
 void BMW_E65::handle480(uint32_t data[2])
 {
@@ -161,9 +174,11 @@ void BMW_E65::Task100Ms()
 
 void BMW_E65::Task200Ms()
 {
+    uint8_t bytes[8];
+
     if(CANWake)
     {
-        //update shitPos
+        //update shitPos over CAN
         int selectedDir = Param::GetInt(Param::dir);
 
         if (selectedDir == 0)
@@ -187,8 +202,6 @@ void BMW_E65::Task200Ms()
             gear_BA = 0x08;
             shiftPos = 0x78;
         }
-
-        uint8_t bytes[8];
 ///////////////////////////////////////////////////////////////////////////////////////////////////
         bytes[0]=shiftPos;  //e1=P  78=D  d2=R  b4=N
         bytes[1]=0x0c;
@@ -207,6 +220,33 @@ void BMW_E65::Task200Ms()
         {
             Gcount=0x0D;
         }
+
+        //ERROR lights over CAN////////
+        uint8_t errorLightsParam = Param::GetInt(Param::errlights);
+        if (engineLights != errorLightsParam)
+        {
+            bytes[0]=0x40;
+            bytes[1]=0x22;
+            bytes[2]=0x00;
+            bytes[4]=0xFF;
+            bytes[5]=0xFF;
+            bytes[6]=0xFF;
+            bytes[7]=0xFF;
+
+            if (errorLightsParam == 0)
+            {
+                bytes[3]=0x30;
+            }
+            else if (errorLightsParam == 8)
+            {
+                bytes[3]=0x31;
+            }
+            engineLights = errorLightsParam;
+
+            can->Send(0x592,bytes,8); //Send on CAN2
+        }
+
+        SetFuelGauge(Param::GetFloat(Param::SOC));
     }
 }
 
@@ -337,8 +377,9 @@ void BMW_E65::Engine_Data()
     if (Param::GetInt(Param::opmode) == MOD_RUN)
     {
         EngRun = 0x60;
-        bytes[4] = 0x9C;
-        bytes[5] = 0x9E;
+        uint16_t injectors = 40604;
+        bytes[4] = injectors;
+        bytes[5] = injectors >> 8;
     }
     else
     {
@@ -346,15 +387,24 @@ void BMW_E65::Engine_Data()
         bytes[5] = 0x00;
     }
 
+    float Curr = Param::GetFloat(Param::idc) * -1;
+    Curr = Curr + 100;
+    float Temp = utils::change(Curr, 0, 500, 50, 150);
+    Temp = Temp + 48;
+    if (Curr > 525)
+    {
+        Temp = 150;
+    }
+
     bytes[0] = 0x3C;            //Engine Coolant Temp
-    bytes[1] = 0xFF;            //Engine Oil Temp
+    bytes[1] = Temp;            //Engine Oil Temp, use to show current
     bytes[2] = EngRun | C1D00;  //Counter
     bytes[3] = 0xC3;
 
     bytes[6] = 0xCD;
     bytes[7] = 0x82;  //Idle Traget
 
-    can->Send(0x1D0,bytes,8); //Send on CAN2
+    can->Send(0x1D0,bytes,8); //Send on CAN
 
     if (C1D00 == C1D01)
     {
@@ -371,3 +421,43 @@ void BMW_E65::Engine_Data()
 
 }
 
+void BMW_E65::SetFuelGauge(float level)
+{
+    int pot1 = 0;
+    int pot2 = 0;
+    const int fuelGaugeMap[20][3] =
+    {
+        { 5, 1, 0 },
+        { 10, 1, 1 },
+        { 15, 2, 1 },
+        { 20, 2, 2 },
+        { 25, 3, 2 },
+        { 30, 4, 3 },
+        { 35, 4, 4 },
+        { 40, 5, 4 },
+        { 45, 5, 5 },
+        { 50, 6, 6 },
+        { 55, 7, 6 },
+        { 60, 8, 7 },
+        { 65, 8, 8 },
+        { 70, 9, 9 },
+        { 75, 10, 10 },
+        { 80, 11, 11 },
+        { 85, 12, 12 },
+        { 90, 14, 14 },
+        { 95, 17, 16 },
+        { 100, 19, 19 }
+    };
+
+    for(int i = 0; i < 20; i++)
+    {
+        if (level >= fuelGaugeMap[i][0])
+        {
+            pot1 = fuelGaugeMap[i][1];
+            pot2 = fuelGaugeMap[i][2];
+        }
+    }
+
+    Param::SetInt(Param::DigiPot1Step, pot1);
+    Param::SetInt(Param::DigiPot2Step, pot2);
+}

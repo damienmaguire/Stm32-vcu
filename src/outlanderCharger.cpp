@@ -23,6 +23,7 @@
 
 
 #include <outlanderCharger.h>
+#include "OutlanderHeartBeat.h"
 
 uint8_t outlanderCharger::chgStatus;
 uint8_t outlanderCharger::evseDuty;
@@ -115,6 +116,8 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
 
 void outlanderCharger::SetCanInterface(CanHardware* c)
 {
+    OutlanderHeartBeat::SetCanInterface(c);//set Outlander Heartbeat on same CAN
+
     can = c;
     can->RegisterUserMessage(0x377);//dc_dc status
     can->RegisterUserMessage(0x389);//charger status
@@ -144,21 +147,30 @@ void outlanderCharger::Task100Ms()
     {
         setVolts=Param::GetInt(Param::Voltspnt)*10;
         actVolts=Param::GetInt(Param::udc);
-
-
         uint8_t bytes[8];
-        bytes[0] = 0x00;
-        bytes[1] = 0x00;
-        bytes[2] = 0x00;
-        bytes[3] = 0x00;
-        bytes[4] = 0x00;
-        bytes[5] = 0x00;
-        bytes[6] = 0x00;
-        bytes[7] = 0x00;
+
+        /*
+                bytes[0] = 0x00;
+                bytes[1] = 0x00;
+                bytes[2] = 0x00;
+                bytes[3] = 0x00;
+                bytes[4] = 0x00;
+                bytes[5] = 0x00;
+                bytes[6] = 0x00;
+                bytes[7] = 0x00;
+                if(clearToStart)
+                {
+                    bytes[2] = 0xB6;//oxb6 in byte 3 enables charger
+                    can->Send(0x285, (uint32_t*)bytes, 8);
+                }
+        */
         if(clearToStart)
         {
-            bytes[2] = 0xB6;//oxb6 in byte 3 enables charger
-            can->Send(0x285, (uint32_t*)bytes, 8);
+            OutlanderHeartBeat::SetPullInEVSE(1);
+        }
+        else
+        {
+            OutlanderHeartBeat::SetPullInEVSE(0);
         }
 
 

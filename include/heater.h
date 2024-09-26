@@ -18,6 +18,7 @@ public:
    virtual void SetPower(uint16_t power, bool HeatReq) = 0; //Must be called cyclically with power in watts
    virtual void DeInit() {} //called when switching to another heater, similar to a destructor
    virtual void SetCanInterface(CanHardware* c) { can = c; }
+   virtual void Task100Ms() {};
 
 protected:
    CanHardware* can;

@@ -1,5 +1,4 @@
 /*
-/*
  * This file is part of the stm32-vcu project.
  *
  * Copyright (C) 2021 Damien Maguire
@@ -96,6 +95,9 @@
 #include "rearoutlanderinverter.h"
 #include "NoVehicle.h"
 #include "V_Classic.h"
+#include "kangoobms.h"
+#include "OutlanderCanHeater.h"
+#include "OutlanderHeartBeat.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
