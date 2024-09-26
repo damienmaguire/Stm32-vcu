@@ -68,8 +68,11 @@
 		<Unit filename="include/NissanPDM.h" />
 		<Unit filename="include/NoInverter.h" />
 		<Unit filename="include/NoVehicle.h" />
+		<Unit filename="include/OutlanderCanHeater.h" />
+		<Unit filename="include/OutlanderHeartBeat.h" />
 		<Unit filename="include/TeslaDCDC.h" />
 		<Unit filename="include/VWheater.h" />
+		<Unit filename="include/V_Classic.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bms.h" />
@@ -89,6 +92,7 @@
 		<Unit filename="include/inverter.h" />
 		<Unit filename="include/iomatrix.h" />
 		<Unit filename="include/isa_shunt.h" />
+		<Unit filename="include/kangoobms.h" />
 		<Unit filename="include/leafbms.h" />
 		<Unit filename="include/leafinv.h" />
 		<Unit filename="include/noHeater.h" />
@@ -159,9 +163,12 @@
 		<Unit filename="src/JLR_G2.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
+		<Unit filename="src/OutlanderCanHeater.cpp" />
+		<Unit filename="src/OutlanderHeartBeat.cpp" />
 		<Unit filename="src/RearOutlanderinverter.cpp" />
 		<Unit filename="src/TeslaDCDC.cpp" />
 		<Unit filename="src/VWheater.cpp" />
+		<Unit filename="src/V_Classic.cpp" />
 		<Unit filename="src/amperacharger.cpp" />
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
@@ -172,6 +179,7 @@
 		<Unit filename="src/i3LIM.cpp" />
 		<Unit filename="src/iomatrix.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
+		<Unit filename="src/kangoobms.cpp" />
 		<Unit filename="src/leafbms.cpp" />
 		<Unit filename="src/leafinv.cpp" />
 		<Unit filename="src/outlanderCharger.cpp" />

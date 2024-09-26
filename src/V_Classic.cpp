@@ -20,6 +20,7 @@
 #include "hwinit.h"
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/gpio.h>
+#include "my_math.h"
 
 
 //We use this as an init function

@@ -44,7 +44,7 @@ static bool StartSig=false;
 static bool ACrequest=false;
 static bool initbyStart=false;
 static bool initbyCharge=false;
-
+static bool OutlanderCAN=false;
 
 static volatile unsigned
 days=0,
@@ -78,6 +78,7 @@ static NoInverterClass NoInverter;
 static OutlanderInverter outlanderInv;
 static noHeater Heaternone;
 static AmperaHeater amperaHeater;
+static OutlanderCanHeater outlanderCanHeater;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
@@ -96,6 +97,7 @@ static BMS BMSnone;
 static SimpBMS BMSsimp;
 static LeafBMS BMSleaf;
 static DaisychainBMS BMSdaisychain;
+static KangooBMS BMSRenaultKangoo33;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
 static BMS* selectedBMS = &BMSnone;
@@ -293,8 +295,13 @@ static void Ms100Task(void)
     selectedBMS->Task100Ms();
     selectedDCDC->Task100Ms();
     selectedShifter->Task100Ms();
+    selectedHeater->Task100Ms();
     canMap->SendAll();
 
+    if(OutlanderCAN == true)
+    {
+        OutlanderHeartBeat::Task100Ms();
+    }
 
     if (Param::GetInt(Param::dir) < 0)
     {
@@ -639,12 +646,14 @@ static void UpdateInv()
         break;
     case InvModes::Outlander:
         selectedInverter = &outlanderInv;
+        OutlanderCAN = true;
         break;
     case InvModes::OpenI:
         selectedInverter = &openInv;
         break;
     case InvModes::RearOutlander:
         selectedInverter = &rearoutlanderInv;
+        OutlanderCAN = true;
         break;
     }
     //This will call SetCanFilters() via the Clear Callback
@@ -711,6 +720,7 @@ static void UpdateCharger()
         break;
     case ChargeModes::Out_lander:
         selectedCharger = &outChg;
+        OutlanderCAN = true;
         break;
     case ChargeModes::Elcon:
         selectedCharger = &ChargerElcon;
@@ -762,6 +772,11 @@ static void UpdateHeater()
     case HeatType::VW:
         selectedHeater = &heaterVW;
         heaterVW.SetLinInterface(lin);
+        break;
+    case HeatType::OutlanderHeater:
+        selectedHeater = &outlanderCanHeater;
+        OutlanderCAN = true;
+        break;
     }
     //This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
@@ -782,6 +797,9 @@ static void UpdateBMS()
     case BMSModes::BMSModeDaisychainSingleBMS:
     case BMSModes::BMSModeDaisychainDualBMS:
         selectedBMS = &BMSdaisychain;
+        break;
+    case BMSModes::BMSRenaultKangoo33BMS:
+        selectedBMS = &BMSRenaultKangoo33;
         break;
     default:
         // Default to no BMS
@@ -865,6 +883,7 @@ static void SetCanFilters()
     CanHardware* bms_can = canInterface[Param::GetInt(Param::BMSCan)];
     CanHardware* obd2_can = canInterface[Param::GetInt(Param::OBD2Can)];
     CanHardware* dcdc_can = canInterface[Param::GetInt(Param::DCDCCan)];
+    CanHardware* heater_can = canInterface[Param::GetInt(Param::HeaterCan)];
 
     selectedInverter->SetCanInterface(inverter_can);
     selectedVehicle->SetCanInterface(vehicle_can);
@@ -874,6 +893,7 @@ static void SetCanFilters()
     selectedDCDC->SetCanInterface(dcdc_can);
     selectedShifter->SetCanInterface(vehicle_can);
     canOBD2.SetCanInterface(obd2_can);
+    selectedHeater->SetCanInterface(heater_can);
 
     if (Param::GetInt(Param::ShuntType) == 1)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
     if (Param::GetInt(Param::ShuntType) == 2)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
@@ -1021,6 +1041,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
         selectedBMS->DecodeCAN(id, (uint8_t*)data);
         selectedDCDC->DecodeCAN(id, (uint8_t*)data);
         selectedShifter->DecodeCAN(id,data);
+        selectedHeater->DecodeCAN(id, data);
         break;
     }
     return false;

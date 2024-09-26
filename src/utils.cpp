@@ -8,6 +8,7 @@
 #include "my_math.h"
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/rtc.h>
+#include "hwinit.h"
 
 namespace utils
 {
