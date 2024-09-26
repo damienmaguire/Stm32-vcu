@@ -20,6 +20,8 @@
 #ifndef BMS_H
 #define BMS_H
 #include <stdint.h>
+#include "canhardware.h"
+#include "params.h"
 
 /* This is an interface for a BMS to provide minimal data required
  * for safe battery charging.  The BMS must be able to provide the

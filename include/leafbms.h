@@ -18,29 +18,33 @@
  */
 #ifndef LEAFBMS_H
 #define LEAFBMS_H
-#include <stdint.h>
+#include "bms.h"
 
-class LeafBMS
+class LeafBMS: public BMS
 {
-   public:
-      static void DecodeCAN(int id, uint32_t data[2], uint32_t time);
-      static void RequestNextFrame();
-      static uint16_t GetCellVoltage(int idx);
-      static int GetCellStatus(int idx);
-      static void Send10msMessages();
-      static void Send100msMessages();
-      static bool Alive(uint32_t time);
-      static const int NUMCELLS = 96;
+public:
+    virtual void SetCanInterface(CanHardware* can);
+    void DecodeCAN(int id, uint8_t * data);
+    static void RequestNextFrame(CanHardware* can);
+    static uint16_t GetCellVoltage(int idx);
+    static int GetCellStatus(int idx);
+    static const int NUMCELLS = 96;
+    static float Voltage;
+    static float Voltage2;
+    static int32_t Temperature;
+    static int32_t Amperes;   // Floating point with current in Amperes
+    static int32_t SOC;
+    static int32_t KW;
+    static int32_t KWh;
 
-   private:
-      static uint8_t Crc8ForHCM(int n, uint8_t *msg);
-      static int bmsGrp;
-      static int bmsGrpIndex;
-      static uint8_t voltBytes[NUMCELLS * 2];
-      static uint8_t statusBits[NUMCELLS / 4];
-      static uint8_t run10ms;
-      static uint8_t run100ms;
-      static uint32_t lastRecv;
+
+private:
+    static uint8_t Crc8ForHCM(int n, uint8_t *msg);
+    static int bmsGrp;
+    static int bmsGrpIndex;
+    static uint8_t voltBytes[NUMCELLS * 2];
+    static uint8_t statusBits[NUMCELLS / 4];
+
 };
 
 #endif // LEAFBMS_H
