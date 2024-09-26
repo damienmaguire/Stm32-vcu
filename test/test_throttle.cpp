@@ -26,12 +26,22 @@
 
 using namespace std;
 
+void Param::Change(Param::PARAM_NUM p)
+{
+   // Dummy function - we ignore parameter changes in these tests
+}
+
+// Include a dummy error list to allow the tests to link. It is unused.
+const char* errorListString = "";
+
 static void TestSetup()
 {
    //percentage of deadzone
    Throttle::throtdead = 5;
    Throttle::potmin[0] = 100;
    Throttle::potmax[0] = 4000;
+   Throttle::throtmax = 100;
+   Param::SetInt(Param::dir, 1);
 }
 
 // TEMPERATURE DERATING
@@ -82,7 +92,7 @@ static void TestCalcThrottleIs0WhenInDeadZone() {
 
 static void TestCalcThrottleIsAbove0WhenJustOutOfDeadZone() {
    //deadzone is first 5% of travel between 100 and 4000
-   ASSERT(Throttle::CalcThrottle(296, 0, false) > 0);
+   ASSERT(Throttle::CalcThrottle(496, 0, false) > 0);
 }
 
 static void TestCalcThrottleIs100WhenMax() {

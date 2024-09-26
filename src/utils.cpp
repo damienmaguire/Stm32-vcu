@@ -1,5 +1,14 @@
 #include "utils.h"
 
+#include "iomatrix.h"
+#include "throttle.h"
+#include "vag_sbox.h"
+#include "bmw_sbox.h"
+#include "isa_shunt.h"
+#include "my_math.h"
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/rtc.h>
+
 namespace utils
 {
 

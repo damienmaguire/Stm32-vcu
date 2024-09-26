@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: build-linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build package dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install gcc-arm-none-eabi
+
+      - name: Build dependencies
+        run: |
+          echo "Number of processors:" `nproc`
+          make get-deps -j `nproc`
+
+      - name: Build Stm32-vcu firmware
+        run: |
+          make
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Stm32-vcu firmware binary
+          path: stm32_vcu.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Stm32-vcu firmware hex
+          path: stm32_vcu.hex
+
+      - name: Build unit tests on host
+        run: |
+          make Test
+
+      - name: Run unit tests on host
+        run: |
+          test/test_vcu
