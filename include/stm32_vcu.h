@@ -1,4 +1,5 @@
 /*
+/*
  * This file is part of the stm32-vcu project.
  *
  * Copyright (C) 2021 Damien Maguire
@@ -80,7 +81,7 @@
 #include "TeslaDCDC.h"
 #include "BMW_E31.h"
 #include "shifter.h"
-#include "DigiPot.h"
+#include "digipot.h"
 #include "F30_Lever.h"
 #include "E65_Lever.h"
 #include "JLR_G1.h"
