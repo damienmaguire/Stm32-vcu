@@ -89,6 +89,7 @@
 		<Unit filename="include/inverter.h" />
 		<Unit filename="include/iomatrix.h" />
 		<Unit filename="include/isa_shunt.h" />
+		<Unit filename="include/leafbms.h" />
 		<Unit filename="include/leafinv.h" />
 		<Unit filename="include/noHeater.h" />
 		<Unit filename="include/no_Lever.h" />
@@ -171,6 +172,7 @@
 		<Unit filename="src/i3LIM.cpp" />
 		<Unit filename="src/iomatrix.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
+		<Unit filename="src/leafbms.cpp" />
 		<Unit filename="src/leafinv.cpp" />
 		<Unit filename="src/outlanderCharger.cpp" />
 		<Unit filename="src/outlanderinverter.cpp" />

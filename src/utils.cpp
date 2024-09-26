@@ -1,5 +1,14 @@
 #include "utils.h"
 
+#include "iomatrix.h"
+#include "throttle.h"
+#include "vag_sbox.h"
+#include "bmw_sbox.h"
+#include "isa_shunt.h"
+#include "my_math.h"
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/rtc.h>
+
 namespace utils
 {
 
@@ -589,8 +598,15 @@ void GS450hOilPump(uint16_t pumpdc)
 {
     if(Param::GetInt(Param::PumpPWM) == 0)//If Pump PWM out is set to Oil Pump
     {
-        pumpdc = utils::change(pumpdc, 10, 80, 425, 1875); //map oil pump pwm to timer
-        pumpdc = pumpdc * 0.5;//Scalar increase 2x so duty is period is halved and so is DC.
+        if(pumpdc>9)
+        {
+            pumpdc = utils::change(pumpdc, 10, 80, 425, 1875); //map oil pump pwm to timer
+            pumpdc = pumpdc * 0.5;//Scalar increase 2x so duty is period is halved and so is DC.
+        }
+        else
+        {
+            pumpdc =0;
+        }
         timer_set_oc_value(TIM1, TIM_OC1, pumpdc);//duty. 1000 = 52% , 500 = 76% , 1500=28%
     }
 

@@ -35,21 +35,19 @@ float LeafBMS::Voltage=0;
 float LeafBMS::Voltage2=0;
 int32_t LeafBMS::Temperature;
 
-void LeafBMS::SetCanInterface(CanHardware* c)
+void LeafBMS::SetCanInterface(CanHardware* can)
 {
-    can = c;
     can->RegisterUserMessage(0x1DB);//Leaf BMS message 10ms
     can->RegisterUserMessage(0x1DC);//Leaf BMS message 10ms
     can->RegisterUserMessage(0x55B);//Leaf BMS message 100ms
     can->RegisterUserMessage(0x5BC);//Leaf BMS message 100ms
-    can->RegisterUserMessage(0x5C0);//Leaf BMS message 500ms
+    //can->RegisterUserMessage(0x5C0);//Leaf BMS message 500ms
     //can->RegisterUserMessage(0x59E);//Leaf BMS message 500ms
 }
 
 void LeafBMS::DecodeCAN(int id, uint8_t * data)
 {
-   // static s32fp chgLimFiltered = 0;
-    uint8_t* bytes = data;
+    uint8_t* bytes = (uint8_t*)data;
 
     if (id == 0x1DB)
     {
@@ -91,7 +89,7 @@ void LeafBMS::DecodeCAN(int id, uint8_t * data)
         float soc = uint16_t(bytes[0] << 2) + uint16_t(bytes[1] >> 6);
         if (Param::GetInt(Param::ShuntType) == 0)//Only populate if no shunt is used
         {
-            soc = soc*10;
+            soc = soc*0.1;
             Param::SetFloat(Param::SOC, soc);
         }
 
@@ -118,9 +116,14 @@ void LeafBMS::DecodeCAN(int id, uint8_t * data)
 
         //Param::SetInt(Param::soh, soh);
         */
+        int tmpbat = bytes[3];
+        tmpbat -= 40;
+        Param::SetInt(Param::BMS_Tavg, tmpbat);
+        Temperature = tmpbat;
     }
     else if (id == 0x5C0)
     {
+        /*
         //int dtc = bytes[7];
 
         if ((bytes[0] >> 6) == 1) //maximum
@@ -130,5 +133,6 @@ void LeafBMS::DecodeCAN(int id, uint8_t * data)
             Param::SetInt(Param::tmpaux, tmpbat);
             Temperature = tmpbat;
         }
+        */
     }
 }

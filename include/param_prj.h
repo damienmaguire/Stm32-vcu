@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.20.TJ
+#define VER 2.20.TK
 
 
 /* Entries must be ordered as follows:
@@ -161,6 +161,7 @@
     VALUE_ENTRY(SOC,           "%",                 2015 ) \
     VALUE_ENTRY(BMS_Vmin,      "V",                 2084 ) \
     VALUE_ENTRY(BMS_Vmax,      "V",                 2085 ) \
+    VALUE_ENTRY(BMS_Tavg,      "°C",                2103 ) \
     VALUE_ENTRY(BMS_Tmin,      "°C",                2086 ) \
     VALUE_ENTRY(BMS_Tmax,      "°C",                2087 ) \
     VALUE_ENTRY(BMS_ChargeLim, "A",                 2088 ) \
@@ -232,7 +233,7 @@
     VALUE_ENTRY(powerheater,   "W",                 2098 ) \
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
 
-//Next value Id: 2102
+//Next value Id: 2104
 
 //Dead params
 /*
