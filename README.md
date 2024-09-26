@@ -1,4 +1,7 @@
 # stm32-vcu
+
+[![Build status](../../actions/workflows/CI-build.yml/badge.svg)](../../actions/workflows/CI-build.yml)
+
 Project based on the OpenInverter System by Johannes Huebner to provide a universal VCU (Vehicle Control Unit) for electric vehicle conversion projects. 
 
 Please visit the development thread on the Openinverter Forum for more information : https://openinverter.org/forum/viewtopic.php?f=3&t=1277
@@ -51,15 +54,13 @@ Now you can compile stm32-vcu by typing
 
 # Tests
 
-`cd tests`
-
 Build the tests
 
-`make`
+`make Tests`
 
 Run the tests
 
-`./test_vcu`
+`./test/test_vcu`
 
 And upload it to your board using a JTAG/SWD adapter, the updater.py script or the esp8266 web interface
 
