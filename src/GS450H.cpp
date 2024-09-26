@@ -26,7 +26,6 @@ static int16_t mg1_torque, mg2_torque, speedSum;
 static bool statusInv=0;
 static bool TorqueCut, ShiftInit = 0;
 static int8_t TorqueShiftRamp = 0;
-static uint16_t Lexus_Oil2=0;
 static uint8_t speedSum2;
 static uint8_t gearAct, gearReq, gearStep=0;
 
@@ -39,11 +38,13 @@ static uint8_t htm_data_setup[100]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0
 static uint8_t htm_data[105]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0};
 static uint8_t htm_data_GS300H[105]= {0,14,0,2,0,0,0,0,0,0,0,0,0,23,0,97,0,0,0,0,0,0,0,248,254,8,1,0,0,0,0,0,0,22,0,0,0,0,0,23,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,23,0,75,22,47,250,137,14,0,0,23,0,0,0,0,201,0,218,0,16,0,0,0,29,0,0,0,0,0,0
                                      };
+static uint8_t htm_data_Prius[100] = {0,30,0,2,0,0,0,55,0,128,254,0,0,40,0,97,0,0,0,0,0,0,136,249,120,6,143,255,50,255,48,255,49,0,0,0,48,255,43,0,1,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,40,0,75,33,68,246,51,8,0,0,40,0,0,0,201,0,222,0,16,0,0,0,211,40,0,0,62,15};
+
 #if 0
 // Not currently used
 static uint8_t htm_data_setup_auris[100]= {0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x00, 0x00, 0x00, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5F, 0x01};
 #endif
-
+/*
 uint8_t htm_data_init[7][100]=
 {
     {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,0,0,0,136,0,0,0,160,0,0,0,0,0,0,0,95,1},
@@ -53,6 +54,17 @@ uint8_t htm_data_init[7][100]=
     {0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,25,60,246,52,8,0,0,0,0,0,0,138,0,0,0,168,0,0,0,2,0,0,0,75,5},
     {0,30,0,0,0,0,0,18,0,154,250,0,0,255,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,255,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,255,4,73,25,60,246,52,8,0,0,255,0,0,0,138,0,0,0,168,0,0,0,3,0,0,0,70,9},
     {0,30,0,2,0,0,0,18,0,154,250,0,0,16,0,97,0,0,0,0,0,0,200,249,56,6,165,0,136,0,63,0,16,0,0,0,63,0,16,0,3,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,16,0,75,12,45,248,21,6,0,0,16,0,0,0,202,0,211,0,16,0,0,0,134,16,0,0,130,10}
+};
+*/
+uint8_t htm_data_init[7][100]=
+{
+    {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,0,0,0,136,0,0,0,160,0,0,0,0,0,0,0,95,1},
+    {0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,0,0,0,136,0,0,0,160,0,0,0,0,0,0,0,95,1},
+    {0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,173,255,82,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,12,60,251,52,4,0,0,0,0,0,0,138,0,0,0,168,0,0,0,1,0,0,0,72,7},
+    {0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,12,60,251,52,4,0,0,0,0,0,0,138,0,0,0,168,0,0,0,2,0,0,0,75,5},
+    {0,30,0,0,0,0,0,18,0,154,250,0,0,0,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,75,12,60,251,52,4,0,0,0,0,0,0,138,0,0,0,168,0,0,0,2,0,0,0,75,5},
+    {0,30,0,0,0,0,0,18,0,154,250,0,0,255,0,97,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,255,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,255,4,73,12,60,251,52,4,0,0,255,0,0,0,138,0,0,0,168,0,0,0,3,0,0,0,70,9},
+    {0,30,0,2,0,0,0,18,0,154,250,0,0,16,0,97,0,0,0,0,0,0,200,249,56,6,165,0,136,0,63,0,16,0,0,0,63,0,16,0,3,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,16,0,75,12,45,251,21,4,0,0,16,0,0,0,202,0,211,0,16,0,0,0,134,16,0,0,130,10}
 };
 
 uint8_t  htm_data_Init_GS300H[6][105]=
@@ -74,10 +86,12 @@ void GS450HClass::SetTorque(float torquePercent)
 
         if(!TorqueCut)//Cut torque only when shifting for now
         {
+            mg1_torque = (torquePercent * 4375) / 100.0f;//mg1 does not need shifting !!!verify max allowed request
+
             torquePercent = TorqueShiftRamp * torquePercent *0.01; //multiply by the torque ramp for when shifting
-            scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
+            scaledTorqueTarget = (torquePercent * 3500) / 100.0f; // !!!verify max allowed request
             mg2_torque = this->scaledTorqueTarget;
-            mg1_torque = ((mg2_torque*5)/4);
+            //mg1_torque = ((mg2_torque*5)/4); //no need to shift
 
             if(ShiftInit == true && TorqueShiftRamp > 0)
             {
@@ -266,24 +280,20 @@ void GS450HClass::GS450Houtput()//!!! should be ran every 10ms
 {
     if (Param::GetInt(Param::opmode) == MOD_OFF)
     {
-        //setTimerState(false);
-        Lexus_Oil2 =0;
+        utils::GS450hOilPump(0);
     }
-    else
-    {
-        //setTimerState(true);
-    }
-    Lexus_Oil2 =0;
-    if (Param::GetInt(Param::opmode) == MOD_RUN) Lexus_Oil2 = Param::GetInt(Param::OilPump);
-    Lexus_Oil2 = utils::change(Lexus_Oil2, 10, 80, 1875, 425); //map oil pump pwm to timer
-    timer_set_oc_value(TIM1, TIM_OC1, Lexus_Oil2);//duty. 1000 = 52% , 500 = 76% , 1500=28%
 
-    Param::SetInt(Param::Gear1,!DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
-    Param::SetInt(Param::Gear2,!DigIo::gear2_in.Get());
-    Param::SetInt(Param::Gear3,!DigIo::gear3_in.Get());
-    GearSW=((!DigIo::gear3_in.Get()<<2)|(!DigIo::gear2_in.Get()<<1)|(!DigIo::gear1_in.Get()));
-    if(GearSW==6) Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
-    if(GearSW==5) Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
+    if (Param::GetInt(Param::opmode) == MOD_RUN)
+    {
+
+        Param::SetInt(Param::Gear1,!DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
+        Param::SetInt(Param::Gear2,!DigIo::gear2_in.Get());
+        Param::SetInt(Param::Gear3,!DigIo::gear3_in.Get());
+        GearSW=((!DigIo::gear3_in.Get()<<2)|(!DigIo::gear2_in.Get()<<1)|(!DigIo::gear1_in.Get()));
+        if(GearSW==6) Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
+        if(GearSW==5) Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
+        utils::GS450hOilPump(Param::GetInt(Param::OilPump));//toyota hybrid oil pump pwm to run set point
+    }
 }
 
 
@@ -299,6 +309,7 @@ void GS450HClass::SetPrius()
         htm_state = 5;
         inv_status = 0;//must be 0 for prius
     }
+    for(int i=0; i<100; i++)htm_data[i] = htm_data_Prius[i];
     DriveType = PRIUS;
 }
 
@@ -387,7 +398,7 @@ void GS450HClass::Task1Ms()
         if(VerifyMTHChecksum(100)==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0)
         {
             statusInv=0;
-            //set speeds to 0 to prevent dynamic throttle/regen issues
+             //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
             //disable cruise
@@ -484,7 +495,7 @@ void GS450HClass::Task1Ms()
         }
         else
         {
-            dma_write(&htm_data_init[ inv_status ][0],100); //HAL_UART_Transmit_IT(&huart2, htm_data_setup, 80);
+            dma_write(&htm_data_init[inv_status][0],100); //HAL_UART_Transmit_IT(&huart2, htm_data_setup, 80);
 
             inv_status++;
             if(inv_status==6)
@@ -500,8 +511,9 @@ void GS450HClass::Task1Ms()
     case 8:
         if(VerifyMTHChecksum(120)==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0)
         {
+
             statusInv=0;
-            //set speeds to 0 to prevent dynamic throttle/regen issues
+             //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
             //disable cruise
@@ -538,8 +550,8 @@ void GS450HClass::Task1Ms()
         //these bytes are used, and seem to be MG1 for startup, but can't work out the relatino to the
         //bytes earlier in the stream, possibly the byte order has been flipped on these 2 bytes
         //could be a software bug ?
-        htm_data[76]=(mg1_torque*4) & 0xFF;
-        htm_data[75]=((mg1_torque*4)>>8) & 0xFF;
+        //htm_data[76]=(mg1_torque*4) & 0xFF; //Possibly wrong
+        //htm_data[75]=((mg1_torque*4)>>8) & 0xFF; //Possibly wrong
 
         //mg1
         htm_data[5]=(mg1_torque)&0xFF;  //negative is forward
@@ -570,16 +582,32 @@ void GS450HClass::Task1Ms()
         }
 
         //Battery Limits
+        /*
+                htm_data[85]=(-5000)&0xFF;  // regen ability of battery !!!increased
+                htm_data[86]=((-5000)>>8);
 
-        htm_data[85]=(-5000)&0xFF;  // regen ability of battery
-        htm_data[86]=((-5000)>>8);
+                htm_data[87]=(-10000)&0xFF;  // discharge ability of battery !!!Remove negative and increased
+                htm_data[88]=((-10000)>>8);
+        */
+//Battery Limits = forced zero
+//40	4	75	12	60	251	52	4
 
-        htm_data[87]=(-10000)&0xFF;  // discharge ability of battery
-        htm_data[88]=((-10000)>>8);
+        htm_data[72]=0x40;
+        htm_data[73]=0x04;
+        htm_data[74]=0x75;
+        htm_data[75]=0x12;
+        htm_data[76]=0x60;
+        htm_data[77]=0x25;
+        htm_data[78]=0x52;
+        htm_data[79]=0x04;
+
+        htm_data[86]=137; //from start up
+        htm_data[88]=137; //221 on start
 
         //checksum
         if(++frame_count & 0x01)
         {
+            //b94_count++;
             htm_data[94]++;
         }
 
@@ -624,7 +652,7 @@ void GS450HClass::Task1Ms()
 
             statusInv=0;
             inv_status=0;
-            //set speeds to 0 to prevent dynamic throttle/regen issues
+             //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
             //disable cruise
@@ -687,7 +715,10 @@ void GS450HClass::setTimerState(bool desiredTimerState)
     {
         if (desiredTimerState)
         {
-            tim_setup(); //toyota hybrid oil pump pwm timer
+            if(Param::GetInt(Param::PumpPWM) == 0)//If Pump PWM out is set to Oil Pump
+            {
+                tim_setup(); //trigger pump pwm out setup
+            }
             tim2_setup(); //TOYOTA HYBRID INVERTER INTERFACE CLOCK
             this->timerIsRunning=true; //timers are now running
         }
@@ -695,7 +726,6 @@ void GS450HClass::setTimerState(bool desiredTimerState)
         {
             // These are only used with the Totoa hybrid option.
             timer_disable_counter(TIM2); //TOYOTA HYBRID INVERTER INTERFACE CLOCK
-            timer_disable_counter(TIM1); //toyota hybrid oil pump pwm timer
             this->timerIsRunning=false; //timers are now stopped
         }
     }

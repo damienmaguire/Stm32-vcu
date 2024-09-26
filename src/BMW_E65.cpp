@@ -371,7 +371,9 @@ void BMW_E65::Engine_Data()
 
 }
 
+
 bool BMW_E65::GetGear(Vehicle::gear& outGear __attribute__((unused)))
 {
     return false;
 }
+

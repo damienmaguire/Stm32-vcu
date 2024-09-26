@@ -34,26 +34,18 @@
 void BMW_E31::SetCanInterface(CanHardware* c)
 {
     can = c;
-    tim_setup();//Fire up timer one...
-    timer_disable_counter(TIM1);//...but disable until needed
-    //note we are trying to reuse the lexus gs450h oil pump pwm output here to drive the tach
-    //Be aware this will prevent combo of E31 and GS450H for now ...
-    timerIsRunning=false;
-
+    utils::SpeedoStart();
     can->RegisterUserMessage(0x153);//ASC message. Will confirm.
 }
 
 
 void BMW_E31::SetRevCounter(int speed)
 {
-
     uint16_t speed_input = speed;
     speed_input = MAX(750, speed_input);//
     speed_input = MIN(7500, speed_input);
-    timerPeriod = 30000000 / speed_input; //TODO: find correct factor or make parameter. current gives 52Hz at 750rpm.
-    timer_set_period(TIM1, timerPeriod);
-    timer_set_oc_value(TIM1, TIM_OC1, timerPeriod / 2); //always stay at 50% duty cycle
 
+    utils::SpeedoSet(speed_input);//Moved pwm control into Utils
 }
 
 
@@ -173,18 +165,10 @@ void BMW_E31::Task10Ms()
 
 void BMW_E31::Task100Ms()
 {
-
-    if(Param::GetInt(Param::T15Stat) && !timerIsRunning)
+    if (!Param::GetInt(Param::T15Stat))
     {
-        timer_enable_counter(TIM1);
-        timerIsRunning=true;
+        utils::SpeedoSet(0);//set speedo off
     }
-    else if (!Param::GetInt(Param::T15Stat) && timerIsRunning)
-    {
-        timer_disable_counter(TIM1);
-        timerIsRunning=false;
-    }
-
 }
 
 

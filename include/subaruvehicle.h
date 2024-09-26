@@ -20,7 +20,7 @@
 #define SUBARUVEHICLE_H
 
 #include <vehicle.h>
-
+#include "utils.h"
 
 class SubaruVehicle : public Vehicle
 {

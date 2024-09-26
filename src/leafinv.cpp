@@ -36,25 +36,21 @@ static uint8_t counter_1f2=0;
 static uint8_t counter_55b=0;
 static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
-static bool OBCwake = false;
-static bool PPStat = false;
-static uint8_t OBCVoltStat=0;
-static uint8_t PlugStat=0;
+static bool BMSspoofI = true;
 
 /*Info on running Leaf Gen 2 PDM
 IDs required :
-0x1D4
-0x1DB
-0x1DC
-0x1F2
-0x50B
-0x55B
-0x59E
-0x5BC
-
+0x1D4 VCM (10ms)
+0x1DB LBC (10ms)
+0x1DC LBC (10ms)
+0x1F2 VCM (10ms)
+0x50B VCM (100ms)
+0x55B LBC (100ms)
+0x59E LBC (500ms)
+0x5BC LBC (100ms)
 PDM sends:
-0x390
-0x393
+0x390 (100ms)
+0x393 (100ms)
 0x679 on evse plug insert
 
 */
@@ -65,8 +61,6 @@ void LeafINV::SetCanInterface(CanHardware* c)
 
     can->RegisterUserMessage(0x1DA);//Leaf inv msg
     can->RegisterUserMessage(0x55A);//Leaf inv msg
-    can->RegisterUserMessage(0x679);//Leaf obc msg
-    can->RegisterUserMessage(0x390);//Leaf obc msg
 }
 
 void LeafINV::DecodeCAN(int id, uint32_t data[2])
@@ -75,7 +69,12 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2])
 
     if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
     {
-        voltage = (bytes[0] << 2) | (bytes[1] >> 6);//MEASURED VOLTAGE FROM LEAF INVERTER
+        voltage = ((bytes[0] << 2) | (bytes[1] >> 6)) * 0.5;//MEASURED VOLTAGE FROM LEAF INVERTER
+
+        if (Param::GetInt(Param::ShuntType) == 0 && voltage < 420)//Only populate if no shunt is used and voltage is under 420
+        {
+            Param::SetFloat(Param::udc, voltage);
+        }
 
         int16_t parsed_speed = (bytes[4] << 7) | bytes[5]>>1;
         if(parsed_speed> 0x3fff)parsed_speed -=0x7fff;//15 bit signed conversion
@@ -89,43 +88,8 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2])
         inv_temp = fahrenheit_to_celsius(bytes[2]);//INVERTER TEMP
         motor_temp = fahrenheit_to_celsius(bytes[1]);//MOTOR TEMP
     }
-
-    else if (id == 0x679)// THIS MSG FIRES ONCE ON CHARGE PLUG INSERT
-    {
-        uint8_t dummyVar = bytes[0];
-        dummyVar = dummyVar;
-        OBCwake = true;             //0x679 is received once when we plug in if pdm is asleep so wake wakey...
-    }
-
-    else if (id == 0x390)// THIS MSG FROM PDM
-    {
-        OBCVoltStat = (bytes[3] >> 3) & 0x03;
-        PlugStat = bytes[5] & 0x0F;
-        if(PlugStat == 0x08) PPStat = true; //plug inserted
-        if(PlugStat == 0x00) PPStat = false; //plug not inserted
-    }
 }
 
-bool LeafINV::ControlCharge(bool RunCh)
-{
-    int opmode = Param::GetInt(Param::opmode);
-    if(opmode != MOD_CHARGE)
-    {
-        if(RunCh && OBCwake)
-        {
-            //OBCwake = false;//reset obc wake for next time
-            return true;
-        }
-    }
-
-    if(PPStat) return true;
-    if(!PPStat)
-    {
-        OBCwake = false;
-        return false;
-    }
-    return false;
-}
 
 void LeafINV::SetTorque(float torquePercent)
 {
@@ -143,7 +107,17 @@ void LeafINV::Task10Ms()
 {
     int opmode = Param::GetInt(Param::opmode);
 
+    if (Param::GetInt(Param::BMS_Mode) == 4)
+    {
+        BMSspoofI = false;
+    }
+    else
+    {
+        BMSspoofI = true;
+    }
+
     uint8_t bytes[8];
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Messaage 0x11A
@@ -358,40 +332,43 @@ void LeafINV::Task10Ms()
     can->Send(0x1D4, (uint32_t*)bytes, 8);//send on can1
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // CAN Message 0x1DB
+    if(BMSspoofI)
+    {
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        // CAN Message 0x1DB
 
-    //We need to send 0x1db here with voltage measured by inverter
-    //Zero seems to work also on my gen1
-    ////////////////////////////////////////////////////////////////
-    //Byte 1 bits 8-10 LB Failsafe Status
-    //0x00 Normal start req. seems to stay on this value most of the time
-    //0x01 Normal stop req
-    //0x02 Charge stop req
-    //0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
-    //bits 11-12 LB relay cut req
-    //0x00 no req
-    //0x01,0x02,0x03 main relay off req
-    s16fp TMP_battI = (Param::Get(Param::idc))*2;
-    s16fp TMP_battV = (Param::Get(Param::udc))*4;
-    bytes[0] = TMP_battI >> 8;     //MSB current. 11 bit signed MSBit first
-    bytes[1] = TMP_battI & 0xE0;  //LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
-    bytes[2] = TMP_battV >> 8;
-    bytes[3] = ((TMP_battV & 0xC0) | (0x2b)); //0x2b should give no cut req, main rly on permission,normal p limit.
-    bytes[4] = 0x40;  //SOC for dash in Leaf. fixed val.
-    bytes[5] = 0x00;
-    bytes[6] = counter_1db;
-
-
-
-    // Extra CRC in byte 7
-    nissan_crc(bytes, 0x85);
+        //We need to send 0x1db here with voltage measured by inverter
+        //Zero seems to work also on my gen1
+        ////////////////////////////////////////////////////////////////
+        //Byte 1 bits 8-10 LB Failsafe Status
+        //0x00 Normal start req. seems to stay on this value most of the time
+        //0x01 Normal stop req
+        //0x02 Charge stop req
+        //0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
+        //bits 11-12 LB relay cut req
+        //0x00 no req
+        //0x01,0x02,0x03 main relay off req
+        s16fp TMP_battI = (Param::Get(Param::idc))*2;
+        s16fp TMP_battV = (Param::Get(Param::udc))*4;
+        bytes[0] = TMP_battI >> 8;     //MSB current. 11 bit signed MSBit first
+        bytes[1] = TMP_battI & 0xE0;  //LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
+        bytes[2] = TMP_battV >> 8;
+        bytes[3] = ((TMP_battV & 0xC0) | (0x2b)); //0x2b should give no cut req, main rly on permission,normal p limit.
+        bytes[4] = 0x40;  //SOC for dash in Leaf. fixed val.
+        bytes[5] = 0x00;
+        bytes[6] = counter_1db;
 
 
-    counter_1db++;
-    if(counter_1db >= 4) counter_1db = 0;
 
-    can->Send(0x1DB, (uint32_t*)bytes, 8);
+        // Extra CRC in byte 7
+        nissan_crc(bytes, 0x85);
+
+
+        counter_1db++;
+        if(counter_1db >= 4) counter_1db = 0;
+
+        can->Send(0x1DB, (uint32_t*)bytes, 8);
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Message 0x50B
@@ -415,28 +392,30 @@ void LeafINV::Task10Ms()
     //possible problem here as 0x50B is DLC 7....
     can->Send(0x50B, (uint32_t*)bytes, 7);
 
+    if(BMSspoofI)
+    {
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        // CAN Message 0x1DC:
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // CAN Message 0x1DC:
+        // 0x1dc from lbc. Contains chg power lims and disch power lims.
+        // Disch power lim in byte 0 and byte 1 bits 6-7. Just set to max for now.
+        // Max charging power in bits 13-20. 10 bit unsigned scale 0.25.Byte 1 limit in kw.
+        bytes[0]=0x6E;
+        bytes[1]=0x0A;
+        bytes[2]=0x05;
+        bytes[3]=0xD5;
+        bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
+        bytes[5]=0x00;
+        bytes[6]=counter_1dc;
+        // Extra CRC in byte 7
+        nissan_crc(bytes, 0x85);
 
-    // 0x1dc from lbc. Contains chg power lims and disch power lims.
-    // Disch power lim in byte 0 and byte 1 bits 6-7. Just set to max for now.
-    // Max charging power in bits 13-20. 10 bit unsigned scale 0.25.Byte 1 limit in kw.
-    bytes[0]=0x6E;
-    bytes[1]=0x0A;
-    bytes[2]=0x05;
-    bytes[3]=0xD5;
-    bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
-    bytes[5]=0x00;
-    bytes[6]=counter_1dc;
-    // Extra CRC in byte 7
-    nissan_crc(bytes, 0x85);
+        counter_1dc++;
+        if (counter_1dc >= 4)
+            counter_1dc = 0;
 
-    counter_1dc++;
-    if (counter_1dc >= 4)
-        counter_1dc = 0;
-
-    can->Send(0x1DC, (uint32_t*)bytes, 8);
+        can->Send(0x1DC, (uint32_t*)bytes, 8);
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Message 0x1F2: Charge Power and DC/DC Converter Control
@@ -504,52 +483,56 @@ void LeafINV::Task100Ms()
     // MSGS for charging with pdm
     uint8_t bytes[8];
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // CAN Message 0x55B:
 
-    bytes[0] = 0xA4;
-    bytes[1] = 0x40;
-    bytes[2] = 0xAA;
-    bytes[3] = 0x00;
-    bytes[4] = 0xDF;
-    bytes[5] = 0xC0;
-    bytes[6] = ((0x1 << 4) | (counter_55b));
-    // Extra CRC in byte 7
-    nissan_crc(bytes, 0x85);
+    if(BMSspoofI)
+    {
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        // CAN Message 0x55B:
 
-    counter_55b++;
-    if(counter_55b >= 4) counter_55b = 0;
+        bytes[0] = 0xA4;
+        bytes[1] = 0x40;
+        bytes[2] = 0xAA;
+        bytes[3] = 0x00;
+        bytes[4] = 0xDF;
+        bytes[5] = 0xC0;
+        bytes[6] = ((0x1 << 4) | (counter_55b));
+        // Extra CRC in byte 7
+        nissan_crc(bytes, 0x85);
 
-    can->Send(0x55b, (uint32_t*)bytes, 8);
+        counter_55b++;
+        if(counter_55b >= 4) counter_55b = 0;
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // CAN Message 0x59E:
+        can->Send(0x55b, (uint32_t*)bytes, 8);
 
-    bytes[0] = 0x00;//Static msg works fine here
-    bytes[1] = 0x00;//Batt capacity for chg and qc.
-    bytes[2] = 0x0c;
-    bytes[3] = 0x76;
-    bytes[4] = 0x18;
-    bytes[5] = 0x00;
-    bytes[6] = 0x00;
-    bytes[7] = 0x00;
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        // CAN Message 0x59E:
 
-    can->Send(0x59e, (uint32_t*)bytes, 8);
+        bytes[0] = 0x00;//Static msg works fine here
+        bytes[1] = 0x00;//Batt capacity for chg and qc.
+        bytes[2] = 0x0c;
+        bytes[3] = 0x76;
+        bytes[4] = 0x18;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // CAN Message 0x5BC:
+        can->Send(0x59e, (uint32_t*)bytes, 8);
 
-    // muxed msg with info for gids etc. Will try static for a test.
-    bytes[0] = 0x3D;//Static msg works fine here
-    bytes[1] = 0x80;
-    bytes[2] = 0xF0;
-    bytes[3] = 0x64;
-    bytes[4] = 0xB0;
-    bytes[5] = 0x01;
-    bytes[6] = 0x00;
-    bytes[7] = 0x32;
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        // CAN Message 0x5BC:
 
-    can->Send(0x5bc, (uint32_t*)bytes, 8);
+        // muxed msg with info for gids etc. Will try static for a test.
+        bytes[0] = 0x3D;//Static msg works fine here
+        bytes[1] = 0x80;
+        bytes[2] = 0xF0;
+        bytes[3] = 0x64;
+        bytes[4] = 0xB0;
+        bytes[5] = 0x01;
+        bytes[6] = 0x00;
+        bytes[7] = 0x32;
+
+        can->Send(0x5bc, (uint32_t*)bytes, 8);
+    }
 }
 
 

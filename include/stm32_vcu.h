@@ -72,14 +72,15 @@
 #include "noHeater.h"
 #include "bms.h"
 #include "simpbms.h"
+#include "leafbms.h"
 #include "daisychainbms.h"
 #include "outlanderCharger.h"
 #include "Can_OBD2.h"
 #include "dcdc.h"
 #include "TeslaDCDC.h"
 #include "BMW_E31.h"
-#include "digipot.h"
 #include "shifter.h"
+#include "DigiPot.h"
 #include "F30_Lever.h"
 #include "E65_Lever.h"
 #include "JLR_G1.h"
@@ -93,6 +94,7 @@
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
 #include "NoVehicle.h"
+#include "V_Classic.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
