@@ -42,15 +42,6 @@ public:
 
 
 private:
-    static		unsigned long elapsedtime;
-    static		double  ampseconds;
-    static		int milliseconds ;
-    static		int seconds;
-    static		int minutes;
-    static		int hours;
-    static		char buffer[9];
-    static		char bigbuffer[90];
-
     static void handle521(uint32_t data[2]);
     static void handle522(uint32_t data[2]);
     static void handle523(uint32_t data[2]);
