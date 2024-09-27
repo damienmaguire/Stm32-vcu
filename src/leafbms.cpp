@@ -21,20 +21,6 @@
 #include "my_fp.h"
 #include "my_math.h"
 
-#define CRCKEY 0x185
-
-int LeafBMS::bmsGrp = 2;
-int LeafBMS::bmsGrpIndex = -1;
-uint8_t LeafBMS::voltBytes[NUMCELLS * 2];
-uint8_t LeafBMS::statusBits[NUMCELLS / 4];
-int32_t LeafBMS::Amperes;
-int32_t LeafBMS::SOC;
-int32_t LeafBMS::KW;
-int32_t LeafBMS::KWh;
-float LeafBMS::Voltage=0;
-float LeafBMS::Voltage2=0;
-int32_t LeafBMS::Temperature;
-
 void LeafBMS::SetCanInterface(CanHardware* can)
 {
     can->RegisterUserMessage(0x1DB);//Leaf BMS message 10ms
@@ -122,7 +108,6 @@ void LeafBMS::DecodeCAN(int id, uint8_t * data)
         int tmpbat = bytes[3];
         tmpbat -= 40;
         Param::SetInt(Param::BMS_Tavg, tmpbat);
-        Temperature = tmpbat;
     }
     else if (id == 0x5C0)
     {
@@ -134,7 +119,6 @@ void LeafBMS::DecodeCAN(int id, uint8_t * data)
             int tmpbat = bytes[2] >> 1;
             tmpbat -= 40;
             Param::SetInt(Param::tmpaux, tmpbat);
-            Temperature = tmpbat;
         }
         */
     }

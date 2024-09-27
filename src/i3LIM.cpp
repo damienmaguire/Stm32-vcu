@@ -1,5 +1,8 @@
 #include <i3LIM.h>
 
+#include "params.h"
+#include "my_math.h"
+
 enum class ChargeStatus : uint8_t
 {
     // no led
@@ -48,16 +51,16 @@ static uint8_t ctr_20ms=0;
 static uint8_t vin_ctr=0;
 static uint8_t Timer_1Sec=0;
 static uint8_t Timer_60Sec=0;
-uint8_t ChargeType=0;
-uint8_t CCS_Plim=0;//ccs power limit flag. 0=no,1=yes,3=invalid.
-uint8_t CCS_Ilim=0;//ccs current limit flag. 0=no,1=yes,3=invalid.
-uint8_t CCS_Vlim=0;//ccs voltage limit flag. 0=no,1=yes,3=invalid.
-uint8_t CCS_Stat=0;//ccs charging status. 0=standby,1=charging,3=invalid.
-uint8_t CCS_Malf=0;//ccs malfunction status. 0=normal,1=fail,3=invalid.
-uint8_t CCS_Bmalf=0;//ccs battery malfunction status. 0=no,1=yes,3=invalid.
-uint8_t CCS_Stop=0;//ccs chargeing stop status. 0=tracking,1=supression,3=invalid.
-uint8_t CCS_Iso=0;//ccs isolation status. 0=invalid,1=valid,2=error,3=invalid signal.
-uint8_t CCS_IntStat=0;//ccs charger internal status. 0=not ready,1=ready,2=switch off charger,3=interruption,4=pre charge,5=insulation monitor,6=estop,7=malfunction,0x13=reserved,0x14=reserved,0x15=invlaid signal.
+static uint8_t ChargeType=0;
+static uint8_t CCS_Plim=0;//ccs power limit flag. 0=no,1=yes,3=invalid.
+static uint8_t CCS_Ilim=0;//ccs current limit flag. 0=no,1=yes,3=invalid.
+static uint8_t CCS_Vlim=0;//ccs voltage limit flag. 0=no,1=yes,3=invalid.
+static uint8_t CCS_Stat=0;//ccs charging status. 0=standby,1=charging,3=invalid.
+static uint8_t CCS_Malf=0;//ccs malfunction status. 0=normal,1=fail,3=invalid.
+static uint8_t CCS_Bmalf=0;//ccs battery malfunction status. 0=no,1=yes,3=invalid.
+static uint8_t CCS_Stop=0;//ccs chargeing stop status. 0=tracking,1=supression,3=invalid.
+static uint8_t CCS_Iso=0;//ccs isolation status. 0=invalid,1=valid,2=error,3=invalid signal.
+static uint8_t CCS_IntStat=0;//ccs charger internal status. 0=not ready,1=ready,2=switch off charger,3=interruption,4=pre charge,5=insulation monitor,6=estop,7=malfunction,0x13=reserved,0x14=reserved,0x15=invlaid signal.
 static uint32_t sec_328=0;
 static uint16_t Cont_Volts=0;
 static uint16_t Bulk_SOCt=0;//Time to bulk soc target.
@@ -89,19 +92,19 @@ void i3LIMClass::DecodeCAN(int id, uint32_t* data)
     switch(id)
     {
     case 0x3B4:
-        i3LIMClass::handle3B4(data);
+        handle3B4(data);
         break;
     case 0x272:
-        i3LIMClass::handle272(data);
+        handle272(data);
         break;
     case 0x29E:
-        i3LIMClass::handle29E(data);
+        handle29E(data);
         break;
     case 0x2B2:
-        i3LIMClass::handle2B2(data);
+        handle2B2(data);
         break;
     case 0x2EF:
-        i3LIMClass::handle2EF(data);
+        handle2EF(data);
         break;
 
     default:

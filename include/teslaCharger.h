@@ -1,32 +1,21 @@
-
-#ifndef teslaCharger_h
-#define teslsCharger_h
+#ifndef TESLACHARGER_H
+#define TESLACHARGER_H
 
 /*  This library supports the various opensource tesla charger controllers e.g. PCS , Gen2/3 etc.
 
 */
 
-#include <stdint.h>
-#include "my_fp.h"
-#include "params.h"
 #include "chargerhw.h"
-#include "my_math.h"
+#include "canhardware.h"
+#include <stdint.h>
 
 class teslaCharger: public Chargerhw
 {
-
 public:
-void DecodeCAN(int id, uint32_t data[2]);
-void Task100Ms();
-bool ControlCharge(bool RunCh, bool ACReq);
-void SetCanInterface(CanHardware* c);
-/*
-static void handle108(uint32_t data[2]);
-static bool HVreq;
-static void Send100msMessages(bool ChRun, CanHardware* can);
-*/
-private:
-
+    void DecodeCAN(int id, uint32_t data[2]) override;
+    void Task100Ms() override;
+    bool ControlCharge(bool RunCh, bool ACReq) override;
+    void SetCanInterface(CanHardware* c) override;
 };
 
-#endif /* teslaCharger_h */
+#endif /* TESLACHARGER_H */

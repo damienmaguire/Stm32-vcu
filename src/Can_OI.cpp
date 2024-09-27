@@ -21,16 +21,11 @@
  */
 
 #include "Can_OI.h"
-#include "my_fp.h"
-#include "my_math.h"
-#include "stm32_can.h"
 #include "params.h"
+#include <libopencm3/stm32/crc.h>
 
-uint8_t Can_OI::run100ms = 0;
-uint32_t Can_OI::lastRecv = 0;
 uint16_t Can_OI::voltage;
 int16_t Can_OI::speed;
-bool Can_OI::error=false;
 int16_t Can_OI::inv_temp;
 int16_t Can_OI::motor_temp;
 int16_t Can_OI::final_torque_request;
@@ -49,7 +44,7 @@ void Can_OI::SetCanInterface(CanHardware* c)
    can->RegisterUserMessage(0x1AE);//Open Inv Msg. Dec 430 for Opmode.
 }
 
-void Can_OI::DecodeCAN(int id, uint32_t data[2])
+void Can_OI::DecodeCAN(int id, uint32_t* data)
 {
 //0x1A4 bits 0-15 inverter voltage x10
 //0x190 bits 0-15 motor rpm x1

@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "daisychainbms.h"
 #include <math.h>
-#include "stm32_vcu.h"
 
 /*
  * This module receives messages from catphish's DaisychainBMS and updates

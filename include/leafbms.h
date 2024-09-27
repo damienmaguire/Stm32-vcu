@@ -23,28 +23,8 @@
 class LeafBMS: public BMS
 {
 public:
-    virtual void SetCanInterface(CanHardware* can);
-    void DecodeCAN(int id, uint8_t * data);
-    static void RequestNextFrame(CanHardware* can);
-    static uint16_t GetCellVoltage(int idx);
-    static int GetCellStatus(int idx);
-    static const int NUMCELLS = 96;
-    static float Voltage;
-    static float Voltage2;
-    static int32_t Temperature;
-    static int32_t Amperes;   // Floating point with current in Amperes
-    static int32_t SOC;
-    static int32_t KW;
-    static int32_t KWh;
-
-
-private:
-    static uint8_t Crc8ForHCM(int n, uint8_t *msg);
-    static int bmsGrp;
-    static int bmsGrpIndex;
-    static uint8_t voltBytes[NUMCELLS * 2];
-    static uint8_t statusBits[NUMCELLS / 4];
-
+    void SetCanInterface(CanHardware* can) override;
+    void DecodeCAN(int id, uint8_t * data) override;
 };
 
 #endif // LEAFBMS_H
