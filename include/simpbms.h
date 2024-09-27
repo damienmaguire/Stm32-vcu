@@ -19,15 +19,18 @@
 
 #ifndef SIMPBMS_H
 #define SIMPBMS_H
+
+#include "bms.h"
+#include "canhardware.h"
 #include <stdint.h>
 
 class SimpBMS: public BMS
 {
    public:
-      virtual void SetCanInterface(CanHardware* c);
-      void DecodeCAN(int id, uint8_t * data);
-      float MaxChargeCurrent();
-      void Task100Ms();
+      void SetCanInterface(CanHardware* c) override;
+      void DecodeCAN(int id, uint8_t * data) override;
+      float MaxChargeCurrent() override;
+      void Task100Ms() override;
    private:
       bool BMSDataValid();
       bool ChargeAllowed();
