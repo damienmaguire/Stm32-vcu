@@ -17,9 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "stm32_vcu.h"
-#include "stm32_can.h"
-#include <kangoobms.h>
+#include "kangoobms.h"
+
 /*
  * This module receives messages from SimpBMS and updates the
  * BMS_MinV, BMS_MaxV, BMS_MinT and BMS_MaxT parameters with the
@@ -43,11 +42,6 @@ bool KangooBMS::BMSDataValid() {
    // Return false if primary BMS is not sending data.
    if(timeoutCounter < 1) return false;
    return true;
-}
-
-float KangooBMS::GetCurrent() 
-{
-   return current;
 }
 
 // Return the maximum charge current allowed by the BMS.

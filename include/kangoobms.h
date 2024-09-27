@@ -19,19 +19,22 @@
 
 #ifndef KANGOOBMS_H
 #define KANGOOBMS_H
+
+#include "bms.h"
+#include "canhardware.h"
 #include <stdint.h>
+
 
 class KangooBMS: public BMS
 {
    public:
-      virtual void SetCanInterface(CanHardware* c);
-      void DecodeCAN(int id, uint8_t * data);
-      float MaxChargeCurrent();
-      float GetCurrent();
-      void Task100Ms();
+      void SetCanInterface(CanHardware* c) override;
+      void DecodeCAN(int id, uint8_t * data) override;
+      float MaxChargeCurrent() override;
+      void Task100Ms() override;
+
    private:
       bool BMSDataValid();
-      bool ChargeAllowed();
       int messageCounter = 0;
       int chargeCurrentLimit = 0;
       int timeoutCounter = 0;
