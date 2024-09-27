@@ -19,7 +19,93 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "stm32_vcu.h"
+#include <stdint.h>
+#include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/rtc.h>
+#include <libopencm3/stm32/can.h>
+#include <libopencm3/stm32/iwdg.h>
+#include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/exti.h>
+#include "stm32_can.h"
+#include "terminal.h"
+#include "params.h"
+#include "hwdefs.h"
+#include "digio.h"
+#include "hwinit.h"
+#include "anain.h"
+#include "temp_meas.h"
+#include "param_save.h"
+#include "my_math.h"
+#include "errormessage.h"
+#include "printf.h"
+#include "stm32scheduler.h"
+#include "cansdo.h"
+#include "leafinv.h"
+#include "isa_shunt.h"
+#include "BMW_E39.h"
+#include "BMW_E65.h"
+#include "subaruvehicle.h"
+#include "Can_OI.h"
+#include "outlanderinverter.h"
+#include "Can_VAG.h"
+#include "GS450H.h"
+#include "throttle.h"
+#include "utils.h"
+#include "teslaCharger.h"
+#include "i3LIM.h"
+#include "CANSPI.h"
+#include "chademo.h"
+#include "heater.h"
+#include "amperaheater.h"
+#include "inverter.h"
+#include "vehicle.h"
+#include "chargerhw.h"
+#include "canmap.h"
+#include "terminalcommands.h"
+#include "iomatrix.h"
+#include "bmw_sbox.h"
+#include "vag_sbox.h"
+#include "NissanPDM.h"
+#include "chargerint.h"
+#include "notused.h"
+#include "nocharger.h"
+#include "extCharger.h"
+#include "amperacharger.h"
+#include "noHeater.h"
+#include "bms.h"
+#include "simpbms.h"
+#include "leafbms.h"
+#include "daisychainbms.h"
+#include "outlanderCharger.h"
+#include "Can_OBD2.h"
+#include "dcdc.h"
+#include "TeslaDCDC.h"
+#include "BMW_E31.h"
+#include "shifter.h"
+#include "digipot.h"
+#include "F30_Lever.h"
+#include "E65_Lever.h"
+#include "JLR_G1.h"
+#include "JLR_G2.h"
+#include "no_Lever.h"
+#include "CPC.h"
+#include "Focci.h"
+#include "NoInverter.h"
+#include "linbus.h"
+#include "VWheater.h"
+#include "ElconCharger.h"
+#include "rearoutlanderinverter.h"
+#include "NoVehicle.h"
+#include "V_Classic.h"
+#include "kangoobms.h"
+#include "OutlanderCanHeater.h"
+#include "OutlanderHeartBeat.h"
+
+#define PRECHARGE_TIMEOUT 5  //5s
+
+#define PRINT_JSON 0
+
 
 extern "C" void __cxa_pure_virtual()
 {
