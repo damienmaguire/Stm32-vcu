@@ -39,7 +39,7 @@ public:
    void Task1Ms();
    void SetRevCounter(int s);
    void SetTemperatureGauge(float temp);
-   void DecodeCAN(int id, uint32_t* data);
+   void DecodeCAN(int id, const uint8_t bytes[8]) override;
    bool Ready();
    bool Start();
 

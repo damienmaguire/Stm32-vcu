@@ -35,7 +35,7 @@ class outlanderCharger: public Chargerhw
 {
 
 public:
-void DecodeCAN(int id, uint32_t data[2]);
+void DecodeCAN(int id, const uint8_t bytes[8]) override;
 void Task100Ms();
 bool ControlCharge(bool RunCh, bool ACReq);
 void SetCanInterface(CanHardware* c);
@@ -51,9 +51,9 @@ static uint8_t chgStatus , evseDuty;
 static float dcBusV , temp_1 , temp_2 , ACVolts , DCAmps , ACAmps;
 static float LV_Volts , LV_Amps;
 
-static void handle377(uint32_t data[2]);
-static void handle389(uint32_t data[2]);
-static void handle38A(uint32_t data[2]);
+static void handle377(const uint8_t bytes[8]);
+static void handle389(const uint8_t bytes[8]);
+static void handle38A(const uint8_t bytes[8]);
 };
 
 #endif // OUTLANDERCHARGER_H

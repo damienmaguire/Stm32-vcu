@@ -22,7 +22,7 @@ class VWBOX
 
 public:
     static void RegisterCanMessages(CanHardware* can);
-    static void DecodeCAN(int id, uint32_t data[2]);
+    static void DecodeCAN(int id, const uint8_t bytes[8]);
     static void ControlContactors(int opmode, CanHardware* can);
 
     static float Voltage;
@@ -37,7 +37,7 @@ public:
 private:
 
 
-    static void handle0BB(uint32_t data[2]);
+    static void handle0BB(const uint8_t bytes[8]);
     static uint8_t vw_crc_calc(uint8_t *data);
 
 };

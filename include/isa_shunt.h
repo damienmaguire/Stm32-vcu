@@ -29,7 +29,7 @@ public:
     static void START(CanHardware* can);
     static void RESTART(CanHardware* can);
     static void deFAULT(CanHardware* can);
-    static void DecodeCAN(int id, uint32_t data[2]);
+    static void DecodeCAN(int id, const uint8_t bytes[8]);
 
     static int32_t Voltage;
     static int32_t Voltage2;
@@ -42,14 +42,14 @@ public:
 
 
 private:
-    static void handle521(uint32_t data[2]);
-    static void handle522(uint32_t data[2]);
-    static void handle523(uint32_t data[2]);
-    static void handle524(uint32_t data[2]);
-    static void handle525(uint32_t data[2]);
-    static void handle526(uint32_t data[2]);
-    static void handle527(uint32_t data[2]);
-    static void handle528(uint32_t data[2]);
+    static void handle521(const uint8_t bytes[8]);
+    static void handle522(const uint8_t bytes[8]);
+    static void handle523(const uint8_t bytes[8]);
+    static void handle524(const uint8_t bytes[8]);
+    static void handle525(const uint8_t bytes[8]);
+    static void handle526(const uint8_t bytes[8]);
+    static void handle527(const uint8_t bytes[8]);
+    static void handle528(const uint8_t bytes[8]);
 };
 
 #endif /* SimpleISA_h */

@@ -124,18 +124,18 @@ void outlanderCharger::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x38A);//charger status 2
 }
 
-void outlanderCharger::DecodeCAN(int id, uint32_t data[2])
+void outlanderCharger::DecodeCAN(int id, const uint8_t bytes[8])
 {
     switch (id)
     {
     case 0x377:
-        outlanderCharger::handle377(data);
+        outlanderCharger::handle377(bytes);
         break;
     case 0x389:
-        outlanderCharger::handle389(data);
+        outlanderCharger::handle389(bytes);
         break;
     case 0x38A:
-        outlanderCharger::handle38A(data);
+        outlanderCharger::handle38A(bytes);
         break;
     }
 }
@@ -212,21 +212,16 @@ void outlanderCharger::Task100Ms()
     }
 }
 
-void outlanderCharger::handle377(uint32_t data[2])
-
+void outlanderCharger::handle377(const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     LV_Volts = ((bytes[0]<<8) | (bytes[1]))*0.01;
     LV_Amps = ((bytes[2]<<8) | (bytes[3]))*0.1;
     Param::SetFloat(Param::U12V, LV_Volts);
     Param::SetFloat(Param::I12V, LV_Amps);
-
 }
 
-void outlanderCharger::handle389(uint32_t data[2])
-
+void outlanderCharger::handle389(const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     ACVolts = bytes[1]; //AC voltage measured at charger. Scale 1 to 1.
     ACAmps = bytes[6] * 0.1; //Current in Amps from mains. scale 0.1.
     DCAmps = bytes[2] * 0.1; //Current in Amps from charger to battery. scale 0.1.
@@ -234,10 +229,8 @@ void outlanderCharger::handle389(uint32_t data[2])
     Param::SetFloat(Param::AC_Amps, ACAmps);
 }
 
-void outlanderCharger::handle38A(uint32_t data[2])
-
+void outlanderCharger::handle38A(const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     chgStatus = bytes[4];
     evseDuty = bytes[3];
     dcBusV = bytes[2]*2;// Volts scale 2
@@ -245,5 +238,3 @@ void outlanderCharger::handle38A(uint32_t data[2])
     temp_2 = bytes[1]-45;//degC bias -45
     Param::SetFloat(Param::ChgTemp, MAX(temp_1, temp_2));
 }
-
-

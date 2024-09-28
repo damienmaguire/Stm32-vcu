@@ -35,7 +35,7 @@ public:
 
    void Task10Ms();
    void Task100Ms();
-   void DecodeCAN(int, uint32_t*);
+   void DecodeCAN(int id, const uint8_t bytes[8]) override;
    bool GetGear(Shifter::Sgear& outGear);//if shifter class knows gear return true and set dir
    void SetCanInterface(CanHardware* c);
 

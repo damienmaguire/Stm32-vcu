@@ -28,7 +28,7 @@ class OutlanderCanHeater : public Heater
    public:
       void SetTargetTemperature(float temp);
       void SetCanInterface(CanHardware* c);
-      void DecodeCAN(int id, uint32_t data[2]);
+      void DecodeCAN(int id, const uint8_t bytes[8]);
       void SetPower(uint16_t power, bool HeatReq);
       void Task100Ms();
 
@@ -37,7 +37,7 @@ class OutlanderCanHeater : public Heater
       int8_t desiredTemperature;
 
       bool shouldHeat;
-      static void handle398(uint32_t data[2]);
+      static void handle398(const uint8_t bytes[8]);
 
 };
 

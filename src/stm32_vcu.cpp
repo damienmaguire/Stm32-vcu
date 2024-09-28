@@ -1107,27 +1107,29 @@ void Param::Change(Param::PARAM_NUM paramNum)
 }
 
 
-static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is where we go when a defined CAN message is received.
+//This is where we go when a defined CAN message is received.
+static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t len __attribute__((unused)) )
 {
-    dlc = dlc;
+    const uint8_t* bytes = (uint8_t*)data;
+
     switch (id)
     {
     case 0x7DF:
-        canOBD2.DecodeCAN(id,data);
+        canOBD2.DecodeCAN(id, bytes);
         break;
 
     default:
-        if (Param::GetInt(Param::ShuntType) == 1)  ISA::DecodeCAN(id, data);
-        if (Param::GetInt(Param::ShuntType) == 2)  SBOX::DecodeCAN(id, data);
-        if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::DecodeCAN(id, data);
-        selectedInverter->DecodeCAN(id, data);
-        selectedVehicle->DecodeCAN(id, data);
-        selectedCharger->DecodeCAN(id, data);
-        selectedChargeInt->DecodeCAN(id, data);
-        selectedBMS->DecodeCAN(id, (uint8_t*)data);
-        selectedDCDC->DecodeCAN(id, (uint8_t*)data);
-        selectedShifter->DecodeCAN(id,data);
-        selectedHeater->DecodeCAN(id, data);
+        if (Param::GetInt(Param::ShuntType) == 1)  ISA::DecodeCAN(id, bytes);
+        if (Param::GetInt(Param::ShuntType) == 2)  SBOX::DecodeCAN(id, bytes);
+        if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::DecodeCAN(id, bytes);
+        selectedInverter->DecodeCAN(id, bytes);
+        selectedVehicle->DecodeCAN(id, bytes);
+        selectedCharger->DecodeCAN(id, bytes);
+        selectedChargeInt->DecodeCAN(id, bytes);
+        selectedBMS->DecodeCAN(id, bytes);
+        selectedDCDC->DecodeCAN(id, bytes);
+        selectedShifter->DecodeCAN(id, bytes);
+        selectedHeater->DecodeCAN(id, bytes);
         break;
     }
     return false;
@@ -1152,17 +1154,16 @@ extern "C" void tim4_isr(void)
 extern "C" void exti15_10_isr(void)    //CAN3 MCP25625 interruppt
 {
     uCAN_MSG rxMessage;
-    uint32_t canData[2];
-    if(CANSPI_receive(&rxMessage))
-    {
-        canData[0]=(rxMessage.frame.data0 | rxMessage.frame.data1<<8 | rxMessage.frame.data2<<16 | rxMessage.frame.data3<<24);
-        canData[1]=(rxMessage.frame.data4 | rxMessage.frame.data5<<8 | rxMessage.frame.data6<<16 | rxMessage.frame.data7<<24);
-    }
-    //can cast this to uint32_t[2]. dont be an idiot! * pointer
-    CANSPI_CLR_IRQ();   //Clear Rx irqs in mcp25625
-    exti_reset_request(EXTI15); // clear irq
-    if((rxMessage.frame.id==0x108)||(rxMessage.frame.id==0x109)) selectedChargeInt->DecodeCAN(rxMessage.frame.id, canData);
 
+    bool newFrame = CANSPI_receive(&rxMessage);
+    CANSPI_CLR_IRQ();   //Clear Rx irqs in mcp25625
+
+    exti_reset_request(EXTI15); // clear irq
+
+    if(newFrame && ((rxMessage.frame.id==0x108)||(rxMessage.frame.id==0x109)))
+    {
+        selectedChargeInt->DecodeCAN(rxMessage.frame.id, &rxMessage.frame.data0);
+    }
 }
 
 extern "C" void rtc_isr(void)

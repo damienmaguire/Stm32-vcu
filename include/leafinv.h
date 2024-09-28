@@ -28,7 +28,7 @@
 class LeafINV: public Inverter
 {
 public:
-   void DecodeCAN(int id, uint32_t data[2]);
+   void DecodeCAN(int id, const uint8_t bytes[8]) override;
    void Task10Ms();
    void Task100Ms();
    static bool ControlCharge(bool RunCh);

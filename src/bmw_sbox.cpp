@@ -95,47 +95,39 @@ void SBOX::RegisterCanMessages(CanHardware* can)
 
 }
 
-void SBOX::DecodeCAN(int id, uint32_t data[2])
+void SBOX::DecodeCAN(int id, const uint8_t bytes[8])
 {
    switch (id)
    {
    case 0x200:
-      SBOX::handle200(data);//SBOX CAN MESSAGE
+      SBOX::handle200(bytes);//SBOX CAN MESSAGE
       break;
    case 0x210:
-      SBOX::handle210(data);//SBOX CAN MESSAGE
+      SBOX::handle210(bytes);//SBOX CAN MESSAGE
       break;
    case 0x220:
-      SBOX::handle220(data);//SBOX CAN MESSAGE
+      SBOX::handle220(bytes);//SBOX CAN MESSAGE
       break;
    }
 }
 
 
-void SBOX::handle200(uint32_t data[2])  //SBOX Current
-
+void SBOX::handle200(const uint8_t bytes[8])  //SBOX Current
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Amperes = ((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
    Amperes = (Amperes<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
-
 }
 
-void SBOX::handle210(uint32_t data[2])  //SBOX battery voltage
-
+void SBOX::handle210(const uint8_t bytes[8])  //SBOX battery voltage
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
    Voltage = (Voltage<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
 }
 
-void SBOX::handle220(uint32_t data[2]) //SBOX Output voltage
-
+void SBOX::handle220(const uint8_t bytes[8]) //SBOX Output voltage
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage2=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
    Voltage2 = (Voltage2<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
-
 }
 
 void SBOX::ControlContactors(int opmode, CanHardware* can)

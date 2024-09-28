@@ -71,19 +71,19 @@ void FocciClass::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x596);
 }
 
-void FocciClass::DecodeCAN(int id, uint32_t* data)
+void FocciClass::DecodeCAN(int id, const uint8_t bytes[8])
 {
 
     switch(id)
     {
     case 0x109:
-        handle109(data);
+        handle109(bytes);
         break;
     case 0x357:
-        handle357(data);
+        handle357(bytes);
         break;
     case 0x596:
-        handle596(data);
+        handle596(bytes);
         break;
 
 
@@ -93,21 +93,16 @@ void FocciClass::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void FocciClass::handle109(uint32_t data[2])  //FOCCI DCFC info
+void FocciClass::handle109(const uint8_t bytes[8])  //FOCCI DCFC info
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-
     Param::SetInt(Param::CCS_V,bytes[1] * 256 + bytes[0]);
     Param::SetInt(Param::CCS_I,bytes[3] * 256 + bytes[2]);
     Param::SetInt(Param::CCS_I_Avail,bytes[5] * 256 + bytes[4]);
     Param::SetInt(Param::CCS_V_Avail,bytes[7] * 256 + bytes[6]);
-
 }
 
-void FocciClass::handle357(uint32_t data[2])  //FOCCI Charge Port Info
+void FocciClass::handle357(const uint8_t bytes[8])  //FOCCI Charge Port Info
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-
     ChargePort_IsoStop = bytes[0];
     ChargePort_ACLimit = bytes[2] * 256 + bytes[1];
     ChargePort_Status = bytes[3];
@@ -170,9 +165,8 @@ void FocciClass::handle357(uint32_t data[2])  //FOCCI Charge Port Info
     Param::SetInt(Param::PilotTyp,CP_Mode);
 }
 
-void FocciClass::handle596(uint32_t data[2])  //FOCCI SDO responses
+void FocciClass::handle596(const uint8_t bytes[8])  //FOCCI SDO responses
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     if(RespondReq == 1)//only look at this if we have sent a message looking for a response
     {
         if(bytes[0] == 0x80)

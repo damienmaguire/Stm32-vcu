@@ -44,13 +44,11 @@ void Can_OI::SetCanInterface(CanHardware* c)
    can->RegisterUserMessage(0x1AE);//Open Inv Msg. Dec 430 for Opmode.
 }
 
-void Can_OI::DecodeCAN(int id, uint32_t* data)
+void Can_OI::DecodeCAN(int id, const uint8_t bytes[8])
 {
 //0x1A4 bits 0-15 inverter voltage x10
 //0x190 bits 0-15 motor rpm x1
 //0x19A bits 0-15 heatsink temp x10
-
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
    if (id == 0x1A4)// THIS MSG CONTAINS INV VOLTAGE
    {

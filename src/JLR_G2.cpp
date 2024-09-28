@@ -58,9 +58,8 @@ void JLR_G2::SetCanInterface(CanHardware* c)
 }
 
 
-void JLR_G2::DecodeCAN(int id, uint32_t* data)
+void JLR_G2::DecodeCAN(int id, const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;
     if (id == 0x0E0)
     {
         Cnt0E0 = bytes[4];

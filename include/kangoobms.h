@@ -29,7 +29,7 @@ class KangooBMS: public BMS
 {
    public:
       void SetCanInterface(CanHardware* c) override;
-      void DecodeCAN(int id, uint8_t * data) override;
+      void DecodeCAN(int id, const uint8_t data[8]) override;
       float MaxChargeCurrent() override;
       void Task100Ms() override;
 

@@ -86,25 +86,25 @@ void i3LIMClass::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x2EF);
 }
 
-void i3LIMClass::DecodeCAN(int id, uint32_t* data)
+void i3LIMClass::DecodeCAN(int id, const uint8_t bytes[8])
 {
 
     switch(id)
     {
     case 0x3B4:
-        handle3B4(data);
+        handle3B4(bytes);
         break;
     case 0x272:
-        handle272(data);
+        handle272(bytes);
         break;
     case 0x29E:
-        handle29E(data);
+        handle29E(bytes);
         break;
     case 0x2B2:
-        handle2B2(data);
+        handle2B2(bytes);
         break;
     case 0x2EF:
-        handle2EF(data);
+        handle2EF(bytes);
         break;
 
     default:
@@ -113,7 +113,7 @@ void i3LIMClass::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
+void i3LIMClass::handle3B4(const uint8_t bytes[8])  //Lim data
 
 {
     /*
@@ -127,7 +127,6 @@ void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
     6=pilot static
     */
 
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     uint8_t CP_Amps=bytes[0];
     Param::SetInt(Param::PilotLim,CP_Amps);
     uint8_t PP_Amps=bytes[1];
@@ -160,10 +159,8 @@ void i3LIMClass::handle3B4(uint32_t data[2])  //Lim data
 
 }
 
-void i3LIMClass::handle29E(uint32_t data[2])  //Lim data. Available current and voltage from the ccs charger
-
+void i3LIMClass::handle29E(const uint8_t bytes[8])  //Lim data. Available current and voltage from the ccs charger
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     uint16_t V_Avail=((bytes[2]<<8)|(bytes[1]));
     V_Avail=FP_TOINT(FP_DIV(V_Avail,10));
     Param::SetInt(Param::CCS_V_Avail,V_Avail);//available voltage from ccs charger
@@ -175,13 +172,10 @@ void i3LIMClass::handle29E(uint32_t data[2])  //Lim data. Available current and 
     CCS_Iso = (bytes[0]>>6)&0x03;
     CCS_IntStat = (bytes[0]>>2)&0x0f;
     Param::SetInt(Param::CCS_COND,CCS_IntStat);//update evse condition on webui
-
 }
 
-void i3LIMClass::handle2B2(uint32_t data[2])  //Lim data. Current and Votage as measured by the ccs charger
-
+void i3LIMClass::handle2B2(const uint8_t bytes[8])  //Lim data. Current and Votage as measured by the ccs charger
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     uint16_t CCS_Vmeas=((bytes[1]<<8)|(bytes[0]));
     CCS_Vmeas=FP_TOINT(FP_DIV(CCS_Vmeas,10));
     Param::SetInt(Param::CCS_V,CCS_Vmeas);//Voltage measurement from ccs charger
@@ -199,21 +193,17 @@ void i3LIMClass::handle2B2(uint32_t data[2])  //Lim data. Current and Votage as 
     CCS_Stop = (bytes[5]>>2)&0x03;
 }
 
-void i3LIMClass::handle2EF(uint32_t data[2])  //Lim data. Min available voltage from the ccs charger.
-
+void i3LIMClass::handle2EF(const uint8_t bytes[8])  //Lim data. Min available voltage from the ccs charger.
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     uint16_t minV_Avail=((bytes[1]<<8)|(bytes[0]));
     minV_Avail=FP_TOINT(FP_DIV(minV_Avail,10));
     Param::SetInt(Param::CCS_V_Min,minV_Avail);//minimum available voltage from ccs charger
 
     CCS_Plim = (bytes[6]>>4)&0x03;
-
 }
 
-void i3LIMClass::handle272(uint32_t data[2])  //Lim data. CCS contactor state and charge flap open/close status.
+void i3LIMClass::handle272(const uint8_t bytes[8])  //Lim data. CCS contactor state and charge flap open/close status.
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 // Only the top 6-bits indicate the contactor state
     uint8_t Cont_stat=bytes[2] >> 2;
     Param::SetInt(Param::CCS_Contactor,Cont_stat);

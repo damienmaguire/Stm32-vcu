@@ -89,10 +89,8 @@ void NissanPDM::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x390);//Leaf obc msg
 }
 
-void NissanPDM::DecodeCAN(int id, uint32_t data[2])
+void NissanPDM::DecodeCAN(int id, const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-
     if (id == 0x679)// THIS MSG FIRES ONCE ON CHARGE PLUG INSERT
     {
         uint8_t dummyVar = bytes[0];

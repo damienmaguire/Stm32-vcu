@@ -69,19 +69,18 @@ void OutlanderCanHeater::SetTargetTemperature(float temp)
     desiredTemperature = temp;
 }
 
-void OutlanderCanHeater::DecodeCAN(int id, uint32_t data[2])
+void OutlanderCanHeater::DecodeCAN(int id, const uint8_t bytes[8])
 {
     switch (id)
     {
     case 0x398:
-        OutlanderCanHeater::handle398(data);
+        OutlanderCanHeater::handle398(bytes);
         break;
     }
 }
 
-void OutlanderCanHeater::handle398(uint32_t data[2])
+void OutlanderCanHeater::handle398(const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     unsigned int temp1 = bytes[3] - 40;
     unsigned int temp2 = bytes[4] - 40;
     if (temp2 > temp1)

@@ -53,7 +53,7 @@ float KangooBMS::MaxChargeCurrent()
 }
 
 // Process voltage and temperature message from SimpBMS.
-void KangooBMS::DecodeCAN(int id, uint8_t *data)
+void KangooBMS::DecodeCAN(int id, const uint8_t data[8])
 {
    if (id == 0x155)
    {

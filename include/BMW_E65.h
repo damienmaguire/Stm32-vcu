@@ -20,14 +20,14 @@ public:
    void Task200Ms();
    void SetRevCounter(int speed) { revCounter = speed; }
    void SetTemperatureGauge(float temp) { temperature = temp; }
-   void DecodeCAN(int, uint32_t* data);
+   void DecodeCAN(int id, const uint8_t bytes[8]) override;
    bool Ready() { return terminal15On; }
    bool Start() { return terminal15On; }
    void DashOff();
-   void handle130(uint32_t data[2]);
-   void handle1A0(uint32_t data[2]);
-   void handle2FC(uint32_t data[2]);
-   void handle480(uint32_t data[2]);
+   void handle130(const uint8_t bytes[8]);
+   void handle1A0(const uint8_t bytes[8]);
+   void handle2FC(const uint8_t bytes[8]);
+   void handle480(const uint8_t bytes[8]);
    void SetE90(bool e90) { isE90 = e90; }
    void Engine_Data();
    void SetFuelGauge(float level);

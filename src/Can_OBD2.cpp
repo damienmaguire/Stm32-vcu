@@ -75,9 +75,8 @@ void Can_OBD2::SetCanInterface(CanHardware *c)
    can->RegisterUserMessage(0x7DF);
 }
 
-void Can_OBD2::DecodeCAN(int id, uint32_t data[2])
+void Can_OBD2::DecodeCAN(int id, const uint8_t bytes[8])
 {
-  uint8_t *bytes = (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
   uint8_t response[8];
   uint16_t speed;
 

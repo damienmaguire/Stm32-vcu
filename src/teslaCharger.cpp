@@ -21,9 +21,8 @@ void teslaCharger::SetCanInterface(CanHardware* c)
 
 }
 
-void teslaCharger::DecodeCAN(int id, uint32_t data[2])
+void teslaCharger::DecodeCAN(int id, const uint8_t bytes[8])
 {
-   uint8_t* bytes = (uint8_t*)data;
    if (id == 0x108)
    {
    if(bytes[0]==0xAA) HVreq=true;

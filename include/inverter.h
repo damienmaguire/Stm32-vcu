@@ -28,7 +28,7 @@ public:
    virtual void Task1Ms() {} //Default does nothing
    virtual void Task10Ms() {} //Default does nothing
    virtual void Task100Ms() {} //Default does nothing
-   virtual void DecodeCAN(int, uint32_t*) {};
+   virtual void DecodeCAN(int, const uint8_t[8]) {};
    virtual void SetTorque(float torquePercent) = 0;
    virtual float GetMotorTemperature() = 0;
    virtual float GetInverterTemperature() = 0;

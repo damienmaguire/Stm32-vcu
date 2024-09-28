@@ -13,7 +13,7 @@ class i3LIMClass: public Chargerint
 {
 public:
       void SetCanInterface(CanHardware* c) override;
-      void DecodeCAN(int id, uint32_t* data) override;
+      void DecodeCAN(int id, const uint8_t bytes[8]) override;
       void Task10Ms() override;
       void Task100Ms() override;
       void Task200Ms() override;
@@ -21,11 +21,11 @@ public:
       bool ACRequest(bool RunCh) override;
 
 private:
-      void handle3B4(uint32_t data[2]);
-      void handle29E(uint32_t data[2]);
-      void handle2B2(uint32_t data[2]);
-      void handle2EF(uint32_t data[2]);
-      void handle272(uint32_t data[2]);
+      void handle3B4(const uint8_t bytes[8]);
+      void handle29E(const uint8_t bytes[8]);
+      void handle2B2(const uint8_t bytes[8]);
+      void handle2EF(const uint8_t bytes[8]);
+      void handle272(const uint8_t bytes[8]);
       void CCS_Pwr_Con();
       void Chg_Timers();
 };

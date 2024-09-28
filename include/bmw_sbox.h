@@ -22,7 +22,7 @@ class SBOX
 
 public:
     static void RegisterCanMessages(CanHardware* can);
-    static void DecodeCAN(int id, uint32_t data[2]);
+    static void DecodeCAN(int id, const uint8_t bytes[8]);
     static void ControlContactors(int opmode, CanHardware* can);
 
     static int32_t Voltage;
@@ -37,9 +37,9 @@ public:
 private:
 
 
-    static void handle200(uint32_t data[2]);
-    static void handle210(uint32_t data[2]);
-    static void handle220(uint32_t data[2]);
+    static void handle200(const uint8_t bytes[8]);
+    static void handle210(const uint8_t bytes[8]);
+    static void handle220(const uint8_t bytes[8]);
 
 };
 

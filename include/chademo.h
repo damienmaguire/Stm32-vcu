@@ -31,7 +31,7 @@
 class FCChademo: public Chargerint
 {
    public:
-      void DecodeCAN(int id, uint32_t data[2]);
+      void DecodeCAN(int id, const uint8_t bytes[8]) override;
       void Task100Ms();//Must be called every 100ms
       void Task200Ms();
       bool DCFCRequest(bool RunCh);

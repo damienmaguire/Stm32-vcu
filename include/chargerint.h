@@ -29,7 +29,7 @@ public:
    virtual void Task10Ms() {} //Default does nothing
    virtual void Task100Ms() {} //Default does nothing
    virtual void Task200Ms() {} //Default does nothing
-   virtual void DecodeCAN(int, uint32_t*) {};
+   virtual void DecodeCAN(int, const uint8_t[8]) {};
    virtual bool DCFCRequest(bool) {return false;};
    virtual bool ACRequest(bool) {return false;};
    virtual void DeInit() {} //called when switching to another charger, similar to a destructor
