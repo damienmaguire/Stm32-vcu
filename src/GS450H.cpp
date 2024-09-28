@@ -138,6 +138,13 @@ void GS450HClass::SetTorque(float torquePercent)
         {
             mg1_torque = 0;
         }
+		else if(MotorActive == 3)//MG1 only at high torque
+        {
+            if(torquePercent > 50)//only have MG1 active above 50%
+            {
+                mg1_torque = utils::change(torquePercent,50,100,0,4375);
+            }
+        }
     }
     else if(DriveType == PRIUS)
     {
@@ -186,6 +193,13 @@ void GS450HClass::SetTorque(float torquePercent)
             {
                 mg1_torque = 0;
             }
+			else if(MotorActive == 3)//MG1 only at high torque
+			{
+				if(torquePercent > 50)//only have MG1 active above 50%
+				{
+					mg1_torque = utils::change(torquePercent,50,100,0,4375);
+				}
+			}
         }
         else
         {
@@ -651,7 +665,7 @@ void GS450HClass::Task1Ms()
         {
 
             statusInv=0;
-            inv_status=0;
+            //inv_status=0; Stop reinit of inverter
              //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
