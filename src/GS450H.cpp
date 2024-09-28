@@ -140,6 +140,7 @@ void GS450HClass::SetTorque(float torquePercent)
         }
 		else if(MotorActive == 3)//MG1 only at high torque
         {
+			mg1_torque = 0;
             if(torquePercent > 50)//only have MG1 active above 50%
             {
                 mg1_torque = utils::change(torquePercent,50,100,0,4375);
@@ -195,6 +196,7 @@ void GS450HClass::SetTorque(float torquePercent)
             }
 			else if(MotorActive == 3)//MG1 only at high torque
 			{
+				mg1_torque = 0;
 				if(torquePercent > 50)//only have MG1 active above 50%
 				{
 					mg1_torque = utils::change(torquePercent,50,100,0,4375);
