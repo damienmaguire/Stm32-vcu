@@ -36,7 +36,7 @@ public:
    void Task100Ms();
    void SetRevCounter(int s) { speed = s; }
    void SetTemperatureGauge(float temp);
-   void DecodeCAN(int id, uint32_t* data);
+   void DecodeCAN(int id, const uint8_t bytes[8]) override;
    bool Ready();
    bool Start();
    void SetE46(bool e46) { isE46 = e46; }

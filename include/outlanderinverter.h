@@ -27,7 +27,7 @@ class OutlanderInverter : public Inverter
 public:
    OutlanderInverter();
    void SetCanInterface(CanHardware* c);
-   void DecodeCAN(int id, uint32_t data[2]);
+   void DecodeCAN(int id, const uint8_t bytes[8]) override;
    void Task10Ms();
    void Task100Ms();
    void SetTorque(float torque);

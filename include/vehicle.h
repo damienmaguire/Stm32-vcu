@@ -32,7 +32,7 @@ public:
    virtual void Task10Ms() {} //Default does nothing
    virtual void Task100Ms() {} //Default does nothing
    virtual void Task200Ms() {} //Default does nothing
-   virtual void DecodeCAN(int, uint32_t*) {};
+   virtual void DecodeCAN(int, const uint8_t[8]) {};
    virtual void DashOff() {}
    virtual void SetRevCounter(int speed) = 0;
    virtual void SetTemperatureGauge(float temp) = 0;

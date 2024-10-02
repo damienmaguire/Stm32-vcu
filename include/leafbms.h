@@ -24,7 +24,7 @@ class LeafBMS: public BMS
 {
 public:
     void SetCanInterface(CanHardware* can) override;
-    void DecodeCAN(int id, uint8_t * data) override;
+    void DecodeCAN(int id, const uint8_t bytes[8]) override;
 };
 
 #endif // LEAFBMS_H

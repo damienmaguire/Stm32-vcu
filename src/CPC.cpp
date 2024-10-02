@@ -32,13 +32,13 @@ void CPCClass::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x357);
 }
 
-void CPCClass::DecodeCAN(int id, uint32_t* data)
+void CPCClass::DecodeCAN(int id, const uint8_t bytes[8])
 {
 
     switch(id)
     {
     case 0x357:
-        CPCClass::handle357(data);
+        CPCClass::handle357(bytes);
         break;
 
 
@@ -48,10 +48,8 @@ void CPCClass::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void CPCClass::handle357(uint32_t data[2])  //Lim data
+void CPCClass::handle357(const uint8_t bytes[8])  //Lim data
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-
     ChargePort_IsoStop = bytes[0];
     ChargePort_ACLimit = bytes[2] * 256 + bytes[1];
     ChargePort_Status = bytes[3];

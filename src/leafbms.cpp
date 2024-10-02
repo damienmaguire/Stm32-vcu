@@ -31,10 +31,8 @@ void LeafBMS::SetCanInterface(CanHardware* can)
     //can->RegisterUserMessage(0x59E);//Leaf BMS message 500ms
 }
 
-void LeafBMS::DecodeCAN(int id, uint8_t * data)
+void LeafBMS::DecodeCAN(int id, const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;
-
     if (id == 0x1DB)
     {
         float cur = uint16_t(bytes[0] << 3) + uint16_t(bytes[1] >>5);

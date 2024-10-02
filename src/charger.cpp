@@ -4,10 +4,8 @@ bool chargerClass::HVreq=false;
 static uint8_t counter_109 = 0;
 
 
-void chargerClass::handle108(uint32_t data[2])  //HV request
-
+void chargerClass::handle108(const uint8_t bytes[8])  //HV request
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    if(bytes[0]==0xAA) HVreq=true;
    if(bytes[0]==0xCC) HVreq=false;
    //Counter in byte 7 to validate msg.

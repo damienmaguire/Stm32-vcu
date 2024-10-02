@@ -35,8 +35,10 @@ void OutlanderInverter::SetCanInterface(CanHardware* c)
    can->RegisterUserMessage(0x733);//Outlander Inv Msg
 }
 
-void OutlanderInverter::DecodeCAN(int id, uint32_t data[2])
+void OutlanderInverter::DecodeCAN(int id, const uint8_t bytes[8])
 {
+   const uint32_t* data = (uint32_t*)bytes;
+
    switch (id)
    {
    case 0x289:

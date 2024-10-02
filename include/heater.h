@@ -12,7 +12,7 @@
 class Heater
 {
 public:
-   virtual void DecodeCAN(int, uint32_t*) {};
+   virtual void DecodeCAN(int, const uint8_t[8]) {};
    virtual float GetTemperature() { return 0; }
    virtual void SetTargetTemperature(float temp) = 0; //target temperature in °C
    virtual void SetPower(uint16_t power, bool HeatReq) = 0; //Must be called cyclically with power in watts

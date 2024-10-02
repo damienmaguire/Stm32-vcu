@@ -68,7 +68,7 @@ float SimpBMS::MaxChargeCurrent()
 }
 
 // Process voltage and temperature message from SimpBMS.
-void SimpBMS::DecodeCAN(int id, uint8_t *data)
+void SimpBMS::DecodeCAN(int id, const uint8_t data[8])
 {
    if (id == 0x373)
    {

@@ -47,21 +47,24 @@ static void delay(void)
       __asm__("nop");
 }
 
-void FCChademo::DecodeCAN(int id, uint32_t data[2])
+void FCChademo::DecodeCAN(int id, const uint8_t bytes[8])
 {
-if (id == 0x108)
-{
-    chargerMaxCurrent = data[0] >> 24;
-    chargerMaxVoltage = data[0] >> 8;
-}
+   // TODO: Refactor to access the bytes this is looking for
+   const uint32_t* data = (uint32_t*)bytes;
+
+   if (id == 0x108)
+   {
+      chargerMaxCurrent = data[0] >> 24;
+      chargerMaxVoltage = data[0] >> 8;
+   }
 
 
-if (id == 0x109)
-{
-   chargerOutputVoltage = data[0] >> 8;
-   chargerOutputCurrent = data[0] >> 24;
-   chargerStatus = (data[1] >> 8) & 0x3F;
-}
+   if (id == 0x109)
+   {
+      chargerOutputVoltage = data[0] >> 8;
+      chargerOutputCurrent = data[0] >> 24;
+      chargerStatus = (data[1] >> 8) & 0x3F;
+   }
 }
 
 
