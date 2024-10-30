@@ -506,7 +506,7 @@ static void Ms10Task(void)
 
     selectedChargeInt->Task10Ms();
 
-    if (Param::GetInt(Param::opmode) == MOD_RUN)
+    if (Param::GetInt(Param::opmode) == MOD_RUN) //!!!THROTTLE CODE HERE//
     {
         torquePercent = utils::ProcessThrottle(ABS(previousSpeed)); //run the throttle reading and checks and then generate Potnom
 
@@ -546,15 +546,30 @@ static void Ms10Task(void)
 
     selectedInverter->SetTorque(torquePercent);
 
-    //Brake light based on regen being below the set threshold
-    if(torquePercent < Param::GetFloat(Param::RegenBrakeLight))
+    //Brake light based on regen being below the set threshold !! this logic needs verifying
+    if(Param::GetInt(Param::reversemotor) == 0)
     {
-        //enable Brake Light Ouput
-        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+        if((torquePercent * requestedDirection) < Param::GetFloat(Param::RegenBrakeLight))//if reverse we flip signs of torque, so multiply by direction- reverse is -1
+        {
+            //enable Brake Light Ouput
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+        }
+        else
+        {
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+        }
     }
-    else
+    else //Motor torques flipped so need to flip again
     {
-        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+        if((torquePercent * requestedDirection) < Param::GetFloat(Param::RegenBrakeLight))//if reverse we flip signs of torque, so multiply by direction- reverse is -1, reversed again for MotRev
+        {
+            //enable Brake Light Ouput
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+        }
+        else
+        {
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+        }
     }
 
     //speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface NO ABS allowed on speed as we need to know direction
@@ -589,13 +604,19 @@ static void Ms10Task(void)
         initbyStart=false;
         initbyCharge=false;
         DigIo::inv_out.Clear();//inverter power off
-        DigIo::dcsw_out.Clear();
-        IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Clear();//Negative contactors off if used
         IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear();//Coolant pump off if used
-        DigIo::prec_out.Clear();
         Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown regardless of shifter pos
         selectedVehicle->DashOff();
         StartSig=false;//reset for next time
+
+        if(rlyDly!=0) rlyDly--;//here we are going to pause to allow system shut down before opening HV contactors
+        if(rlyDly==0)
+        {
+            DigIo::dcsw_out.Clear();
+            IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Clear();//Negative contactors off if used
+            DigIo::prec_out.Clear();
+        }
+
         if(Param::GetInt(Param::pot) < Param::GetInt(Param::potmin))
         {
             if ((selectedVehicle->Start() && selectedVehicle->Ready()))
@@ -667,7 +688,11 @@ static void Ms10Task(void)
 
     case MOD_CHARGE:
         if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
-        if(rlyDly==0) DigIo::dcsw_out.Set();
+        if(rlyDly==0)
+        {
+            DigIo::dcsw_out.Set();
+            rlyDly=25;//Recharge sequence timer
+        }
         ErrorMessage::UnpostAll();
         if(!chargeMode) opmode = MOD_OFF;
         Param::SetInt(Param::opmode, opmode);
@@ -679,14 +704,13 @@ static void Ms10Task(void)
         {
             DigIo::dcsw_out.Set();
             DigIo::inv_out.Set();//inverter power on
+            rlyDly=25;//Recharge sequence timer
         }
         Param::SetInt(Param::opmode, MOD_RUN);
         ErrorMessage::UnpostAll();
         if(!selectedVehicle->Ready()) opmode = MOD_OFF;
         Param::SetInt(Param::opmode, opmode);
         break;
-
-
     }
 
     ControlCabHeater(opmode);

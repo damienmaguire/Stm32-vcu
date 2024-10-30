@@ -37,7 +37,7 @@ static uint8_t mth_data[140];
 static const uint8_t htm_data_setup[100]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,25,0,0,0,0,0,0,0,128,0,0,0,128,0,0,0,37,1};
 static uint8_t htm_data[105]= {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0};
 static const uint8_t htm_data_GS300H[105]= {0,14,0,2,0,0,0,0,0,0,0,0,0,23,0,97,0,0,0,0,0,0,0,248,254,8,1,0,0,0,0,0,0,22,0,0,0,0,0,23,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,23,0,75,22,47,250,137,14,0,0,23,0,0,0,0,201,0,218,0,16,0,0,0,29,0,0,0,0,0,0
-                                     };
+                                           };
 static const uint8_t htm_data_Prius[100] = {0,30,0,2,0,0,0,55,0,128,254,0,0,40,0,97,0,0,0,0,0,0,136,249,120,6,143,255,50,255,48,255,49,0,0,0,48,255,43,0,1,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,40,0,75,33,68,246,51,8,0,0,40,0,0,0,201,0,222,0,16,0,0,0,211,40,0,0,62,15};
 
 #if 0
@@ -138,9 +138,9 @@ void GS450HClass::SetTorque(float torquePercent)
         {
             mg1_torque = 0;
         }
-		else if(MotorActive == 3)//MG1 only at high torque
+        else if(MotorActive == 3)//MG1 only at high torque
         {
-			mg1_torque = 0;
+            mg1_torque = 0;
             if(torquePercent > 50)//only have MG1 active above 50%
             {
                 mg1_torque = utils::change(torquePercent,50,100,0,4375);
@@ -194,14 +194,14 @@ void GS450HClass::SetTorque(float torquePercent)
             {
                 mg1_torque = 0;
             }
-			else if(MotorActive == 3)//MG1 only at high torque
-			{
-				mg1_torque = 0;
-				if(torquePercent > 50)//only have MG1 active above 50%
-				{
-					mg1_torque = utils::change(torquePercent,50,100,0,4375);
-				}
-			}
+            else if(MotorActive == 3)//MG1 only at high torque
+            {
+                mg1_torque = 0;
+                if(torquePercent > 50)//only have MG1 active above 50%
+                {
+                    mg1_torque = utils::change(torquePercent,50,100,0,4375);
+                }
+            }
         }
         else
         {
@@ -238,7 +238,7 @@ void GS450HClass::GS450Hgear()//!!! should be ran every 10ms - ran before calcul
     //Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update inverter status on web interface
     gear=(Param::GetInt(Param::Gear));
 
-    if(gear == 2)//!!!Auto Shifting using code from AK - Always start in low gear when powered on
+    if(gear == 2)//!!!Auto Shifting always start in low gear when powered on
     {
         if(gearAct == 0 && mg2_speed > 7000) //Shift up when in low gear and mg2 is over 7000rpm
         {
@@ -289,6 +289,23 @@ void GS450HClass::GS450Hgear()//!!! should be ran every 10ms - ran before calcul
         DigIo::SP_out.Clear();
         DigIo::SL1_out.Set();
         DigIo::SL2_out.Set();
+    }
+
+    if (gear == 3) //!!!High in FWD and Low in REV - Jamie Jones special
+    {
+        int dir = Param::GetInt(Param::dir);
+        if (dir == -1) //reverse go low
+        {
+            DigIo::SP_out.Clear();
+            DigIo::SL1_out.Set();
+            DigIo::SL2_out.Set();
+        }
+        else     //go high
+        {
+            DigIo::SP_out.Clear();
+            DigIo::SL1_out.Clear();
+            DigIo::SL2_out.Clear();
+        }
     }
 }
 
@@ -414,7 +431,7 @@ void GS450HClass::Task1Ms()
         if(VerifyMTHChecksum(100)==0 || dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)==0)
         {
             statusInv=0;
-             //set speeds to 0 to prevent dynamic throttle/regen issues
+            //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
             //disable cruise
@@ -529,7 +546,7 @@ void GS450HClass::Task1Ms()
         {
 
             statusInv=0;
-             //set speeds to 0 to prevent dynamic throttle/regen issues
+            //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
             //disable cruise
@@ -668,7 +685,7 @@ void GS450HClass::Task1Ms()
 
             statusInv=0;
             //inv_status=0; Stop reinit of inverter
-             //set speeds to 0 to prevent dynamic throttle/regen issues
+            //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
             //disable cruise
