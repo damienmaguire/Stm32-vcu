@@ -595,7 +595,7 @@ void GS450hOilPump(uint16_t pumpdc)
     {
         if(pumpdc>9)
         {
-            pumpdc = utils::change(pumpdc, 10, 80, 425, 1875); //map oil pump pwm to timer
+            pumpdc = utils::change(pumpdc, 10, 80, 1875, 425); //map oil pump pwm to timer
             pumpdc = pumpdc * 0.5;//Scalar increase 2x so duty is period is halved and so is DC.
         }
         else

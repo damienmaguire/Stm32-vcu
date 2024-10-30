@@ -35,6 +35,7 @@ float   outlanderCharger::ACAmps;
 float   outlanderCharger::DCAmps;
 float   outlanderCharger::LV_Volts;
 float   outlanderCharger::LV_Amps;
+uint16_t outlanderCharger::batteryVolts;
 
 
 bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
@@ -230,8 +231,15 @@ void outlanderCharger::handle389(uint32_t data[2])
     ACVolts = bytes[1]; //AC voltage measured at charger. Scale 1 to 1.
     ACAmps = bytes[6] * 0.1; //Current in Amps from mains. scale 0.1.
     DCAmps = bytes[2] * 0.1; //Current in Amps from charger to battery. scale 0.1.
+    batteryVolts = bytes[0] * 2;
+
     Param::SetFloat(Param::AC_Volts, ACVolts);
     Param::SetFloat(Param::AC_Amps, ACAmps);
+
+    if (Param::GetInt(Param::ShuntType) == 0 && Param::GetInt(Param::Inverter)!= 1)//Only populate if no shunt is used and not using Leaf inverter !!!look to clean up
+    {
+        Param::SetFloat(Param::udc, batteryVolts);
+    }
 }
 
 void outlanderCharger::handle38A(uint32_t data[2])
