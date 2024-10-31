@@ -44,15 +44,13 @@ void JLR_G1::SetCanInterface(CanHardware* c)
 }
 
 
-void JLR_G1::DecodeCAN(int id, uint32_t* data)
+void JLR_G1::DecodeCAN(int id, const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;
     if (id == 0x312)
     {
         Cnt312 = bytes[7] & 0x0F;
         DirJLRG1 = bytes[3] >> 4;
     }
-
 }
 
 void JLR_G1::sendcan()

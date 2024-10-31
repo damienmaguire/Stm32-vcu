@@ -63,10 +63,8 @@ void LeafINV::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x55A);//Leaf inv msg
 }
 
-void LeafINV::DecodeCAN(int id, uint32_t data[2])
+void LeafINV::DecodeCAN(int id, const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-
     if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
     {
         voltage = ((bytes[0] << 2) | (bytes[1] >> 6)) * 0.5;//MEASURED VOLTAGE FROM LEAF INVERTER

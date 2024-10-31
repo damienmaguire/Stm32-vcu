@@ -37,33 +37,33 @@ static void delay(void) //delay used for isa setup fumction. probably much bette
       __asm__("nop");
 }
 
-void ISA::DecodeCAN(int id, uint32_t data[2])
+void ISA::DecodeCAN(int id, const uint8_t bytes[8])
 {
    switch (id)
    {
    case 0x521:
-      ISA::handle521(data);//ISA CAN MESSAGE
+      ISA::handle521(bytes);//ISA CAN MESSAGE
       break;
    case 0x522:
-      ISA::handle522(data);//ISA CAN MESSAGE
+      ISA::handle522(bytes);//ISA CAN MESSAGE
       break;
    case 0x523:
-      ISA::handle523(data);//ISA CAN MESSAGE
+      ISA::handle523(bytes);//ISA CAN MESSAGE
       break;
    case 0x524:
-      ISA::handle524(data);//ISA CAN MESSAGE
+      ISA::handle524(bytes);//ISA CAN MESSAGE
       break;
    case 0x525:
-      ISA::handle525(data);//ISA CAN MESSAGE
+      ISA::handle525(bytes);//ISA CAN MESSAGE
       break;
    case 0x526:
-      ISA::handle526(data);//ISA CAN MESSAGE
+      ISA::handle526(bytes);//ISA CAN MESSAGE
       break;
    case 0x527:
-      ISA::handle527(data);//ISA CAN MESSAGE
+      ISA::handle527(bytes);//ISA CAN MESSAGE
       break;
    case 0x528:
-      ISA::handle528(data);//ISA CAN MESSAGE
+      ISA::handle528(bytes);//ISA CAN MESSAGE
       break;
    }
 }
@@ -225,66 +225,50 @@ void ISA::initCurrent(CanHardware* can)
 
 /********* Private functions *******/
 
-void ISA::handle521(uint32_t data[2])  //Amperes
+void ISA::handle521(const uint8_t bytes[8])  //Amperes
 
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Amperes = ((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 }
 
-void ISA::handle522(uint32_t data[2])  //Voltage
+void ISA::handle522(const uint8_t bytes[8])  //Voltage
 
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage=((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 }
 
-void ISA::handle523(uint32_t data[2]) //Voltage2
+void ISA::handle523(const uint8_t bytes[8]) //Voltage2
 
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage2 = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
-
 }
 
-void ISA::handle524(uint32_t data[2])  //Voltage3
-
+void ISA::handle524(const uint8_t bytes[8])  //Voltage3
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Voltage3 = (uint32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
 }
 
-void ISA::handle525(uint32_t data[2])  //Temperature
+void ISA::handle525(const uint8_t bytes[8])  //Temperature
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    framecount++;
    int32_t temp=0;
    temp = (int32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 
    Temperature=temp/10;
-
 }
 
-void ISA::handle526(uint32_t data[2]) //Kilowatts
+void ISA::handle526(const uint8_t bytes[8]) //Kilowatts
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    KW = (int32_t)((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
 }
 
 
-void ISA::handle527(uint32_t data[2]) //Ampere-Hours
-
+void ISA::handle527(const uint8_t bytes[8]) //Ampere-Hours
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    Ah = (bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]);
 }
 
-void ISA::handle528(uint32_t data[2])  //kiloWatt-hours
-
+void ISA::handle528(const uint8_t bytes[8])  //kiloWatt-hours
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
    KWh=((bytes[5] << 24) | (bytes[4] << 16) | (bytes[3] << 8) | (bytes[2]));
-
 }

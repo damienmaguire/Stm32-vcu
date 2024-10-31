@@ -25,7 +25,7 @@ class Can_OBD2
 {
 public:
   void SetCanInterface(CanHardware *c);
-  void DecodeCAN(int id, uint32_t data[2]);
+  void DecodeCAN(int id, const uint8_t bytes[8]);
 
 protected:
   CanHardware *can;

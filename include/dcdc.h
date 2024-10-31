@@ -26,7 +26,7 @@
 class DCDC
 {
    public:
-      virtual void DecodeCAN(int, uint8_t *) {};
+      virtual void DecodeCAN(int, const uint8_t[8]) {};
       virtual void DeInit() {};
       virtual void Task1Ms() {};
       virtual void Task10Ms() {};

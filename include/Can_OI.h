@@ -30,7 +30,7 @@ class Can_OI: public Inverter
 {
 public:
    void Task100Ms() override;
-   void DecodeCAN(int, uint32_t*) override;
+   void DecodeCAN(int id, const uint8_t bytes[8]) override;
    void SetTorque(float torquePercent) override;
    float GetMotorTemperature() override { return motor_temp; }
    float GetInverterTemperature() override { return inv_temp; }

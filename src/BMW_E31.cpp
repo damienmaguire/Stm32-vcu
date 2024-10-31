@@ -56,9 +56,9 @@ void BMW_E31::SetTemperatureGauge(float temp)
     dc = dc;
 }
 
-void BMW_E31::DecodeCAN(int id, uint32_t* data)
+void BMW_E31::DecodeCAN(int id, const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;//E31 CAN to be added here
+    //E31 CAN to be added here
 
     if (id == 0x153)// ASC1 contains road speed signal. Unsure if applies to E31 as yet ....
     {

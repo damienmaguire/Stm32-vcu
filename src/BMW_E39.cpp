@@ -370,7 +370,7 @@ void BMW_E39::Msg43F(int8_t gear)
     can->Send(0x43F, bytes, 8);
 }
 
-void BMW_E39::DecodeCAN(int id, uint32_t* data)
+void BMW_E39::DecodeCAN(int id, const uint8_t bytes[8])
 {
     //ASC1 message data 0x153
     /*
@@ -422,8 +422,6 @@ void BMW_E39::DecodeCAN(int id, uint32_t* data)
 
     Byte 7 - ASC ALIVE
     */
-
-    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
     if (id == 0x153)// ASC1 contains road speed signal.
     {

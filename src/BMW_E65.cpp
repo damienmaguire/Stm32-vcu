@@ -30,25 +30,25 @@ void BMW_E65::SetCanInterface(CanHardware* c)
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////Handle incomming pt can messages from the car here
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void BMW_E65::DecodeCAN(int id, uint32_t* data)
+void BMW_E65::DecodeCAN(int id, const uint8_t bytes[8])
 {
 
     switch (id)
     {
     case 0x130:
-        BMW_E65::handle130(data);
+        BMW_E65::handle130(bytes);
         break;
 
     case 0x1A0:
-        BMW_E65::handle1A0(data);
+        BMW_E65::handle1A0(bytes);
         break;
 
     case 0x2FC:
-        BMW_E65::handle2FC(data);
+        BMW_E65::handle2FC(bytes);
         break;
 
     case 0x480:
-        BMW_E65::handle480(data);
+        BMW_E65::handle480(bytes);
         break;
 
     default:
@@ -56,9 +56,8 @@ void BMW_E65::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void BMW_E65::handle130(uint32_t data[2])
+void BMW_E65::handle130(const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;
     /*
         if ((bytes[0] == 0x45) || (bytes[0] == 0x55))
         {
@@ -107,17 +106,14 @@ void BMW_E65::handle130(uint32_t data[2])
     }
 }
 
-void BMW_E65::handle1A0(uint32_t data[2])
+void BMW_E65::handle1A0(const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;
-
     float kph = (bytes[0] + uint16_t((bytes[1]&0x0F)<<8)) * 0.1;
     Param::SetFloat(Param::Veh_Speed, kph * 0.621371f);
 }
 
-void BMW_E65::handle2FC(uint32_t data[2])
+void BMW_E65::handle2FC(const uint8_t bytes[8])
 {
-    uint8_t* bytes = (uint8_t*)data;
     if (bytes[0] == 0x84)//Locked
     {
         Param::SetInt(Param::VehLockSt,1);
@@ -128,10 +124,9 @@ void BMW_E65::handle2FC(uint32_t data[2])
     }
 }
 
-void BMW_E65::handle480(uint32_t data[2])
-{
-    uint8_t* bytes = (uint8_t*)data;
 
+void BMW_E65::handle480(const uint8_t bytes[8])
+{
     if (bytes[1] == 0x32)
     {
         CANWake = false;

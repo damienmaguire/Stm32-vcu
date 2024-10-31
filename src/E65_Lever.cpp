@@ -28,8 +28,10 @@ void E65_Lever::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x192);//GWS status msg. Contains info on buttons pressed and lever location.
 }
 
-void E65_Lever::DecodeCAN(int id, uint32_t* data)
+void E65_Lever::DecodeCAN(int id, const uint8_t bytes[8])
 {
+    uint32_t* data = (uint32_t*)bytes;
+
     if (id == 0x192)
     {
         uint32_t GLeaver = data[0] & 0x00ffffff;  //unsigned int to contain result of message 0x192. Gear selector lever position

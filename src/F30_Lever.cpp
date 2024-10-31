@@ -93,9 +93,8 @@ remainder = remainder^final;
 }
 
 
-void F30_Lever::DecodeCAN(int id, uint32_t* data)
+void F30_Lever::DecodeCAN(int id, const uint8_t bytes[8])
 {
-   uint8_t* bytes = (uint8_t*)data;
    if (id == 0x197)
    {
      Up1 = false;

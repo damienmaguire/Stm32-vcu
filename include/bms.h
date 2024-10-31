@@ -38,7 +38,7 @@
 class BMS
 {
    public:
-      virtual void DecodeCAN(int, uint8_t *) {};
+      virtual void DecodeCAN(int, const uint8_t[8]) {};
       virtual void DeInit() {};
       virtual float MaxChargeCurrent() { return 9999.0; };
       virtual void Task100Ms() {

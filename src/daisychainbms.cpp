@@ -76,7 +76,7 @@ float DaisychainBMS::MaxChargeCurrent()
 }
 
 // Process voltage and temperature message from TI Daisychain BMS.
-void DaisychainBMS::DecodeCAN(int id, uint8_t *data)
+void DaisychainBMS::DecodeCAN(int id, const uint8_t data[8])
 {
    int bms = -1;
    if (id == 0x4f1) bms = 0;
