@@ -546,30 +546,16 @@ static void Ms10Task(void)
 
     selectedInverter->SetTorque(torquePercent);
 
-    //Brake light based on regen being below the set threshold !! this logic needs verifying
-    if(Param::GetInt(Param::reversemotor) == 0)
+
+    if(Param::GetInt(Param::potnom) < Param::GetInt(Param::RegenBrakeLight))
     {
-        if((torquePercent * requestedDirection) < Param::GetFloat(Param::RegenBrakeLight))//if reverse we flip signs of torque, so multiply by direction- reverse is -1
-        {
-            //enable Brake Light Ouput
-            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
-        }
-        else
-        {
-            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
-        }
+        Param::SetInt(Param::BrkVacVal,torquePercent*requestedDirection*-1);
+        //enable Brake Light Ouput
+        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
     }
-    else //Motor torques flipped so need to flip again
+    else
     {
-        if((torquePercent * requestedDirection) < Param::GetFloat(Param::RegenBrakeLight))//if reverse we flip signs of torque, so multiply by direction- reverse is -1, reversed again for MotRev
-        {
-            //enable Brake Light Ouput
-            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
-        }
-        else
-        {
-            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
-        }
+        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
     }
 
     //speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface NO ABS allowed on speed as we need to know direction
