@@ -143,7 +143,7 @@ ifneq ($(shell test -s libopencm3/lib/libopencm3_stm32f1.a && echo -n yes),yes)
 	@printf "  GIT SUBMODULE\n"
 	$(Q)git submodule update --init
 	@printf "  MAKE libopencm3\n"
-	$(Q)${MAKE} -C libopencm3
+	$(Q)${MAKE} -C libopencm3 TARGETS=stm32/f1
 endif
 
 Test:
