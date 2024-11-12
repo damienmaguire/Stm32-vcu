@@ -137,7 +137,7 @@ days=0,
 hours=0, minutes=0, seconds=0,
 alarm=0;			// != 0 when alarm is pending
 
-static uint8_t rlyDly=25;
+static uint16_t rlyDly=25;
 
 // Instantiate Classes
 static BMW_E31 e31Vehicle;
@@ -609,6 +609,7 @@ static void Ms10Task(void)
             {
                 StartSig=true;
                 opmode = MOD_PRECHARGE;//proceed to precharge if 1)throttle not pressed , 2)ign on , 3)start signal rx
+                rlyDly=25;//Recharge sequence timer
                 vehicleStartTime = rtc_get_counter_val();
                 initbyStart=true;
             }
@@ -616,11 +617,11 @@ static void Ms10Task(void)
         if(chargeMode)
         {
             opmode = MOD_PRECHARGE;//proceed to precharge if charge requested.
+            rlyDly=25;//Recharge sequence timer
             vehicleStartTime = rtc_get_counter_val();
             initbyCharge=true;
         }
         Param::SetInt(Param::opmode, opmode);
-        rlyDly=25;//Recharge sequence timer
         break;
 
     case MOD_PRECHARGE:
@@ -677,10 +678,13 @@ static void Ms10Task(void)
         if(rlyDly==0)
         {
             DigIo::dcsw_out.Set();
-            rlyDly=25;//Recharge sequence timer
         }
         ErrorMessage::UnpostAll();
-        if(!chargeMode) opmode = MOD_OFF;
+        if(!chargeMode)		
+		{
+			opmode = MOD_OFF;
+			rlyDly=250;//Recharge sequence timer for delayed shutdown
+		}
         Param::SetInt(Param::opmode, opmode);
         break;
 
@@ -690,11 +694,14 @@ static void Ms10Task(void)
         {
             DigIo::dcsw_out.Set();
             DigIo::inv_out.Set();//inverter power on
-            rlyDly=25;//Recharge sequence timer
         }
         Param::SetInt(Param::opmode, MOD_RUN);
         ErrorMessage::UnpostAll();
-        if(!selectedVehicle->Ready()) opmode = MOD_OFF;
+        if(!selectedVehicle->Ready())
+		{
+			opmode = MOD_OFF;
+			rlyDly=250;//Recharge sequence timer for delayed shutdown
+		}
         Param::SetInt(Param::opmode, opmode);
         break;
     }
