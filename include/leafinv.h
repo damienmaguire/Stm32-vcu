@@ -35,7 +35,7 @@ public:
    void SetTorque(float torque);
    float GetMotorTemperature() { return motor_temp; }
    float GetInverterTemperature() { return inv_temp; }
-   float GetInverterVoltage() { return voltage / 2; }
+   float GetInverterVoltage() { return voltage; }
    float GetMotorSpeed() { return speed; }
    int GetInverterState() { return error; }
    void SetCanInterface(CanHardware* c);
