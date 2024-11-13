@@ -35,12 +35,13 @@ static uint8_t counter_55b=0;
 static uint8_t counter_1d4=0;
 static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
-static bool OBCwake = false;
 static bool PPStat = false;
 static uint8_t OBCVoltStat=0;
 static uint8_t PlugStat=0;
 static uint16_t calcBMSpwr=0;
 static bool BMSspoof = true;
+static uint8_t OBCAvailPwr = 0;
+static uint8_t OBCActPwr = 0;
 
 /*Info on running Leaf Gen 2,3 PDM
 IDs required :
@@ -93,42 +94,99 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
-    if (id == 0x679)// THIS MSG FIRES ONCE ON CHARGE PLUG INSERT
-    {
-        uint8_t dummyVar = bytes[0];
-        dummyVar = dummyVar;
-        OBCwake = true;             //0x679 is received once when we plug in if pdm is asleep so wake wakey...
-    }
-
-    else if (id == 0x390)// THIS MSG FROM PDM
+    if (id == 0x390)// THIS MSG FROM PDM
     {
         OBCVoltStat = (bytes[3] >> 3) & 0x03;
+
+        if(OBCVoltStat == 0x1)
+        {
+            Param::SetInt(Param::AC_Volts,110);
+        }
+        else if(OBCVoltStat == 0x2)
+        {
+            Param::SetInt(Param::AC_Volts,230);
+        }
+        else
+        {
+            Param::SetInt(Param::AC_Volts,0);
+        }
+
+        OBCActPwr = bytes[1]; //Power in 0.1kW
+        OBCAvailPwr = bytes[6]; //Power in 0.1kW
+
         PlugStat = bytes[5] & 0x0F;
         if(PlugStat == 0x08) PPStat = true; //plug inserted
         if(PlugStat == 0x00) PPStat = false; //plug not inserted
+
+        Param::SetInt(Param::PlugDet,PPStat);
     }
 }
 
-bool NissanPDM::ControlCharge(bool RunCh, bool ACReq)
+bool NissanPDM::ControlCharge(bool RunCh, bool ACReq) //Modeled off of Outlander Charger
 {
     bool dummy=RunCh;
     dummy=dummy;
 
-    int opmode = Param::GetInt(Param::opmode);
-    if(opmode != MOD_CHARGE)
+    int chgmode = Param::GetInt(Param::interface);
+    switch(chgmode)
     {
-        if(ACReq && OBCwake)
+    case Unused:
+        if(PPStat && ACReq)
         {
-            //OBCwake = false;//reset obc wake for next time
             return true;
         }
-    }
+        else
+        {
+            return false;
+        }
 
-    if(PPStat && ACReq) return true;
-    if(!PPStat || !ACReq)
-    {
-        OBCwake = false;
-        return false;
+        break;
+
+    case i3LIM:
+        if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+        break;
+
+    case CPC:
+        if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+        break;
+
+    case Focci:
+        if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+        break;
+
+    case Chademo:
+        if (RunCh && ACReq)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+        break;
+
     }
     return false;
 }
@@ -150,6 +208,9 @@ void NissanPDM::Task10Ms()
 
     if (opmode == MOD_CHARGE) //ONLY send when charging else sent by leafinv.cpp
     {
+
+
+
         /////////////////////////////////////////////////////////////////////////////////////////////////
         // CAN Message 0x1D4: Target Motor Torque
 
@@ -412,6 +473,9 @@ void NissanPDM::Task100Ms()
 
         can->Send(0x5bc, (uint32_t*)bytes, 8);
     }
+
+    Param::SetInt(Param::PilotLim,float(OBCAvailPwr/2.25));
+
 }
 
 
