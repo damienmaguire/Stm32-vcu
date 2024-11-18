@@ -82,7 +82,7 @@ void KangooBMS::DecodeCAN(int id, uint8_t *data)
    } else if (id == 0x425) {
       minCellV = (((float)(((data[6] & 0x01) << 8) + data[7]) + 100) * 10);
       maxCellV = ((float)(((data[4] & 0x03) << 7) + ((data[5] >> 1) + 100)) * 10);
-      remainingKHW = (float)(data[1] * 0.1);
+      remainingKHW = (float)((((data[0] & 0x01) << 8) + data[1]) * 0.1);
 
       isolationResistance = data[4] >> 2;
       isolationResistance = isolationResistance + (data[3] << 6);
