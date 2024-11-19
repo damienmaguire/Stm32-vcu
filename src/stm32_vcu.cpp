@@ -1,6 +1,7 @@
 /*
  * This file is part of the ZombieVerter project.
  *
+ * Copyright (C) 2024 Tom de Bree <tom@voltinflux.com>
  * Copyright (C) 2010 Johannes Huebner <contact@johanneshuebner.com>
  * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
  * Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
@@ -438,7 +439,10 @@ static void Ms100Task(void)
         ACrequest=selectedChargeInt->ACRequest(RunChg);
     }
 
-    Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+    if (IOMatrix::GetPin(IOMatrix::HEATREQ) != &DigIo::dummypin)
+    {
+        Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+    }
 
     DigiPot::SetPot1Step(); //just for dev
     DigiPot::SetPot2Step(); //just for dev
@@ -680,11 +684,11 @@ static void Ms10Task(void)
             DigIo::dcsw_out.Set();
         }
         ErrorMessage::UnpostAll();
-        if(!chargeMode)		
-		{
-			opmode = MOD_OFF;
-			rlyDly=250;//Recharge sequence timer for delayed shutdown
-		}
+        if(!chargeMode)
+        {
+            opmode = MOD_OFF;
+            rlyDly=250;//Recharge sequence timer for delayed shutdown
+        }
         Param::SetInt(Param::opmode, opmode);
         break;
 
@@ -698,10 +702,10 @@ static void Ms10Task(void)
         Param::SetInt(Param::opmode, MOD_RUN);
         ErrorMessage::UnpostAll();
         if(!selectedVehicle->Ready())
-		{
-			opmode = MOD_OFF;
-			rlyDly=250;//Recharge sequence timer for delayed shutdown
-		}
+        {
+            opmode = MOD_OFF;
+            rlyDly=250;//Recharge sequence timer for delayed shutdown
+        }
         Param::SetInt(Param::opmode, opmode);
         break;
     }

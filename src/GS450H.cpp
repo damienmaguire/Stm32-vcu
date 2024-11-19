@@ -1,3 +1,23 @@
+/*
+ * This file is part of the ZombieVerter project.
+ *
+ * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
+ * Changes by Tom de Bree <tom@voltinflux.com> 2024
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "GS450H.h"
 #include "hwinit.h"
 #include "temp_meas.h"
@@ -318,10 +338,9 @@ void GS450HClass::GS450Houtput()//!!! should be ran every 10ms
 
     if (Param::GetInt(Param::opmode) == MOD_RUN)
     {
-
-        Param::SetInt(Param::Gear1,!DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
-        Param::SetInt(Param::Gear2,!DigIo::gear2_in.Get());
-        Param::SetInt(Param::Gear3,!DigIo::gear3_in.Get());
+        Param::SetInt(Param::Gear1,DigIo::gear1_in.Get());//update web interface with status of gearbox PB feedbacks for diag purposes.
+        Param::SetInt(Param::Gear2,DigIo::gear2_in.Get());
+        Param::SetInt(Param::Gear3,DigIo::gear3_in.Get());
         GearSW=((!DigIo::gear3_in.Get()<<2)|(!DigIo::gear2_in.Get()<<1)|(!DigIo::gear1_in.Get()));
         if(GearSW==6) Param::SetInt(Param::GearFB,LOW_Gear);// set low gear
         if(GearSW==5) Param::SetInt(Param::GearFB,HIGH_Gear);// set high gear
