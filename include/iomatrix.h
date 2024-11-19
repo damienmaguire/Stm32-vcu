@@ -2,6 +2,7 @@
  * This file is part of the tumanako_vc project.
  *
  * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
+ * Changes by Tom de Bree <tom@voltinflux.com> 2024
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +47,7 @@ class IOMatrix
 
    private:
       static DigIo* functionToPin[LAST];
-      static const int numPins = 10;
+      static const int numPins = 13;
       static DigIo* const paramToPin[numPins];
 
       static AnaIn* functionToPinAnalgoue[LAST_ANAL];

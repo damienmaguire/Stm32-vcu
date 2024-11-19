@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011-2019 Johannes Huebner <dev@johanneshuebner.com>
  * Copyright (C) 2019-2022 Damien Maguire <info@evbmw.com>
+ * Changes by Tom de Bree <tom@voltinflux.com> 2024
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.20.TN
+#define VER 2.20.TP1
 
 
 /* Entries must be ordered as follows:
@@ -127,7 +128,10 @@
     PARAM_ENTRY(CAT_IOPINS,    PWM2Func,    PINFUNCS,  0,      18,     4,      86 ) \
     PARAM_ENTRY(CAT_IOPINS,    PWM3Func,    PINFUNCS,  0,      18,     2,      87 ) \
     PARAM_ENTRY(CAT_IOPINS,    GP12VInFunc, PINFUNCS,  0,      13,     12,     98 ) \
-    PARAM_ENTRY(CAT_IOPINS,    HVReqFunc,   PINFUNCS,  0,      13,     11,     99 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PB1InFunc,   PINFUNCS,  0,      13,     12,     140 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PB2InFunc,   PINFUNCS,  0,      13,     12,     141 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PB3InFunc,   PINFUNCS,  0,      13,     12,     142 ) \
+    PARAM_ENTRY(CAT_IOPINS,    HVReqFunc,   PINFUNCS,  0,      13,     12,     99 ) \
     PARAM_ENTRY(CAT_IOPINS,    GPA1Func,    APINFUNCS, 0,      2,      0,      110 ) \
     PARAM_ENTRY(CAT_IOPINS,    GPA2Func,    APINFUNCS, 0,      2,      0,      111 ) \
     PARAM_ENTRY(CAT_IOPINS,    ppthresh,    "dig",     0,      4095,   2500,   114 ) \
@@ -317,6 +321,7 @@
 #define CAN_PERIOD_10MS     1
 
 #define FIRST_IO_PARAM Param::Out1Func
+#define SEC_IO_PARAM Param::PB1InFunc
 #define FIRST_AI_PARAM Param::GPA1Func
 enum modes
 {
