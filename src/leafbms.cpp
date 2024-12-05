@@ -2,6 +2,7 @@
  * This file is part of the tumanako_vc project.
  *
  * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
+ *               2024 Daniel Öster <info@dalasevrepair.fi>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,14 +22,22 @@
 #include "my_fp.h"
 #include "my_math.h"
 
+#define ZE0_BATTERY 0 //2011-2013 ZE0
+#define AZE0_BATTERY 1 //2013-2017 AZE0
+#define ZE1_BATTERY 2 //2018+ ZE1
+static uint8_t LEAF_battery_Type = ZE0_BATTERY;
+static int temperature = 0;
+
 void LeafBMS::SetCanInterface(CanHardware* can)
 {
     can->RegisterUserMessage(0x1DB);//Leaf BMS message 10ms
     can->RegisterUserMessage(0x1DC);//Leaf BMS message 10ms
     can->RegisterUserMessage(0x55B);//Leaf BMS message 100ms
-    can->RegisterUserMessage(0x5BC);//Leaf BMS message 100ms
+    can->RegisterUserMessage(0x5BC);//Leaf BMS message 100ms (500ms on ZE0)
     //can->RegisterUserMessage(0x5C0);//Leaf BMS message 500ms
-    //can->RegisterUserMessage(0x59E);//Leaf BMS message 500ms
+    //can->RegisterUserMessage(0x59E);//Leaf BMS message 500ms (Only on AZE0)
+    can->RegisterUserMessage(0x1C2);//Leaf BMS message 10ms (ZE1)
+    can->RegisterUserMessage(0x1ED);//Leaf BMS message 10ms (ZE1, only on 62kWh)
 }
 
 void LeafBMS::DecodeCAN(int id, uint8_t * data)
@@ -42,8 +51,6 @@ void LeafBMS::DecodeCAN(int id, uint8_t * data)
         uint16_t udc = uint16_t(bytes[2] << 2) + uint16_t(bytes[3] >>6);
         //bool interlock = (bytes[3] & (1 << 3)) >> 3;
         //bool full = (bytes[3] & (1 << 4)) >> 4;
-
-
 
         if (Param::GetInt(Param::ShuntType) == 0)//Only populate if no shunt is used
         {
@@ -102,24 +109,42 @@ void LeafBMS::DecodeCAN(int id, uint8_t * data)
 
             //Param::SetInt(Param::chgtime, time);
         }
+        
 
         //Param::SetInt(Param::soh, soh);
         */
-        int tmpbat = bytes[3];
-        tmpbat -= 40;
-        Param::SetInt(Param::BMS_Tavg, tmpbat);
+        //0x5BC only contains average battery temperature on ZE0
+        if (LEAF_battery_Type == ZE0_BATTERY) { 
+            temperature = (bytes[3] - 40);
+            Param::SetInt(Param::BMS_Tavg, temperature);
+        }
     }
     else if (id == 0x5C0)
     {
-        /*
-        //int dtc = bytes[7];
-
-        if ((bytes[0] >> 6) == 1) //maximum
-        {
-            int tmpbat = bytes[2] >> 1;
-            tmpbat -= 40;
-            Param::SetInt(Param::tmpaux, tmpbat);
+      //This temperature only works for 2013-2017 AZE0 LEAF packs, the mux is different on other generations
+      if (LEAF_battery_Type == AZE0_BATTERY) {
+        if ((bytes[0] >> 6) == 1) {  // Mux signalling MAX value 
+          temperature = ((bytes[2] / 2) - 40); //Effectively has only 7-bit precision, bottom bit is always 0
+          Param::SetInt(Param::BMS_Tavg, temperature);
         }
-        */
+      }
+    }
+    else if (id == 0x59E)
+    {
+      //AZE0 2013-2017 or ZE1 2018-2023 battery detected
+      //Only detect as AZE0 if not already set as ZE1
+      if (LEAF_battery_Type != ZE1_BATTERY) {
+        LEAF_battery_Type = AZE0_BATTERY;
+      }
+    }
+    else if (id == 0x1C2)
+    {
+      //ZE1 2018-2023 battery detected!
+      LEAF_battery_Type = ZE1_BATTERY;
+    }
+    else if (id == 0x1ED)
+    {
+      //ZE1 62kWh battery detected!
+      LEAF_battery_Type = ZE1_BATTERY;
     }
 }
