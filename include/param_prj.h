@@ -288,7 +288,7 @@
 #define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, 6=Elcon"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Focci"
-#define CAN3SPD      "0=k33.3, 1=k500. 2=k100"
+#define CAN3SPD      "0=k33.3, 1=k500, 2=k100"
 #define TRNMODES     "0=Manual, 1=Auto"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
@@ -309,13 +309,7 @@
 #define CAT_PWM      "PWM Control"
 #define MotorsAct    "0=Mg1and2, 1=Mg1, 2=Mg2, 3=BlendingMG2and1"
 #define PumpOutType  "0=GS450hOil, 1=TachoOut"
-#define LIMITREASON  "0=None, 1=UDClimLow, 2=UDClimHigh, 3=UDClimHigh+UDClimHigh, 4=IDClimLow, 5=UDClimLow+IDClimLow, 6=UDClimHigh+IDClimLow,"\
-                     "7=UDClimLow+UDClimHigh+IDClimLow, 8=IDClimHigh, 9=UDClimLow+IDClimHigh, 10=UDClimHigh+IDClimHigh, 11=UDClimHigh+UDClimHigh+IDClimHigh,"\
-                     "12=IDClimLow+IDClimHigh, 13=UDClimHigh+IDClimLow+IDClimHigh 14=UDClimHigh+IDClimLow+IDClimHigh, 15=UDClimLow+UDClimHigh+IDClimLow+IDClimHigh,"\
-                     "16=TempLim, 17=UDClimLow+TempLim, 18=UDClimHigh+TempLim, 19=UDClimHigh+UDClimHigh+TempLim, 20=IDClimLow+TempLim, 21=UDClimLow+IDClimLow+TempLim,"\
-                     "22=UDClimHigh+IDClimLow+TempLim, 23=UDClimLow+UDClimHigh+IDClimLow+TempLim, 24=IDClimHigh+TempLim, 25=UDClimLow+IDClimHigh+TempLim,"\
-                     "26=UDClimHigh+IDClimHigh+TempLim, 27=UDClimHigh+UDClimHigh+IDClimHigh+TempLim, 28=IDClimLow+IDClimHigh+TempLim,"\
-                     "29=UDClimHigh+IDClimLow+IDClimHigh+TempLim, 30=UDClimHigh+IDClimLow+IDClimHigh+TempLim,31=UDClimLow+UDClimHigh+IDClimLow+IDClimHigh+TempLim"
+#define LIMITREASON  "0=None, 1=UDClimLow, 2=UDClimHigh, 4=IDClimLow, 8=IDClimHigh, 16=TempLim"
 
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
