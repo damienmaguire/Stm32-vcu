@@ -54,8 +54,8 @@
     PARAM_ENTRY(CAT_THROTTLE,  pot2max,     "dig",     0,      4095,   4095,   10 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenrpm,    "rpm",    100,      10000,    1500,     60 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenendrpm,"rpm",     100,      10000,  100,  126 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regenmax,     "%",     -30,   0,     -10,     61 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  regenBrake,    "%",    -30,   0,     -10,     122 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenmax,     "%",     -35,   0,     -10,     61 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  regenBrake,    "%",    -35,   0,     -10,     122 ) \
     PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    1,    68 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmode,     POTMODES,  0,      1,      0,      11 ) \
     PARAM_ENTRY(CAT_THROTTLE,  dirmode,     DIRMODES,  0,      4,      1,      12 ) \
