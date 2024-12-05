@@ -28,11 +28,8 @@
 
 static uint16_t Vbatt=0;
 static uint16_t VbattSP=0;
-static uint8_t counter_1db=0;
-static uint8_t counter_1dc=0;
-static uint8_t counter_1f2=0;
-static uint8_t counter_55b=0;
-static uint8_t counter_1d4=0;
+static uint8_t mprun10=0;
+static uint8_t mprun100=0;
 static uint8_t OBCpwrSP=0;
 static uint8_t OBCpwr=0;
 static bool PPStat = false;
@@ -205,6 +202,7 @@ void NissanPDM::Task10Ms()
     }
 
     uint8_t bytes[8];
+    mprun10 = (mprun10 + 1) % 4; // mprun10 cycles between 0-1-2-3-0-1...
 
     if (opmode == MOD_CHARGE) //ONLY send when charging else sent by leafinv.cpp
     {
@@ -234,12 +232,9 @@ void NissanPDM::Task10Ms()
         //   3: Precharging (0.4%)
         //   5: Starting discharge (3x10ms) (2.0%)
         //   7: Precharged (93%)
-        bytes[4] = 0x07 | (counter_1d4 << 6);
-        //bytes[4] = 0x02 | (counter_1d4 << 6);
+        bytes[4] = 0x07 | (mprun10 << 6);
+        //bytes[4] = 0x02 | (mprun10 << 6);
         //Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
-
-        counter_1d4++;
-        if(counter_1d4 >= 4) counter_1d4 = 0;
 
         // MSB nibble:
         //   0: 35-40ms at startup when gear is 0, then at shutdown 40ms
@@ -292,14 +287,10 @@ void NissanPDM::Task10Ms()
         bytes[3] = ((TMP_battV & 0xC0) | (0x2b)); //0x2b should give no cut req, main rly on permission,normal p limit.
         bytes[4] = 0x40;  //SOC for dash in Leaf. fixed val.
         bytes[5] = 0x00;
-        bytes[6] = counter_1db;
+        bytes[6] = mprun10;
 
         // Extra CRC in byte 7
         nissan_crc(bytes, 0x85);
-
-
-        counter_1db++;
-        if(counter_1db >= 4) counter_1db = 0;
 
         can->Send(0x1DB, (uint32_t*)bytes, 8);
     }
@@ -315,7 +306,7 @@ void NissanPDM::Task10Ms()
     //    513 000006c0000000
 
     // Let's just send the most common one all the time
-    // FIXME: This is a very sloppy implementation. Thanks. I try:)
+    // FIXME: This is a very sloppy implementation. Thanks. I try:) Dala: This message is not 10ms, it is 100ms
     bytes[0] = 0x00;
     bytes[1] = 0x00;
     bytes[2] = 0x06;
@@ -341,13 +332,9 @@ void NissanPDM::Task10Ms()
         bytes[3]=0xD5;
         bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
         bytes[5]=0x00;
-        bytes[6]=counter_1dc;
+        bytes[6]=mprun10;
         // Extra CRC in byte 7
         nissan_crc(bytes, 0x85);
-
-        counter_1dc++;
-        if (counter_1dc >= 4)
-            counter_1dc = 0;
 
         can->Send(0x1DC, (uint32_t*)bytes, 8);
     }
@@ -405,14 +392,8 @@ void NissanPDM::Task10Ms()
     bytes[3] = 0xAC;
     bytes[4] = 0x00;
     bytes[5] = 0x3C;
-    bytes[6] = counter_1f2;
+    bytes[6] = mprun10;
     bytes[7] = 0x8F;  //may not need checksum here?
-
-    counter_1f2++;
-    if (counter_1f2 >= 4)
-    {
-        counter_1f2 = 0;
-    }
 
     can->Send(0x1F2, (uint32_t*)bytes, 8);
 }
@@ -423,6 +404,7 @@ void NissanPDM::Task100Ms()
 
     // MSGS for charging with pdm
     uint8_t bytes[8];
+    mprun100 = (mprun100 + 1) % 4; // mprun100 cycles between 0-1-2-3-0-1...
 
     if(BMSspoof)
     {
@@ -435,12 +417,9 @@ void NissanPDM::Task100Ms()
         bytes[3] = 0x00;
         bytes[4] = 0xDF;
         bytes[5] = 0xC0;
-        bytes[6] = ((0x1 << 4) | (counter_55b));
+        bytes[6] = ((0x1 << 4) | (mprun100));
         // Extra CRC in byte 7
         nissan_crc(bytes, 0x85);
-
-        counter_55b++;
-        if(counter_55b >= 4) counter_55b = 0;
 
         can->Send(0x55b, (uint32_t*)bytes, 8);
 
