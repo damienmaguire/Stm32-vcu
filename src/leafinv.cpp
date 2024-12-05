@@ -161,9 +161,7 @@ void LeafINV::Task10Ms()
     bytes[4] = weird_d34_values[mprun10][1];//0xC0;
     bytes[5] = 0x00;  // Always 0x00 (LeafLogs, canmsgs)
     bytes[6] = mprun10;     // A 2-bit counter
-
-    // Extra CRC
-    nissan_crc(bytes, 0x85);//not sure if this is really working or just making me look like a muppet.
+    bytes[7] = nissan_crc(bytes);
 
     can->Send(0x11A, (uint32_t*)bytes, 8);
 
@@ -303,9 +301,7 @@ void LeafINV::Task10Ms()
     // 2016-24kWh-ev-on-drive-park-off.pcap #12101 / 15.63s
     // outFrame.data.bytes[6] = 0x01;
     //byte 6 brake signal
-
-    // Extra CRC
-    nissan_crc(bytes, 0x85);
+    bytes[7] = nissan_crc(bytes);
 
     can->Send(0x1D4, (uint32_t*)bytes, 8);//send on can1
 
@@ -335,9 +331,7 @@ void LeafINV::Task10Ms()
         bytes[4] = 0x40;  //SOC for dash in Leaf. fixed val.
         bytes[5] = 0x00;
         bytes[6] = mprun10;
-
-        // Extra CRC in byte 7
-        nissan_crc(bytes, 0x85);
+        bytes[7] = nissan_crc(bytes);
 
         can->Send(0x1DB, (uint32_t*)bytes, 8);
     }
@@ -357,8 +351,7 @@ void LeafINV::Task10Ms()
         bytes[4]=0x00;//may not need pairing code crap here...and we don't:)
         bytes[5]=0x00;
         bytes[6]=mprun10;
-        // Extra CRC in byte 7
-        nissan_crc(bytes, 0x85);
+        bytes[7] = nissan_crc(bytes);
 
         can->Send(0x1DC, (uint32_t*)bytes, 8);
     }
@@ -456,8 +449,7 @@ void LeafINV::Task100Ms()
         bytes[4] = 0xDF;
         bytes[5] = 0xC0;
         bytes[6] = ((0x1 << 4) | (mprun100));
-        // Extra CRC in byte 7
-        nissan_crc(bytes, 0x85);
+        bytes[7] = nissan_crc(bytes);
 
         can->Send(0x55b, (uint32_t*)bytes, 8);
 
@@ -505,21 +497,20 @@ int8_t LeafINV::fahrenheit_to_celsius(uint16_t fahrenheit)
 
 
 
-void LeafINV::nissan_crc(uint8_t *data, uint8_t polynomial)
+uint8_t LeafINV::nissan_crc(uint8_t *data)
 {
-    // We want to process 8 bytes with the 8th byte being zero
-    data[7] = 0;
     uint8_t crc = 0;
-    for(int b=0; b<8; b++)
-    {
-        for(int i=7; i>=0; i--)
-        {
-            uint8_t bit = ((data[b] &(1 << i)) > 0) ? 1 : 0;
-            if(crc >= 0x80)
+    uint8_t polynomial = 0x85;
+
+    for (int b = 0; b < 8; b++) {
+        uint8_t byte = (b == 7) ? 0 : data[b]; // Treat 8th byte as 0 during calculation.
+        for (int i = 7; i >= 0; i--) {
+            uint8_t bit = ((byte & (1 << i)) > 0) ? 1 : 0;
+            if (crc >= 0x80)
                 crc = (uint8_t)(((crc << 1) + bit) ^ polynomial);
             else
                 crc = (uint8_t)((crc << 1) + bit);
         }
     }
-    data[7] = crc;
+    return crc;
 }
