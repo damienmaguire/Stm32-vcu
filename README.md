@@ -44,6 +44,10 @@ V2.05a now available.
 
 # Compiling
 You will need the arm-none-eabi toolchain: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
+On Linux this can be installed by typing:
+
+`sudo apt install gcc-arm-none-eabi`
+
 The only external depedencies are libopencm3 and libopeninv. You can download and build this dependency by typing
 
 `make get-deps`
