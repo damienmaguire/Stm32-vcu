@@ -39,9 +39,8 @@ public:
    float GetMotorSpeed() { return speed; }
    int GetInverterState() { return error; }
    void SetCanInterface(CanHardware* c);
-
 private:
-   static void nissan_crc(uint8_t *data, uint8_t polynomial);
+   uint8_t nissan_crc(uint8_t *data);
    static int8_t fahrenheit_to_celsius(uint16_t fahrenheit);
    uint32_t lastRecv;
    int16_t speed;
