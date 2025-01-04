@@ -143,19 +143,26 @@ void FocciClass::handle357(uint32_t data[2])  //FOCCI Charge Port Info
     if(ChargePort_Status == 0x03)//check ac connected and ready to charge
     {
         ChargePort_ReadyCharge = true;
+        Param::SetInt(Param::chgtyp,1);
     }
     else
     {
         ChargePort_ReadyCharge = false;
+        Param::SetInt(Param::chgtyp,0);
     }
 
     if(ChargePort_Status == 0x04)//check DC connected and ready to attempt charge
     {
         ChargePort_ReadyDCFC = true;
+        Param::SetInt(Param::chgtyp,2);
     }
     else
     {
         ChargePort_ReadyDCFC = false;
+        if(ChargePort_ReadyCharge == false)//if not AC charging
+        {
+        Param::SetInt(Param::chgtyp,0);
+        }
     }
 
 
