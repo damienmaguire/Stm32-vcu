@@ -83,7 +83,7 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
         }
         break;
 
-    case Focci:
+    case Foccci:
         if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
         {
             clearToStart=true;

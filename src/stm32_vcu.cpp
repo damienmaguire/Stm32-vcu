@@ -91,10 +91,11 @@
 #include "JLR_G2.h"
 #include "no_Lever.h"
 #include "CPC.h"
-#include "Focci.h"
+#include "Foccci.h"
 #include "NoInverter.h"
 #include "linbus.h"
-#include "VWheater.h"
+#include "VWCoolantHeater.h"
+#include "VWAirHeater.h"
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
 #include "NoVehicle.h"
@@ -102,6 +103,7 @@
 #include "kangoobms.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
+#include "MGCoolantHeater.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -159,7 +161,7 @@ static outlanderCharger outChg;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
-static FocciClass Foccican;
+static FoccciClass Focccican;
 static Can_OI openInv;
 static NoInverterClass NoInverter;
 static OutlanderInverter outlanderInv;
@@ -171,7 +173,9 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
-static vwHeater heaterVW;
+static vwCoolantHeater heaterCoolantVW;
+static mgCoolantHeater heaterCoolantMG;
+static vwAirHeater heaterAirVW;
 static NoVehicle VehicleNone;
 static V_Classic classVehicle;
 static Inverter* selectedInverter = &openInv;
@@ -278,7 +282,7 @@ static void Ms200Task(void)
     //in chademo , we do not want to run the 200ms task unless in dc charge mode
     if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
     //In case of the LIM we want to send it all the time if lim in use
-    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)|| (targetChgint == ChargeInterfaces::Focci)) selectedChargeInt->Task200Ms();
+    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)|| (targetChgint == ChargeInterfaces::Foccci)) selectedChargeInt->Task200Ms();
     //and just to be thorough ...
     if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
 
@@ -419,7 +423,7 @@ static void Ms100Task(void)
     int32_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
 
-    if(targetChgint == ChargeInterfaces::i3LIM || targetChgint == ChargeInterfaces::Focci || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
+    if(targetChgint == ChargeInterfaces::i3LIM || targetChgint == ChargeInterfaces::Foccci || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
 
     if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
     {
@@ -856,8 +860,8 @@ static void UpdateChargeInt()
     case ChargeInterfaces::CPC:
         selectedChargeInt = &CPCcan;
         break;
-    case ChargeInterfaces::Focci:
-        selectedChargeInt = &Foccican;
+    case ChargeInterfaces::Foccci:
+        selectedChargeInt = &Focccican;
         break;
     }
     //This will call SetCanFilters() via the Clear Callback
@@ -876,9 +880,16 @@ static void UpdateHeater()
     case HeatType::AmpHeater:
         selectedHeater = &amperaHeater;
         break;
-    case HeatType::VW:
-        selectedHeater = &heaterVW;
-        heaterVW.SetLinInterface(lin);
+    case HeatType::VWCoolant:
+        selectedHeater = &heaterCoolantVW;
+        heaterCoolantVW.SetLinInterface(lin);
+        break;
+    case HeatType::VWAir:
+        selectedHeater = &heaterCoolantVW;
+        heaterCoolantVW.SetLinInterface(lin);
+        break;
+    case HeatType::MGCoolant:
+        selectedHeater = &heaterCoolantMG;
         break;
     case HeatType::OutlanderHeater:
         selectedHeater = &outlanderCanHeater;
