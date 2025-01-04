@@ -6,13 +6,12 @@ static uint8_t ChargePort_Plug = 0;
 static uint8_t ChargePort_Lock = 0;
 
 static bool ChargePort_ReadyCharge = false;
+static bool ChargePort_ReadyDCFC = false;
 static bool PlugPres = false;
 static bool RX_357Pres = false;
 static bool ChargeAllow = false;
 
 static uint8_t AcOBCReq = 0;
-
-static bool DcFastCharging = false;
 
 static uint8_t CP_Mode=0;
 static uint8_t Timer_1Sec=0;
@@ -144,10 +143,26 @@ void FocciClass::handle357(uint32_t data[2])  //FOCCI Charge Port Info
     if(ChargePort_Status == 0x03)//check ac connected and ready to charge
     {
         ChargePort_ReadyCharge = true;
+        Param::SetInt(Param::chgtyp,1);
     }
     else
     {
         ChargePort_ReadyCharge = false;
+        Param::SetInt(Param::chgtyp,0);
+    }
+
+    if(ChargePort_Status == 0x04)//check DC connected and ready to attempt charge
+    {
+        ChargePort_ReadyDCFC = true;
+        Param::SetInt(Param::chgtyp,2);
+    }
+    else
+    {
+        ChargePort_ReadyDCFC = false;
+        if(ChargePort_ReadyCharge == false)//if not AC charging
+        {
+        Param::SetInt(Param::chgtyp,0);
+        }
     }
 
 
@@ -221,7 +236,7 @@ void FocciClass::Task200Ms()
 
 void FocciClass::Task100Ms()
 {
-    if(DcFastCharging)
+    if(ChargePort_ReadyDCFC)
     {
         CCS_Pwr_Con(); //Calc DC current req
     }
@@ -278,8 +293,15 @@ void FocciClass::Chg_Timers()
 
 bool FocciClass::DCFCRequest(bool RunCh)
 {
+    if(ChargePort_ReadyDCFC == true)
+    {
+        return true; //Attempt DC Charging session
+    }
+    else
+    {
+        return false; //No DC Charging session
+    }
     RunCh = RunCh;
-    return false; //No DC Charging support
 }
 
 bool FocciClass::ACRequest(bool RunCh)
