@@ -704,11 +704,14 @@ void GS450HClass::Task1Ms()
 
             statusInv=0;
             //inv_status=0; Stop reinit of inverter
+            /* PART OF 2.20A Changes that stopped working
+            //inv_status=0; Stop reinit of inverter
             //set speeds to 0 to prevent dynamic throttle/regen issues
             mg1_speed=0;
             mg2_speed=0;
             //disable cruise
             Param::SetInt(Param::cruisespeed, 0);
+            */
         }
         else
         {

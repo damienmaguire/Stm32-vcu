@@ -207,6 +207,53 @@ void NissanPDM::Task10Ms()
     if (opmode == MOD_CHARGE) //ONLY send when charging else sent by leafinv.cpp
     {
 
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        // CAN Messaage 0x11A
+
+        // Data taken from a gen1 inFrame where the car is starting to
+        // move at about 10% throttle: 4E400055 0000017D
+
+        // All possible gen1 values: 00 01 0D 11 1D 2D 2E 3D 3E 4D 4E
+        // MSB nibble: Selected gear (gen1/LeafLogs)
+        //   0: some kind of non-gear before driving
+        //      0: Park in Gen 2. byte 0 = 0x01 when in park and charging
+        //   1: some kind of non-gear after driving
+        //   2: R
+        //   3: N
+        //   4: D
+        // LSB nibble: ? (LeafLogs)
+        //   0: sometimes at startup, not always; never when the
+        //      inverted is powered on (0.06%)
+        //   1: this is the usual value (55% of the time in LeafLogs)
+        //   D: seems to occur for ~90ms when changing gears (0.2%)
+        //   E: this also is a usual value, but never occurs with the
+        //      non-gears 0 and 1 (44% of the time in LeafLogs)
+
+
+        //byte 0 determines motor rotation direction
+        bytes[0] = 0x01;//Car in park when charging
+        // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
+        bytes[1] = 0x80;
+        // Usually 0x00, sometimes 0x80 (LeafLogs), 0x04 seen by canmsgs
+        bytes[2] = 0x00;
+
+        // Weird value at D3:4 that goes along with the counter
+        // NOTE: Not actually needed, you can just send constant AA C0
+        const static uint8_t weird_d34_values[4][2] =
+        {
+            {0xaa, 0xc0},
+            {0x55, 0x00},
+            {0x55, 0x40},
+            {0xaa, 0x80},
+        };
+
+        bytes[3] = weird_d34_values[mprun10][0];//0xAA;
+        bytes[4] = weird_d34_values[mprun10][1];//0xC0;
+        bytes[5] = 0x00;  // Always 0x00 (LeafLogs, canmsgs)
+        bytes[6] = mprun10;     // A 2-bit counter
+        nissan_crc(bytes, 0x85);
+
+        can->Send(0x11A, (uint32_t*)bytes, 8);
 
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
