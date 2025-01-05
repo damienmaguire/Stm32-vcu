@@ -94,8 +94,7 @@
 #include "Foccci.h"
 #include "NoInverter.h"
 #include "linbus.h"
-#include "VWCoolantHeater.h"
-#include "VWAirHeater.h"
+#include "VWHeater.h"
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
 #include "NoVehicle.h"
@@ -103,7 +102,6 @@
 #include "kangoobms.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
-#include "MGCoolantHeater.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -173,9 +171,7 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
-static vwCoolantHeater heaterCoolantVW;
-static mgCoolantHeater heaterCoolantMG;
-static vwAirHeater heaterAirVW;
+static vwHeater heaterVW;
 static NoVehicle VehicleNone;
 static V_Classic classVehicle;
 static Inverter* selectedInverter = &openInv;
@@ -880,16 +876,9 @@ static void UpdateHeater()
     case HeatType::AmpHeater:
         selectedHeater = &amperaHeater;
         break;
-    case HeatType::VWCoolant:
-        selectedHeater = &heaterCoolantVW;
-        heaterCoolantVW.SetLinInterface(lin);
-        break;
-    case HeatType::VWAir:
-        selectedHeater = &heaterCoolantVW;
-        heaterCoolantVW.SetLinInterface(lin);
-        break;
-    case HeatType::MGCoolant:
-        selectedHeater = &heaterCoolantMG;
+    case HeatType::VW:
+        selectedHeater = &heaterVW;
+        heaterVW.SetLinInterface(lin);
         break;
     case HeatType::OutlanderHeater:
         selectedHeater = &outlanderCanHeater;
