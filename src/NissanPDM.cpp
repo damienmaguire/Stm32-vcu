@@ -161,7 +161,7 @@ bool NissanPDM::ControlCharge(bool RunCh, bool ACReq) //Modeled off of Outlander
         }
         break;
 
-    case Focci:
+    case Foccci:
         if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
         {
             return true;

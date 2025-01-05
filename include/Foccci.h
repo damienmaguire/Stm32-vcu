@@ -1,7 +1,7 @@
-#ifndef Focci_h
-#define Focci_h
+#ifndef Foccci_h
+#define Foccci_h
 
-/*  This library supports the Focci
+/*  This library supports the Foccci
 https://github.com/uhi22/foccci
 https://github.com/uhi22/ccs32clara
 	2024 - Tom de Bree
@@ -16,7 +16,7 @@ https://github.com/uhi22/ccs32clara
 
 #define NODEID 22
 
-class FocciClass: public Chargerint
+class FoccciClass: public Chargerint
 {
 
 public:
