@@ -94,7 +94,7 @@
 #include "Foccci.h"
 #include "NoInverter.h"
 #include "linbus.h"
-#include "VWHeater.h"
+#include "VWheater.h"
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
 #include "NoVehicle.h"
