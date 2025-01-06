@@ -1,4 +1,4 @@
-#include <Focci.h>
+#include <Foccci.h>
 static uint8_t ChargePort_IsoStop = 0;
 static uint16_t ChargePort_ACLimit = 0;
 static uint8_t ChargePort_Status = 0;
@@ -6,13 +6,12 @@ static uint8_t ChargePort_Plug = 0;
 static uint8_t ChargePort_Lock = 0;
 
 static bool ChargePort_ReadyCharge = false;
+static bool ChargePort_ReadyDCFC = false;
 static bool PlugPres = false;
 static bool RX_357Pres = false;
 static bool ChargeAllow = false;
 
 static uint8_t AcOBCReq = 0;
-
-static bool DcFastCharging = false;
 
 static uint8_t CP_Mode=0;
 static uint8_t Timer_1Sec=0;
@@ -62,7 +61,7 @@ static uint8_t CanConfigRxArr[7][8]=
     {0x58,0x03,0x00,0x00,0x20,0x00,0x07,0x1}
 };
 
-void FocciClass::SetCanInterface(CanHardware* c)
+void FoccciClass::SetCanInterface(CanHardware* c)
 {
     can = c;
 
@@ -71,7 +70,7 @@ void FocciClass::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x596);
 }
 
-void FocciClass::DecodeCAN(int id, uint32_t* data)
+void FoccciClass::DecodeCAN(int id, uint32_t* data)
 {
 
     switch(id)
@@ -93,7 +92,7 @@ void FocciClass::DecodeCAN(int id, uint32_t* data)
     }
 }
 
-void FocciClass::handle109(uint32_t data[2])  //FOCCI DCFC info
+void FoccciClass::handle109(uint32_t data[2])  //FOCCCI DCFC info
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
@@ -104,7 +103,7 @@ void FocciClass::handle109(uint32_t data[2])  //FOCCI DCFC info
 
 }
 
-void FocciClass::handle357(uint32_t data[2])  //FOCCI Charge Port Info
+void FoccciClass::handle357(uint32_t data[2])  //FOCCCI Charge Port Info
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
 
@@ -144,10 +143,26 @@ void FocciClass::handle357(uint32_t data[2])  //FOCCI Charge Port Info
     if(ChargePort_Status == 0x03)//check ac connected and ready to charge
     {
         ChargePort_ReadyCharge = true;
+        Param::SetInt(Param::chgtyp,1);
     }
     else
     {
         ChargePort_ReadyCharge = false;
+        Param::SetInt(Param::chgtyp,0);
+    }
+
+    if(ChargePort_Status == 0x04)//check DC connected and ready to attempt charge
+    {
+        ChargePort_ReadyDCFC = true;
+        Param::SetInt(Param::chgtyp,2);
+    }
+    else
+    {
+        ChargePort_ReadyDCFC = false;
+        if(ChargePort_ReadyCharge == false)//if not AC charging
+        {
+        Param::SetInt(Param::chgtyp,0);
+        }
     }
 
 
@@ -170,7 +185,7 @@ void FocciClass::handle357(uint32_t data[2])  //FOCCI Charge Port Info
     Param::SetInt(Param::PilotTyp,CP_Mode);
 }
 
-void FocciClass::handle596(uint32_t data[2])  //FOCCI SDO responses
+void FoccciClass::handle596(uint32_t data[2])  //FOCCCI SDO responses
 {
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     if(RespondReq == 1)//only look at this if we have sent a message looking for a response
@@ -205,23 +220,23 @@ void FocciClass::handle596(uint32_t data[2])  //FOCCI SDO responses
 }
 
 
-void FocciClass::Task10Ms()
+void FoccciClass::Task10Ms()
 {
-    if(Param::GetInt(Param::ConfigFocci)==1)//do the config shit
+    if(Param::GetInt(Param::ConfigFoccci)==1)//do the config shit
     {
         ConfigCan();
     }
 }
 
 
-void FocciClass::Task200Ms()
+void FoccciClass::Task200Ms()
 {
 
 }
 
-void FocciClass::Task100Ms()
+void FoccciClass::Task100Ms()
 {
-    if(DcFastCharging)
+    if(ChargePort_ReadyDCFC)
     {
         CCS_Pwr_Con(); //Calc DC current req
     }
@@ -260,7 +275,7 @@ void FocciClass::Task100Ms()
     can->Send(0x358, (uint32_t*)bytes,8); //
 }
 
-void FocciClass::Chg_Timers()
+void FoccciClass::Chg_Timers()
 {
     Timer_1Sec--;   //decrement the loop counter
 
@@ -276,13 +291,20 @@ void FocciClass::Chg_Timers()
     }
 }
 
-bool FocciClass::DCFCRequest(bool RunCh)
+bool FoccciClass::DCFCRequest(bool RunCh)
 {
+    if(ChargePort_ReadyDCFC == true)
+    {
+        return true; //Attempt DC Charging session
+    }
+    else
+    {
+        return false; //No DC Charging session
+    }
     RunCh = RunCh;
-    return false; //No DC Charging support
 }
 
-bool FocciClass::ACRequest(bool RunCh)
+bool FoccciClass::ACRequest(bool RunCh)
 {
     ChargeAllow = RunCh;
     if (ChargePort_ReadyCharge == false)
@@ -295,7 +317,7 @@ bool FocciClass::ACRequest(bool RunCh)
     }
 }
 
-void FocciClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
+void FoccciClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
 {
     uint16_t Tmp_Vbatt=Param::GetInt(Param::udc);//Actual measured battery voltage by isa shunt
     uint16_t Tmp_Vbatt_Spnt=Param::GetInt(Param::Voltspnt);
@@ -315,7 +337,7 @@ void FocciClass::CCS_Pwr_Con()    //here we control ccs charging during state 6.
     Param::SetInt(Param::CCS_Ireq,CCSI_Spnt);
 }
 
-void FocciClass::ConfigCan()
+void FoccciClass::ConfigCan()
 {
 
 //CAN sending//
@@ -558,6 +580,6 @@ void FocciClass::ConfigCan()
     }
     else if(ConfigStep == 5)//Config completed
     {
-        Param::SetInt(Param::ConfigFocci,0);
+        Param::SetInt(Param::ConfigFoccci,0);
     }
 }

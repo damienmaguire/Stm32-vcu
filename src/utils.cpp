@@ -532,7 +532,7 @@ void CpSpoofOutput()
 {
     uint16_t CpVal = 0;
 
-    if(Param::GetInt(Param::interface) == ChargeInterfaces::i3LIM || Param::GetInt(Param::interface) == ChargeInterfaces::CPC || Param::GetInt(Param::interface) == ChargeInterfaces::Focci)
+    if(Param::GetInt(Param::interface) == ChargeInterfaces::i3LIM || Param::GetInt(Param::interface) == ChargeInterfaces::CPC || Param::GetInt(Param::interface) == ChargeInterfaces::Foccci)
     {
         CpVal = float(Param::GetInt(Param::PilotLim) *1.6667);
         Param::SetInt(Param::CP_PWM,CpVal);
