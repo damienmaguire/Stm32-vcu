@@ -367,8 +367,6 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
 
     if(udcmin>0)    //ignore if set to zero. useful for bench testing without isa shunt
     {
-        Param::SetFloat(Param::udcheater, finalSpnt);
-
         if (finalSpnt >= 0)
         {
 
@@ -414,7 +412,6 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
             }
             finalSpnt = UDCprevspnt;
         }
-        Param::SetFloat(Param::tmpheater, UDCprevspnt);
     }
     else
     {
@@ -434,7 +431,6 @@ void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
 
     if(idcmax>0)    //ignore if set to zero. useful for bench testing without isa shunt
     {
-        Param::SetFloat(Param::powerheater, finalSpnt);
         if (finalSpnt >= 0)
         {
             float idcerr = idcmax - idcFiltered;
