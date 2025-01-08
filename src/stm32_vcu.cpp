@@ -553,7 +553,6 @@ static void Ms10Task(void)
 
     if(Param::GetInt(Param::potnom) < Param::GetInt(Param::RegenBrakeLight))
     {
-        Param::SetInt(Param::BrkVacVal,torquePercent*requestedDirection*-1);
         //enable Brake Light Ouput
         IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
     }
