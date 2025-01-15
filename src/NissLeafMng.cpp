@@ -308,11 +308,11 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
             //0x00 no req
             //0x01,0x02,0x03 main relay off req
             uint16_t Ibatt = Param::GetInt(Param::idc)*2;
-            Vbatt = Vbatt*4;
-            bytes[0] = Ibatt >> 8;     //MSB current. 11 bit signed MSBit first
-            bytes[1] = Ibatt & 0xE0;  //LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
-            bytes[2] = Vbatt >> 8;
-            bytes[3] = ((Vbatt & 0xC0) | (0x2b)); //0x2b should give no cut req, main rly on permission,normal p limit.
+            Vbatt = Vbatt*2;
+            bytes[0] = Ibatt >> 3;     //MSB current. 11 bit signed MSBit first
+            bytes[1] = (Ibatt & 0x07) << 5;  //LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
+            bytes[2] = Vbatt >> 2;
+            bytes[3] = (((Vbatt & 0x07) << 6)| (0x2b)); //0x2b should give no cut req, main rly on permission,normal p limit.
             bytes[4] = 0x40;  //SOC for dash in Leaf. fixed val.
             bytes[5] = 0x00;
             bytes[6] = mprun10;
