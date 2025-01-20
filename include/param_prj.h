@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.21.A
+#define VER 2.22.A
 
 
 /* Entries must be ordered as follows:
@@ -153,6 +153,7 @@
     VALUE_ENTRY(chgtyp,        CHGTYPS,             2003 ) \
     VALUE_ENTRY(lasterr,       errorListString,     2004 ) \
     VALUE_ENTRY(status,        STATUS,              2005 ) \
+	VALUE_ENTRY(CanAct,        ONOFF,               2107 ) \
     VALUE_ENTRY(TorqDerate,    LIMITREASON,         2102 ) \
     VALUE_ENTRY(udc,           "V",                 2006 ) \
     VALUE_ENTRY(udc2,          "V",                 2007 ) \
@@ -242,7 +243,7 @@
     VALUE_ENTRY(powerheater,   "W",                 2098 ) \
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
 
-//Next value Id: 2104
+//Next value Id: 2108
 
 //Dead params
 /*

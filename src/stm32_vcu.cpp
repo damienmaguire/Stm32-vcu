@@ -575,7 +575,14 @@ static void Ms10Task(void)
     selectedVehicle->Task10Ms();
     selectedDCDC->Task10Ms();
     selectedShifter->Task10Ms();
-    if(opmode==MOD_CHARGE) selectedCharger->Task10Ms();
+    if(opmode==MOD_CHARGE)
+    {
+        selectedCharger->Task10Ms();
+    }
+    else if (Param::GetInt(Param::chargemodes) == ChargeModes::Leaf_PDM)
+    {
+        selectedCharger->Task10Ms();
+    }
     if(opmode==MOD_RUN) Param::SetInt(Param::canctr, (Param::GetInt(Param::canctr) + 1) & 0xF);//Update the OI can counter in RUN mode only
 
     //////////////////////////////////////////////////
