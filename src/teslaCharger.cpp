@@ -56,8 +56,6 @@ bool teslaCharger::ControlCharge(bool RunCh, bool ACReq)
   bool dummy = RunCh;
   dummy = dummy;
   ChRun = ACReq;
-  if (HVreq) return true;
-  if (!HVreq) return false;
-  return false;
+  return HVreq;
 }
 
