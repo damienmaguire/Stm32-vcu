@@ -31,7 +31,7 @@ public:
    virtual void Task200Ms() {} //Default does nothing
    virtual void DecodeCAN(int, uint32_t*) {};
    virtual bool DCFCRequest(bool) {return false;};
-   virtual bool ACRequest(bool) {return false;};
+   virtual bool ACRequest(bool) {return true;};
    virtual void DeInit() {} //called when switching to another charger, similar to a destructor
    virtual void SetCanInterface(CanHardware* c) { can = c; }
 
