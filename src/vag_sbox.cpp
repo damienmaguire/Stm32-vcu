@@ -1,4 +1,5 @@
-/*   * This file is part of the ZombieVerter project.
+/*
+ * This file is part of the ZombieVerter project.
  *
  * Copyright (C) 2010 Johannes Huebner <contact@johanneshuebner.com>
  * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
@@ -22,8 +23,6 @@
  *Reads batter parameters from contactor box.
  *See : https://github.com/jamiejones85/VW-GTE-ContactorBox/tree/main
 */
-
-
 
 #include <vag_sbox.h>
 

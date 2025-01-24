@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef SHIFTER_H_INCLUDED
 #define SHIFTER_H_INCLUDED
 #include <stdint.h>

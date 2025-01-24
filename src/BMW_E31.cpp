@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "BMW_E31.h"
 #include "hwinit.h"
 #include "my_math.h"

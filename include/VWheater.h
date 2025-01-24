@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Controls the VW LIN based heater as : https://openinverter.org/wiki/Volkswagen_Heater
  */
+
 #ifndef VWHEATER_H
 #define VWHEATER_H
 
