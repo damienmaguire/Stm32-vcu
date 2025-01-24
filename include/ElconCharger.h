@@ -14,20 +14,17 @@
 
 class ElconCharger: public Chargerhw
 {
-
-public:
-void DecodeCAN(int id, uint32_t data[2]);
-void Task200Ms();
-bool ControlCharge(bool RunCh, bool ACReq);
-void SetCanInterface(CanHardware* c);
-void handle18FF50E5(uint32_t data[2]);
-/*
-static void handle108(uint32_t data[2]);
-static bool HVreq;
-static void Send100msMessages(bool ChRun, CanHardware* can);
-*/
-private:
-
+  public:
+    void DecodeCAN(int id, uint32_t data[2]);
+    void Task200Ms();
+    bool ControlCharge(bool RunCh, bool ACReq);
+    void SetCanInterface(CanHardware* c);
+    void handle18FF50E5(uint32_t data[2]);
+    /*
+    static void handle108(uint32_t data[2]);
+    static bool HVreq;
+    static void Send100msMessages(bool ChRun, CanHardware* can);
+    */
 };
 
 #endif /* ElconCharger_h */

@@ -12,14 +12,10 @@
 
 class chargerClass
 {
-
-public:
-
-static void handle108(uint32_t data[2]);
-static bool HVreq;
-static void Send100msMessages(bool ChRun, CanHardware* can);
-private:
-
+  public:
+    static void handle108(uint32_t data[2]);
+    static bool HVreq;
+    static void Send100msMessages(bool ChRun, CanHardware* can);
 };
 
 #endif /* charger_h */

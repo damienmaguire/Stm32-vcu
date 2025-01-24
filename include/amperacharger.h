@@ -12,11 +12,8 @@
 
 class amperaCharger: public Chargerhw
 {
-public:
-  bool ControlCharge(bool RunCh, bool ACreq);
+  public:
+    bool ControlCharge(bool RunCh, bool ACreq);
 };
 
 #endif /* amperacharger_h */
-
-
-

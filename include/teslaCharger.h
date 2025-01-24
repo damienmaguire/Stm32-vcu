@@ -11,7 +11,7 @@
 
 class teslaCharger: public Chargerhw
 {
-public:
+  public:
     void DecodeCAN(int id, uint32_t data[2]) override;
     void Task100Ms() override;
     bool ControlCharge(bool RunCh, bool ACReq) override;

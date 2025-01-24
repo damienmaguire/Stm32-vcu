@@ -13,15 +13,8 @@
 
 class extCharger: public Chargerhw
 {
-
-public:
-bool ControlCharge(bool RunCh, bool ACReq);
-
-
-
-private:
-
+  public:
+    bool ControlCharge(bool RunCh, bool ACReq);
 };
 
 #endif /* EXTCHARGER_H */
-

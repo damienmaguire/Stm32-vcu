@@ -13,12 +13,9 @@
 
 class noCharger: public Chargerhw
 {
+  public:
 
-public:
-
-private:
-
+  private:
 };
 
 #endif /* nocharger_h */
-
