@@ -16,14 +16,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC Converter.
- *
  */
-
 
 #include <outlanderCharger.h>
 #include "OutlanderHeartBeat.h"
+
+/* Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC Converter. */
 
 uint8_t outlanderCharger::chgStatus;
 uint8_t outlanderCharger::evseDuty;

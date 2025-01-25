@@ -16,7 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <TeslaDCDC.h>
+
 /* This is an interface for The Tesla GEN2 DCDC converter
  * https://openinverter.org/wiki/Tesla_Model_S/X_DC/DC_Converter
  */

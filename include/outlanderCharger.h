@@ -17,11 +17,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC Converter.
- *
  */
+
 #ifndef OUTLANDERCHARGER_H
 #define OUTLANDERCHARGER_H
+
+/* Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC Converter. */
 
 #include <stdint.h>
 #include "my_fp.h"

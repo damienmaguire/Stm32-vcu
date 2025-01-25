@@ -1,5 +1,23 @@
-#include "teslaCharger.h"
+/*
+ * This file is part of the Zombieverter project.
+ *
+ * Copyright (C) 2023 Damien Maguire
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
+#include "teslaCharger.h"
 #include "params.h"
 #include "my_math.h"
 
@@ -12,13 +30,10 @@ static uint16_t HVpwr=0;
 static uint16_t calcBMSpwr=0;
 
 
-
 void teslaCharger::SetCanInterface(CanHardware* c)
 {
    can = c;
-
    can->RegisterUserMessage(0x108);
-
 }
 
 void teslaCharger::DecodeCAN(int id, uint32_t data[2])
@@ -26,8 +41,8 @@ void teslaCharger::DecodeCAN(int id, uint32_t data[2])
    uint8_t* bytes = (uint8_t*)data;
    if (id == 0x108)
    {
-   if(bytes[0]==0xAA) HVreq=true;
-   if(bytes[0]==0xCC) HVreq=false;
+     if(bytes[0]==0xAA) HVreq=true;
+     if(bytes[0]==0xCC) HVreq=false;
    }
 }
 
@@ -51,18 +66,14 @@ void teslaCharger::Task100Ms()
    counter_109++;
    if(counter_109 >= 0xF) counter_109 = 0;
    can->Send(0x109, (uint32_t*)bytes,8);
-
 }
-
 
 bool teslaCharger::ControlCharge(bool RunCh, bool ACReq)
 {
-   bool dummy=RunCh;
-   dummy=dummy;
-   ChRun=ACReq;
+   bool dummy = RunCh;
+   dummy = dummy;
+   ChRun = ACReq;
    if(HVreq) return true;
    if(!HVreq) return false;
    return false;
-
 }
-

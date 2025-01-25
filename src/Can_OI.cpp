@@ -1,5 +1,4 @@
 /*
- *
  * Copyright (C) 2020 Johannes Huebner <dev@johanneshuebner.com>
  *                      Damien Maguire <info@evbmw.com>
  * Yes I'm really writing software now........run.....run away.......

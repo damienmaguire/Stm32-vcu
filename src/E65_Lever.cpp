@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "E65_Lever.h"
 
 static uint8_t shiftPos=0xe1; //contains byte to display gear position on dash.default to park
