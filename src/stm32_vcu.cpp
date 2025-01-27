@@ -586,6 +586,8 @@ static void Ms10Task(void)
     }
     if(opmode==MOD_RUN) Param::SetInt(Param::canctr, (Param::GetInt(Param::canctr) + 1) & 0xF);//Update the OI can counter in RUN mode only
 
+    ControlCabHeater(opmode);
+
     //////////////////////////////////////////////////
     //            MODE CONTROL SECTION              //
     //////////////////////////////////////////////////
@@ -673,7 +675,6 @@ static void Ms10Task(void)
             ErrorMessage::Post(ERR_PRECHARGE);
             opmode = MOD_PCHFAIL;
         }
-        Param::SetInt(Param::opmode, opmode);
         break;
 
     case MOD_PCHFAIL:
@@ -713,15 +714,13 @@ static void Ms10Task(void)
         {
             opmode = MOD_OFF;
             rlyDly=250;//Recharge sequence timer for delayed shutdown
-             Param::SetInt(Param::opmode, opmode); //set opmode to OFF when leaving charge state
+            Param::SetInt(Param::opmode, opmode); //set opmode to OFF when leaving charge state
         }
         break;
     }
 
-    ControlCabHeater(opmode);
     if (Param::GetInt(Param::ShuntType) == 2)  SBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//BMW contactor box
     if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//VW contactor box
-
 
 }
 
