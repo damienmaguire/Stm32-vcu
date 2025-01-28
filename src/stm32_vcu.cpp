@@ -586,6 +586,8 @@ static void Ms10Task(void)
     }
     if(opmode==MOD_RUN) Param::SetInt(Param::canctr, (Param::GetInt(Param::canctr) + 1) & 0xF);//Update the OI can counter in RUN mode only
 
+    ControlCabHeater(opmode);
+
     //////////////////////////////////////////////////
     //            MODE CONTROL SECTION              //
     //////////////////////////////////////////////////
@@ -673,7 +675,6 @@ static void Ms10Task(void)
             ErrorMessage::Post(ERR_PRECHARGE);
             opmode = MOD_PCHFAIL;
         }
-        Param::SetInt(Param::opmode, opmode);
         break;
 
     case MOD_PCHFAIL:
@@ -689,14 +690,15 @@ static void Ms10Task(void)
         if(rlyDly==0)
         {
             DigIo::dcsw_out.Set();
+            Param::SetInt(Param::opmode, opmode);//Only set opmode to charge once Main Contactor is shut.
         }
         ErrorMessage::UnpostAll();
         if(!chargeMode)
         {
             opmode = MOD_OFF;
             rlyDly=250;//Recharge sequence timer for delayed shutdown
+            Param::SetInt(Param::opmode, opmode); //set opmode to OFF when leaving charge state
         }
-        Param::SetInt(Param::opmode, opmode);
         break;
 
     case MOD_RUN:
@@ -705,22 +707,20 @@ static void Ms10Task(void)
         {
             DigIo::dcsw_out.Set();
             DigIo::inv_out.Set();//inverter power on
+            Param::SetInt(Param::opmode, MOD_RUN); //Only set opmode to Run once main contactor is shut
         }
-        Param::SetInt(Param::opmode, MOD_RUN);
         ErrorMessage::UnpostAll();
         if(!selectedVehicle->Ready())
         {
             opmode = MOD_OFF;
             rlyDly=250;//Recharge sequence timer for delayed shutdown
+            Param::SetInt(Param::opmode, opmode); //set opmode to OFF when leaving charge state
         }
-        Param::SetInt(Param::opmode, opmode);
         break;
     }
 
-    ControlCabHeater(opmode);
     if (Param::GetInt(Param::ShuntType) == 2)  SBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//BMW contactor box
     if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//VW contactor box
-
 
 }
 
