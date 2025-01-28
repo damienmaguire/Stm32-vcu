@@ -122,7 +122,7 @@ static CanHardware* canInterface[3];
 static CanMap* canMap;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
-static uint8_t ChgSet;
+static uint8_t ChgSet;  // Temp variable storing Param::Chgctrl. 0=enable, 1=disable, 2=timer.
 static bool RunChg;
 static uint8_t ChgHrs_tmp;
 static uint8_t ChgMins_tmp;
@@ -248,13 +248,11 @@ static void Ms200Task(void)
     if(Param::GetInt(Param::GPA1Func) == IOMatrix::PILOT_PROX || Param::GetInt(Param::GPA2Func) == IOMatrix::PILOT_PROX )
     {
         int ppThresh = Param::GetInt(Param::ppthresh);
-
         int ppValue = IOMatrix::GetAnaloguePin(IOMatrix::PILOT_PROX)->Get();
         Param::SetInt(Param::PPVal, ppValue);
 
-
-        //if PP is less than threshold and currently disabled and not already finished
-        if (ppValue < ppThresh && ChgSet==1 && !ChgLck)
+        // If PP is at or below threshold and currently disabled and not already finished
+        if (ppValue <= ppThresh && ChgSet==1 && !ChgLck)
         {
             RunChg=true;
         }
