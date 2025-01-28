@@ -5,6 +5,7 @@
 Project based on the OpenInverter System by Johannes Huebner to provide a universal VCU (Vehicle Control Unit) for electric vehicle conversion projects. 
 
 Please visit the development thread on the Openinverter Forum for more information : https://openinverter.org/forum/viewtopic.php?f=3&t=1277
+![Screenshot from 2025-01-28 14-17-28](https://github.com/user-attachments/assets/ff066c9e-8c79-470d-aa04-bc3b34198900)
 
 ## Videos on progress
 
