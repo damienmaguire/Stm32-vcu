@@ -575,7 +575,7 @@ void CpSpoofOutput()
 
 void SpeedoStart()
 {
-    if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
+    if(Param::GetInt(Param::PumpPWM) == 1 || Param::GetInt(Param::PumpPWM) == 2)//If Pump PWM out is set to Tacho or Speedo
     {
         tim_setup();//Fire up timer one...
         timer_disable_counter(TIM1);//...but disable until needed
@@ -588,6 +588,29 @@ void SpeedoSet(uint16_t speed)
     if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
     {
         float PulseGain = Param::GetInt(Param::TachoPPR);
+
+        if(speed == 0)
+        {
+            timer_disable_counter(TIM1);
+            Timer1Run = false;
+        }
+
+        if(speed > 0)
+        {
+            if(Timer1Run == false)
+            {
+                timer_enable_counter(TIM1);
+                Timer1Run = true;
+            }
+
+            uint32_t timerPeriod = float((33000000)*2) / float(speed * PulseGain);
+            timer_set_period(TIM1, timerPeriod);
+            timer_set_oc_value(TIM1, TIM_OC1, timerPeriod / 2); //always stay at 50% duty cycle
+        }
+    }
+    if(Param::GetInt(Param::PumpPWM) == 2)//If Pump PWM out is set to Speedo
+    {
+        float PulseGain = Param::GetFloat(Param::TachoPPR);
 
         if(speed == 0)
         {
