@@ -251,7 +251,8 @@ void tim3_setup()
     // General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3 Chan 2 PA7.
     // General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3 Chan 1 PA6.
     ////////////////////////////////////////////////////////////////////////
-    bool CPspoofPres,GS450hOil = 0;
+    bool CPspoofPres = 0;
+    bool GS450hOil = 0;
 ///PWM3
     if (Param::GetInt(Param::PWM3Func) == IOMatrix::PWM_TIM3)
     {
