@@ -149,9 +149,9 @@
     PARAM_ENTRY(CAT_PWM,       Tim3_2_OC,   "",        1,      100000, 3600,   103 ) \
     PARAM_ENTRY(CAT_PWM,       Tim3_3_OC,   "",        1,      100000, 3600,   104 ) \
     PARAM_ENTRY(CAT_PWM,       CP_PWM,       "",       1,      100,      10,   132 ) \
-    PARAM_ENTRY(CAT_PWM,       DC_MaxTemp,   "",       1,      100,      10,   143 ) \
+    PARAM_ENTRY(CAT_PWM,       DC_MaxTemp,   "",       1,      100,       0,   143 ) \
     PARAM_ENTRY(CAT_PWM,       DC_MinTemp,   "",       1,      100,       0,   144 ) \
-    PARAM_ENTRY(CAT_PWM,       DC_MaxSOC,   "",        1,      100,      10,   145 ) \
+    PARAM_ENTRY(CAT_PWM,       DC_MaxSOC,   "",        1,      100,       0,   145 ) \
     PARAM_ENTRY(CAT_PWM,       DC_MinSOC,   "",        1,      100,       0,   146 ) \
     VALUE_ENTRY(version,       VERSTR,              2000 ) \
     VALUE_ENTRY(opmode,        OPMODES,             2002 ) \
