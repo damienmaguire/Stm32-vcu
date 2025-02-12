@@ -556,7 +556,7 @@ void CpSpoofOutput()
     {
         CpVal = float(Param::GetInt(Param::PilotLim) *1.6667);
         Param::SetInt(Param::CP_PWM,CpVal);
-        CpVal = (Param::GetInt(Param::CP_PWM)*66)-16;
+        CpVal = (Param::GetInt(Param::CP_PWM)*40);
     }
 
     if(Param::GetInt(Param::PWM1Func) == IOMatrix::CP_SPOOF)
@@ -570,6 +570,53 @@ void CpSpoofOutput()
     if(Param::GetInt(Param::PWM3Func) == IOMatrix::CP_SPOOF)
     {
         timer_set_oc_value(TIM3, TIM_OC3,CpVal);//No duty set here
+    }
+}
+
+void SetTempgaugePWM(bool en)
+{
+    uint16_t TempDC = 0;
+
+    if(en)
+    {
+        TempDC = utils::change(Param::GetInt(Param::tmphs), 0, Param::GetInt(Param::tmphsmax), Param::GetInt(Param::DC_MinTemp), Param::GetInt(Param::DC_MaxTemp)); //map Temp Heatsink, from 0 to max and min to max duty
+        TempDC = TempDC * 40;
+    }
+
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,TempDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,TempDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC3,TempDC);//No duty set here
+    }
+}
+
+void SetSocgaugePWM(bool en)
+{
+    uint16_t SocDC = 0;
+
+    if(en)
+    {
+        SocDC = utils::change(Param::GetInt(Param::SOC), 0, 100, Param::GetInt(Param::DC_MinSOC), Param::GetInt(Param::DC_MaxSOC)); //map SOC, from 0 to max and min to max duty
+        SocDC = SocDC * 40;
+    }
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,SocDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,SocDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC3,SocDC);//No duty set here
     }
 }
 
@@ -649,7 +696,7 @@ void GS450hOilPump(uint16_t pumpdc)
         timer_set_oc_value(TIM1, TIM_OC1, pumpdc);//duty. 1000 = 52% , 500 = 76% , 1500=28%
     }
 
-    uint16_t pumpduty = (pumpdc*66)-16;
+    uint16_t pumpduty = pumpdc*40;
 
     if(Param::GetInt(Param::PWM1Func) == IOMatrix::GS450HOIL)
     {

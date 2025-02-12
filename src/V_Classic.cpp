@@ -52,9 +52,7 @@ void V_Classic::SetRevCounter(int speed)
 
 void V_Classic::SetTemperatureGauge(float temp)
 {
-    float dc = temp * 10; //TODO find right factor for value like 0..0.5 or so
-    //Would like to use digi pots here
-    dc = dc;
+ temp = temp; //We aint doing anything here old code!
 }
 
 void V_Classic::Task1Ms()
@@ -74,6 +72,13 @@ void V_Classic::Task100Ms()
     if (!Param::GetInt(Param::T15Stat))
     {
         utils::SpeedoSet(0);//set speedo off
+        utils::SetTempgaugePWM(0); //turn off temp gauge
+        utils::SetSocgaugePWM(0); //turn off soc gauge
+    }
+    else
+    {
+      utils::SetTempgaugePWM(1); //turn on temp gauge
+      utils::SetSocgaugePWM(1); //turn on soc gauge
     }
 }
 
