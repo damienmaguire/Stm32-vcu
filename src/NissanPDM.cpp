@@ -136,6 +136,17 @@ bool NissanPDM::ControlCharge(bool RunCh, bool ACReq) //Modeled off of Outlander
         {
             return false;
         }
+        break;
+
+    case Chademo:
+        if (PPStat && ACReq)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
 
         break;
 
@@ -171,19 +182,6 @@ bool NissanPDM::ControlCharge(bool RunCh, bool ACReq) //Modeled off of Outlander
             return false;
         }
         break;
-
-    case Chademo:
-        if (RunCh && ACReq)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-
-        break;
-
     }
     return false;
 }

@@ -22,6 +22,7 @@
 #include "OutlanderHeartBeat.h"
 
 /* Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC Converter. */
+#define TIMERRESET 300 //time out timer reset value
 
 uint8_t outlanderCharger::chgStatus;
 uint8_t outlanderCharger::evseDuty;
@@ -34,7 +35,9 @@ float   outlanderCharger::DCAmps;
 float   outlanderCharger::LV_Volts;
 float   outlanderCharger::LV_Amps;
 uint16_t outlanderCharger::batteryVolts;
-
+bool Charging = 0; //Charging has started and is running
+bool EvseTimeout = 0; //timeout EVSE - after waiting for CP duty none recieved timeout after x
+uint16_t EvseTimer = TIMERRESET; //counts of 100ms before timing out for CP Duty
 
 bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
 {
@@ -42,6 +45,31 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
     switch(chgmode)
     {
     case Unused:
+        if (ACReq && RunCh) //proposed changes - utilize with PP detect, start off with running so it boots then have it time out if no EVSE duty appears
+        {
+            if(!EvseTimeout) //no CP duty in time
+            {
+                clearToStart=true;
+                return true; //ask to go into charge mode
+            }
+            else
+            {
+                clearToStart=false;
+                return false;
+            }
+
+        }
+        else
+        {
+            EvseTimeout = false; //reset EVSE CP duty timeout
+            EvseTimer = TIMERRESET; //reset EVSE CP duty timer
+            clearToStart=false;
+            return false;
+        }
+
+        break;
+
+    case Chademo:
         if (evseDuty > 0 && RunCh)
         {
             clearToStart=true;
@@ -93,21 +121,6 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
             return false;
         }
         break;
-
-    case Chademo:
-        if (RunCh && ACReq)
-        {
-            clearToStart=true;
-            return true;
-        }
-        else
-        {
-            clearToStart=false;
-            return false;
-        }
-
-        break;
-
     }
     return false;
 }
@@ -144,25 +157,27 @@ void outlanderCharger::Task100Ms()
     int opmode = Param::GetInt(Param::opmode);
     if(opmode==MOD_CHARGE)
     {
+        if(evseDuty == 0)//if no CP duty recieved
+        {
+            if(EvseTimer > 0)
+            {
+                EvseTimer--;
+            }
+            else
+            {
+                EvseTimeout = true;//time out once EvseTimer hits 0
+            }
+        }
+        else
+        {
+            EvseTimer = TIMERRESET; //reset timer
+            EvseTimeout = false;//timeout reset
+        }
+
         setVolts=Param::GetInt(Param::Voltspnt)*10;
         actVolts=Param::GetInt(Param::udc);
         uint8_t bytes[8];
 
-        /*
-                bytes[0] = 0x00;
-                bytes[1] = 0x00;
-                bytes[2] = 0x00;
-                bytes[3] = 0x00;
-                bytes[4] = 0x00;
-                bytes[5] = 0x00;
-                bytes[6] = 0x00;
-                bytes[7] = 0x00;
-                if(clearToStart)
-                {
-                    bytes[2] = 0xB6;//oxb6 in byte 3 enables charger
-                    can->Send(0x285, (uint32_t*)bytes, 8);
-                }
-        */
         if(clearToStart)
         {
             OutlanderHeartBeat::SetPullInEVSE(1);
@@ -187,27 +202,18 @@ void outlanderCharger::Task100Ms()
             if(actVolts<Param::GetInt(Param::Voltspnt)) currentRamp++;
             if(actVolts>=Param::GetInt(Param::Voltspnt)) currentRamp--;
             if(currentRamp>=0x78) currentRamp=0x78;//clamp to max of 12A
-            /* Superceeded by CPspoof on PWM3
-            if(!pwmON)
-              {
-                tim_setup(); //toyota hybrid oil pump pwm timer used to supply a psuedo evse pilot to the charger
-                pwmON=true;
-              }
-            */
-
+            Charging = true;
         }
         else
         {
             currentRamp=0;
-            /* Superceeded by CPspoof on PWM3
-             if(pwmON)
-             {
-             timer_disable_counter(TIM1);
-             pwmON=false;
-             }
-             */
         }
 
+    }
+    else
+    {
+        Charging = false;
+        OutlanderHeartBeat::SetPullInEVSE(0);
     }
 }
 
@@ -219,7 +225,6 @@ void outlanderCharger::handle377(uint32_t data[2])
     LV_Amps = ((bytes[2]<<8) | (bytes[3]))*0.1;
     Param::SetFloat(Param::U12V, LV_Volts);
     Param::SetFloat(Param::I12V, LV_Amps);
-
 }
 
 void outlanderCharger::handle389(uint32_t data[2])
@@ -246,10 +251,14 @@ void outlanderCharger::handle38A(uint32_t data[2])
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     chgStatus = bytes[4];
     evseDuty = bytes[3];
+
+
+
     dcBusV = bytes[2]*2;// Volts scale 2
     temp_1 = bytes[0]-45;//degC bias -45
     temp_2 = bytes[1]-45;//degC bias -45
     Param::SetFloat(Param::ChgTemp, MAX(temp_1, temp_2));
+
 }
 
 
