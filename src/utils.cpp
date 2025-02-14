@@ -556,7 +556,7 @@ void CpSpoofOutput()
     {
         CpVal = float(Param::GetInt(Param::PilotLim) *1.6667);
         Param::SetInt(Param::CP_PWM,CpVal);
-        CpVal = (Param::GetInt(Param::CP_PWM)*66)-16;
+        CpVal = (Param::GetInt(Param::CP_PWM)*40);
     }
 
     if(Param::GetInt(Param::PWM1Func) == IOMatrix::CP_SPOOF)
@@ -573,9 +573,56 @@ void CpSpoofOutput()
     }
 }
 
+void SetTempgaugePWM(bool en)
+{
+    uint16_t TempDC = 0;
+
+    if(en)
+    {
+        TempDC = utils::change(Param::GetInt(Param::tmphs), 0, Param::GetInt(Param::tmphsmax), Param::GetInt(Param::DC_MinTemp), Param::GetInt(Param::DC_MaxTemp)); //map Temp Heatsink, from 0 to max and min to max duty
+        TempDC = TempDC * 40;
+    }
+
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,TempDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,TempDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC3,TempDC);//No duty set here
+    }
+}
+
+void SetSocgaugePWM(bool en)
+{
+    uint16_t SocDC = 0;
+
+    if(en)
+    {
+        SocDC = utils::change(Param::GetInt(Param::SOC), 0, 100, Param::GetInt(Param::DC_MinSOC), Param::GetInt(Param::DC_MaxSOC)); //map SOC, from 0 to max and min to max duty
+        SocDC = SocDC * 40;
+    }
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,SocDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,SocDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC3,SocDC);//No duty set here
+    }
+}
+
 void SpeedoStart()
 {
-    if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
+    if(Param::GetInt(Param::PumpPWM) == 1 || Param::GetInt(Param::PumpPWM) == 2)//If Pump PWM out is set to Tacho or Speedo
     {
         tim_setup();//Fire up timer one...
         timer_disable_counter(TIM1);//...but disable until needed
@@ -588,6 +635,29 @@ void SpeedoSet(uint16_t speed)
     if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
     {
         float PulseGain = Param::GetInt(Param::TachoPPR);
+
+        if(speed == 0)
+        {
+            timer_disable_counter(TIM1);
+            Timer1Run = false;
+        }
+
+        if(speed > 0)
+        {
+            if(Timer1Run == false)
+            {
+                timer_enable_counter(TIM1);
+                Timer1Run = true;
+            }
+
+            uint32_t timerPeriod = float((33000000)*2) / float(speed * PulseGain);
+            timer_set_period(TIM1, timerPeriod);
+            timer_set_oc_value(TIM1, TIM_OC1, timerPeriod / 2); //always stay at 50% duty cycle
+        }
+    }
+    if(Param::GetInt(Param::PumpPWM) == 2)//If Pump PWM out is set to Speedo
+    {
+        float PulseGain = Param::GetFloat(Param::TachoPPR);
 
         if(speed == 0)
         {
@@ -626,7 +696,7 @@ void GS450hOilPump(uint16_t pumpdc)
         timer_set_oc_value(TIM1, TIM_OC1, pumpdc);//duty. 1000 = 52% , 500 = 76% , 1500=28%
     }
 
-    uint16_t pumpduty = (pumpdc*66)-16;
+    uint16_t pumpduty = pumpdc*40;
 
     if(Param::GetInt(Param::PWM1Func) == IOMatrix::GS450HOIL)
     {

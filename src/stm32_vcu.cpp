@@ -135,6 +135,7 @@ static bool ACrequest=false;
 static bool initbyStart=false;
 static bool initbyCharge=false;
 static bool OutlanderCAN=false;
+static bool ExtHVreq=false;
 
 static volatile unsigned
 days=0,
@@ -207,14 +208,25 @@ static void Ms200Task(void)
     selectedVehicle->Task200Ms();
     if(opmode==MOD_CHARGE) selectedCharger->Task200Ms();
 
+    //in chademo , we do not want to run the 200ms task unless in dc charge mode
+    if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
+    //In case of the LIM we want to send it all the time if lim in use
+    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)|| (targetChgint == ChargeInterfaces::Foccci)) selectedChargeInt->Task200Ms();
+    //and just to be thorough ...
+    if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
+
     //if(opmode==MOD_CHARGE) utils::CpSpoofOutput;
     utils::CpSpoofOutput();
+
 
     Param::SetInt(Param::Day,days);
     Param::SetInt(Param::Hour,hours);
     Param::SetInt(Param::Min,minutes);
     Param::SetInt(Param::Sec,seconds);
     Param::SetInt(Param::ChgT,ChgDur_tmp);
+
+    //Setting of RunChg - main okay to charge param
+
     if(ChgSet==2 && !ChgLck)  //if in timer mode and not locked out from a previous full charge.
     {
         if(opmode!=MOD_CHARGE)
@@ -248,7 +260,7 @@ static void Ms200Task(void)
     if(ChgSet==0 && !ChgLck) RunChg=true;//enable from webui if we are not locked out from an auto termination
     if(ChgSet==1) RunChg=false;//disable from webui
 
-    //Handle PP on the Charging port
+    //Handle PP on the Charging port - Changes RunChg
     if(Param::GetInt(Param::GPA1Func) == IOMatrix::PILOT_PROX || Param::GetInt(Param::GPA2Func) == IOMatrix::PILOT_PROX )
     {
         int ppThresh = Param::GetInt(Param::ppthresh);
@@ -256,17 +268,25 @@ static void Ms200Task(void)
         Param::SetInt(Param::PPVal, ppValue);
 
         // If PP is at or below threshold and currently disabled and not already finished
-        if (ppValue <= ppThresh && ChgSet==1 && !ChgLck)
+        if (ppValue <= ppThresh)
         {
-            RunChg=true;
+            if (ChgSet==1 && !ChgLck)
+            {
+                RunChg=true;
+            }
+            Param::SetInt(Param::PlugDet, 1);
         }
         else if (ppValue > ppThresh)
         {
             //even if timer was enabled, change to disabled, we've unplugged
             RunChg=false;
+            Param::SetInt(Param::PlugDet, 0);
         }
     }
+    // END Setting of RunChg - main okay to charge param
 
+
+    //Check if we want to AC charge via charger
     if(selectedCharger->ControlCharge(RunChg, ACrequest) && (opmode != MOD_RUN))
     {
         chargeMode = true;   //AC charge mode
@@ -277,14 +297,7 @@ static void Ms200Task(void)
         Param::SetInt(Param::chgtyp,OFF);
         chargeMode = false;  //no charge mode
     }
-
-    //in chademo , we do not want to run the 200ms task unless in dc charge mode
-    if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
-    //In case of the LIM we want to send it all the time if lim in use
-    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)|| (targetChgint == ChargeInterfaces::Foccci)) selectedChargeInt->Task200Ms();
-    //and just to be thorough ...
-    if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
-
+    //end check
 
 
     ///////////////////////////////////////
@@ -307,9 +320,10 @@ static void Ms200Task(void)
             RunChg=false;//end charge
             ChgLck=true;//set charge lockout flag
         }
-
-
     }
+//End Charge Term Logic
+
+
     if(opmode==MOD_RUN)
     {
         ChgLck=false;//reset charge lockout flag when we drive off
@@ -356,7 +370,6 @@ static void Ms200Task(void)
         IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
     }
 
-
 }
 
 static void Ms100Task(void)
@@ -393,6 +406,7 @@ static void Ms100Task(void)
         OutlanderHeartBeat::Task100Ms();
     }
 
+    //Setting reverse light
     if (Param::GetInt(Param::dir) < 0)
     {
         IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Set();
@@ -402,6 +416,7 @@ static void Ms100Task(void)
         IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Clear();
     }
 
+    //Setting Run light
     if(opmode==MOD_RUN)
     {
         IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Set();
@@ -410,7 +425,7 @@ static void Ms100Task(void)
     {
         IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Clear();
     }
-
+//end lights
 
     Param::SetFloat(Param::tmphs, selectedInverter->GetInverterTemperature()); //send inverter temp to web interface
     Param::SetFloat(Param::tmpm, selectedInverter->GetMotorTemperature()); //send motor temp to web interface
@@ -419,12 +434,15 @@ static void Ms100Task(void)
 
     Param::SetInt(Param::T15Stat, selectedVehicle->Ready());
 
+    //Needs to move to shunt handling
     int32_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
+//end need to move
 
+//Charge interface logic
     if(targetChgint == ChargeInterfaces::i3LIM || targetChgint == ChargeInterfaces::Foccci || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
 
-    if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
+    if(selectedChargeInt->DCFCRequest(RunChg) || ExtHVreq)//Request to run dc fast charge via charge interface or external pin io
     {
         //Here we receive a valid DCFC startup request.
         if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
@@ -439,12 +457,22 @@ static void Ms100Task(void)
 
     if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM) if we are NOT in DC charge mode.
     {
-        ACrequest=selectedChargeInt->ACRequest(RunChg);
+        ACrequest=selectedChargeInt->ACRequest(RunChg); //If using unused always returns true
     }
+//End charge interface logic
 
+
+//Reading HeatReq inpput
     if (IOMatrix::GetPin(IOMatrix::HEATREQ) != &DigIo::dummypin)
     {
         Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+    }
+
+    //Reading HVrequest inpput
+    if (IOMatrix::GetPin(IOMatrix::HVREQ) != &DigIo::dummypin)
+    {
+        ExtHVreq = IOMatrix::GetPin(IOMatrix::HVREQ)->Get();//Read IO pin to determine if there is an external HV request
+        if(ExtHVreq)Param::SetInt(Param::chgtyp,DCEXT);
     }
 
     DigiPot::SetPot1Step(); //just for dev
