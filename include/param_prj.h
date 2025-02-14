@@ -18,8 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#define VER 2.22.A
+#define VER 2.30.TA
 
 
 /* Entries must be ordered as follows:
@@ -105,7 +104,7 @@
     PARAM_ENTRY(CAT_BMS,       BMS_VmaxLimit, "V",     0,      10,     4.2,    93 ) \
     PARAM_ENTRY(CAT_BMS,       BMS_TminLimit, "°C",    -100,   100,    5,      94 ) \
     PARAM_ENTRY(CAT_BMS,       BMS_TmaxLimit, "°C",    -100,   100,    50,     95 ) \
-    PARAM_ENTRY(CAT_HEATER,    Heater,      HTTYPE,    0,      3,      0,      57 ) \
+    PARAM_ENTRY(CAT_HEATER,    Heater,      HTTYPE,    0,      5,      0,      57 ) \
     PARAM_ENTRY(CAT_HEATER,    Control,     HTCTRL,    0,      2,      0,      58 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPwr,     "W",       0,      6500,   0,      59 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPercnt,  "%",       0,      100,    0,      124 ) \
@@ -285,7 +284,7 @@
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"
 #define CRUISESTATES "0=None, 1=On, 2=Disable, 4=Set, 8=Resume"
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
-#define HTTYPE       "0=None, 1=Ampera, 2=VW, 3=OutlanderCan"
+#define HTTYPE       "0=None, 1=Ampera, 2=VWCoolant, 3=VWAir, 4=OutlanderCan, 5=MGCoolant"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
 #define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, 6=Elcon"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
@@ -388,8 +387,10 @@ enum HeatType
 {
     Noheater = 0,
     AmpHeater = 1,
-    VW = 2,
-        OutlanderHeater = 3
+    VWCoolant = 2,
+    VWAir = 3,
+    OutlanderHeater = 4,
+    MGCoolant = 5
 };
 
 enum BMSModes
