@@ -196,24 +196,27 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
     Shifter::Sgear gearS;
     int8_t selectedDir = Param::GetInt(Param::dir);
     int8_t userDirSelection = 0;
+    int8_t prevValidDir = 0;
     int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
+    uint8_t ChangeLim = Param::GetInt(Param::DirChange); //"0=None, 1=Speed Thres, 2=Speed+Brake"
 
+    //Collecting Inputs//
     if (vehicle->GetGear(gear))
     {
         // if the vehicle class supplies gear selection then use that
         switch (gear)
         {
         case Vehicle::PARK:
-            selectedDir = 2; // Park
+            userDirSelection = 2; // Park
             break;
         case Vehicle::REVERSE:
-            selectedDir = -1; // Reverse
+            userDirSelection = -1; // Reverse
             break;
         case Vehicle::NEUTRAL:
-            selectedDir = 0; // Neutral
+            userDirSelection = 0; // Neutral
             break;
         case Vehicle::DRIVE:
-            selectedDir = 1; // Drive
+            userDirSelection = 1; // Drive
             break;
         }
     }
@@ -223,20 +226,19 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
         switch (gearS)
         {
         case Shifter::PARK:
-            selectedDir = 2; // Park
+            userDirSelection = 2; // Park
             break;
         case Shifter::REVERSE:
-            selectedDir = -1; // Reverse
+            userDirSelection = -1; // Reverse
             break;
         case Shifter::NEUTRAL:
-            selectedDir = 0; // Neutral
+            userDirSelection = 0; // Neutral
             break;
         case Shifter::DRIVE:
-            selectedDir = 1; // Drive
+            userDirSelection = 1; // Drive
             break;
         }
     }
-
     else
     {
         // otherwise use the traditional inputs
@@ -271,17 +273,73 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
             else if (Param::GetBool(Param::din_reverse))
                 userDirSelection = -1 * dirSign;
         }
-
-        /* Only change direction when below certain motor speed */
-//   if ((int)Encoder::GetSpeed() < Param::GetInt(Param::dirchrpm))
-        selectedDir = userDirSelection;
-
-        /* Current direction doesn't match selected direction -> neutral */
-        if (selectedDir != userDirSelection)
-            selectedDir = 0;
     }
 
-    Param::SetInt(Param::dir, selectedDir);
+    //Change Allowed Logic//
+
+    if(selectedDir !=  userDirSelection)//only run if requested change
+    {
+        if(ChangeLim == 0)//No limits on requesting new direction
+        {
+            selectedDir =  userDirSelection; //direct pass through
+        }
+        else if (ChangeLim == 1 || 2)//speed limit only when changing F to R or R to F, note last selected direction is valid,ignore neautral
+        {
+            if(userDirSelection != 0 && userDirSelection != prevValidDir)//neutral changes always allowed, check if we are not going back into same mode as before neutral
+            {
+                if(Param::GetInt(Param::DirChangeRpm) > (ABS(Param::GetInt(Param::speed))))
+                {
+                    if (Param::GetBool(Param::din_brake) && ChangeLim == 2)
+                    {
+                        selectedDir =  userDirSelection;
+                        prevValidDir = selectedDir;//update only when its a valid forward or reverse action under speed threshold
+                    }
+                    else if(ChangeLim == 1)
+                    {
+                        selectedDir =  userDirSelection;
+                        prevValidDir = selectedDir;//update only when its a valid forward or reverse action under speed threshold
+                    }
+                }
+            }
+            else
+            {
+                selectedDir =  userDirSelection; //direct pass through
+            }
+        }
+    }
+
+    //Shiftlock out control
+    if(ChangeLim == 0)//No limits on requesting new direction
+    {
+        SetInt(Param::ShiftLock,0);//No shift lock out ever
+    }
+    else if(Param::GetInt(Param::DirChangeRpm) > (ABS(Param::GetInt(Param::speed))))//speed based limit
+    {
+        if (Param::GetBool(Param::din_brake) && ChangeLim == 2)//brake input required
+        {
+            SetInt(Param::ShiftLock,1);//Solenoid pull out brake pressed and speed low
+        }
+        else if(ChangeLim == 1)//if only speed
+        {
+            SetInt(Param::ShiftLock,1);//Solenoid pull out speed low
+        }
+        else
+        {
+           SetInt(Param::ShiftLock,0);//No shift lock out speed too high
+        }
+    }
+    else
+    {
+        SetInt(Param::ShiftLock,0);//No shift lock out speed too high
+    }
+
+    //Always off outside of run
+    if(Param::GetInt(Param::opmode)!=MOD_RUN)
+    {
+        SetInt(Param::ShiftLock,0);//No shift lock out speed too high
+    }
+
+    Param::SetInt(Param::dir, selectedDir);//final writing of DIR
 }
 
 float ProcessUdc(int motorSpeed)

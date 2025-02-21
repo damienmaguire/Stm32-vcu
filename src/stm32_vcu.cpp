@@ -502,6 +502,16 @@ static void Ms100Task(void)
     {
         IOMatrix::GetPin(IOMatrix::HVACTIVE)->Clear();//HV Active Off
     }
+
+    //ShiftLock Out output
+    if(opmode==MOD_RUN && Param::GetInt(Param::ShiftLock) == 1)
+    {
+        IOMatrix::GetPin(IOMatrix::SHIFTLOCKNO)->Set();//Shift Lock Out On
+    }
+    else
+    {
+        IOMatrix::GetPin(IOMatrix::SHIFTLOCKNO)->Clear();//Shift Lock Out Off
+    }
 }
 
 static void ControlCabHeater(int opmode)
