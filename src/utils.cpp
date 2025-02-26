@@ -360,6 +360,7 @@ float ProcessUdc(int motorSpeed)
         Param::SetFloat(Param::udc, udc);
         float udc2 = ((float)ISA::Voltage2)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc2, udc2);
+        Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
         float udc3 = ((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)ISA::Amperes)/1000;//get current from isa sensor and post to parameter database
@@ -371,8 +372,7 @@ float ProcessUdc(int motorSpeed)
         float Amph = ((float)ISA::Ah)/3600;//get Ah from isa sensor and post to parameter database
         Param::SetFloat(Param::AMPh, Amph);
         float deltaVolts1 = (udc2 / 2) - udc3;
-        float deltaVolts2 = (udc2 + udc3) - udc;
-        Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
+        Param::SetFloat(Param::deltaV, deltaVolts1);
     }
     else if (Param::GetInt(Param::ShuntType) == 2)//BMs Sbox
     {
