@@ -325,7 +325,7 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
         }
         else
         {
-           SetInt(Param::ShiftLock,0);//No shift lock out speed too high
+            SetInt(Param::ShiftLock,0);//No shift lock out speed too high
         }
     }
     else
@@ -354,7 +354,7 @@ float ProcessUdc(int motorSpeed)
             udc = 0; //ensure we reset udc during off state to keep precharge working
         }
     }
-    else if (Param::GetInt(Param::ShuntType) == 1)//ISA shunt
+    else if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)//ISA shunt
     {
         float udc = ((float)ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
@@ -371,8 +371,14 @@ float ProcessUdc(int motorSpeed)
         float Amph = ((float)ISA::Ah)/3600;//get Ah from isa sensor and post to parameter database
         Param::SetFloat(Param::AMPh, Amph);
         float deltaVolts1 = (udc2 / 2) - udc3;
-        float deltaVolts2 = (udc2 + udc3) - udc;
-        Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
+        Param::SetFloat(Param::deltaV, deltaVolts1);
+        if(Param::GetInt(Param::ShuntType) == 4)//ISA Shunt with udcsw update
+        {
+            if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+            {
+                Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+            }
+        }
     }
     else if (Param::GetInt(Param::ShuntType) == 2)//BMs Sbox
     {
@@ -380,7 +386,10 @@ float ProcessUdc(int motorSpeed)
         Param::SetFloat(Param::udc, udc);
         float udc2 = ((float)SBOX::Voltage)/1000;//get battery voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc2, udc2);
-        Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+        {
+            Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        }
         float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)SBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
@@ -394,7 +403,10 @@ float ProcessUdc(int motorSpeed)
         Param::SetFloat(Param::udc, udc);
         float udc2 = ((float)VWBOX::Voltage2)*0.0625;//get battery voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc2, udc2);
-        Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+        {
+            Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        }
         float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)VWBOX::Amperes)*0.1;//get current from sbox sensor and post to parameter database

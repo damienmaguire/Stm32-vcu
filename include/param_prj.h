@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.31.TE
+#define VER 2.31.TG
 
 
 /* Entries must be ordered as follows:
@@ -37,7 +37,7 @@
     PARAM_ENTRY(CAT_SETUP,     interface,    CHGINT,    0,     4,      0,      39 ) \
     PARAM_ENTRY(CAT_SETUP,     chargemodes,  CHGMODS,   0,     6,      0,      37 ) \
     PARAM_ENTRY(CAT_SETUP,     BMS_Mode,    BMSMODES,  0,      5,      0,      90 ) \
-    PARAM_ENTRY(CAT_SETUP,     ShuntType,   SHNTYPE,   0,      3,      0,      88 ) \
+    PARAM_ENTRY(CAT_SETUP,     ShuntType,   SHNTYPE,   0,      4,      0,      88 ) \
     PARAM_ENTRY(CAT_SETUP,     InverterCan,  CAN_DEV,  0,      1,      0,      70 ) \
     PARAM_ENTRY(CAT_SETUP,     VehicleCan,   CAN_DEV,  0,      1,      1,      71 ) \
     PARAM_ENTRY(CAT_SETUP,     ShuntCan,     CAN_DEV,  0,      1,      0,      72 ) \
@@ -268,7 +268,7 @@
                      "19=GS450pump, 20=PwmTempGauge, 21=PwmSocGauge"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor"
 #define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
-#define SHNTYPE      "0=None, 1=ISA, 2=SBOX, 3=VAG"
+#define SHNTYPE      "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleChannel, 1=DualChannel"
 #define BTNSWITCH    "0=Button, 1=Switch, 2=CAN"

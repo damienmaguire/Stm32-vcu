@@ -1056,7 +1056,7 @@ static void SetCanFilters()
     canOBD2.SetCanInterface(obd2_can);
     selectedHeater->SetCanInterface(heater_can);
 
-    if (Param::GetInt(Param::ShuntType) == 1)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
+    if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
     if (Param::GetInt(Param::ShuntType) == 2)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
     if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::RegisterCanMessages(shunt_can);//select vw sbox
 
@@ -1192,7 +1192,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
         break;
 
     default:
-        if (Param::GetInt(Param::ShuntType) == 1)  ISA::DecodeCAN(id, data);
+        if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)  ISA::DecodeCAN(id, data);
         if (Param::GetInt(Param::ShuntType) == 2)  SBOX::DecodeCAN(id, data);
         if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::DecodeCAN(id, data);
         selectedInverter->DecodeCAN(id, data);
