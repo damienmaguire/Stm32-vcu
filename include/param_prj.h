@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.31.TG
+#define VER 2.31.TH
 
 
 /* Entries must be ordered as follows:

@@ -132,7 +132,7 @@ void Can_OI::SetTorque(float torquePercent)
 
     uint8_t tempIO=0;
 
-    if(opmode==MOD_RUN)
+    if(opmode==MOD_RUN)//No need to send CAN any time but run mode
     {
         if(dir == 1)//Forward
         {
@@ -142,7 +142,6 @@ void Can_OI::SetTorque(float torquePercent)
         {
             tempIO+=16;//Reverse, only send direction data if in run mode
         }
-    }
 
     if(Param::GetBool(Param::din_brake)) tempIO+=4;
     //if(Param::GetBool(Param::din_start)) tempIO+=2;
@@ -190,6 +189,7 @@ void Can_OI::SetTorque(float torquePercent)
     data[1] |= crc << 24;
 
     can->Send(0x3F,data);//send 0x3F
+    }
 }
 
 
