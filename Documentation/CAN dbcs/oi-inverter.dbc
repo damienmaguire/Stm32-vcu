@@ -1,0 +1,72 @@
+VERSION ""
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_:
+VAL_TABLE_ Opmode 2 "ManualRun" 1 "Run" 0 "Off" ;
+
+
+BO_ 400 InverterFeedback: 8 Vector__XXX
+ SG_ Inv_Voltage : 8|16@1+ (0.1,0) [0|6553.5] "V" Vector__XXX
+ SG_ Inv_Speed : 24|16@1+ (1,0) [0|65535] "rpm" Vector__XXX
+ SG_ Inv_Opmode : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ Inv_MotorTemp : 55|8@0+ (1,-30) [-30|225] "C" Vector__XXX
+ SG_ Inv_HeatsinkTemp : 47|8@0+ (1,-30) [-30|225] "C" Vector__XXX
+
+BO_ 2147483711 Vector__XXXMsg99: 8 Vector__XXX
+ SG_ pot : 0|12@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ pot2 : 12|12@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ cruise : 24|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ start : 25|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ brake : 26|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ forward : 27|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ reverse : 28|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ bms : 29|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ cruisespeed : 32|14@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ regenpreset : 48|8@1+ (1,0) [0|1] "" Vector__XXX
+
+
+
+BA_DEF_ BO_  "GenMsgBackgroundColor" STRING ;
+BA_DEF_ BO_  "GenMsgForegroundColor" STRING ;
+BA_DEF_ BO_  "matchingcriteria" INT 0 0;
+BA_DEF_ BO_  "filterlabeling" INT 0 0;
+BA_DEF_DEF_  "GenMsgBackgroundColor" "#ffffff";
+BA_DEF_DEF_  "GenMsgForegroundColor" "#000000";
+BA_DEF_DEF_  "matchingcriteria" 0;
+BA_DEF_DEF_  "filterlabeling" 1;
+BA_ "GenMsgBackgroundColor" BO_ 2147483711 "#57e389";
+BA_ "GenMsgForegroundColor" BO_ 2147483711 "#000000";
+VAL_ 400 Inv_Opmode 2 "ManualRun" 1 "Run" 0 "Off" ;
+

@@ -18,7 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define VER 2.30.TA
+
+#define VER 2.31.TE
 
 
 /* Entries must be ordered as follows:
@@ -26,7 +27,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 139
+//Next param id (increase when adding new parameter!): 149
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
@@ -48,6 +49,7 @@
     PARAM_ENTRY(CAT_SETUP,     DCDCCan,      CAN_DEV,  0,      1,      1,      107 ) \
     PARAM_ENTRY(CAT_SETUP,     HeaterCan,    CAN_DEV,  0,      1,      1,      138 ) \
     PARAM_ENTRY(CAT_SETUP,     MotActive,    MotorsAct,0,      3,      0,      129 ) \
+    PARAM_ENTRY(CAT_SETUP,     ConfigCANOI,   ONOFF,   0,      1,      0,      149 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmax,      "dig",     0,      4095,   4095,   8  ) \
     PARAM_ENTRY(CAT_THROTTLE,  pot2min,     "dig",     0,      4095,   4095,   9  ) \
@@ -59,6 +61,8 @@
     PARAM_ENTRY(CAT_THROTTLE,  regenramp,   "%/10ms",  0.1,    100,    1,    68 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmode,     POTMODES,  0,      1,      0,      11 ) \
     PARAM_ENTRY(CAT_THROTTLE,  dirmode,     DIRMODES,  0,      4,      1,      12 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  DirChange,    DIRLIM,   0,      2,      0,     147 ) \
+    PARAM_ENTRY(CAT_THROTTLE,  DirChangeRpm,"rpm",     0,    20000,   500,    139 ) \
     PARAM_ENTRY(CAT_THROTTLE,  reversemotor,  ONOFF,   0,      1,      0,      127 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramp,   "%/10ms",  1,    100,    10,    13 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramprpm,"rpm",     0,      20000,  20000,  14 ) \
@@ -119,14 +123,14 @@
     PARAM_ENTRY(CAT_CLOCK,     Pre_Min,     "Mins",    0,      59,     0,      54 ) \
     PARAM_ENTRY(CAT_CLOCK,     Pre_Dur,     "Mins",    0,      60,     0,      55 ) \
     PARAM_ENTRY(CAT_IOPINS,    PumpPWM,    PumpOutType,0,      2,      0,      135 ) \
-    PARAM_ENTRY(CAT_IOPINS,    Out1Func,    PINFUNCS,  0,      15,     6,      80 ) \
-    PARAM_ENTRY(CAT_IOPINS,    Out2Func,    PINFUNCS,  0,      15,     7,      81 ) \
-    PARAM_ENTRY(CAT_IOPINS,    Out3Func,    PINFUNCS,  0,      15,     3,      82 ) \
-    PARAM_ENTRY(CAT_IOPINS,    SL1Func,     PINFUNCS,  0,      15,     0,      83 ) \
-    PARAM_ENTRY(CAT_IOPINS,    SL2Func,     PINFUNCS,  0,      15,     0,      84 ) \
-    PARAM_ENTRY(CAT_IOPINS,    PWM1Func,    PINFUNCS,  0,      20,     0,      85 ) \
-    PARAM_ENTRY(CAT_IOPINS,    PWM2Func,    PINFUNCS,  0,      20,     4,      86 ) \
-    PARAM_ENTRY(CAT_IOPINS,    PWM3Func,    PINFUNCS,  0,      20,     2,      87 ) \
+    PARAM_ENTRY(CAT_IOPINS,    Out1Func,    PINFUNCS,  0,      16,     6,      80 ) \
+    PARAM_ENTRY(CAT_IOPINS,    Out2Func,    PINFUNCS,  0,      16,     7,      81 ) \
+    PARAM_ENTRY(CAT_IOPINS,    Out3Func,    PINFUNCS,  0,      16,     3,      82 ) \
+    PARAM_ENTRY(CAT_IOPINS,    SL1Func,     PINFUNCS,  0,      16,     0,      83 ) \
+    PARAM_ENTRY(CAT_IOPINS,    SL2Func,     PINFUNCS,  0,      16,     0,      84 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PWM1Func,    PINFUNCS,  0,      21,     0,      85 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PWM2Func,    PINFUNCS,  0,      21,     4,      86 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PWM3Func,    PINFUNCS,  0,      21,     2,      87 ) \
     PARAM_ENTRY(CAT_IOPINS,    GP12VInFunc, PINFUNCS,  0,      13,     12,     98 ) \
     PARAM_ENTRY(CAT_IOPINS,    HVReqFunc,   PINFUNCS,  0,      13,     12,     99 ) \
     PARAM_ENTRY(CAT_IOPINS,    PB1InFunc,   PINFUNCS,  0,      13,     12,     140 ) \
@@ -204,6 +208,7 @@
     VALUE_ENTRY(din_reverse,   ONOFF,               2039 ) \
     VALUE_ENTRY(din_bms,       ONOFF,               2040 ) \
     VALUE_ENTRY(din_12Vgp,     ONOFF,               2071 ) \
+    VALUE_ENTRY(ShiftLock,     ONOFF,               2108 ) \
     VALUE_ENTRY(handbrk,       ONOFF,               2041 ) \
     VALUE_ENTRY(Gear1,         ONOFF,               2042 ) \
     VALUE_ENTRY(Gear2,         ONOFF,               2043 ) \
@@ -247,7 +252,7 @@
     VALUE_ENTRY(powerheater,   "W",                 2098 ) \
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
 
-//Next value Id: 2108
+//Next value Id: 2109
 
 //Dead params
 /*
@@ -259,8 +264,8 @@
 #define VERSTR STRINGIFY(4=VER)
 #define PINFUNCS     "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, 5=WarnIndication," \
                      "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, 11=HVRequest," \
-                     "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, 16=PwmTim3, 17=CpSpoof,"\
-                     "18=GS450pump, 19=PwmTempGauge, 20=PwmSocGauge"
+                     "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, 16=ShiftLockNO, 17=PwmTim3, 18=CpSpoof,"\
+                     "19=GS450pump, 20=PwmTempGauge, 21=PwmSocGauge"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor"
 #define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE      "0=None, 1=ISA, 2=SBOX, 3=VAG"
@@ -315,6 +320,7 @@
 #define MotorsAct    "0=Mg1and2, 1=Mg1, 2=Mg2, 3=BlendingMG2and1"
 #define PumpOutType  "0=GS450hOil, 1=TachoOut, 2=SpeedoOut"
 #define LIMITREASON  "0=None, 1=UDClimLow, 2=UDClimHigh, 4=IDClimLow, 8=IDClimHigh, 16=TempLim"
+#define DIRLIM       "0=None, 1=SpeedThres, 2=SpeedBrake"
 
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1
