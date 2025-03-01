@@ -143,52 +143,52 @@ void Can_OI::SetTorque(float torquePercent)
             tempIO+=16;//Reverse, only send direction data if in run mode
         }
 
-    if(Param::GetBool(Param::din_brake)) tempIO+=4;
-    //if(Param::GetBool(Param::din_start)) tempIO+=2;
-    if(opmode==MOD_RUN && InvStartTimeout!=0)//Set the start signal true for 3 seconds on vcu entering run mode.
-    {
-        InvStartTimeout--;
-        tempIO+=2;//inv start signal on for 3 secs once enter vcu run mode
+        if(Param::GetBool(Param::din_brake)) tempIO+=4;
+        //if(Param::GetBool(Param::din_start)) tempIO+=2;
+        if(InvStartTimeout!=0)//Set the start signal true for 3 seconds on vcu entering run mode.
+        {
+            InvStartTimeout--;
+            tempIO+=2;//inv start signal on for 3 secs once enter vcu run mode
+        }
+
+        /*
+        pot[0:11]
+        pot2[12:23]
+        canio[24:29]
+        cruise[24]
+        start[25]
+        brake[26]
+        forward[27]
+        reverse[28]
+        bms[29]
+        canrun1[30:31]
+        cruisespeed[32:45]
+        canrun2[46:47]
+        regenpreset[48:55]
+        cancrc[56:63]
+        */
+
+        uint32_t data[2];
+        uint32_t pot = Param::GetInt(Param::pot) & 0xFFF;
+        uint32_t pot2 = Param::GetInt(Param::pot2) & 0xFFF;
+        uint32_t canio = tempIO & 0x3F;
+        uint32_t ctr = Param::GetInt(Param::canctr) & 0x3;
+        uint32_t cruise = 0;//Param::GetInt(Param::cruisespeed) & 0x3FFF; // Cruise disabled
+        uint32_t regen = 100& 0x7F;//Param::GetInt(Param::potbrake) & 0x7F; // Fixed for now 100% regen allowed
+
+        data[0] = pot | (pot2 << 12) | (canio << 24) | (ctr << 30);
+        data[1] = cruise | (ctr << 14) | (regen << 16);
+
+        crc_reset();
+        uint32_t crc = crc_calculate_block(data, 2) & 0xFF;
+        data[1] |= crc << 24;
+
+        can->Send(0x3F,data);//send 0x3F
     }
 
     if(opmode==MOD_OFF)
     {
         InvStartTimeout=300;
-    }
-
-    /*
-    pot[0:11]
-    pot2[12:23]
-    canio[24:29]
-    cruise[24]
-    start[25]
-    brake[26]
-    forward[27]
-    reverse[28]
-    bms[29]
-    canrun1[30:31]
-    cruisespeed[32:45]
-    canrun2[46:47]
-    regenpreset[48:55]
-    cancrc[56:63]
-    */
-
-    uint32_t data[2];
-    uint32_t pot = Param::GetInt(Param::pot) & 0xFFF;
-    uint32_t pot2 = Param::GetInt(Param::pot2) & 0xFFF;
-    uint32_t canio = tempIO & 0x3F;
-    uint32_t ctr = Param::GetInt(Param::canctr) & 0x3;
-    uint32_t cruise = 0;//Param::GetInt(Param::cruisespeed) & 0x3FFF; // Cruise disabled
-    uint32_t regen = 100& 0x7F;//Param::GetInt(Param::potbrake) & 0x7F; // Fixed for now 100% regen allowed
-
-    data[0] = pot | (pot2 << 12) | (canio << 24) | (ctr << 30);
-    data[1] = cruise | (ctr << 14) | (regen << 16);
-
-    crc_reset();
-    uint32_t crc = crc_calculate_block(data, 2) & 0xFF;
-    data[1] |= crc << 24;
-
-    can->Send(0x3F,data);//send 0x3F
     }
 }
 
