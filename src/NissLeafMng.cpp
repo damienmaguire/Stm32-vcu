@@ -40,6 +40,8 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
 
     int opmode = Param::GetInt(Param::opmode);
 
+    int Dir = Param::GetInt(Param::dir);
+
     if(SendCan == true)//only send CAN when needed
     {
         mprun10 = (mprun10 + 1) % 4; // mprun10 cycles between 0-1-2-3-0-1...
@@ -68,8 +70,27 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
 
 
         //byte 0 determines motor rotation direction
-        if (opmode == MOD_CHARGE) bytes[0] = 0x01;//Car in park when charging
-        if (opmode != MOD_CHARGE) bytes[0] = 0x4E;
+        if (opmode == MOD_CHARGE)
+        {
+            bytes[0] = 0x01;//Car in park when charging
+        }
+        else
+        {
+            if(Dir == 1)//drive
+            {
+                bytes[0] = 0x4E;//Drive
+            }
+            else if(Dir == -1)//reverse
+            {
+                bytes[0] = 0x2E;//Reverse
+            }
+            else
+            {
+                bytes[0] = 0x01;//Park
+            }
+        }
+
+
         // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
         if (opmode == MOD_CHARGE) bytes[1] = 0x80;
         if (opmode != MOD_CHARGE) bytes[1] = 0x40;
@@ -375,22 +396,22 @@ void NissLeafMng::Task100Ms()
     {
         if(SleepCount == 0)
         {
-        SendCan = false;
-        Param::SetInt(Param::CanAct,0);//Reset CAN wake trigger
-        //Send CAN sleep command and stop sending CAN
-        bytes[0] = 0x00;
-        bytes[1] = 0x00;
-        bytes[2] = 0x00;
-        bytes[3] = 0x00;
-        bytes[4] = 0x00;
-        bytes[5] = 0x00;
-        bytes[6] = 0x00;
+            SendCan = false;
+            Param::SetInt(Param::CanAct,0);//Reset CAN wake trigger
+            //Send CAN sleep command and stop sending CAN
+            bytes[0] = 0x00;
+            bytes[1] = 0x00;
+            bytes[2] = 0x00;
+            bytes[3] = 0x00;
+            bytes[4] = 0x00;
+            bytes[5] = 0x00;
+            bytes[6] = 0x00;
 
-        //possible problem here as 0x50B is DLC 7....
-        can->Send(0x50B, (uint32_t*)bytes, 7);
+            //possible problem here as 0x50B is DLC 7....
+            can->Send(0x50B, (uint32_t*)bytes, 7);
         }
         else
-            {
+        {
             SleepCount --;
         }
     }
