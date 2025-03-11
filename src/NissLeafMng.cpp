@@ -122,11 +122,11 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
         // move at about 10% throttle: F70700E0C74430D4
 
         // Usually F7, but can have values between 9A...F7 (gen1)
-        bytes[0] = 0xF7;
+        bytes[0] = 0xF7; // Upper Torque Limit 2.5Nm/bit 617Nm
         // 2016: 6E
 
         // Usually 07, but can have values between 07...70 (gen1)
-        bytes[1] = 0x07;
+        bytes[1] = 0xF7;//0x07; // Lower Torque Limit -2.5Nm/bit Lets for fun allow ALL power
         // 2016: 6E
 
         // override any torque commands if not in run mode.
