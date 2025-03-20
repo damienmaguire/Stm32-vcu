@@ -276,17 +276,26 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
         {
             // clamp min and max values
             if (OBCpwrSP > 0xA0)
+            {
                 OBCpwrSP = 0xA0;
-            else if (OBCpwrSP < 0x64)
-                OBCpwrSP = 0x64;
+            }
 
             // if measured vbatt is less than setpoint got to max power from web ui
             if (Vbatt < VbattSP)
+            {
                 OBCpwr = OBCpwrSP;
+            }
 
             // decrement charger power if volt setpoint is reached
             if (Vbatt >= VbattSP)
+            {
                 OBCpwr--;
+            }
+
+            if (OBCpwrSP < 0x64)
+            {
+                OBCpwrSP = 0x64;
+            }
         }
         else
         {
