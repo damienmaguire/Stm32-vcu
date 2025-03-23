@@ -754,7 +754,7 @@ static void Ms10Task(void)
         if(!chargeMode)
         {
             opmode = MOD_OFF;
-            rlyDly=1000;//Recharge sequence timer for delayed shutdown
+            rlyDly=250;//Recharge sequence timer for delayed shutdown
         }
         Param::SetInt(Param::opmode, opmode);
         break;
@@ -771,7 +771,7 @@ static void Ms10Task(void)
         if(!selectedVehicle->Ready())
         {
             opmode = MOD_OFF;
-            rlyDly=1000;//Recharge sequence timer for delayed shutdown
+            rlyDly=250;//Recharge sequence timer for delayed shutdown
         }
         Param::SetInt(Param::opmode, opmode);
         break;
@@ -787,7 +787,7 @@ static void Ms10Task(void)
 
         if(!preheater.GetRunPreHeat())
         {
-            rlyDly=1000;//Recharge sequence timer for delayed shutdown
+            rlyDly=250;//Recharge sequence timer for delayed shutdown
         }
         break;
     
