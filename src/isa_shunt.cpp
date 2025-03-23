@@ -1,12 +1,14 @@
-/*  This library supports ISA Scale IVT Modular current/voltage sensor device.  These devices measure current, up to three voltages, and provide temperature compensation.
-
-    This library was written by Jack Rickard of EVtv - http://www.evtv.me
-    copyright 2014
-    You are licensed to use this library for any purpose, commercial or private,
-    without restriction.
-
-*/
-
+/* 
+ * This library supports ISA Scale IVT Modular current/voltage sensor device.
+ * These devices measure current, up to three voltages, and provide temperature
+ * compensation.
+ *
+ * This library was written by Jack Rickard of EVtv - http://www.evtv.me
+ * copyright 2014
+ *
+ * You are licensed to use this library for any purpose, commercial or private,
+ * without restriction.
+ */
 
 #include <isa_shunt.h>
 #include "my_fp.h"

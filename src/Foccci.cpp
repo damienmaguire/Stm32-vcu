@@ -1,3 +1,24 @@
+/*
+ * This file is part of the ZombieVeter project.
+ *
+ * Copyright (C) 2020 Johannes Huebner <dev@johanneshuebner.com>
+ *               2021-2022 Damien Maguire <info@evbmw.com>
+ * Yes I'm really writing software now........run.....run away.......
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <Foccci.h>
 static uint8_t ChargePort_IsoStop = 0;
 static uint16_t ChargePort_ACLimit = 0;
@@ -36,6 +57,9 @@ static uint8_t EmptyCount = 0;
 
 static uint16_t xarr=0;
 
+static bool FoccciCANalive = 0;//CAN awake for Foccci comms
+static uint16_t CANaliveCnt = 0;
+
 static uint8_t CanConfigTxArr[10][8]=
 {
     {0x09,0x01,0x00,0x00,0xD6,0x07,0x0,0x10},
@@ -53,7 +77,7 @@ static uint8_t CanConfigTxArr[10][8]=
 static uint8_t CanConfigRxArr[7][8]=
 {
     {0x58,0x03,0x00,0x00,0x17,0x00,0x0,0x1},
-    {0x58,0x03,0x00,0x00,0x1D,0x00,0x2,0x6},
+    {0x58,0x03,0x00,0x00,0x1D,0x00,0x2,0x4},
     {0x58,0x03,0x00,0x00,0x5,0x00,0x8,0x8},
     {0x58,0x03,0x00,0x00,0x6,0x00,0x10,0x10},
     {0x58,0x03,0x00,0x00,0x3,0x00,0x20,0x10},
@@ -161,7 +185,7 @@ void FoccciClass::handle357(uint32_t data[2])  //FOCCCI Charge Port Info
         ChargePort_ReadyDCFC = false;
         if(ChargePort_ReadyCharge == false)//if not AC charging
         {
-        Param::SetInt(Param::chgtyp,0);
+            Param::SetInt(Param::chgtyp,0);
         }
     }
 
@@ -183,6 +207,11 @@ void FoccciClass::handle357(uint32_t data[2])  //FOCCCI Charge Port Info
 
     Param::SetInt(Param::PlugDet,PlugPres);
     Param::SetInt(Param::PilotTyp,CP_Mode);
+
+    if(PlugPres && CANaliveCnt == 0)//Keep talking to Foccci while plug present
+    {
+        FoccciCANalive = 1;
+    }
 }
 
 void FoccciClass::handle596(uint32_t data[2])  //FOCCCI SDO responses
@@ -236,43 +265,68 @@ void FoccciClass::Task200Ms()
 
 void FoccciClass::Task100Ms()
 {
-    if(ChargePort_ReadyDCFC)
+    int opmode = Param::GetInt(Param::opmode);
+
+    if(opmode==MOD_RUN || opmode==MOD_CHARGE || FoccciCANalive)//Always send during Run or Charge or When Foccci reports a plug
     {
-        CCS_Pwr_Con(); //Calc DC current req
+        if(ChargePort_ReadyDCFC)
+        {
+            CCS_Pwr_Con(); //Calc DC current req
+        }
+
+
+        //CAN sending//
+        uint8_t bytes[8];
+        uint8_t UnlockAllow = 1;
+
+        if(Param::GetInt(Param::VehLockSt) == 1)
+        {
+            UnlockAllow = 0;
+        }
+
+        UnlockAllow = UnlockAllow << 7;
+
+        if(ChargeAllow == true)
+        {
+            bytes[0] = 0x01; //allow starting
+            AcOBCReq = 0x08; //Charge AC
+        }
+        else
+        {
+            bytes[0] = 0x00; //stop charge
+            AcOBCReq = 0x08; //Idle
+        }
+        bytes[0] = bytes[0] | AcOBCReq | UnlockAllow; //
+        bytes[1] = Param::GetInt(Param::SOC)&0xFF;; //SOC
+        bytes[2] = Param::GetInt(Param::udc)&0xFF;
+        bytes[3] = Param::GetInt(Param::udc)>>8&0xFF;
+        bytes[4] = Param::GetInt(Param::Voltspnt)&0xFF;
+        bytes[5] = Param::GetInt(Param::Voltspnt)>>8&0xFF;
+        bytes[6] = Param::GetInt(Param::CCS_Ireq)&0xFF;
+        bytes[7] = Param::GetInt(Param::CCS_Ireq)>>8&0xFF;
+
+        can->Send(0x358, (uint32_t*)bytes,8); //
     }
 
-
-    //CAN sending//
-    uint8_t bytes[8];
-    uint8_t UnlockAllow = 1;
-
-    if(Param::GetInt(Param::VehLockSt) == 1)
+    if(opmode==MOD_OFF)
     {
-        UnlockAllow = 0;
+        if(CANaliveCnt < 1000) //wait 1 minute for valid charge session to start
+        {
+            if(FoccciCANalive)//only run count if Foccci been on
+            {
+            CANaliveCnt ++;
+            }
+        }
+        else if(CANaliveCnt > 1200) //wait 20s until after setting to stop sending CAN to sleep Foccci
+        {
+            CANaliveCnt = 0;
+        }
+        else //triggers after 1 min
+        {
+            FoccciCANalive = 0;
+            CANaliveCnt ++;
+        }
     }
-
-    UnlockAllow = UnlockAllow << 7;
-
-    if(ChargeAllow == true)
-    {
-        bytes[0] = 0x01; //allow starting
-        AcOBCReq = 0x08; //Charge AC
-    }
-    else
-    {
-        bytes[0] = 0x00; //stop charge
-        AcOBCReq = 0x08; //Idle
-    }
-    bytes[0] = bytes[0] | AcOBCReq | UnlockAllow; //
-    bytes[1] = Param::GetInt(Param::SOC)&0xFF;; //SOC
-    bytes[2] = Param::GetInt(Param::udc)&0xFF;
-    bytes[3] = Param::GetInt(Param::udc)>>8&0xFF;
-    bytes[4] = Param::GetInt(Param::Voltspnt)&0xFF;
-    bytes[5] = Param::GetInt(Param::Voltspnt)>>8&0xFF;
-    bytes[6] = Param::GetInt(Param::CCS_Ireq)&0xFF;
-    bytes[7] = Param::GetInt(Param::CCS_Ireq)>>8&0xFF;
-
-    can->Send(0x358, (uint32_t*)bytes,8); //
 }
 
 void FoccciClass::Chg_Timers()

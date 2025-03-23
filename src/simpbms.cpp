@@ -64,7 +64,7 @@ bool SimpBMS::ChargeAllowed()
 float SimpBMS::MaxChargeCurrent()
 {
    if(!ChargeAllowed()) return 0;
-   return chargeCurrentLimit / 1000.0;
+   return chargeCurrentLimit * 0.1;
 }
 
 // Process voltage and temperature message from SimpBMS.

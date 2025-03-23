@@ -34,7 +34,7 @@ class SimpBMS: public BMS
    private:
       bool BMSDataValid();
       bool ChargeAllowed();
-      int chargeCurrentLimit = 0;
+      int chargeCurrentLimit = 0;  // Sent by Simp as 0.1A per digit and stored the same way.
       int timeoutCounter = 0;
       float minCellV = 0;
       float maxCellV = 0;

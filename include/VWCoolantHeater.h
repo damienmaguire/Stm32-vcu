@@ -1,5 +1,5 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the Zombieverter VCU project.
  *
  * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
@@ -15,30 +15,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Controls the VW LIN based heater as : https://openinverter.org/wiki/Volkswagen_Heater
  */
+#ifndef VWCOOLANTHEATER_H
+#define VWCOOLANTHEATER_H
 
-#ifndef SHIFTER_H_INCLUDED
-#define SHIFTER_H_INCLUDED
-#include <stdint.h>
-#include "canhardware.h"
-#include "params.h"
+//#include <libopencm3/stm32/usart.h>
+#include <heater.h>
+#include "linbus.h"
 
-class Shifter
+
+class vwCoolantHeater : public Heater
 {
-public:
-   enum Sgear { PARK, REVERSE, NEUTRAL, DRIVE };
+   public:
+      void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
+      void SetPower(uint16_t power, bool HeatReq);
+      void SetLinInterface(LinBus* l);
 
-   virtual void Task1Ms() {} //Default does nothing
-   virtual void Task10Ms() {} //Default does nothing
-   virtual void Task100Ms() {} //Default does nothing
-   virtual void Task200Ms() {} //Default does nothing
-   virtual void DecodeCAN(int, uint32_t*) {};
-   virtual bool GetGear(Sgear&) { return false; } //if shifter class knows gear return true and set dir
-   virtual void SetCanInterface(CanHardware* c) { can = c; }
+   private:
+      bool isAwake=false;
+      LinBus* lin;
 
-protected:
-   CanHardware* can;
 };
-
-#endif // SHIFTER_H_INCLUDED
-
+#endif // VWCOOLANTHEATER_H

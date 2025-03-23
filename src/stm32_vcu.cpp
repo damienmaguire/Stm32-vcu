@@ -20,6 +20,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <stdint.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/timer.h>
@@ -94,7 +95,8 @@
 #include "Foccci.h"
 #include "NoInverter.h"
 #include "linbus.h"
-#include "VWheater.h"
+#include "VWCoolantHeater.h"
+#include "VWAirHeater.h"
 #include "ElconCharger.h"
 #include "rearoutlanderinverter.h"
 #include "NoVehicle.h"
@@ -103,6 +105,7 @@
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
 #include "Preheater.h"
+#include "MGCoolantHeater.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -122,7 +125,7 @@ static CanHardware* canInterface[3];
 static CanMap* canMap;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
-static uint8_t ChgSet;
+static uint8_t ChgSet;  // Temp variable storing Param::Chgctrl. 0=enable, 1=disable, 2=timer.
 static bool RunChg;
 static uint8_t ChgHrs_tmp;
 static uint8_t ChgMins_tmp;
@@ -133,6 +136,7 @@ static bool ACrequest=false;
 static bool initbyStart=false;
 static bool initbyCharge=false;
 static bool OutlanderCAN=false;
+static bool ExtHVreq=false;
 
 static volatile unsigned
 days=0,
@@ -173,7 +177,9 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
-static vwHeater heaterVW;
+static vwCoolantHeater heaterCoolantVW;
+static mgCoolantHeater heaterCoolantMG;
+static vwAirHeater heaterAirVW;
 static NoVehicle VehicleNone;
 static V_Classic classVehicle;
 static Inverter* selectedInverter = &openInv;
@@ -205,14 +211,25 @@ static void Ms200Task(void)
     selectedVehicle->Task200Ms();
     if(opmode==MOD_CHARGE) selectedCharger->Task200Ms();
 
+    //in chademo , we do not want to run the 200ms task unless in dc charge mode
+    if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
+    //In case of the LIM we want to send it all the time if lim in use
+    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)|| (targetChgint == ChargeInterfaces::Foccci)) selectedChargeInt->Task200Ms();
+    //and just to be thorough ...
+    if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
+
     //if(opmode==MOD_CHARGE) utils::CpSpoofOutput;
     utils::CpSpoofOutput();
+
 
     Param::SetInt(Param::Day,days);
     Param::SetInt(Param::Hour,hours);
     Param::SetInt(Param::Min,minutes);
     Param::SetInt(Param::Sec,seconds);
     Param::SetInt(Param::ChgT,ChgDur_tmp);
+
+    //Setting of RunChg - main okay to charge param
+
     if(ChgSet==2 && !ChgLck)  //if in timer mode and not locked out from a previous full charge.
     {
         if(opmode!=MOD_CHARGE)
@@ -246,27 +263,33 @@ static void Ms200Task(void)
     if(ChgSet==0 && !ChgLck) RunChg=true;//enable from webui if we are not locked out from an auto termination
     if(ChgSet==1) RunChg=false;//disable from webui
 
-    //Handle PP on the Charging port
+    //Handle PP on the Charging port - Changes RunChg
     if(Param::GetInt(Param::GPA1Func) == IOMatrix::PILOT_PROX || Param::GetInt(Param::GPA2Func) == IOMatrix::PILOT_PROX )
     {
         int ppThresh = Param::GetInt(Param::ppthresh);
-
         int ppValue = IOMatrix::GetAnaloguePin(IOMatrix::PILOT_PROX)->Get();
         Param::SetInt(Param::PPVal, ppValue);
 
-
-        //if PP is less than threshold and currently disabled and not already finished
-        if (ppValue < ppThresh && ChgSet==1 && !ChgLck)
+        // If PP is at or below threshold and currently disabled and not already finished
+        if (ppValue <= ppThresh)
         {
-            RunChg=true;
+            if (ChgSet==1 && !ChgLck)
+            {
+                RunChg=true;
+            }
+            Param::SetInt(Param::PlugDet, 1);
         }
         else if (ppValue > ppThresh)
         {
             //even if timer was enabled, change to disabled, we've unplugged
             RunChg=false;
+            Param::SetInt(Param::PlugDet, 0);
         }
     }
+    // END Setting of RunChg - main okay to charge param
 
+
+    //Check if we want to AC charge via charger
     if(selectedCharger->ControlCharge(RunChg, ACrequest) && (opmode != MOD_RUN))
     {
         chargeMode = true;   //AC charge mode
@@ -277,14 +300,7 @@ static void Ms200Task(void)
         Param::SetInt(Param::chgtyp,OFF);
         chargeMode = false;  //no charge mode
     }
-
-    //in chademo , we do not want to run the 200ms task unless in dc charge mode
-    if(targetChgint == ChargeInterfaces::Chademo && chargeModeDC) selectedChargeInt->Task200Ms();
-    //In case of the LIM we want to send it all the time if lim in use
-    if((targetChgint == ChargeInterfaces::i3LIM) || (targetChgint == ChargeInterfaces::Unused) || (targetChgint == ChargeInterfaces::CPC)|| (targetChgint == ChargeInterfaces::Foccci)) selectedChargeInt->Task200Ms();
-    //and just to be thorough ...
-    if(targetChgint == ChargeInterfaces::Unused) selectedChargeInt->Task200Ms();
-
+    //end check
 
 
     ///////////////////////////////////////
@@ -307,9 +323,10 @@ static void Ms200Task(void)
             RunChg=false;//end charge
             ChgLck=true;//set charge lockout flag
         }
-
-
     }
+//End Charge Term Logic
+
+
     if(opmode==MOD_RUN)
     {
         ChgLck=false;//reset charge lockout flag when we drive off
@@ -394,6 +411,7 @@ static void Ms100Task(void)
         OutlanderHeartBeat::Task100Ms();
     }
 
+    //Setting reverse light
     if (Param::GetInt(Param::dir) < 0)
     {
         IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Set();
@@ -403,6 +421,7 @@ static void Ms100Task(void)
         IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Clear();
     }
 
+    //Setting Run light
     if(opmode==MOD_RUN)
     {
         IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Set();
@@ -411,7 +430,7 @@ static void Ms100Task(void)
     {
         IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Clear();
     }
-
+//end lights
 
     Param::SetFloat(Param::tmphs, selectedInverter->GetInverterTemperature()); //send inverter temp to web interface
     Param::SetFloat(Param::tmpm, selectedInverter->GetMotorTemperature()); //send motor temp to web interface
@@ -420,12 +439,15 @@ static void Ms100Task(void)
 
     Param::SetInt(Param::T15Stat, selectedVehicle->Ready());
 
+    //Needs to move to shunt handling
     int32_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpaux,IsaTemp);
+//end need to move
 
+//Charge interface logic
     if(targetChgint == ChargeInterfaces::i3LIM || targetChgint == ChargeInterfaces::Foccci || chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
 
-    if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
+    if(selectedChargeInt->DCFCRequest(RunChg) || ExtHVreq)//Request to run dc fast charge via charge interface or external pin io
     {
         //Here we receive a valid DCFC startup request.
         if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
@@ -440,12 +462,22 @@ static void Ms100Task(void)
 
     if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM) if we are NOT in DC charge mode.
     {
-        ACrequest=selectedChargeInt->ACRequest(RunChg);
+        ACrequest=selectedChargeInt->ACRequest(RunChg); //If using unused always returns true
     }
+//End charge interface logic
 
+
+//Reading HeatReq inpput
     if (IOMatrix::GetPin(IOMatrix::HEATREQ) != &DigIo::dummypin)
     {
         Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+    }
+
+    //Reading HVrequest inpput
+    if (IOMatrix::GetPin(IOMatrix::HVREQ) != &DigIo::dummypin)
+    {
+        ExtHVreq = IOMatrix::GetPin(IOMatrix::HVREQ)->Get();//Read IO pin to determine if there is an external HV request
+        if(ExtHVreq)Param::SetInt(Param::chgtyp,DCEXT);
     }
 
     DigiPot::SetPot1Step(); //just for dev
@@ -478,6 +510,16 @@ static void Ms100Task(void)
     else
     {
         IOMatrix::GetPin(IOMatrix::HVACTIVE)->Clear();//HV Active Off
+    }
+
+    //ShiftLock Out output
+    if(opmode==MOD_RUN && Param::GetInt(Param::ShiftLock) == 1)
+    {
+        IOMatrix::GetPin(IOMatrix::SHIFTLOCKNO)->Set();//Shift Lock Out On
+    }
+    else
+    {
+        IOMatrix::GetPin(IOMatrix::SHIFTLOCKNO)->Clear();//Shift Lock Out Off
     }
 }
 
@@ -557,7 +599,6 @@ static void Ms10Task(void)
 
     if(Param::GetInt(Param::potnom) < Param::GetInt(Param::RegenBrakeLight))
     {
-        Param::SetInt(Param::BrkVacVal,torquePercent*requestedDirection*-1);
         //enable Brake Light Ouput
         IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
     }
@@ -580,7 +621,14 @@ static void Ms10Task(void)
     selectedVehicle->Task10Ms();
     selectedDCDC->Task10Ms();
     selectedShifter->Task10Ms();
-    if(opmode==MOD_CHARGE) selectedCharger->Task10Ms();
+    if(opmode==MOD_CHARGE)
+    {
+        selectedCharger->Task10Ms();
+    }
+    else if (Param::GetInt(Param::chargemodes) == ChargeModes::Leaf_PDM)
+    {
+        selectedCharger->Task10Ms();
+    }
     if(opmode==MOD_RUN) Param::SetInt(Param::canctr, (Param::GetInt(Param::canctr) + 1) & 0xF);//Update the OI can counter in RUN mode only
 
     //////////////////////////////////////////////////
@@ -911,9 +959,16 @@ static void UpdateHeater()
     case HeatType::AmpHeater:
         selectedHeater = &amperaHeater;
         break;
-    case HeatType::VW:
-        selectedHeater = &heaterVW;
-        heaterVW.SetLinInterface(lin);
+    case HeatType::VWCoolant:
+        selectedHeater = &heaterCoolantVW;
+        heaterCoolantVW.SetLinInterface(lin);
+        break;
+    case HeatType::VWAir:
+        selectedHeater = &heaterCoolantVW;
+        heaterCoolantVW.SetLinInterface(lin);
+        break;
+    case HeatType::MGCoolant:
+        selectedHeater = &heaterCoolantMG;
         break;
     case HeatType::OutlanderHeater:
         selectedHeater = &outlanderCanHeater;
@@ -1037,7 +1092,7 @@ static void SetCanFilters()
     canOBD2.SetCanInterface(obd2_can);
     selectedHeater->SetCanInterface(heater_can);
 
-    if (Param::GetInt(Param::ShuntType) == 1)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
+    if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
     if (Param::GetInt(Param::ShuntType) == 2)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
     if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::RegisterCanMessages(shunt_can);//select vw sbox
 
@@ -1176,7 +1231,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
         break;
 
     default:
-        if (Param::GetInt(Param::ShuntType) == 1)  ISA::DecodeCAN(id, data);
+        if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)  ISA::DecodeCAN(id, data);
         if (Param::GetInt(Param::ShuntType) == 2)  SBOX::DecodeCAN(id, data);
         if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::DecodeCAN(id, data);
         selectedInverter->DecodeCAN(id, data);

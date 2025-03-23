@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "V_Classic.h"
 #include "hwinit.h"
 #include <libopencm3/stm32/timer.h>
@@ -34,8 +35,16 @@ void V_Classic::SetCanInterface(CanHardware* c)//Abusing the SetCanInterface as 
 void V_Classic::SetRevCounter(int speed)
 {
     uint16_t speed_input = speed;
-    speed_input = MAX(750, speed_input);//
-    speed_input = MIN(7500, speed_input);
+    if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
+    {
+        speed_input = MAX(750, speed_input);//
+        speed_input = MIN(7500, speed_input);
+    }
+    if(Param::GetInt(Param::PumpPWM) == 2)//If Pump PWM out is set to Speedo
+    {
+        speed_input = MIN(13000, speed_input);
+        if(speed_input < 200 ) speed_input = 0; // to be verified if this is okay
+    }
 
     utils::SpeedoSet(speed_input);//Moved pwm control into Utils
 }
@@ -43,9 +52,7 @@ void V_Classic::SetRevCounter(int speed)
 
 void V_Classic::SetTemperatureGauge(float temp)
 {
-    float dc = temp * 10; //TODO find right factor for value like 0..0.5 or so
-    //Would like to use digi pots here
-    dc = dc;
+ temp = temp; //We aint doing anything here old code!
 }
 
 void V_Classic::Task1Ms()
@@ -65,6 +72,13 @@ void V_Classic::Task100Ms()
     if (!Param::GetInt(Param::T15Stat))
     {
         utils::SpeedoSet(0);//set speedo off
+        utils::SetTempgaugePWM(0); //turn off temp gauge
+        utils::SetSocgaugePWM(0); //turn off soc gauge
+    }
+    else
+    {
+      utils::SetTempgaugePWM(1); //turn on temp gauge
+      utils::SetSocgaugePWM(1); //turn on soc gauge
     }
 }
 

@@ -18,6 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #define __TEMP_LU_TABLES
 #include "temp_meas.h"
 #include "my_math.h"
