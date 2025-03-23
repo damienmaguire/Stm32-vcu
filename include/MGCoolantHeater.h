@@ -1,5 +1,5 @@
 /*
- * This file is part of the tumanako_vc project.
+ * This file is part of the Zombieverter VCU project.
  *
  * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
@@ -16,29 +16,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef MGCOOLANTHEATER_H
+#define MGCOOLANTHEATER_H
 
-#ifndef SHIFTER_H_INCLUDED
-#define SHIFTER_H_INCLUDED
-#include <stdint.h>
-#include "canhardware.h"
-#include "params.h"
+//#include <libopencm3/stm32/usart.h>
+#include <heater.h>
 
-class Shifter
+
+class mgCoolantHeater : public Heater
 {
-public:
-   enum Sgear { PARK, REVERSE, NEUTRAL, DRIVE };
+   public:
+      void SetTargetTemperature(float temp);
+      void SetCanInterface(CanHardware* c);
+      void DecodeCAN(int id, uint32_t data[2]);
+      void SetPower(uint16_t power, bool HeatReq);
+      void Task100Ms();
 
-   virtual void Task1Ms() {} //Default does nothing
-   virtual void Task10Ms() {} //Default does nothing
-   virtual void Task100Ms() {} //Default does nothing
-   virtual void Task200Ms() {} //Default does nothing
-   virtual void DecodeCAN(int, uint32_t*) {};
-   virtual bool GetGear(Sgear&) { return false; } //if shifter class knows gear return true and set dir
-   virtual void SetCanInterface(CanHardware* c) { can = c; }
+   private:
+      int8_t currentTemperature;
+      int8_t desiredTemperature;
 
-protected:
-   CanHardware* can;
+      bool shouldHeat;
+      static void handle2B5(uint32_t data[2]);
+      static void handle2B6(uint32_t data[2]);
+
 };
 
-#endif // SHIFTER_H_INCLUDED
-
+#endif // MGCOOLANTHEATER_H

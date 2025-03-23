@@ -1,7 +1,7 @@
 /*
  * This file is part of the Zombieverter project.
  *
- * Copyright (C) 2023 Damien Maguire
+ * Copyright (C) 2023 Damien Maguire & Tom de Bree
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "JLR_G2.h"
 
 uint8_t DirJLRG2 = 0;
@@ -35,8 +36,8 @@ uint8_t KnobPos, KnobPosDes = 0;
 
 uint8_t Knoblock = 0;
 
-#define Unlocked 0x40
-#define Locked 0x00
+#define Unlocked 0x40//0x40
+#define Locked 0x00//0x00
 
 uint16_t Cnt02C = 0;
 uint8_t Cnt0E0;
@@ -73,6 +74,9 @@ void JLR_G2::sendcan()
 {
     uint8_t bytes[8];
 //-1=Reverse, 0=Neutral, 1=Forward , 2=Park
+
+    int8_t selectedDir = Param::GetInt(Param::dir);
+
     if(Param::GetInt(Param::opmode)==!MOD_RUN) DirJLRG2=JLR_Park;
 
     bytes[0] = 0x00; //0x1E;
@@ -86,18 +90,29 @@ void JLR_G2::sendcan()
       else
       {
     */
+    if(Param::GetInt(Param::opmode)==MOD_RUN)
+    {
+        bytes[2] = 0x01;// on
+    }
+    else
+    {
+        bytes[2] = 0x00;
+    }
     if (KnobPosDes == Raise)
     {
-        bytes[2] = 0x09;
+        bytes[2] = 0x08 | bytes[2];
     }
     if (KnobPosDes == Lower)
     {
-        bytes[2] = 0x10;
+        bytes[2] = 0x10 |bytes[2];
     }
     /*
       KnobPos = KnobPosDes;
       }
     */
+
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
 
     if (DirJLRG2 == JLR_Park)
     {
@@ -114,9 +129,11 @@ void JLR_G2::sendcan()
         bytes[3] = Knoblock | 0x00;
         bytes[4] = byte4G2[Cnt02C];
         bytes[5] = byte5RG2[Cnt02C];
-        bytes[6] = 0x01;
-        bytes[7] = 0x00;
-
+        if(selectedDir == -1)
+        {
+            bytes[6] = 0x01;
+            bytes[7] = 0x00;
+        }
         this->gear = REVERSE;
     }
 
@@ -125,9 +142,11 @@ void JLR_G2::sendcan()
         bytes[3] = Knoblock | 0x01;
         bytes[4] = byte4G2[Cnt02C];
         bytes[5] = byte5NG2[Cnt02C];
-        bytes[6] = 0x02;
-        bytes[7] = 0x00;
-
+        if(selectedDir == 0)
+        {
+            bytes[6] = 0x02;
+            bytes[7] = 0x00;
+        }
         this->gear = NEUTRAL;
     }
 
@@ -136,9 +155,11 @@ void JLR_G2::sendcan()
         bytes[3] = Knoblock | 0x04;
         bytes[4] = byte4G2[Cnt02C] | 0x0B;
         bytes[5] = byte5DG2[Cnt02C];
-        bytes[6] = 0x04;
-        bytes[7] = 0x00;
-
+        if(selectedDir == 1)
+        {
+            bytes[6] = 0x04;
+            bytes[7] = 0x00;
+        }
         this->gear = DRIVE;
     }
 

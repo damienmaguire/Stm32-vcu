@@ -1,7 +1,7 @@
 /*
  * This file is part of the Zombieverter project.
  *
- * Copyright (C) 2023 Damien Maguire
+ * Copyright (C) 2023 Damien Maguire & Tom de Bree
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "JLR_G1.h"
 
 #define JLR_Park 0
@@ -59,6 +60,8 @@ void JLR_G1::sendcan()
 {
     uint8_t bytes[8];
 //-1=Reverse, 0=Neutral, 1=Forward , 2=Park
+    //int8_t selectedDir = Param::GetInt(Param::dir);
+
     if(Param::GetInt(Param::opmode)==!MOD_RUN) DirJLRG1=JLR_Park;
 
     if (DirJLRG1 == JLR_Park)
@@ -92,7 +95,6 @@ void JLR_G1::sendcan()
         bytes[5] = 0xFF;
         bytes[6] = 0x01;
         bytes[7] = 0x00;
-
         this->gear = REVERSE;
     }
 
@@ -104,7 +106,6 @@ void JLR_G1::sendcan()
         bytes[5] = 0xFF;
         bytes[6] = 0x02;
         bytes[7] = 0x00;
-
         this->gear = NEUTRAL;
     }
 
@@ -116,7 +117,6 @@ void JLR_G1::sendcan()
         bytes[5] = 0xFF;
         bytes[6] = 0x04;
         bytes[7] = 0x00;
-
         this->gear = DRIVE;
     }
 
@@ -139,24 +139,24 @@ void JLR_G1::Task10Ms()
 {
     if(ShtdwnCnt < 20)
     {
-    Cnt20ms++;
-    if (Cnt20ms==2)
-    {
-        sendcan();
-        Cnt3f3 ++;
-        if (DirJLRG1 == JLR_Park)
+        Cnt20ms++;
+        if (Cnt20ms==2)
         {
-            if (Cnt3f3 == 0x02)
+            sendcan();
+            Cnt3f3 ++;
+            if (DirJLRG1 == JLR_Park)
             {
-                Cnt3f3 = 0x04;
+                if (Cnt3f3 == 0x02)
+                {
+                    Cnt3f3 = 0x04;
+                }
             }
+            if (Cnt3f3 == 0xF)
+            {
+                Cnt3f3 = 0x00;
+            }
+            Cnt20ms = 0;
         }
-        if (Cnt3f3 == 0xF)
-        {
-            Cnt3f3 = 0x00;
-        }
-        Cnt20ms = 0;
-    }
     }
 }
 

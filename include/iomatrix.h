@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef IOMATRIX_H
 #define IOMATRIX_H
 
@@ -31,8 +32,8 @@ class IOMatrix
       {
          NONE, CHADEMOALLOW, OBCENABLE, HEATERENABLE, RUNINDICATION, WARNINDICATION,
          COOLANTPUMP, NEGCONTACTOR, BRAKELIGHT, REVERSELIGHT, HEATREQ, HVREQ,
-         DCFCREQUEST, BRAKEVACPUMP, COOLINGFAN, HVACTIVE, PREHEATOUT, PWM_TIM3,CP_SPOOF,
-         GS450HOIL, LAST
+         DCFCREQUEST, BRAKEVACPUMP, COOLINGFAN, HVACTIVE, SHIFTLOCKNO, PREHEATOUT, PWM_TIM3,CP_SPOOF,
+         GS450HOIL,PWMTEMPGAUGE, PWMSOCGAUGE, LAST
       };
             //order of these matters!
       enum analoguepinfuncs

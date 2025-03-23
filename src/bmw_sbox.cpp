@@ -17,15 +17,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
- *Implements control of the contactors in the BMW PHEV battery box "SBOX" unit.
- *Reads batter parameters from SBOX.
- *See : https://github.com/damienmaguire/BMW_SBox
-*/
-
-
+ */
 
 #include <bmw_sbox.h>
+
+/*
+ * Implements control of the contactors in the BMW PHEV battery box "SBOX" unit.
+ * Reads batter parameters from SBOX.
+ * See : https://github.com/damienmaguire/BMW_SBox
+ */
 
 int32_t SBOX::Amperes;
 int32_t SBOX::Ah;

@@ -1,7 +1,7 @@
 /*
- * This file is part of the Zombieverter VCU project.
+ * This file is part of the ZombieVerter project.
  *
- * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
+ * Copyright (C) 2021-2023  Tom de Bree <Tom@voltinflux.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +15,33 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * Controls the VW LIN based heater as : https://openinverter.org/wiki/Volkswagen_Heater
+ *
+ *
  */
-#ifndef VWHEATER_H
-#define VWHEATER_H
 
-//#include <libopencm3/stm32/usart.h>
-#include <heater.h>
-#include "linbus.h"
+#ifndef NISSLEAFMNG_H
+#define NISSLEAFMNG_H
 
+#include <stdint.h>
+#include "params.h"
+#include "canhardware.h"
+#include "my_fp.h"
+#include "my_math.h"
+#include "utils.h"
 
-class vwHeater : public Heater
+class NissLeafMng
 {
-   public:
-      void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
-      void SetPower(uint16_t power, bool HeatReq);
-      void SetLinInterface(LinBus* l);
 
-   private:
-      bool isAwake=false;
-      LinBus* lin;
+public:
+static void Task10Ms(int16_t final_torque_request);
+static void Task100Ms();
+static void SetCanInterface(CanHardware* c);
+static void SetPullInEVSE(bool pullInEVSE);
+static void nissan_crc(uint8_t *data, uint8_t polynomial);
+
+
+protected:
+
 };
 
-#endif // VWHEATER_H
+#endif

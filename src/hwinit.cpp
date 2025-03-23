@@ -18,6 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/scb.h>
@@ -57,7 +58,7 @@ void clock_setup(void)
     rcc_periph_clock_enable(RCC_GPIOE);
     rcc_periph_clock_enable(RCC_USART3);
     rcc_periph_clock_enable(RCC_USART2);//GS450H Inverter Comms
-	rcc_periph_clock_enable(RCC_USART1);//LIN Comms
+    rcc_periph_clock_enable(RCC_USART1);//LIN Comms
     rcc_periph_clock_enable(RCC_TIM1); //GS450H oil pump pwm
     rcc_periph_clock_enable(RCC_TIM2); //GS450H 500khz usart clock
     rcc_periph_clock_enable(RCC_TIM3); //PWM outputs
@@ -109,18 +110,18 @@ void spi3_setup()   //spi3 used for digi pots (fuel gauge etc)
 
 void usart1_setup(void)
 {
-   /* Setup GPIO pin GPIO_USART1_TX and GPIO_USART1_RX. */
-   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-                 GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
-   gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-                 GPIO_CNF_INPUT_FLOAT, GPIO_USART1_RX);
-   usart_set_baudrate(USART1, 19200);
-   usart_set_databits(USART1, 8);
-   usart_set_stopbits(USART1, USART_STOPBITS_1);
-   usart_set_mode(USART1, USART_MODE_TX_RX);
-   usart_set_parity(USART1, USART_PARITY_NONE);
-   usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
-   usart_enable(USART1);
+    /* Setup GPIO pin GPIO_USART1_TX and GPIO_USART1_RX. */
+    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
+    gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+                  GPIO_CNF_INPUT_FLOAT, GPIO_USART1_RX);
+    usart_set_baudrate(USART1, 19200);
+    usart_set_databits(USART1, 8);
+    usart_set_stopbits(USART1, USART_STOPBITS_1);
+    usart_set_mode(USART1, USART_MODE_TX_RX);
+    usart_set_parity(USART1, USART_PARITY_NONE);
+    usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+    usart_enable(USART1);
 }
 
 /**
@@ -250,24 +251,18 @@ void tim3_setup()
     // General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3 Chan 2 PA7.
     // General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3 Chan 1 PA6.
     ////////////////////////////////////////////////////////////////////////
-    bool CPspoofPres,GS450hOil = 0;
-///PWM3
+    bool Fixed1K = 0;
+    ///PWM3
     if (Param::GetInt(Param::PWM3Func) == IOMatrix::PWM_TIM3)
     {
         gpio_set_mode(GPIOB,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
                       GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO0);	// GPIOB0=TIM3.CH3
     }
-    else if (Param::GetInt(Param::PWM3Func) == IOMatrix::CP_SPOOF)
+    else if (Param::GetInt(Param::PWM3Func) == IOMatrix::CP_SPOOF || Param::GetInt(Param::PWM3Func) == IOMatrix::GS450HOIL || Param::GetInt(Param::PWM3Func) == IOMatrix::PWMTEMPGAUGE || Param::GetInt(Param::PWM3Func) == IOMatrix::PWMSOCGAUGE)
     {
         gpio_set_mode(GPIOB,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
                       GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO0);	// GPIOB0=TIM3.CH3
-        CPspoofPres = 1; //Running CP Spoof
-    }
-    else if (Param::GetInt(Param::PWM3Func) == IOMatrix::GS450HOIL)
-    {
-        gpio_set_mode(GPIOB,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
-                      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO0);	// GPIOB0=TIM3.CH3
-        GS450hOil = 1; //Running GS450h Oil Pump
+        Fixed1K = 1; //Running 1kHz Fixed
     }
     else
     {
@@ -280,17 +275,11 @@ void tim3_setup()
         gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
                       GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO7);	// GPIOE9=TIM3.CH2
     }
-    else if (Param::GetInt(Param::PWM2Func) == IOMatrix::CP_SPOOF)
+    else if (Param::GetInt(Param::PWM2Func) == IOMatrix::CP_SPOOF || Param::GetInt(Param::PWM2Func) == IOMatrix::GS450HOIL || Param::GetInt(Param::PWM2Func) == IOMatrix::PWMTEMPGAUGE || Param::GetInt(Param::PWM2Func) == IOMatrix::PWMSOCGAUGE)
     {
         gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
                       GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO7);	// GPIOE9=TIM3.CH2
-        CPspoofPres = 1; //Running CP Spoof
-    }
-    else if (Param::GetInt(Param::PWM2Func) == IOMatrix::GS450HOIL)
-    {
-        gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
-                      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO7);	// GPIOE9=TIM3.CH2
-        GS450hOil = 1; //Running GS450h Oil Pump
+        Fixed1K = 1; //Running 1kHz Fixed
     }
     else
     {
@@ -303,17 +292,11 @@ void tim3_setup()
         gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
                       GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO6);	// GPIOA6=TIM3.CH1
     }
-    else if (Param::GetInt(Param::PWM1Func) == IOMatrix::CP_SPOOF)
+    else if (Param::GetInt(Param::PWM1Func) == IOMatrix::CP_SPOOF || Param::GetInt(Param::PWM1Func) == IOMatrix::GS450HOIL || Param::GetInt(Param::PWM1Func) == IOMatrix::PWMTEMPGAUGE || Param::GetInt(Param::PWM1Func) == IOMatrix::PWMSOCGAUGE)
     {
         gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
                       GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO6);	// GPIOA6=TIM3.CH1
-        CPspoofPres = 1; //Running CP Spoof
-    }
-    else if (Param::GetInt(Param::PWM1Func) == IOMatrix::GS450HOIL)
-    {
-        gpio_set_mode(GPIOA,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
-                      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO6);	// GPIOA6=TIM3.CH1
-        GS450hOil = 1; //Running GS450h Oil Pump
+        Fixed1K = 1; //Running 1kHz Fixed
     }
     else
     {
@@ -339,7 +322,7 @@ void tim3_setup()
     timer_enable_oc_output(TIM3, TIM_OC2);
     timer_enable_oc_output(TIM3, TIM_OC3);
 
-    if (CPspoofPres == 0 && GS450hOil == 0) //No CP Spoof Selected or GS450h Oil pump
+    if (Fixed1K == 0) //No CP Spoof Selected or GS450h Oil pump or Gauges
     {
         timer_set_period(TIM3, Param::GetInt(Param::Tim3_Period));
         timer_set_oc_value(TIM3, TIM_OC1, Param::GetInt(Param::Tim3_1_OC));
@@ -351,12 +334,12 @@ void tim3_setup()
     }
     else//No CP Spoof or GS450h Oil pump output selected locks TIM3 Force 1khz clock (996khz)
     {
-        timer_set_period(TIM3, 6540);
+        timer_set_period(TIM3, 3999);
         timer_set_oc_value(TIM3, TIM_OC1, 1);//No duty set here
         timer_set_oc_value(TIM3, TIM_OC2, 1);//No duty set here
         timer_set_oc_value(TIM3, TIM_OC3, 1);//No duty set here
         timer_generate_event(TIM3, TIM_EGR_UG);
-        timer_set_prescaler(TIM3,10);
+        timer_set_prescaler(TIM3,17);
         timer_enable_counter(TIM3);
     }
 }
