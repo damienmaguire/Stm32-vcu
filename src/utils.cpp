@@ -352,6 +352,7 @@ float ProcessUdc(int motorSpeed)
         if(Param::GetInt(Param::opmode) == MOD_OFF)
         {
             udc = 0; //ensure we reset udc during off state to keep precharge working
+            Param::SetFloat(Param::udc, udc);
         }
     }
     else if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)//ISA shunt
