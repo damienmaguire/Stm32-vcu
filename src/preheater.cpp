@@ -19,7 +19,7 @@
  */
 
 
-#include "Preheater.h"
+#include "preheater.h"
 #include "errormessage.h"
 #include "digio.h"
 #include "utils.h"

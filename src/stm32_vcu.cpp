@@ -104,7 +104,7 @@
 #include "kangoobms.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
-#include "Preheater.h"
+#include "preheater.h"
 #include "MGCoolantHeater.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
