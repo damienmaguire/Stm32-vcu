@@ -112,8 +112,9 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
         OBCAvailPwr = bytes[6]; //Power in 0.1kW
 
         PlugStat = bytes[5] & 0x0F;
-        if(PlugStat == 0x08) PPStat = true; //plug inserted
-        if(PlugStat == 0x00) PPStat = false; //plug not inserted
+        if(PlugStat == 0x08) PPStat = true; //plug inserted 32A
+        else if(PlugStat == 0x04) PPStat = true; //plug inserted 16A
+        else PPStat = false; //plug not inserted
 
         Param::SetInt(Param::PlugDet,PPStat);
     }
