@@ -113,8 +113,8 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
 
         PlugStat = bytes[5] & 0x0F;
         if(PlugStat == 0x08) PPStat = true; //plug inserted 32A
-        if(PlugStat == 0x04) PPStat = true; //plug inserted 16A
-        if(PlugStat == 0x00) PPStat = false; //plug not inserted
+        else if(PlugStat == 0x04) PPStat = true; //plug inserted 16A
+        else PPStat = false; //plug not inserted
 
         Param::SetInt(Param::PlugDet,PPStat);
     }
