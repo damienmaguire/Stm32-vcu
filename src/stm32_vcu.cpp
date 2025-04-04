@@ -103,6 +103,7 @@
 #include "kangoobms.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
+#include "MGgen2V2Lcharger.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -157,6 +158,7 @@ static noCharger nochg;
 static extCharger chgdigi;
 static amperaCharger ampChg;
 static outlanderCharger outChg;
+static MGgen2V2Lcharger MGgen2v2l;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
@@ -837,6 +839,10 @@ static void UpdateCharger()
     case ChargeModes::Elcon:
         selectedCharger = &ChargerElcon;
         break;
+    case ChargeModes::MGgen2:
+        selectedCharger = &MGgen2v2l;
+        break;
+        
 
     }
     //This will call SetCanFilters() via the Clear Callback

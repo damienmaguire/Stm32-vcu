@@ -35,7 +35,7 @@
     PARAM_ENTRY(CAT_SETUP,     GearLvr,      SHIFTERS, 0,      4,      0,      108 ) \
     PARAM_ENTRY(CAT_SETUP,     Transmission, TRNMODES, 0,      1,      0,      78 ) \
     PARAM_ENTRY(CAT_SETUP,     interface,    CHGINT,    0,     4,      0,      39 ) \
-    PARAM_ENTRY(CAT_SETUP,     chargemodes,  CHGMODS,   0,     6,      0,      37 ) \
+    PARAM_ENTRY(CAT_SETUP,     chargemodes,  CHGMODS,   0,     7,      0,      37 ) \
     PARAM_ENTRY(CAT_SETUP,     BMS_Mode,    BMSMODES,  0,      5,      0,      90 ) \
     PARAM_ENTRY(CAT_SETUP,     ShuntType,   SHNTYPE,   0,      3,      0,      88 ) \
     PARAM_ENTRY(CAT_SETUP,     InverterCan,  CAN_DEV,  0,      1,      0,      70 ) \
@@ -287,7 +287,7 @@
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
 #define HTTYPE       "0=None, 1=Ampera, 2=VW, 3=OutlanderCan"
 #define HTCTRL       "0=Disable, 1=Enable, 2=Timer"
-#define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, 6=Elcon"
+#define CHGMODS      "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, 6=Elcon, 7=MGgen2"
 #define CHGCTRL      "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Foccci"
 #define CAN3SPD      "0=k33.3, 1=k500, 2=k100"
@@ -372,7 +372,8 @@ enum ChargeModes
     Leaf_PDM = 3,
     TeslaOI = 4,
     Out_lander = 5,
-    Elcon = 6
+    Elcon = 6,
+    MGgen2=7
 };
 
 enum ChargeInterfaces
