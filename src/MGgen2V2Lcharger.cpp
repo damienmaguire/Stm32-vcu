@@ -118,6 +118,7 @@ void MGgen2V2Lcharger::SetCanInterface(CanHardware* c)
 
     can = c;
     can->RegisterUserMessage(0x324);//
+    can->RegisterUserMessage(0x39F);
    // can->RegisterUserMessage(0x325);// test
    // can->RegisterUserMessage(0x326);//test
 }
@@ -152,7 +153,7 @@ void MGgen2V2Lcharger::Task100Ms()
         bytes[5] = 0xFE;
         bytes[6] = 0x07;
         bytes[7] = 0x7F;
-        can->Send(0x19C, (uint32_t*)bytes, 8);
+        //can->Send(0x19C, (uint32_t*)bytes, 8);
 
         bytes[0] = 0x0E;
         bytes[1] = 0x00;
@@ -162,7 +163,7 @@ void MGgen2V2Lcharger::Task100Ms()
         bytes[5] = 0x00;
         bytes[6] = 0x00;
         bytes[7] = 0x00;
-        can->Send(0x1F1, (uint32_t*)bytes, 8);
+       // can->Send(0x1F1, (uint32_t*)bytes, 8);
 
       }
     
@@ -206,9 +207,19 @@ void MGgen2V2Lcharger::handle324(uint32_t data[2])
 
     if (Param::GetInt(Param::ShuntType) == 0 && Param::GetInt(Param::Inverter)!= 1)//Only populate if no shunt is used and not using Leaf inverter !!!look to clean up
     {
-        Param::SetFloat(Param::udc, batteryVolts);
+       // Param::SetFloat(Param::udc, batteryVolts);
     }
 
+}
+
+void MGgen2V2Lcharger::handle39F(uint32_t data[2])
+
+{
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+    LV_Volts = bytes[1] / 8;
+    LV_Amps = bytes[4];
+    Param::SetFloat(Param::U12V, LV_Volts);
+    Param::SetFloat(Param::I12V, LV_Amps);
 }
 /*
 void MGgen2V2Lcharger::handle389(uint32_t data[2])
