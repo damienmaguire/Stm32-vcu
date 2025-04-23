@@ -130,6 +130,9 @@ void MGgen2V2Lcharger::DecodeCAN(int id, uint32_t data[2])
     case 0x324:
         MGgen2V2Lcharger::handle324(data);
         break;
+    case 0x39F:
+        MGgen2V2Lcharger::handle39F(data);
+        break;
    // case 0x389:
      //   MGgen2V2Lcharger::handle389(data);
     //    break;
@@ -145,25 +148,25 @@ void MGgen2V2Lcharger::Task100Ms()
     uint8_t bytes[8];
       if(opmode==MOD_CHARGE or opmode==MOD_RUN) //do some DC-DC stuff
       {
-        bytes[0] = 0x06;
-        bytes[1] = 0xA0;
-        bytes[2] = 0x26;
-        bytes[3] = 0xA0;
-        bytes[4] = 0x7F;
-        bytes[5] = 0xFE;
-        bytes[6] = 0x07;
-        bytes[7] = 0x7F;
-        //can->Send(0x19C, (uint32_t*)bytes, 8);
+        bytes[0] = 0x00;
+        bytes[1] = 0x00;
+        bytes[2] = 0x26; //26 for on, 06 for off
+        bytes[3] = 0x00;  
+        bytes[4] = 0x00; 
+        bytes[5] = 0x00; 
+        bytes[6] = 0x00;
+        bytes[7] = 0x00; /
+        can->Send(0x19C, (uint32_t*)bytes, 8);
 
-        bytes[0] = 0x0E;
+        bytes[0] = 0x00;
         bytes[1] = 0x00;
         bytes[2] = 0x00;
         bytes[3] = 0x00;
         bytes[4] = 0x00;
         bytes[5] = 0x00;
-        bytes[6] = 0x00;
+        bytes[6] = 0x20; // 20 to wake up charger.
         bytes[7] = 0x00;
-       // can->Send(0x1F1, (uint32_t*)bytes, 8);
+        can->Send(0x297, (uint32_t*)bytes, 8);
 
       }
     
@@ -196,6 +199,20 @@ void MGgen2V2Lcharger::Task100Ms()
         }
 
     }
+}
+
+void MGgen2V2Lcharger::Off()
+{
+    uint8_t bytes[8];
+      bytes[0] = 0x00; 
+      bytes[1] = 0x00; 
+      bytes[2] = 0x06; //26 for on, 06 for off
+      bytes[3] = 0x00; 
+      bytes[4] = 0x00; 
+      bytes[5] = 0x00; 
+      bytes[6] = 0x00;
+      bytes[7] = 0x00; 
+      can->Send(0x19C, (uint32_t*)bytes, 8);
 }
 
 void MGgen2V2Lcharger::handle324(uint32_t data[2])

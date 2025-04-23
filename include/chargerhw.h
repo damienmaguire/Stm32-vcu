@@ -27,6 +27,7 @@ class Chargerhw
 public:
    virtual void Task1Ms() {} //Default does nothing
    virtual void Task10Ms() {} //Default does nothing
+   virtual void Off() {} //Default does nothing
    virtual void Task100Ms() {} //Default does nothing
    virtual void Task200Ms() {} //Default does nothing
    virtual void DecodeCAN(int, uint32_t*) {};

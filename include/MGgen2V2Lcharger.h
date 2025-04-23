@@ -38,6 +38,7 @@ class MGgen2V2Lcharger: public Chargerhw
 public:
 void DecodeCAN(int id, uint32_t data[2]);
 void Task100Ms();
+void Off();
 bool ControlCharge(bool RunCh, bool ACReq);
 void SetCanInterface(CanHardware* c);
 
