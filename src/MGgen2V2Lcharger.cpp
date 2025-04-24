@@ -178,6 +178,16 @@ void MGgen2V2Lcharger::Task100Ms()
         bytes[7] = 0x00;
         can->Send(0x1F1, (uint32_t*)bytes, 8);
 
+        bytes[0] = 0x00; 
+        bytes[1] = 0x00;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0x28;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00; 
+        bytes[7] = 0x46; // 46 start V2l? or 48
+        can->Send(0x33F, (uint32_t*)bytes, 8); // V2L
+
       }
     
     if(opmode==MOD_CHARGE)
@@ -211,28 +221,17 @@ void MGgen2V2Lcharger::Task100Ms()
         bytes[6] = 0x20; 
         bytes[7] = 0x00;
         can->Send(0x1F1, (uint32_t*)bytes, 8);
-       
-        if(clearToStart)
-        {
-          
-        }
-        else
-        {
-            
-        }
 
 
         if(clearToStart)
         {
-            if(actVolts<Param::GetInt(Param::Voltspnt)) currentRamp++;
-            if(actVolts>=Param::GetInt(Param::Voltspnt)) currentRamp--;
-            if(currentRamp>=0x78) currentRamp=0x78;//clamp to max of 12A
+
            
 
         }
         else
         {
-            currentRamp=0;
+           
 
         }
 
@@ -272,6 +271,16 @@ void MGgen2V2Lcharger::Off()
       bytes[6] = 0x20; 
       bytes[7] = 0x00;
       can->Send(0x1F1, (uint32_t*)bytes, 8);
+
+      bytes[0] = 0x00; 
+      bytes[1] = 0x00;
+      bytes[2] = 0x00;
+      bytes[3] = 0x00;
+      bytes[4] = 0x28;
+      bytes[5] = 0x00;
+      bytes[6] = 0x00; 
+      bytes[7] = 0x00; //
+      can->Send(0x33F, (uint32_t*)bytes, 8); // V2L
 }
 
 void MGgen2V2Lcharger::handle324(uint32_t data[2])
