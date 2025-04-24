@@ -604,10 +604,14 @@ static void Ms10Task(void)
         IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear();//Coolant pump off if used
         Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown regardless of shifter pos
         selectedVehicle->DashOff();
-        selectedCharger->Off();
+        
         StartSig=false;//reset for next time
 
-        if(rlyDly!=0) rlyDly--;//here we are going to pause to allow system shut down before opening HV contactors
+        if(rlyDly!=0) 
+        {
+        rlyDly--;//here we are going to pause to allow system shut down before opening HV contactors
+        selectedCharger->Off(); // send message to charger to shut down
+        }
         if(rlyDly==0)
         {
             DigIo::dcsw_out.Clear();
