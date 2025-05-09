@@ -27,7 +27,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 152
+//Next param id (increase when adding new parameter!): 153
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
@@ -112,8 +112,9 @@
     PARAM_ENTRY(CAT_HEATER,    Control,     HTCTRL,    0,      2,      0,      58 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPwr,     "W",       0,      6500,   0,      59 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPercnt,  "%",       0,      100,    0,      124 ) \
-    PARAM_ENTRY(CAT_HEATER,    HeatPotDir, ABOVEBELOW, 0,      1,      0,      150 ) \
+    PARAM_ENTRY(CAT_HEATER,    HeatPotDir, ABOVEBELOW, 0,      4,      0,      150 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPotOn,   "dig",     0,      4095,   0,      151 ) \
+    PARAM_ENTRY(CAT_HEATER,    HeatPotFull, "dig",     0,      4095,   0,      152 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Min,     "Mins",    0,      59,     0,      48 ) \
@@ -324,7 +325,7 @@
 #define PumpOutType  "0=GS450hOil, 1=TachoOut, 2=SpeedoOut"
 #define LIMITREASON  "0=None, 1=UDClimLow, 2=UDClimHigh, 4=IDClimLow, 8=IDClimHigh, 16=TempLim"
 #define DIRLIM       "0=None, 1=SpeedThres, 2=SpeedBrake"
-#define ABOVEBELOW   "0=Below, 1=Above"
+#define ABOVEBELOW   "0=BelowOF,1=BelowScale, 2=AboveOF, 3=AboveScale"
 
 #define CAN_PERIOD_100MS    0
 #define CAN_PERIOD_10MS     1

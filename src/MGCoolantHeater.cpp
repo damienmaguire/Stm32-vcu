@@ -44,7 +44,7 @@ void mgCoolantHeater::Task100Ms()
     uint8_t bytes[8];
     bytes[0] = 0x00; //No Power!
     bytes[1] = 0x00; //No Power!
-    bytes[2] = 0x01; //Fixed
+    bytes[2] = 0x00; //No Power!
     bytes[3] = 0x00; //Fixed
     bytes[4] = 0x00; //Fixed
     bytes[5] = 0x60; //Fixed
@@ -55,6 +55,7 @@ void mgCoolantHeater::Task100Ms()
     {
         bytes[0] = 0x04; //Max Power!!!! 0x04 gives 19A
         bytes[1] = 0x0F; //Max Power!!!! 0x0F gives 19A
+        bytes[2] = 0x01; //Max Power!!!! 0x0F gives 19A
     }
     else
     {
