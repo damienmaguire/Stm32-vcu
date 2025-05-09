@@ -34,6 +34,7 @@ float   MGgen2V2Lcharger::DCAmps;
 float   MGgen2V2Lcharger::LV_Volts;
 float   MGgen2V2Lcharger::LV_Amps;
 uint16_t MGgen2V2Lcharger::batteryVolts;
+static uint8_t PlugStat=0;
 
 
 bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq)
@@ -42,7 +43,7 @@ bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq)
     switch(chgmode)
     {
     case Unused:
-        if (RunCh && ACReq)
+        if (PlugStat && ACReq)
         {
             clearToStart=true;
             return true;
@@ -117,9 +118,9 @@ void MGgen2V2Lcharger::SetCanInterface(CanHardware* c)
 {
 
     can = c;
-    can->RegisterUserMessage(0x324);//
+    can->RegisterUserMessage(0x324);
     can->RegisterUserMessage(0x39F);
-   // can->RegisterUserMessage(0x325);// test
+    can->RegisterUserMessage(0x323);
    // can->RegisterUserMessage(0x326);//test
 }
 
@@ -133,9 +134,9 @@ void MGgen2V2Lcharger::DecodeCAN(int id, uint32_t data[2])
     case 0x39F:
         MGgen2V2Lcharger::handle39F(data);
         break;
-   // case 0x389:
-     //   MGgen2V2Lcharger::handle389(data);
-    //    break;
+    case 0x323:
+       MGgen2V2Lcharger::handle323(data);
+        break;
    // case 0x38A:
     //    MGgen2V2Lcharger::handle38A(data);
     //    break;
@@ -555,13 +556,16 @@ void MGgen2V2Lcharger::handle39F(uint32_t data[2])
     Param::SetFloat(Param::U12V, LV_Volts);
     Param::SetFloat(Param::I12V, LV_Amps);
 }
-/*
-void MGgen2V2Lcharger::handle389(uint32_t data[2])
 
+void MGgen2V2Lcharger::handle323(uint32_t data[2])
 {
    
-}
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:
+   PlugStat = bytes[5];
 
+
+}
+/*
 void MGgen2V2Lcharger::handle38A(uint32_t data[2])
 
 {

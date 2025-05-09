@@ -55,7 +55,7 @@ static float LV_Volts , LV_Amps;
 static uint16_t batteryVolts;
 
 static void handle324(uint32_t data[2]);
-//static void handle389(uint32_t data[2]);
+static void handle323(uint32_t data[2]);
 static void handle39F(uint32_t data[2]);
 //static void handle38A(uint32_t data[2]);
 };
