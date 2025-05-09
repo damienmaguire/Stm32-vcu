@@ -38,7 +38,7 @@ class IOMatrix
             //order of these matters!
       enum analoguepinfuncs
       {
-         NONE_ANAL, PILOT_PROX, VAC_SENSOR, LAST_ANAL
+         NONE_ANAL, PILOT_PROX, VAC_SENSOR, HEATER_POT, LAST_ANAL
       };
 
       static void AssignFromParams();
@@ -52,7 +52,7 @@ class IOMatrix
       static DigIo* const paramToPin[numPins];
 
       static AnaIn* functionToPinAnalgoue[LAST_ANAL];
-      static const int numAnaloguePins = 2;
+      static const int numAnaloguePins = 3;
       static AnaIn* const paramToPinAnalgue[numAnaloguePins];
 };
 
