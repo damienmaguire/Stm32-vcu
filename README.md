@@ -22,7 +22,7 @@ V2.20A now available : https://www.youtube.com/watch?v=wjlucUWX_lc
 # Supported components
 
 - Nissan Leaf Gen1/2/3 inverter via CAN
-- Nissan Leaf Gen2 PDM (Charger and DCDC)
+- Nissan Leaf Gen1/2/3 PDM (Charger and DCDC)
 - Nissan LEAF Battery (all variants)
 - Mitsubishi Outlander Support
 - Mitsubishi Outlander drivetrain (front and rear motors/inverters) Support
