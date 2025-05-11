@@ -43,7 +43,7 @@ bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq)
     switch(chgmode)
     {
     case Unused:
-        if (PlugStat && ACReq)
+        if (PlugStat == 1 && ACReq)
         {
             clearToStart=true;
             return true;
@@ -189,173 +189,184 @@ void MGgen2V2Lcharger::Task100Ms()
         bytes[7] = 0x46; // 46 start V2l? or 48
         can->Send(0x33F, (uint32_t*)bytes, 8); // V2L
 
-      }
-    
-    if(opmode==MOD_CHARGE)
-    {
-        /*
-        bytes[0] = 0x06;
-        bytes[1] = 0xA0;
-        bytes[2] = 0x26; //26 for on, 06 for off
-        bytes[3] = 0x00;  
-        bytes[4] = 0x00; 
-        bytes[5] = 0x00; 
-        bytes[6] = 0x00;
-        bytes[7] = 0x7F; 
-        can->Send(0x19C, (uint32_t*)bytes, 8);
+        bytes[0] = 0x3B;
+        bytes[1] = 0xCA;
+                bytes[2] = 0x86;
+                bytes[3] = 0x02;
+                bytes[4] = 0xFD;
+                bytes[5] = 0x60;
+                bytes[6] = 0x00;
+                bytes[7] = 0x00;
+                can->Send(0x29B, (uint32_t*)bytes, 8);
 
-        bytes[0] = 0x00;
+
+            }
+            
+            if(opmode==MOD_CHARGE)
+            {
+                /*
+                bytes[0] = 0x06;
+                bytes[1] = 0xA0;
+                bytes[2] = 0x26; //26 for on, 06 for off
+                bytes[3] = 0x00;  
+                bytes[4] = 0x00; 
+                bytes[5] = 0x00; 
+                bytes[6] = 0x00;
+                bytes[7] = 0x7F; 
+                can->Send(0x19C, (uint32_t*)bytes, 8);
+
+                bytes[0] = 0x00;
+                bytes[1] = 0x06; // 01 is stand by, 03 is driving, 06 is AC charging, 07 is CCS charging
+                bytes[2] = 0x00;
+                bytes[3] = 0x00;
+                bytes[4] = 0x00;
+                bytes[5] = 0x00;
+                bytes[6] = 0x20; // 20 to wake up charger.
+                bytes[7] = 0x00;
+                can->Send(0x297, (uint32_t*)bytes, 8); // 297 is BMS state
+        */
+                bytes[0] = 0x0E; //0E to wake up
+                bytes[1] = 0x00;
+                bytes[2] = 0x00;
+                bytes[3] = 0x00;
+                bytes[4] = 0x00;
+                bytes[5] = 0x00;
+                bytes[6] = 0x20; 
+                bytes[7] = 0x00;
+                can->Send(0x1F1, (uint32_t*)bytes, 8);
+
+                
+                bytes[0] = 0x00;
         bytes[1] = 0x06; // 01 is stand by, 03 is driving, 06 is AC charging, 07 is CCS charging
         bytes[2] = 0x00;
         bytes[3] = 0x00;
         bytes[4] = 0x00;
-        bytes[5] = 0x00;
+        bytes[5] = 0x20; 
         bytes[6] = 0x20; // 20 to wake up charger.
         bytes[7] = 0x00;
-        can->Send(0x297, (uint32_t*)bytes, 8); // 297 is BMS state
-*/
-        bytes[0] = 0x0E; //0E to wake up
+        can->Send(0x297, (uint32_t*)bytes, 8);
+
+        bytes[0] = 0x3B;
+        bytes[1] = 0xCA;
+        bytes[2] = 0x86;
+        bytes[3] = 0x00;
+        bytes[4] = 0xFD;
+        bytes[5] = 0x60;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x29B, (uint32_t*)bytes, 8);
+
+
+
+        bytes[0] = 0x00;
         bytes[1] = 0x00;
         bytes[2] = 0x00;
         bytes[3] = 0x00;
         bytes[4] = 0x00;
         bytes[5] = 0x00;
-        bytes[6] = 0x20; 
+        bytes[6] = 0x00;
         bytes[7] = 0x00;
-        can->Send(0x1F1, (uint32_t*)bytes, 8);
+        can->Send(0x32E, (uint32_t*)bytes, 8);
 
-        
         bytes[0] = 0x00;
-bytes[1] = 0x06; // 01 is stand by, 03 is driving, 06 is AC charging, 07 is CCS charging
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x20; 
-bytes[6] = 0x20; // 20 to wake up charger.
-bytes[7] = 0x00;
-can->Send(0x297, (uint32_t*)bytes, 8);
+        bytes[1] = 0x00;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0x00;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x343, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x3B;
-bytes[1] = 0xCA;
-bytes[2] = 0x86;
-bytes[3] = 0x00;
-bytes[4] = 0xFD;
-bytes[5] = 0x60;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x29B, (uint32_t*)bytes, 8);
+        bytes[0] = 0x00;
+        bytes[1] = 0x00;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0x00;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x348, (uint32_t*)bytes, 8);
 
+        bytes[0] = 0x00;
+        bytes[1] = 0x28;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0x10;
+        bytes[5] = 0x43;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x394, (uint32_t*)bytes, 8);
 
+        bytes[0] = 0x44;
+        bytes[1] = 0x6E;
+        bytes[2] = 0xB4;
+        bytes[3] = 0x28;
+        bytes[4] = 0x80;
+        bytes[5] = 0x4E;
+        bytes[6] = 0x4E;
+        bytes[7] = 0x4D;
+        can->Send(0x396, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x32E, (uint32_t*)bytes, 8);
+        bytes[0] = 0x00;
+        bytes[1] = 0x43;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0xCD;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x39A, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x343, (uint32_t*)bytes, 8);
+        bytes[0] = 0x44;
+        bytes[1] = 0x43;
+        bytes[2] = 0x9D;
+        bytes[3] = 0x00;
+        bytes[4] = 0x00;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x39B, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x348, (uint32_t*)bytes, 8);
+        bytes[0] = 0x00;
+        bytes[1] = 0x00;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0x28;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x41;
+        can->Send(0x33F, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x00;
-bytes[1] = 0x28;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x10;
-bytes[5] = 0x43;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x394, (uint32_t*)bytes, 8);
+        bytes[0] = 0x06;
+        bytes[1] = 0xA0;
+        bytes[2] = 0x26;
+        bytes[3] = 0x00;
+        bytes[4] = 0x00;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x7F;
+        can->Send(0x19C, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x44;
-bytes[1] = 0x6E;
-bytes[2] = 0xB4;
-bytes[3] = 0x28;
-bytes[4] = 0x80;
-bytes[5] = 0x4E;
-bytes[6] = 0x4E;
-bytes[7] = 0x4D;
-can->Send(0x396, (uint32_t*)bytes, 8);
+        bytes[0] = 0x00;
+        bytes[1] = 0x00;
+        bytes[2] = 0x00;
+        bytes[3] = 0x20;
+        bytes[4] = 0x00;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x322, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x00;
-bytes[1] = 0x43;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0xCD;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x39A, (uint32_t*)bytes, 8);
-
-bytes[0] = 0x44;
-bytes[1] = 0x43;
-bytes[2] = 0x9D;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x39B, (uint32_t*)bytes, 8);
-
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x28;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x41;
-can->Send(0x33F, (uint32_t*)bytes, 8);
-
-bytes[0] = 0x06;
-bytes[1] = 0xA0;
-bytes[2] = 0x26;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x7F;
-can->Send(0x19C, (uint32_t*)bytes, 8);
-
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x20;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x322, (uint32_t*)bytes, 8);
-
-bytes[0] = 0x00;
-bytes[1] = 0x28;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x10;
-bytes[5] = 0x43;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x394, (uint32_t*)bytes, 8);
+        bytes[0] = 0x00;
+        bytes[1] = 0x28;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0x10;
+        bytes[5] = 0x43;
+        bytes[6] = 0x00;
+        bytes[7] = 0x00;
+        can->Send(0x394, (uint32_t*)bytes, 8);
 
 
     }
@@ -394,8 +405,8 @@ can->Send(0x394, (uint32_t*)bytes, 8);
 void MGgen2V2Lcharger::Off()
 {
     uint8_t bytes[8];
-      bytes[0] = 0x26; 
-      bytes[1] = 0xA0; 
+    bytes[0] = 0x26; 
+    bytes[1] = 0xA0; 
       bytes[2] = 0x06; //26 for on, 06 for off
       bytes[3] = 0x00; 
       bytes[4] = 0x00; 
@@ -447,87 +458,87 @@ void MGgen2V2Lcharger::Off()
       can->Send(0x33F, (uint32_t*)bytes, 8); // V2L
 
       bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x20;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x322, (uint32_t*)bytes, 8);
+      bytes[1] = 0x00;
+    bytes[2] = 0x00;
+    bytes[3] = 0x20;
+    bytes[4] = 0x00;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
+    can->Send(0x322, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x28;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x41;
-can->Send(0x33F, (uint32_t*)bytes, 8);
-      
-bytes[0] = 0x44;
-bytes[1] = 0x43;
-bytes[2] = 0x9D;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x39B, (uint32_t*)bytes, 8);
+    bytes[0] = 0x00;
+    bytes[1] = 0x00;
+    bytes[2] = 0x00;
+    bytes[3] = 0x00;
+    bytes[4] = 0x28;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x41;
+    can->Send(0x33F, (uint32_t*)bytes, 8);
+        
+    bytes[0] = 0x44;
+    bytes[1] = 0x43;
+    bytes[2] = 0x9D;
+    bytes[3] = 0x00;
+    bytes[4] = 0x00;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;                        
+    can->Send(0x39B, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x00;
-bytes[1] = 0x43;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0xCD;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x39A, (uint32_t*)bytes, 8);
-
-
-bytes[0] = 0x44;
-bytes[1] = 0x6E;
-bytes[2] = 0xB4;
-bytes[3] = 0x28;
-bytes[4] = 0x80;
-bytes[5] = 0x4E;
-bytes[6] = 0x4E;
-bytes[7] = 0x4D;
-can->Send(0x396, (uint32_t*)bytes, 8);
+    bytes[0] = 0x00;
+    bytes[1] = 0x43;
+    bytes[2] = 0x00;
+    bytes[3] = 0x00;
+    bytes[4] = 0xCD;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
+    can->Send(0x39A, (uint32_t*)bytes, 8);
 
 
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x343, (uint32_t*)bytes, 8);
+    bytes[0] = 0x44;
+    bytes[1] = 0x6E;
+    bytes[2] = 0xB4;
+    bytes[3] = 0x28;
+    bytes[4] = 0x80;
+    bytes[5] = 0x4E;
+    bytes[6] = 0x4E;
+    bytes[7] = 0x4D;
+    can->Send(0x396, (uint32_t*)bytes, 8);
 
 
-bytes[0] = 0x00;
-bytes[1] = 0x00;
-bytes[2] = 0x00;
-bytes[3] = 0x00;
-bytes[4] = 0x00;
-bytes[5] = 0x00;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x32E, (uint32_t*)bytes, 8);
+    bytes[0] = 0x00;
+    bytes[1] = 0x00;
+    bytes[2] = 0x00;
+    bytes[3] = 0x00;
+    bytes[4] = 0x00;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
+    can->Send(0x343, (uint32_t*)bytes, 8);
 
-bytes[0] = 0x3B;
-bytes[1] = 0xCA;
-bytes[2] = 0x86;
-bytes[3] = 0x00;
-bytes[4] = 0xFD;
-bytes[5] = 0x60;
-bytes[6] = 0x00;
-bytes[7] = 0x00;
-can->Send(0x29B, (uint32_t*)bytes, 8);
+
+    bytes[0] = 0x00;
+    bytes[1] = 0x00;
+    bytes[2] = 0x00;
+    bytes[3] = 0x00;
+    bytes[4] = 0x00;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
+    can->Send(0x32E, (uint32_t*)bytes, 8);
+
+    bytes[0] = 0x3B;
+    bytes[1] = 0xCA;
+    bytes[2] = 0x86;
+    bytes[3] = 0x00;
+    bytes[4] = 0xFD;
+    bytes[5] = 0x60;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
+    can->Send(0x29B, (uint32_t*)bytes, 8);
 
 }
 
