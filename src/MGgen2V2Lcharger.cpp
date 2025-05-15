@@ -204,6 +204,9 @@ void MGgen2V2Lcharger::Task100Ms()
             
             if(opmode==MOD_CHARGE)
             {
+
+                 setVolts=Param::GetInt(Param::Voltspnt)*10;
+                 actVolts=Param::GetInt(Param::udc);
                 /*
                 bytes[0] = 0x06;
                 bytes[1] = 0xA0;
@@ -289,13 +292,15 @@ void MGgen2V2Lcharger::Task100Ms()
         can->Send(0x348, (uint32_t*)bytes, 8);
 
         bytes[0] = 0x00;
-        bytes[1] = 0x28;
+        bytes[1] = currentRamp;
         bytes[2] = 0x00;
         bytes[3] = 0x00;
-        bytes[4] = 0x10;
-        bytes[5] = 0x43;
+        bytes[4] = setVolts >> 8;
+        bytes[5] = setVolts & 0xff;
         bytes[6] = 0x00;
         bytes[7] = 0x00;
+
+        
         can->Send(0x394, (uint32_t*)bytes, 8);
 
         bytes[0] = 0x44;
@@ -371,7 +376,10 @@ void MGgen2V2Lcharger::Task100Ms()
 
     }
         if(clearToStart)
-        {
+        {   
+            if(actVolts<Param::GetInt(Param::Voltspnt)) currentRamp++;
+            if(actVolts>=Param::GetInt(Param::Voltspnt)) currentRamp--;
+            if(currentRamp>=0x28) currentRamp=0x28;//clamp to max of 40A
 
             bytes[0] = 0x28;
             bytes[1] = 0x89;
