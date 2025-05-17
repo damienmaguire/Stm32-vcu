@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.32.TH
+#define VER 2.33.TH
 
 
 /* Entries must be ordered as follows:
@@ -65,7 +65,6 @@
     PARAM_ENTRY(CAT_THROTTLE,  DirChangeRpm,"rpm",     0,    20000,   500,    139 ) \
     PARAM_ENTRY(CAT_THROTTLE,  reversemotor,  ONOFF,   0,      1,      0,      127 ) \
     PARAM_ENTRY(CAT_THROTTLE,  throtramp,   "%/10ms",  1,    100,    10,    13 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  throtramprpm,"rpm",     0,      20000,  20000,  14 ) \
     PARAM_ENTRY(CAT_THROTTLE,  revlim,      "rpm",     0,      20000,  6000,   15 ) \
     PARAM_ENTRY(CAT_THROTTLE,  revRegen,     ONOFF,    0,       1,      0,      137 ) \
     PARAM_ENTRY(CAT_THROTTLE,  udcmin,      "V",       0,      1000,   450,    19 ) \
