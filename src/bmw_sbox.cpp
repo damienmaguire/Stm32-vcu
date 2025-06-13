@@ -82,109 +82,118 @@ uint8_t BMW_crc8(const uint8_t * data, const uint16_t size)
     uint8_t crc = 0;
     for ( uint16_t i = 0; i < size; ++i )
     {
-         crc = crc_array[data[i] ^ crc];
+        crc = crc_array[data[i] ^ crc];
     }
     return crc;
 }
 
 void SBOX::RegisterCanMessages(CanHardware* can)
 {
-   can->RegisterUserMessage(0x200);//SBOX MSG
-   can->RegisterUserMessage(0x210);//SBOX MSG
-   can->RegisterUserMessage(0x220);//SBOX MSG
+    can->RegisterUserMessage(0x200);//SBOX MSG
+    can->RegisterUserMessage(0x210);//SBOX MSG
+    can->RegisterUserMessage(0x220);//SBOX MSG
 
 }
 
 void SBOX::DecodeCAN(int id, uint32_t data[2])
 {
-   switch (id)
-   {
-   case 0x200:
-      SBOX::handle200(data);//SBOX CAN MESSAGE
-      break;
-   case 0x210:
-      SBOX::handle210(data);//SBOX CAN MESSAGE
-      break;
-   case 0x220:
-      SBOX::handle220(data);//SBOX CAN MESSAGE
-      break;
-   }
+    switch (id)
+    {
+    case 0x200:
+        SBOX::handle200(data);//SBOX CAN MESSAGE
+        break;
+    case 0x210:
+        SBOX::handle210(data);//SBOX CAN MESSAGE
+        break;
+    case 0x220:
+        SBOX::handle220(data);//SBOX CAN MESSAGE
+        break;
+    }
 }
 
 
 void SBOX::handle200(uint32_t data[2])  //SBOX Current
 
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   Amperes = ((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
-   Amperes = (Amperes<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+    Amperes = ((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
+    Amperes = (Amperes<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
 
 }
 
 void SBOX::handle210(uint32_t data[2])  //SBOX battery voltage
 
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   Voltage=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
-   Voltage = (Voltage<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
+    int32_t tmpvolt1 = 0;
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+    tmpvolt1 =((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
+    tmpvolt1 = (tmpvolt1<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
+    if(tmpvolt1 < 600) //Ignore start up values that are none plausible
+    {
+        Voltage = tmpvolt1;
+    }
 }
 
 void SBOX::handle220(uint32_t data[2]) //SBOX Output voltage
 
 {
-   uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
-   Voltage2=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
-   Voltage2 = (Voltage2<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
-
+    int32_t tmpvolt2 = 0;
+    uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
+    tmpvolt2=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
+    tmpvolt2 = (tmpvolt2<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
+    if(tmpvolt2 < 600)//Ignore start up values that are none plausible
+    {
+        Voltage2 = tmpvolt2;
+    }
 }
 
 void SBOX::ControlContactors(int opmode, CanHardware* can)
 {
-   uint8_t bytes[8];
-   bytes[0]=0xFF;//sems to control the iso relay
-   bytes[1]=0xFE;//needs to be 0xFE to enable contactors.
-   bytes[2]=0xFF;
-   bytes[3]=0xFF;
-   can->Send(0x300, (uint32_t*)bytes,4);
+    uint8_t bytes[8];
+    bytes[0]=0xFF;//sems to control the iso relay
+    bytes[1]=0xFE;//needs to be 0xFE to enable contactors.
+    bytes[2]=0xFF;
+    bytes[3]=0xFF;
+    can->Send(0x300, (uint32_t*)bytes,4);
 
-   bytes[0]=CCByte;
-   bytes[1]=(canCtr100<<4|0x1);
-   bytes[2]=0xFF;
-   bytes[3]=0x00;//crc
-   bytes[4]=0x00;
-   bytes[5]=0x00;
-   bytes[6]=0x00;
-   bytes[7]=0x00;
+    bytes[0]=CCByte;
+    bytes[1]=(canCtr100<<4|0x1);
+    bytes[2]=0xFF;
+    bytes[3]=0x00;//crc
+    bytes[4]=0x00;
+    bytes[5]=0x00;
+    bytes[6]=0x00;
+    bytes[7]=0x00;
 
 
-   canCtr100++;
-   if(canCtr100>0xE) canCtr100=0;
+    canCtr100++;
+    if(canCtr100>0xE) canCtr100=0;
 
-      switch (opmode)
-   {
-      case 0:
+    switch (opmode)
+    {
+    case 0:
         CCByte=0x00;//all contactors off
-         break;
-      case 2://Precharge
+        break;
+    case 2://Precharge
         CCByte=0xA6;//Prech and Neg contactors activated
-         break;
+        break;
 
-      case 1://Run
+    case 1://Run
         CCByte=0xAA;//All contactors activated
-         break;
+        break;
 
-      case 4://Charge
+    case 4://Charge
         CCByte=0xAA;//All contactors activated
-         break;
+        break;
 
-      case 3://Precharge fail
+    case 3://Precharge fail
         CCByte=0x00;//all contactors off
-         break;
+        break;
 
     }
-   CRCByte = BMW_crc8(bytes,8);
-   bytes[3]=CRCByte;//crc
-   can->Send(0x100, (uint32_t*)bytes,4);
+    CRCByte = BMW_crc8(bytes,8);
+    bytes[3]=CRCByte;//crc
+    can->Send(0x100, (uint32_t*)bytes,4);
 
 }
 
