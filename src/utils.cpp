@@ -471,7 +471,7 @@ float ProcessThrottle(int speed)
 {
     float finalSpnt;
 
-    if (speed < Param::GetInt(Param::throtramprpm))
+    Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
 
     /*
     if (speed < Param::GetInt(Param::throtramprpm))
