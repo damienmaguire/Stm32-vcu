@@ -381,18 +381,27 @@ float ProcessUdc(int motorSpeed)
             }
         }
     }
-    else if (Param::GetInt(Param::ShuntType) == 2)//BMs Sbox
+    else if (Param::GetInt(Param::ShuntType) == 2)//BMS Sbox
     {
-        float udc = ((float)SBOX::Voltage2)/1000;//get output voltage from sbox sensor and post to parameter database
-        Param::SetFloat(Param::udc, udc);
-        float udc2 = ((float)SBOX::Voltage)/1000;//get battery voltage from sbox sensor and post to parameter database
-        Param::SetFloat(Param::udc2, udc2);
-        if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+        if(Param::GetInt(Param::opmode) != MOD_OFF)
         {
-            Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+            float udc = ((float)SBOX::Voltage2)/1000;//get output voltage from sbox sensor and post to parameter database
+            Param::SetFloat(Param::udc, udc);
+            float udc2 = ((float)SBOX::Voltage)/1000;//get battery voltage from sbox sensor and post to parameter database
+            Param::SetFloat(Param::udc2, udc2);
+            if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+            {
+                Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+            }
         }
-        float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
-        Param::SetFloat(Param::udc3, udc3);
+        else
+        {
+            Param::SetFloat(Param::udc, 0);
+            Param::SetFloat(Param::udc2, 0);
+        }
+
+        Param::SetFloat(Param::udc3, 0);
+
         float idc = ((float)SBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
         Param::SetFloat(Param::idc, idc);
         float kw = (udc*idc)/1000;//get power from isa sensor and post to parameter database
@@ -400,16 +409,25 @@ float ProcessUdc(int motorSpeed)
     }
     else if (Param::GetInt(Param::ShuntType) == 3)//VW
     {
-        float udc = ((float)VWBOX::Voltage)*0.5;//get output voltage from sbox sensor and post to parameter database
-        Param::SetFloat(Param::udc, udc);
-        float udc2 = ((float)VWBOX::Voltage2)*0.0625;//get battery voltage from sbox sensor and post to parameter database
-        Param::SetFloat(Param::udc2, udc2);
-        if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+        if(Param::GetInt(Param::opmode) != MOD_OFF)
         {
-            Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+            float udc = ((float)VWBOX::Voltage)*0.5;//get output voltage from sbox sensor and post to parameter database
+            Param::SetFloat(Param::udc, udc);
+            float udc2 = ((float)VWBOX::Voltage2)*0.0625;//get battery voltage from sbox sensor and post to parameter database
+            Param::SetFloat(Param::udc2, udc2);
+            if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+            {
+                Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+            }
         }
-        float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
-        Param::SetFloat(Param::udc3, udc3);
+        else
+        {
+            Param::SetFloat(Param::udc, 0);
+            Param::SetFloat(Param::udc2, 0);
+        }
+
+        Param::SetFloat(Param::udc3, 0);
+
         float idc = ((float)VWBOX::Amperes)*0.1;//get current from sbox sensor and post to parameter database
         Param::SetFloat(Param::idc, idc);
     }
@@ -453,7 +471,15 @@ float ProcessThrottle(int speed)
 {
     float finalSpnt;
 
-    Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
+    if (speed < Param::GetInt(Param::throtramprpm))
+    {
+        Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
+    }
+
+    else
+    {
+        Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
+    }
 
     finalSpnt = utils::GetUserThrottleCommand();
 
