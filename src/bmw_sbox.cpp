@@ -31,8 +31,8 @@ int32_t SBOX::Amperes;
 int32_t SBOX::Ah;
 int32_t SBOX::KW;
 int32_t SBOX::KWh;
-int32_t SBOX::Voltage=0;
-int32_t SBOX::Voltage2=0;
+int32_t SBOX::Voltage=0; //in mV
+int32_t SBOX::Voltage2=0; //in mV
 int32_t SBOX::Temperature;
 uint8_t canCtr100=0;
 uint8_t CCByte=0;
@@ -124,11 +124,11 @@ void SBOX::handle200(uint32_t data[2])  //SBOX Current
 void SBOX::handle210(uint32_t data[2])  //SBOX battery voltage
 
 {
-    int32_t tmpvolt1 = 0;
+    int32_t tmpvolt1 = 0; //in mV
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     tmpvolt1 =((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
     tmpvolt1 = (tmpvolt1<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
-    if(tmpvolt1 < 600) //Ignore start up values that are none plausible
+    if(tmpvolt1 < 600000) //Ignore start up values that are none plausible
     {
         Voltage = tmpvolt1;
     }
@@ -137,11 +137,11 @@ void SBOX::handle210(uint32_t data[2])  //SBOX battery voltage
 void SBOX::handle220(uint32_t data[2]) //SBOX Output voltage
 
 {
-    int32_t tmpvolt2 = 0;
+    int32_t tmpvolt2 = 0; //in mV
     uint8_t* bytes = (uint8_t*)data;// arrgghhh this converts the two 32bit array into bytes. See comments are useful:)
     tmpvolt2=((bytes[2] << 16) | (bytes[1] << 8) | (bytes[0]));
     tmpvolt2 = (tmpvolt2<<8) >> 8;//extend sign bit as its a 24 bit signed value in a 32bit int! AAAHHHHHH!
-    if(tmpvolt2 < 600)//Ignore start up values that are none plausible
+    if(tmpvolt2 < 600000)//Ignore start up values that are none plausible
     {
         Voltage2 = tmpvolt2;
     }
