@@ -47,8 +47,6 @@ namespace utils
     void SpeedoSet(uint16_t speed);
     void SpeedoStart();
     void GS450hOilPump(uint16_t pumpdc);
-    void SetTempgaugePWM(bool en);
-    void SetSocgaugePWM(bool en);
 }
 
 #endif

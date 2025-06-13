@@ -27,13 +27,13 @@
  * Observed data with heater running approx 4kw : 0x32, 0xFC, 0x80, 0x80, 0x8D, 0x5D, 0x7A, 0x77
  */
 
- #include <VWCoolantHeater.h>
+ #include <VWheater.h>
 
  static uint8_t processedPower=0;
  static uint8_t TenCount=0;
 
 
- void vwCoolantHeater::SetLinInterface(LinBus* l)
+ void vwHeater::SetLinInterface(LinBus* l)
  {
     lin = l;
     DigIo::lin_wake.Clear();//Not used on TJA1027
@@ -42,7 +42,7 @@
 
  }
 
- void vwCoolantHeater::SetPower(uint16_t power, bool HeatReq)
+ void vwHeater::SetPower(uint16_t power, bool HeatReq)
 {
     TenCount++;
     if(TenCount==5)//slow down to 50ms as this is called in 10ms task.

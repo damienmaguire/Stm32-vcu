@@ -40,8 +40,6 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
 
     int opmode = Param::GetInt(Param::opmode);
 
-    int Dir = Param::GetInt(Param::dir);
-
     if(SendCan == true)//only send CAN when needed
     {
         mprun10 = (mprun10 + 1) % 4; // mprun10 cycles between 0-1-2-3-0-1...
@@ -70,27 +68,8 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
 
 
         //byte 0 determines motor rotation direction
-        if (opmode == MOD_CHARGE)
-        {
-            bytes[0] = 0x01;//Car in park when charging
-        }
-        else
-        {
-            if(Dir == 1)//drive
-            {
-                bytes[0] = 0x4E;//Drive
-            }
-            else if(Dir == -1)//reverse
-            {
-                bytes[0] = 0x2E;//Reverse
-            }
-            else
-            {
-                bytes[0] = 0x01;//Park
-            }
-        }
-
-
+        if (opmode == MOD_CHARGE) bytes[0] = 0x01;//Car in park when charging
+        if (opmode != MOD_CHARGE) bytes[0] = 0x4E;
         // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when charing 0x80
         if (opmode == MOD_CHARGE) bytes[1] = 0x80;
         if (opmode != MOD_CHARGE) bytes[1] = 0x40;
@@ -122,11 +101,11 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
         // move at about 10% throttle: F70700E0C74430D4
 
         // Usually F7, but can have values between 9A...F7 (gen1)
-        bytes[0] = 0xF7; // Upper Torque Limit 2.5Nm/bit 617Nm
+        bytes[0] = 0xF7;
         // 2016: 6E
 
         // Usually 07, but can have values between 07...70 (gen1)
-        bytes[1] = 0xF7;//0x07; // Lower Torque Limit -2.5Nm/bit Lets for fun allow ALL power
+        bytes[1] = 0x07;
         // 2016: 6E
 
         // override any torque commands if not in run mode.
@@ -276,26 +255,17 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
         {
             // clamp min and max values
             if (OBCpwrSP > 0xA0)
-            {
                 OBCpwrSP = 0xA0;
-            }
+            else if (OBCpwrSP < 0x64)
+                OBCpwrSP = 0x64;
 
             // if measured vbatt is less than setpoint got to max power from web ui
             if (Vbatt < VbattSP)
-            {
                 OBCpwr = OBCpwrSP;
-            }
 
             // decrement charger power if volt setpoint is reached
             if (Vbatt >= VbattSP)
-            {
                 OBCpwr--;
-            }
-
-            if (OBCpwrSP < 0x64)
-            {
-                OBCpwrSP = 0x64;
-            }
         }
         else
         {
@@ -405,22 +375,22 @@ void NissLeafMng::Task100Ms()
     {
         if(SleepCount == 0)
         {
-            SendCan = false;
-            Param::SetInt(Param::CanAct,0);//Reset CAN wake trigger
-            //Send CAN sleep command and stop sending CAN
-            bytes[0] = 0x00;
-            bytes[1] = 0x00;
-            bytes[2] = 0x00;
-            bytes[3] = 0x00;
-            bytes[4] = 0x00;
-            bytes[5] = 0x00;
-            bytes[6] = 0x00;
+        SendCan = false;
+        Param::SetInt(Param::CanAct,0);//Reset CAN wake trigger
+        //Send CAN sleep command and stop sending CAN
+        bytes[0] = 0x00;
+        bytes[1] = 0x00;
+        bytes[2] = 0x00;
+        bytes[3] = 0x00;
+        bytes[4] = 0x00;
+        bytes[5] = 0x00;
+        bytes[6] = 0x00;
 
-            //possible problem here as 0x50B is DLC 7....
-            can->Send(0x50B, (uint32_t*)bytes, 7);
+        //possible problem here as 0x50B is DLC 7....
+        can->Send(0x50B, (uint32_t*)bytes, 7);
         }
         else
-        {
+            {
             SleepCount --;
         }
     }
