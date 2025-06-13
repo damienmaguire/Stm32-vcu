@@ -1,6 +1,7 @@
 /*
  * This file is part of the Zombieverter VCU project.
  *
+ * Copyright (C) 2024 Tom de Bree <tom@voltinflux.com>
  * Copyright (C) 2018 Johannes Huebner <dev@johanneshuebner.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,16 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Controls the VW LIN based heater as : https://openinverter.org/wiki/Volkswagen_Heater
  */
-
-#ifndef VWHEATER_H
-#define VWHEATER_H
+#ifndef VWAIRHEATER_H
+#define VWAIRTHEATER_H
 
 //#include <libopencm3/stm32/usart.h>
 #include <heater.h>
 #include "linbus.h"
 
 
-class vwHeater : public Heater
+class vwAirHeater : public Heater
 {
    public:
       void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
@@ -38,4 +38,4 @@ class vwHeater : public Heater
       LinBus* lin;
 };
 
-#endif // VWHEATER_H
+#endif // VWAirHEATER_H

@@ -112,9 +112,11 @@ void NissanPDM::DecodeCAN(int id, uint32_t data[2])
         OBCAvailPwr = bytes[6]; //Power in 0.1kW
 
         PlugStat = bytes[5] & 0x0F;
+
         if(PlugStat == 0x08) PPStat = true; //plug inserted 32A
         else if(PlugStat == 0x04) PPStat = true; //plug inserted 16A
         else PPStat = false; //plug not inserted
+
 
         Param::SetInt(Param::PlugDet,PPStat);
     }
@@ -130,6 +132,17 @@ bool NissanPDM::ControlCharge(bool RunCh, bool ACReq) //Modeled off of Outlander
     {
     case Unused:
         if(PPStat && ACReq)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+        break;
+
+    case Chademo:
+        if (PPStat && ACReq)
         {
             return true;
         }
@@ -172,19 +185,6 @@ bool NissanPDM::ControlCharge(bool RunCh, bool ACReq) //Modeled off of Outlander
             return false;
         }
         break;
-
-    case Chademo:
-        if (RunCh && ACReq)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-
-        break;
-
     }
     return false;
 }

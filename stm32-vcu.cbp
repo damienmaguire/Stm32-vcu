@@ -165,6 +165,7 @@
 		<Unit filename="src/JLR_G2.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/MGCoolantHeater.cpp" />
+		<Unit filename="src/NissLeafMng.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
 		<Unit filename="src/OutlanderCanHeater.cpp" />
 		<Unit filename="src/OutlanderHeartBeat.cpp" />

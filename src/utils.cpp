@@ -196,24 +196,27 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
     Shifter::Sgear gearS;
     int8_t selectedDir = Param::GetInt(Param::dir);
     int8_t userDirSelection = 0;
+    int8_t prevValidDir = 0;
     int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
+    uint8_t ChangeLim = Param::GetInt(Param::DirChange); //"0=None, 1=Speed Thres, 2=Speed+Brake"
 
+    //Collecting Inputs//
     if (vehicle->GetGear(gear))
     {
         // if the vehicle class supplies gear selection then use that
         switch (gear)
         {
         case Vehicle::PARK:
-            selectedDir = 2; // Park
+            userDirSelection = 2; // Park
             break;
         case Vehicle::REVERSE:
-            selectedDir = -1; // Reverse
+            userDirSelection = -1; // Reverse
             break;
         case Vehicle::NEUTRAL:
-            selectedDir = 0; // Neutral
+            userDirSelection = 0; // Neutral
             break;
         case Vehicle::DRIVE:
-            selectedDir = 1; // Drive
+            userDirSelection = 1; // Drive
             break;
         }
     }
@@ -223,20 +226,19 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
         switch (gearS)
         {
         case Shifter::PARK:
-            selectedDir = 2; // Park
+            userDirSelection = 2; // Park
             break;
         case Shifter::REVERSE:
-            selectedDir = -1; // Reverse
+            userDirSelection = -1; // Reverse
             break;
         case Shifter::NEUTRAL:
-            selectedDir = 0; // Neutral
+            userDirSelection = 0; // Neutral
             break;
         case Shifter::DRIVE:
-            selectedDir = 1; // Drive
+            userDirSelection = 1; // Drive
             break;
         }
     }
-
     else
     {
         // otherwise use the traditional inputs
@@ -271,17 +273,73 @@ void SelectDirection(Vehicle* vehicle, Shifter* shifter)
             else if (Param::GetBool(Param::din_reverse))
                 userDirSelection = -1 * dirSign;
         }
-
-        /* Only change direction when below certain motor speed */
-//   if ((int)Encoder::GetSpeed() < Param::GetInt(Param::dirchrpm))
-        selectedDir = userDirSelection;
-
-        /* Current direction doesn't match selected direction -> neutral */
-        if (selectedDir != userDirSelection)
-            selectedDir = 0;
     }
 
-    Param::SetInt(Param::dir, selectedDir);
+    //Change Allowed Logic//
+
+    if(selectedDir !=  userDirSelection)//only run if requested change
+    {
+        if(ChangeLim == 0)//No limits on requesting new direction
+        {
+            selectedDir =  userDirSelection; //direct pass through
+        }
+        else if (ChangeLim == 1 || 2)//speed limit only when changing F to R or R to F, note last selected direction is valid,ignore neautral
+        {
+            if(userDirSelection != 0 && userDirSelection != prevValidDir)//neutral changes always allowed, check if we are not going back into same mode as before neutral
+            {
+                if(Param::GetInt(Param::DirChangeRpm) > (ABS(Param::GetInt(Param::speed))))
+                {
+                    if (Param::GetBool(Param::din_brake) && ChangeLim == 2)
+                    {
+                        selectedDir =  userDirSelection;
+                        prevValidDir = selectedDir;//update only when its a valid forward or reverse action under speed threshold
+                    }
+                    else if(ChangeLim == 1)
+                    {
+                        selectedDir =  userDirSelection;
+                        prevValidDir = selectedDir;//update only when its a valid forward or reverse action under speed threshold
+                    }
+                }
+            }
+            else
+            {
+                selectedDir =  userDirSelection; //direct pass through
+            }
+        }
+    }
+
+    //Shiftlock out control
+    if(ChangeLim == 0)//No limits on requesting new direction
+    {
+        SetInt(Param::ShiftLock,0);//No shift lock out ever
+    }
+    else if(Param::GetInt(Param::DirChangeRpm) > (ABS(Param::GetInt(Param::speed))))//speed based limit
+    {
+        if (Param::GetBool(Param::din_brake) && ChangeLim == 2)//brake input required
+        {
+            SetInt(Param::ShiftLock,1);//Solenoid pull out brake pressed and speed low
+        }
+        else if(ChangeLim == 1)//if only speed
+        {
+            SetInt(Param::ShiftLock,1);//Solenoid pull out speed low
+        }
+        else
+        {
+            SetInt(Param::ShiftLock,0);//No shift lock out speed too high
+        }
+    }
+    else
+    {
+        SetInt(Param::ShiftLock,0);//No shift lock out speed too high
+    }
+
+    //Always off outside of run
+    if(Param::GetInt(Param::opmode)!=MOD_RUN)
+    {
+        SetInt(Param::ShiftLock,0);//No shift lock out speed too high
+    }
+
+    Param::SetInt(Param::dir, selectedDir);//final writing of DIR
 }
 
 float ProcessUdc(int motorSpeed)
@@ -294,9 +352,10 @@ float ProcessUdc(int motorSpeed)
         if(Param::GetInt(Param::opmode) == MOD_OFF)
         {
             udc = 0; //ensure we reset udc during off state to keep precharge working
+            Param::SetFloat(Param::udc, udc);
         }
     }
-    else if (Param::GetInt(Param::ShuntType) == 1)//ISA shunt
+    else if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)//ISA shunt
     {
         float udc = ((float)ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
@@ -313,8 +372,14 @@ float ProcessUdc(int motorSpeed)
         float Amph = ((float)ISA::Ah)/3600;//get Ah from isa sensor and post to parameter database
         Param::SetFloat(Param::AMPh, Amph);
         float deltaVolts1 = (udc2 / 2) - udc3;
-        float deltaVolts2 = (udc2 + udc3) - udc;
-        Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
+        Param::SetFloat(Param::deltaV, deltaVolts1);
+        if(Param::GetInt(Param::ShuntType) == 4)//ISA Shunt with udcsw update
+        {
+            if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+            {
+                Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+            }
+        }
     }
     else if (Param::GetInt(Param::ShuntType) == 2)//BMs Sbox
     {
@@ -322,7 +387,10 @@ float ProcessUdc(int motorSpeed)
         Param::SetFloat(Param::udc, udc);
         float udc2 = ((float)SBOX::Voltage)/1000;//get battery voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc2, udc2);
-        Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+        {
+            Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        }
         float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)SBOX::Amperes)/1000;//get current from sbox sensor and post to parameter database
@@ -336,7 +404,10 @@ float ProcessUdc(int motorSpeed)
         Param::SetFloat(Param::udc, udc);
         float udc2 = ((float)VWBOX::Voltage2)*0.0625;//get battery voltage from sbox sensor and post to parameter database
         Param::SetFloat(Param::udc2, udc2);
-        Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        if(udc2 > Param::GetFloat(Param::udcmin))//only update UDCsw if UDC2 is above udcmin
+        {
+            Param::SetFloat(Param::udcsw, udc2-20); //Set udcsw to 20V under battery voltage
+        }
         float udc3 = 0;//((float)ISA::Voltage3)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc3, udc3);
         float idc = ((float)VWBOX::Amperes)*0.1;//get current from sbox sensor and post to parameter database
@@ -382,15 +453,7 @@ float ProcessThrottle(int speed)
 {
     float finalSpnt;
 
-    if (speed < Param::GetInt(Param::throtramprpm))
-    {
-        Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
-    }
-
-    else
-    {
-        Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
-    }
+    Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
 
     finalSpnt = utils::GetUserThrottleCommand();
 
@@ -556,7 +619,7 @@ void CpSpoofOutput()
     {
         CpVal = float(Param::GetInt(Param::PilotLim) *1.6667);
         Param::SetInt(Param::CP_PWM,CpVal);
-        CpVal = (Param::GetInt(Param::CP_PWM)*66)-16;
+        CpVal = (Param::GetInt(Param::CP_PWM)*40);
     }
 
     if(Param::GetInt(Param::PWM1Func) == IOMatrix::CP_SPOOF)
@@ -573,9 +636,56 @@ void CpSpoofOutput()
     }
 }
 
+void SetTempgaugePWM(bool en)
+{
+    uint16_t TempDC = 0;
+
+    if(en)
+    {
+        TempDC = utils::change(Param::GetInt(Param::tmphs), 0, Param::GetInt(Param::tmphsmax), Param::GetInt(Param::DC_MinTemp), Param::GetInt(Param::DC_MaxTemp)); //map Temp Heatsink, from 0 to max and min to max duty
+        TempDC = TempDC * 40;
+    }
+
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,TempDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,TempDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::PWMTEMPGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC3,TempDC);//No duty set here
+    }
+}
+
+void SetSocgaugePWM(bool en)
+{
+    uint16_t SocDC = 0;
+
+    if(en)
+    {
+        SocDC = utils::change(Param::GetInt(Param::SOC), 0, 100, Param::GetInt(Param::DC_MinSOC), Param::GetInt(Param::DC_MaxSOC)); //map SOC, from 0 to max and min to max duty
+        SocDC = SocDC * 40;
+    }
+    if(Param::GetInt(Param::PWM1Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC1,SocDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM2Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC2,SocDC);//No duty set here
+    }
+    if(Param::GetInt(Param::PWM3Func) == IOMatrix::PWMSOCGAUGE)
+    {
+        timer_set_oc_value(TIM3, TIM_OC3,SocDC);//No duty set here
+    }
+}
+
 void SpeedoStart()
 {
-    if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
+    if(Param::GetInt(Param::PumpPWM) == 1 || Param::GetInt(Param::PumpPWM) == 2)//If Pump PWM out is set to Tacho or Speedo
     {
         tim_setup();//Fire up timer one...
         timer_disable_counter(TIM1);//...but disable until needed
@@ -588,6 +698,29 @@ void SpeedoSet(uint16_t speed)
     if(Param::GetInt(Param::PumpPWM) == 1)//If Pump PWM out is set to Tacho
     {
         float PulseGain = Param::GetInt(Param::TachoPPR);
+
+        if(speed == 0)
+        {
+            timer_disable_counter(TIM1);
+            Timer1Run = false;
+        }
+
+        if(speed > 0)
+        {
+            if(Timer1Run == false)
+            {
+                timer_enable_counter(TIM1);
+                Timer1Run = true;
+            }
+
+            uint32_t timerPeriod = float((33000000)*2) / float(speed * PulseGain);
+            timer_set_period(TIM1, timerPeriod);
+            timer_set_oc_value(TIM1, TIM_OC1, timerPeriod / 2); //always stay at 50% duty cycle
+        }
+    }
+    if(Param::GetInt(Param::PumpPWM) == 2)//If Pump PWM out is set to Speedo
+    {
+        float PulseGain = Param::GetFloat(Param::TachoPPR);
 
         if(speed == 0)
         {
@@ -626,7 +759,7 @@ void GS450hOilPump(uint16_t pumpdc)
         timer_set_oc_value(TIM1, TIM_OC1, pumpdc);//duty. 1000 = 52% , 500 = 76% , 1500=28%
     }
 
-    uint16_t pumpduty = (pumpdc*66)-16;
+    uint16_t pumpduty = pumpdc*40;
 
     if(Param::GetInt(Param::PWM1Func) == IOMatrix::GS450HOIL)
     {
