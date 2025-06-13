@@ -29,7 +29,6 @@ V2.20A now available : https://www.youtube.com/watch?v=wjlucUWX_lc
 - Modular BMS / SimpBMS Support
 - OpenInverter CAN Support
 - CCS DC fast charge via BMW i3 LIM
-- CCS DC fast charging via FOCCCI https://github.com/uhi22/ccs32clara
 - Chademo DC fast charge
 - ISA Shunt / BMW SBOX / VW EBOX supported via CAN
 - Lexus GS450H inverter / gearbox via sync serial
@@ -47,9 +46,43 @@ V2.20A now available : https://www.youtube.com/watch?v=wjlucUWX_lc
 - OBD2 Can support
 - TESLA Gen 2 DCDC Converter Can support
 
-# Contributing
 
-Information on how to contribute to this open source project can be found [Contributing Guide](./CONTRIBUTING.md)
+# Compiling
+You will need the arm-none-eabi toolchain: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
+On Linux this can be installed by typing:
 
-# All hardware / software is tested in these vehicles before release. More vehicles with different configuration in progress to ensure as much testing as possible.
-Note: Only RELEASES are tested. Code in repository is to be treated as unproven and used as such
+`sudo apt install gcc-arm-none-eabi`
+
+The only external depedencies are libopencm3 and libopeninv. You can download and build this dependency by typing
+
+`make get-deps`
+
+Now you can compile stm32-vcu by typing
+
+`make`
+
+# Tests
+
+Build the tests
+
+`make Tests`
+
+Run the tests
+
+`./test/test_vcu`
+
+And upload it to your board using a JTAG/SWD adapter, the updater.py script or the esp8266 web interface
+
+I use CodeBlocks IDE :  https://www.codeblocks.org/
+
+Sept 21 : V1 hardware and firmware from "Master" branch now running in my E46 Touring and E39 vehicles.
+
+March 24 : V1.1 Hardware and V2.05A firmware now running in 3 vehicles :
+
+-BMW E39 with Lexus GS450H Drivetrain, Tesla PCS, ISA Shunt , Chademo Fast Charge
+
+-BMW E46 Touring with Nissan Leaf Gen 1 Drivetrain, Outlander Charger / DCDC, ISA Shunt , CCS Fast Charge
+
+-BMW E31 with Tesla LDU Drivetrain, Tesla DCDC, ISA Shunt , Chademo Fast Charge
+
+All hardware / software is tested in these vehicles before release. More vehicles with different configuration in progress to ensure as much testing as possible.
