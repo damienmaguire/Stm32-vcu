@@ -92,25 +92,26 @@ void SimpBMS::DecodeCAN(int id, uint8_t *data)
      }
 }
 
-void SimpBMS::Task100Ms()
-{
-    // Decrement timeout counter.
-    timeoutCounter = Param::GetInt(Param::BMS_Timeout) * 10;
-    if(timeoutCounter > 0) timeoutCounter--;
+void SimpBMS::Task100Ms() {
+   // Decrement timeout counter.
+   if(timeoutCounter > 0) timeoutCounter--;
 
-    // Update informational parameters.
-    Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
+   // Update informational parameters.
+   Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
 
-    minCellV = Param::GetFloat(Param::udc)/96;
-    maxCellV = Param::GetFloat(Param::udc)/96;
-    minTempC = 20;
-    maxTempC= 25;
-    chargeCurrentLimit = 20;
-
-    Param::SetFloat(Param::BMS_Vmin, minCellV);
-    Param::SetFloat(Param::BMS_Vmax, maxCellV);
-    Param::SetFloat(Param::BMS_Tmin, minTempC);
-    Param::SetFloat(Param::BMS_Tmax, maxTempC);
+   if(BMSDataValid()) {
+      Param::SetFloat(Param::BMS_Vmin, minCellV);
+      Param::SetFloat(Param::BMS_Vmax, maxCellV);
+      Param::SetFloat(Param::BMS_Tmin, minTempC);
+      Param::SetFloat(Param::BMS_Tmax, maxTempC);
+   }
+   else
+   {
+      Param::SetFloat(Param::BMS_Vmin, 0);
+      Param::SetFloat(Param::BMS_Vmax, 0);
+      Param::SetFloat(Param::BMS_Tmin, 0);
+      Param::SetFloat(Param::BMS_Tmax, 0);
+   }
 }
 
 
