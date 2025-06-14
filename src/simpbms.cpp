@@ -84,7 +84,7 @@ void SimpBMS::DecodeCAN(int id, uint8_t *data)
         maxTempC = maxTemp - 273;
 
         // Reset timeout counter to the full timeout value
-
+        timeoutCounter = Param::GetInt(Param::BMS_Timeout) * 10;
      }
      else if (id == 0x351)
      {
