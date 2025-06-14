@@ -106,7 +106,7 @@
 #include "OutlanderHeartBeat.h"
 #include "preheater.h"
 #include "MGCoolantHeater.h"
-
+#include "MGgen2V2Lcharger.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -684,10 +684,10 @@ static void Ms10Task(void)
         IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear();//Coolant pump off if used
         Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown regardless of shifter pos
         selectedVehicle->DashOff();
-        
+
         StartSig=false;//reset for next time
 
-        if(rlyDly!=0) 
+        if(rlyDly!=0)
         {
         rlyDly--;//here we are going to pause to allow system shut down before opening HV contactors
         selectedCharger->Off(); // send message to charger to shut down
@@ -959,7 +959,7 @@ static void UpdateCharger()
     case ChargeModes::MGgen2:
         selectedCharger = &MGgen2v2l;
         break;
-        
+
 
     }
     //This will call SetCanFilters() via the Clear Callback
