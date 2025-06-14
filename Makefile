@@ -43,9 +43,12 @@ OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.
            param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o i3LIM.o \
            chademo.o amperaheater.o amperacharger.o subaruvehicle.o iomatrix.o bmw_sbox.o NissanPDM.o teslaCharger.o extCharger.o vag_sbox.o \
            daisychainbms.o simpbms.o outlanderCharger.o Can_OBD2.o cansdo.o TeslaDCDC.o BMW_E31.o F30_Lever.o \
+
+
            CPC.o ElconCharger.o RearOutlanderinverter.o linbus.o VWCoolantHeater.o JLR_G1.o JLR_G2.o Foccci.o digipot.o\
 	   OutlanderHeartBeat.o E65_Lever.o leafbms.o V_Classic.o kangoobms.o OutlanderCanHeater.o VWAirHeater.o\
 	   MGCoolantHeater.o NissLeafMng.o preheater.o
+
            
 OBJS     = $(patsubst %.o,$(OUT_DIR)/%.o, $(OBJSL))
 vpath %.c src/ libopeninv/src/

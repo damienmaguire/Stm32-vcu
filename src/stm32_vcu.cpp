@@ -107,6 +107,7 @@
 #include "preheater.h"
 #include "MGCoolantHeater.h"
 
+
 #define PRECHARGE_TIMEOUT 5  //5s
 
 #define PRINT_JSON 0
@@ -162,6 +163,7 @@ static noCharger nochg;
 static extCharger chgdigi;
 static amperaCharger ampChg;
 static outlanderCharger outChg;
+static MGgen2V2Lcharger MGgen2v2l;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
@@ -682,9 +684,14 @@ static void Ms10Task(void)
         IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear();//Coolant pump off if used
         Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown regardless of shifter pos
         selectedVehicle->DashOff();
+        
         StartSig=false;//reset for next time
 
-        if(rlyDly!=0) rlyDly--;//here we are going to pause to allow system shut down before opening HV contactors
+        if(rlyDly!=0) 
+        {
+        rlyDly--;//here we are going to pause to allow system shut down before opening HV contactors
+        selectedCharger->Off(); // send message to charger to shut down
+        }
         if(rlyDly==0)
         {
             DigIo::dcsw_out.Clear();
@@ -949,6 +956,10 @@ static void UpdateCharger()
     case ChargeModes::Elcon:
         selectedCharger = &ChargerElcon;
         break;
+    case ChargeModes::MGgen2:
+        selectedCharger = &MGgen2v2l;
+        break;
+        
 
     }
     //This will call SetCanFilters() via the Clear Callback
