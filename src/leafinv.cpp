@@ -60,7 +60,7 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2])
 
     if (id == 0x1DA)// THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
     {
-        voltage = ((bytes[0] << 2) | (bytes[1] >> 6)) * 0.5;//MEASURED VOLTAGE FROM LEAF INVERTER
+        voltage = (bytes[0] * 2);//MEASURED VOLTAGE FROM LEAF INVERTER
 
         if (Param::GetInt(Param::ShuntType) == 0 && voltage < 420)//Only populate if no shunt is used and voltage is under 420
         {
