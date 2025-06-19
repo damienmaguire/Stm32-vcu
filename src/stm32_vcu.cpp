@@ -103,6 +103,7 @@
 #include "kangoobms.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
+#include "emusbms.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -186,6 +187,7 @@ static SimpBMS BMSsimp;
 static LeafBMS BMSleaf;
 static DaisychainBMS BMSdaisychain;
 static KangooBMS BMSRenaultKangoo33;
+static EmusBMS BMSEmus;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
 static BMS* selectedBMS = &BMSnone;
@@ -912,6 +914,9 @@ static void UpdateBMS()
         break;
     case BMSModes::BMSRenaultKangoo33BMS:
         selectedBMS = &BMSRenaultKangoo33;
+        break;
+    case BMSModes::BMSModeEmusBMS:
+        selectedBMS = &BMSEmus;
         break;
     default:
         // Default to no BMS
