@@ -1,0 +1,151 @@
+
+/*
+ * This file is part of the ZombieVerter project.
+ *
+ * Copyright (C) 2024 Mitch Elliott
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#ifndef vw_mlb_charger_h
+#define vw_mlb_charger_h
+
+#include "chargerhw.h"
+#include "chargerint.h"
+#include "canhardware.h"
+#include <stdint.h>
+#include "my_fp.h"
+#include "params.h"
+#include "my_math.h"
+#include "stm32_can.h"
+#include "CANSPI.h"
+#include "vag_utils.h"
+
+class VWMLBClass: public Chargerhw
+{
+public:
+      bool ControlCharge(bool RunCh, bool ACReq);
+      void SetCanInterface(CanHardware*);
+      void DecodeCAN(int id, uint32_t data[2]);
+      void Task1Ms();
+      void Task10Ms();
+      void Task100Ms();
+      void Task200Ms();
+
+
+private:
+      //void CommandStates();
+      void Simulate();
+      void TagParams();
+      void CalcValues100ms();
+      void msg3C0();
+      void msg1A1();      // BMS_02     0x1A1
+      void msg2B1();      // MSG_TME_02   0x2B1
+      void msg39D();      // BMS_03     0x39D
+      void msg485();      // NavData_02 0x485
+      void msg509();      // BMS_10     0x509
+      void msg552();      // HVEM_05    0x552
+      void msg583();      // ZV_02      0x583
+      void msg59E();      // BMS_06     0x59E
+      void msg5AC();      // HVEM_02    0x5AC
+      void msg64F();      // BCM1_04    0x64F
+      void msg663();      // NVEM_02    0x663
+      void msg1A555548(); // ORU_01     0x1A555548
+      void msg1A5555AD(); // Authentic_Time_01   0x1A5555AD
+      void msg96A955EB(); // BMS_09     0x96A955EB
+      void msg96A954A6(); // BMS_11     0x96A954A6
+      void msg9A555539(); // BMS_16     0x9A555539
+      void msg9A555552(); // BMS_27     0x9A555552
+      void msg040();      // Airbag_01  0x40
+      void msg184();      // ZV_01      0x184
+      void msg191();      // BMS_01     0x191
+      void msg1A2();      // ESP_15   0x1A2
+      void msg2AE();      // DCDC_01    0x2AE
+      void msg37C();      // EM1_HYB_11    0x37C
+      void msg503();      // HVK_01     0x503
+      void msg578();      // BMS_DC_01  0x578
+      void msg5A2();      // BMS_04     0x5A2
+      void msg5CA();      // BMS_07     0x5CA
+      void msg5CD();      // DCDC_03    0x5CD
+      uint8_t Airbag_01[8]          = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t Authentic_Time_01[8]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BCM1_04[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_01[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_02[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_03[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_04[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_06[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_07[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_09[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_10[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_11[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_16[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_27[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t BMS_DC_01[8]          = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t EM_HYB_11[8]          = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t ESP_15[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t Dimmung_01[8]         = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t DCDC_01[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t DCDC_02[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t DCDC_03[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVK_01[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVEM_02[8]            = {0xFF, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVEM_05[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t Klemmen_Status_01[8]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t MSG_TME_02[8]         = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t NVEM_02[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t ORU_01[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t ZV_02[8]              = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVLM_06[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVLM_04[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t LAD_01[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVLM_03[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t LAD_02[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVLM_10[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVLM_11[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVLM_08[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t HVLM_15[8]            = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t LAD_06[8]             = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t ZV_01[8]              = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      uint8_t vag_cnt3C0            = 0x00;
+      uint8_t vag_cnt040            = 0x00;
+      uint8_t vag_cnt184            = 0x00;
+      uint8_t vag_cnt191            = 0x00;
+      uint8_t vag_cnt1A2            = 0x00;
+      uint8_t vag_cnt37C            = 0x00;
+      uint8_t vag_cnt2AE            = 0x00;
+      uint8_t vag_cnt503            = 0x00;
+      uint8_t vag_cnt578            = 0x00;
+      uint8_t vag_cnt5A2            = 0x00;
+      uint8_t vag_cnt5CA            = 0x00;
+      uint8_t vag_cnt5CD            = 0x00;
+};
+
+class VWMLBintClass: public Chargerint
+{
+public:
+      // void SetCanInterface(CanHardware* c);
+      // void DecodeCAN(int id, uint32_t data[2]);
+      // void Task10Ms();
+      // void Task100Ms();
+      // void Task200Ms();
+      // bool DCFCRequest(bool RunCh);
+      // bool ACRequest(bool RunCh);
+
+      
+protected:
+      // CanHardware* can;
+
+};
+
+#endif /* vw_mlb_charger_h */

@@ -91,8 +91,10 @@
 #include "JLR_G1.h"
 #include "JLR_G2.h"
 #include "no_Lever.h"
+#include "Gear_9x1.h"
 #include "CPC.h"
 #include "Foccci.h"
+#include "vw_mlb_charger.h"
 #include "NoInverter.h"
 #include "linbus.h"
 #include "VWCoolantHeater.h"
@@ -168,6 +170,7 @@ static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
 static FoccciClass Focccican;
+static VWMLBClass MLBcharger;
 static Can_OI openInv;
 static NoInverterClass NoInverter;
 static OutlanderInverter outlanderInv;
@@ -179,6 +182,7 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
+static Gear_9x1 PorschePDKshift;
 static vwCoolantHeater heaterCoolantVW;
 static mgCoolantHeater heaterCoolantMG;
 static vwAirHeater heaterAirVW;
@@ -959,6 +963,9 @@ static void UpdateCharger()
     case ChargeModes::MGgen2:
         selectedCharger = &MGgen2v2l;
         break;
+    case ChargeModes::MLBevo:
+        selectedCharger = &MLBcharger;
+        break;
 
 
     }
@@ -1100,6 +1107,10 @@ static void UpdateShifter()
 
     case ShifterModes::BMWE65:
         selectedShifter = &E65GearLever;
+        break;
+    
+    case ShifterModes::PorschePDK:
+        selectedShifter = &PorschePDKshift;
         break;
 
     default:
