@@ -1100,7 +1100,7 @@ static void UpdateCompressor() {
             break;
     }
 
-    //This will call SetCanFilters() via the Clear Callback
+    // This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
     canInterface[1]->ClearUserMessages();
     
