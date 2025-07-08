@@ -109,7 +109,7 @@
 #include "MGgen2V2Lcharger.h"
 #include "compressor.h"
 #include "noCompressor.h"
-#include "OutlanderCompressor.h"
+#include "outlanderCompressor.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 

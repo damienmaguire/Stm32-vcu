@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "OutlanderCompressor.h"
+#include "outlanderCompressor.h"
 #include "OutlanderHeartBeat.h"
 
 
