@@ -226,19 +226,6 @@ bool VWMLBClass::ControlCharge(bool RunCh, bool ACReq)
 
 void VWMLBClass::Simulate()
 {
-    if(Param::GetInt(Param::opmode) == MOD_PRECHARGE || Param::GetInt(Param::opmode) == MOD_RUN || Param::GetInt(Param::opmode) == MOD_CHARGE)
-    {
-        Param::SetFloat(Param::udc, 400.0);
-    }
-    else
-    {
-        Param::SetFloat(Param::udc, 0.0);
-    }
-    
-    if (charger_status.HVVoltage > 320)
-      {
-      Param::SetFloat(Param::udc, charger_status.HVVoltage);
-      }
 }
 
 void VWMLBClass::Task1Ms()
@@ -269,7 +256,7 @@ void VWMLBClass::Task10Ms()
 
 void VWMLBClass::Task100Ms()
 {
-Simulate();
+//Simulate();
 static uint8_t counter100ms = 0;
 TagParams();
 CalcValues100ms();
