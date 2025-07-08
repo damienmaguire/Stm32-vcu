@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.34.TB
+#define VER 2.35.TB
 
 
 /* Entries must be ordered as follows:
@@ -48,6 +48,7 @@
     PARAM_ENTRY(CAT_SETUP,     CanMapCan,    CAN_DEV,  0,      1,      0,      97 ) \
     PARAM_ENTRY(CAT_SETUP,     DCDCCan,      CAN_DEV,  0,      1,      1,      107 ) \
     PARAM_ENTRY(CAT_SETUP,     HeaterCan,    CAN_DEV,  0,      1,      1,      138 ) \
+    PARAM_ENTRY(CAT_SETUP,     CompressorCan,CAN_DEV,  0,      1,      0,      148 ) \
     PARAM_ENTRY(CAT_SETUP,     MotActive,    MotorsAct,0,      3,      0,      129 ) \
     PARAM_ENTRY(CAT_SETUP,     ConfigCANOI,   ONOFF,   0,      1,      0,      149 ) \
     PARAM_ENTRY(CAT_THROTTLE,  potmin,      "dig",     0,      4095,   0,      7  ) \
@@ -114,6 +115,8 @@
     PARAM_ENTRY(CAT_HEATER,    HeatPotDir, ABOVEBELOW, 0,      4,      0,      150 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPotOn,   "dig",     0,      4095,   0,      151 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPotFull, "dig",     0,      4095,   0,      152 ) \
+    PARAM_ENTRY(CAT_AIRCON,     Compressor, COMPRESSMODES, 0, 1,      0,      153  ) \
+    PARAM_ENTRY(CAT_AIRCON,    AirConCtrl,  ONOFF,     0,      1,      0,      154) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Min,     "Mins",    0,      59,     0,      48 ) \
@@ -254,8 +257,9 @@
     VALUE_ENTRY(udcheater,     "V",                 2097 ) \
     VALUE_ENTRY(powerheater,   "W",                 2098 ) \
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
-
-//Next value Id: 2110
+    VALUE_ENTRY(compressStat,  COMP_STAT,           2111 ) \
+    VALUE_ENTRY(compressRPM,   "",                  2109 ) \
+//Next value Id: 2112
 
 //Dead params
 /*
@@ -293,6 +297,8 @@
 #define CANSPEEDS    "0=125k, 1=250k, 2=500k, 3=800k, 4=1M"
 #define CANIOS       "1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms"
 #define CANPERIODS   "0=100ms, 1=10ms"
+#define COMPRESSMODES "0=None, 1=Outlander"
+#define COMP_STAT    "0=NoHv, 1=HvPresent, 2=NoHeartBeat, 3=Start, 4=Running"
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"
 #define CRUISESTATES "0=None, 1=On, 2=Disable, 4=Set, 8=Resume"
 #define CDMSTAT      "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, 32=Stop"
@@ -303,6 +309,7 @@
 #define CHGINT       "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Foccci"
 #define CAN3SPD      "0=k33.3, 1=k500, 2=k100"
 #define TRNMODES     "0=Manual, 1=Auto"
+#define CAT_AIRCON   "Air Conditioning"
 #define CAN_DEV      "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
 #define CAT_POWER    "Power Limit"
@@ -512,7 +519,11 @@ enum can_devices
     CAN_DEV2 = 1
 };
 
-
+enum CompressorOptions
+{
+    NoCompress = 0,
+    OutlanderCompress = 1
+};
 
 
 
