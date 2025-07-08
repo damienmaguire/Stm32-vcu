@@ -339,6 +339,9 @@ static void Ms200Task(void)
     {
         ChgLck=false;//reset charge lockout flag when we drive off
 
+        selectedCompressor->Task200Ms();
+
+
         //Brake Vac Sensor
         if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR || Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR )
         {
@@ -419,7 +422,7 @@ static void Ms100Task(void)
         OutlanderHeartBeat::Task100Ms();
     }
 
-    if(opmode==MOD_RUN)
+    if(opmode==MOD_RUN)//Just Comms
     {
         selectedCompressor->Task100Ms();
     }
@@ -1100,10 +1103,10 @@ static void UpdateCompressor() {
             break;
     }
 
-    // This will call SetCanFilters() via the Clear Callback
+    //This will call SetCanFilters() via the Clear Callback
     canInterface[0]->ClearUserMessages();
     canInterface[1]->ClearUserMessages();
-    
+
 }
 
 static void UpdateShifter()
@@ -1446,7 +1449,7 @@ extern "C" int main(void)
     UpdateDCDC();
     UpdateShifter();
     UpdateCompressor();
-    
+
     Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
     scheduler = &s;
 

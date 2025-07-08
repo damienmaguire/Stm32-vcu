@@ -15,6 +15,7 @@ public:
    virtual void DecodeCAN(int, uint32_t*) {};
    virtual void DeInit() {} //called when switching to another heater, similar to a destructor
    virtual void SetCanInterface(CanHardware* c) { can = c; }
+   virtual void Task200Ms() {};
    virtual void Task100Ms() {};
    virtual void Task10Ms() {};
 
