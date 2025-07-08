@@ -107,6 +107,9 @@
 #include "preheater.h"
 #include "MGCoolantHeater.h"
 #include "MGgen2V2Lcharger.h"
+#include "compressor.h"
+#include "NoCompressor.h"
+#include "OutlanderCompressor.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -204,6 +207,9 @@ static Shifter shifterNone;
 static RearOutlanderInverter rearoutlanderInv;
 static LinBus* lin;
 static Preheater preheater;
+static NoCompressor CompressorNone;
+static OutlanderCompressor outlanderCompressor;
+static Compressor* selectedCompressor = &CompressorNone;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void)
@@ -411,6 +417,11 @@ static void Ms100Task(void)
     if(OutlanderCAN == true)
     {
         OutlanderHeartBeat::Task100Ms();
+    }
+
+    if(opmode==MOD_RUN)
+    {
+        selectedCompressor->Task100Ms();
     }
 
     //Setting reverse light
@@ -663,6 +674,7 @@ static void Ms10Task(void)
         selectedCharger->Task10Ms();
     }
     if(opmode==MOD_RUN) Param::SetInt(Param::canctr, (Param::GetInt(Param::canctr) + 1) & 0xF);//Update the OI can counter in RUN mode only
+    if(opmode==MOD_RUN) selectedCompressor->Task10Ms();
 
     //////////////////////////////////////////////////
     //            MODE CONTROL SECTION              //
@@ -1076,6 +1088,23 @@ static void UpdateDCDC()
     canInterface[1]->ClearUserMessages();
 }
 
+static void UpdateCompressor() {
+    switch (Param::GetInt(Param::Compressor))
+    {
+        case CompressorOptions::NoCompress:
+            selectedCompressor = &CompressorNone;
+            break;
+        case CompressorOptions::OutlanderCompress:
+            selectedCompressor = &outlanderCompressor;
+            OutlanderCAN = true;
+            break;
+    }
+
+    //This will call SetCanFilters() via the Clear Callback
+    canInterface[0]->ClearUserMessages();
+    canInterface[1]->ClearUserMessages();
+    
+}
 
 static void UpdateShifter()
 {
@@ -1126,6 +1155,7 @@ static void SetCanFilters()
     CanHardware* obd2_can = canInterface[Param::GetInt(Param::OBD2Can)];
     CanHardware* dcdc_can = canInterface[Param::GetInt(Param::DCDCCan)];
     CanHardware* heater_can = canInterface[Param::GetInt(Param::HeaterCan)];
+    CanHardware* compressor_can = canInterface[Param::GetInt(Param::CompressorCan)];
 
     selectedInverter->SetCanInterface(inverter_can);
     selectedVehicle->SetCanInterface(vehicle_can);
@@ -1136,6 +1166,7 @@ static void SetCanFilters()
     selectedShifter->SetCanInterface(vehicle_can);
     canOBD2.SetCanInterface(obd2_can);
     selectedHeater->SetCanInterface(heater_can);
+    selectedCompressor->SetCanInterface(compressor_can);
 
     if (Param::GetInt(Param::ShuntType) == 1 || Param::GetInt(Param::ShuntType) == 4)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
     if (Param::GetInt(Param::ShuntType) == 2)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
@@ -1169,6 +1200,9 @@ void Param::Change(Param::PARAM_NUM paramNum)
     case Param::BMS_Mode:
         UpdateBMS();
         break;
+    case Param::Compressor:
+        UpdateCompressor();
+        break;
     case Param::DCdc_Type:
         UpdateDCDC();
         break;
@@ -1180,6 +1214,7 @@ void Param::Change(Param::PARAM_NUM paramNum)
     case Param::ShuntCan:
     case Param::LimCan:
     case Param::ChargerCan:
+    case Param::CompressorCan:
         canInterface[0]->ClearUserMessages();
         canInterface[1]->ClearUserMessages();
         break;
@@ -1287,6 +1322,7 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
         selectedDCDC->DecodeCAN(id, (uint8_t*)data);
         selectedShifter->DecodeCAN(id,data);
         selectedHeater->DecodeCAN(id, data);
+        selectedCompressor->DecodeCAN(id, data);
         break;
     }
     return false;
@@ -1409,7 +1445,8 @@ extern "C" int main(void)
     UpdateHeater();
     UpdateDCDC();
     UpdateShifter();
-
+    UpdateCompressor();
+    
     Stm32Scheduler s(TIM4); //We never exit main so it's ok to put it on stack
     scheduler = &s;
 
