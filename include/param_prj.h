@@ -115,7 +115,7 @@
     PARAM_ENTRY(CAT_HEATER,    HeatPotDir, ABOVEBELOW, 0,      4,      0,      150 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPotOn,   "dig",     0,      4095,   0,      151 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPotFull, "dig",     0,      4095,   0,      152 ) \
-    PARAM_ENTRY(CAT_AIRCON,     Compressor, COMPRESSMODES, 0, 1,      0,      153  ) \
+    PARAM_ENTRY(CAT_AIRCON,    Compressor, COMPRESSMODES, 0,   1,      0,      153 ) \
     PARAM_ENTRY(CAT_AIRCON,    AirConCtrl,  ONOFF,     0,      1,      0,      154) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47 ) \
