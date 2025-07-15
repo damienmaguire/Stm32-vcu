@@ -110,6 +110,7 @@
 #include "compressor.h"
 #include "noCompressor.h"
 #include "OutlanderCompressor.h"
+#include "VolvoP1.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -156,6 +157,7 @@ static BMW_E65 e65Vehicle;
 static BMW_E39 e39Vehicle;
 static Can_VAG vagVehicle;
 static SubaruVehicle subaruVehicle;
+static Volvo_P1 P1Vehicle;
 static GS450HClass gs450Inverter;
 static LeafINV leafInv;
 static NissanPDM chargerPDM;
@@ -605,7 +607,7 @@ static void Ms10Task(void)
 
     if (Param::GetInt(Param::opmode) == MOD_RUN) //!!!THROTTLE CODE HERE//
     {
-        torquePercent = utils::ProcessThrottle(ABS(previousSpeed)); //run the throttle reading and checks and then generate Potnom
+        torquePercent = utils::ProcessThrottle(ABS(previousSpeed) , selectedVehicle); //run the throttle reading and checks and then generate Potnom
 
 
         //When requesting regen we need to be careful. If the car is not rolling
@@ -936,6 +938,9 @@ static void UpdateVehicle()
         break;
     case vehicles::Classic:
         selectedVehicle = &classVehicle;
+        break;
+    case vehicles::vVolvoP1:
+        selectedVehicle = &P1Vehicle;
         break;
     }
     //This will call SetCanFilters() via the Clear Callback

@@ -86,6 +86,7 @@ void GetDigInputs(CanHardware* can)
  */
 float GetUserThrottleCommand()
 {
+
     bool brake = Param::GetBool(Param::din_brake);
     int potmode = Param::GetInt(Param::potmode);
     int direction = Param::GetInt(Param::dir);
@@ -467,9 +468,11 @@ float ProcessUdc(int motorSpeed)
     return udc;
 }
 
-float ProcessThrottle(int speed)
+float ProcessThrottle(int speed , Vehicle* vehicle)
 {
+
     float finalSpnt;
+
 
     Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
 
@@ -483,8 +486,8 @@ float ProcessThrottle(int speed)
         Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
     }
     */
-
-    finalSpnt = utils::GetUserThrottleCommand();
+    if(vehicle->hasCanThrot()) finalSpnt = vehicle->GetThrotl();//If vehicle class supplies a throttle value then use that.
+    else finalSpnt = utils::GetUserThrottleCommand();//otherwise use analog vals as usual.
 
     if (Param::Get(Param::cruisespeed) > 0)
     {

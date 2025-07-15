@@ -34,8 +34,8 @@ namespace utils
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     }
 
-    float GetUserThrottleCommand(CanHardware*);
-    float ProcessThrottle(int);
+    float GetUserThrottleCommand();
+    float ProcessThrottle(int , Vehicle*);
     float ProcessUdc(int);
     void CalcSOC();
     void GetDigInputs(CanHardware*);

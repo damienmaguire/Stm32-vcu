@@ -39,6 +39,8 @@ public:
    virtual void SetTemperatureGauge(float temp) = 0;
    virtual void SetFuelGauge(float level) { (void)level; }; //SoC 0-100%
    virtual bool GetGear(gear&) { return false; } //if vehicle class knows gear return true and set dir
+   virtual bool hasCanThrot() { return false; }; //does the vehicle have CAN throttle? return fgalse as default.
+   virtual int GetThrotl() { return 0; } //if vehicle class knows throttle pedal value return the val. Default sends 0.
    virtual int GetCruiseState() { return CC_NONE; }
    virtual float GetFrontRearBalance() { return 50; } //100% - all front, 0% all rear
    virtual bool EnableTractionControl() { return false; }
