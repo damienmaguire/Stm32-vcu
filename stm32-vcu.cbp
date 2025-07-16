@@ -77,6 +77,7 @@
 		<Unit filename="include/VWAirHeater.h" />
 		<Unit filename="include/VWCoolantHeater.h" />
 		<Unit filename="include/V_Classic.h" />
+		<Unit filename="include/VolvoP1.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bms.h" />
@@ -180,6 +181,7 @@
 		<Unit filename="src/VWAirHeater.cpp" />
 		<Unit filename="src/VWCoolantHeater.cpp" />
 		<Unit filename="src/V_Classic.cpp" />
+		<Unit filename="src/VolvoP1.cpp" />
 		<Unit filename="src/amperacharger.cpp" />
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
