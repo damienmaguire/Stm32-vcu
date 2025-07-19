@@ -144,7 +144,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     int speed = Param::GetInt(Param::speed);
     int dir = Param::GetInt(Param::dir);
     float potnom = 0.0f;  // normalize potval against the potmin and potmax values
-
+/*
     if(speed< 0)//make sure speed is not negative
     {
         speed *= -1;
@@ -170,7 +170,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     speed = SpeedFiltered;
 
     ///////////////////////
-
+*/
     if(dir == 0)//neutral no torque command
     {
         return 0;
@@ -182,6 +182,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
         {
             return 0;
         }
+        /*
         else if (speed < regenRpm)
         {
             potnom = utils::change(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
@@ -192,6 +193,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
             potnom =  regenBrake;
             return potnom;
         }
+        */
     }
 
     // substract offset, bring potval to the potmin-potmax scale and make a percentage
@@ -208,7 +210,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     {
         potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
     }
-
+/*
 //!! pedal command intent coding
 
     PedalPos = potnom; //save comparison next time to check if pedal had moved
@@ -268,6 +270,8 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     }
 
     LastPedalPos = PedalPos; //Save current pedal position for next loop.
+    */
+
     return potnom;
 }
 
