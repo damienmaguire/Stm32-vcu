@@ -171,7 +171,7 @@ void Can_OI::SetTorque(float torquePercent)
         uint32_t data[2];
         //uint32_t pot = Param::GetInt(Param::pot) & 0xFFF;
         //uint32_t pot2 = Param::GetInt(Param::pot2) & 0xFFF;
-        uint32_t pot = Param::GetInt(Param::potnom) & 0xFFF;
+        uint32_t pot = Param::GetInt(Param::potnom) & 0xFFF;//lets try sending potnom instead of raw pot vals.
         uint32_t pot2 = Param::GetInt(Param::potnom) & 0xFFF;
         uint32_t canio = tempIO & 0x3F;
         uint32_t ctr = Param::GetInt(Param::canctr) & 0x3;
