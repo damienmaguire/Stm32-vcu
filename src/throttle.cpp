@@ -415,6 +415,7 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
     }
     else
     {
+        finalSpnt = UDCprevspnt;
         finalSpnt = finalSpnt;
     }
 }
