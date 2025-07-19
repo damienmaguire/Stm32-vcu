@@ -52,8 +52,8 @@ int Throttle::speedLimit;
 float Throttle::ThrotRpmFilt;
 float UDCres;
 float IDCres;
-float UDCprevspnt;
-float IDCprevspnt;
+float UDCprevspnt = 0;
+float IDCprevspnt = 0;
 
 // internal variable, reused every time the function is called
 static float throttleRamped = 0.0;
@@ -367,13 +367,12 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
 
     if(udcmin>0)    //ignore if set to zero. useful for bench testing without isa shunt
     {
-        if (finalSpnt >= 0)
+        if (finalSpnt >= 0) //if we are requesting torque
         {
-
             float udcErr = udc - udcmin;
-            UDCres = udcErr * 5;
-            UDCres = MAX(0, UDCres);
-
+            UDCres = udcErr * 3.5; // error multiplied by
+            UDCres = MAX(0, UDCres); // only allow positive UDCres limit
+/*
             if(UDCprevspnt > UDCres) //if udc limit potnom spnt is lower ramp down to it
             {
                 UDCprevspnt = RAMPDOWN(UDCprevspnt, UDCres, throttleRamp);
@@ -389,13 +388,16 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
                 UDCprevspnt = finalSpnt;
             }
             finalSpnt = UDCprevspnt;
+            */
+
+            finalSpnt = MIN(finalSpnt, UDCres);
         }
         else
         {
             float udcErr = udc - udcmax;
             UDCres = udcErr * 3.5;
             UDCres = MIN(0, UDCres);
-
+/*
             if(UDCprevspnt < UDCres)
             {
                 UDCprevspnt = RAMPUP(UDCprevspnt, UDCres, regenRamp);
@@ -411,6 +413,9 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
                 UDCprevspnt = finalSpnt;
             }
             finalSpnt = UDCprevspnt;
+            */
+            finalSpnt = MAX(finalSpnt, UDCres);
+
         }
     }
     else
