@@ -144,33 +144,33 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     int speed = Param::GetInt(Param::speed);
     int dir = Param::GetInt(Param::dir);
     float potnom = 0.0f;  // normalize potval against the potmin and potmax values
-    /*
-        if(speed< 0)//make sure speed is not negative
-        {
-            speed *= -1;
-        }
+/*
+    if(speed< 0)//make sure speed is not negative
+    {
+        speed *= -1;
+    }
 
-        //limiting speed change rate
-        if(ABS(speed-SpeedFiltered)>ThrotRpmFilt)
+    //limiting speed change rate
+    if(ABS(speed-SpeedFiltered)>ThrotRpmFilt)
+    {
+        if(speed > SpeedFiltered)
         {
-            if(speed > SpeedFiltered)
-            {
-                SpeedFiltered +=  ThrotRpmFilt;
-            }
-            else
-            {
-                SpeedFiltered -=  ThrotRpmFilt;
-            }
+            SpeedFiltered +=  ThrotRpmFilt;
         }
         else
         {
-            SpeedFiltered = speed;
+            SpeedFiltered -=  ThrotRpmFilt;
         }
+    }
+    else
+    {
+        SpeedFiltered = speed;
+    }
 
-        speed = SpeedFiltered;
+    speed = SpeedFiltered;
 
-        ///////////////////////
-    */
+    ///////////////////////
+*/
     if(dir == 0)//neutral no torque command
     {
         return 0;
@@ -178,22 +178,20 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 
     if (brkpedal)
     {
-        potnom = 0; //V2.05
-        return potnom; //V2.05
-        /*
         if(speed < 100 || speed < regenendRpm)
         {
-           return 0;
+            return 0;
         }
+        /*
         else if (speed < regenRpm)
         {
-           potnom = utils::change(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
-           return potnom;
+            potnom = utils::change(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
+            return potnom;
         }
         else
         {
-           potnom =  regenBrake;
-           return potnom;
+            potnom =  regenBrake;
+            return potnom;
         }
         */
     }
@@ -212,67 +210,67 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     {
         potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
     }
-    /*
-    //!! pedal command intent coding
+/*
+//!! pedal command intent coding
 
-        PedalPos = potnom; //save comparison next time to check if pedal had moved
+    PedalPos = potnom; //save comparison next time to check if pedal had moved
 
-        float TempAvgPos = AveragePos(PedalPos); //get an rolling average pedal position over the last 50 measurements for smoothing
+    float TempAvgPos = AveragePos(PedalPos); //get an rolling average pedal position over the last 50 measurements for smoothing
 
-        PedalChange = PedalPos - TempAvgPos; //current pedal position compared to average
-
-
-        if(PedalChange < -1.0 )//Check pedal is release compared to last time
-        {
-            PedalReq = -1; //pedal is released enough - Commanding regen or slowing
-        }
-        else if(PedalChange > 1.0 )//Check pedal is increased compared to last time
-        {
-            PedalReq = 1; //pedal pressed - Commanding accelerating - thus always more power
-        }
-        else//pedal not changed
-        {
-            potnom = TempAvgPos; //use the averaged pedal
-        }
+    PedalChange = PedalPos - TempAvgPos; //current pedal position compared to average
 
 
-        //Do clever bits for regen and such.
+    if(PedalChange < -1.0 )//Check pedal is release compared to last time
+    {
+        PedalReq = -1; //pedal is released enough - Commanding regen or slowing
+    }
+    else if(PedalChange > 1.0 )//Check pedal is increased compared to last time
+    {
+        PedalReq = 1; //pedal pressed - Commanding accelerating - thus always more power
+    }
+    else//pedal not changed
+    {
+        potnom = TempAvgPos; //use the averaged pedal
+    }
 
 
-        if(speed < 100 || speed <regenendRpm)//No regen under 100 rpm or speed under regenendRpm
+    //Do clever bits for regen and such.
+
+
+    if(speed < 100 || speed <regenendRpm)//No regen under 100 rpm or speed under regenendRpm
+    {
+        regenlim = 0;
+    }
+    else if(speed < regenRpm)
+    {
+        regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
+    }
+    else
+    {
+        regenlim = regenmax;
+    }
+
+
+    //!!!potnom is throttle position up to this point//
+
+    if(dir == 1)//Forward
+    {
+        //change limits to uint32, multiply by 10 then 0.1 to add a decimal to remove the hard edges
+        potnom = utils::change(potnom,0,100,regenlim*10,throtmax*10);
+        potnom *= 0.1;
+    }
+    else //Reverse, as neutral already exited function
+    {
+        if(Param::GetInt(Param::revRegen) == 0)//If regen in reverse is to be off
         {
             regenlim = 0;
         }
-        else if(speed < regenRpm)
-        {
-            regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
-        }
-        else
-        {
-            regenlim = regenmax;
-        }
+        potnom = utils::change(potnom,0,100,regenlim*10,throtmaxRev*10);
+        potnom *= 0.1;
+    }
 
-
-        //!!!potnom is throttle position up to this point//
-
-        if(dir == 1)//Forward
-        {
-            //change limits to uint32, multiply by 10 then 0.1 to add a decimal to remove the hard edges
-            potnom = utils::change(potnom,0,100,regenlim*10,throtmax*10);
-            potnom *= 0.1;
-        }
-        else //Reverse, as neutral already exited function
-        {
-            if(Param::GetInt(Param::revRegen) == 0)//If regen in reverse is to be off
-            {
-                regenlim = 0;
-            }
-            potnom = utils::change(potnom,0,100,regenlim*10,throtmaxRev*10);
-            potnom *= 0.1;
-        }
-
-        LastPedalPos = PedalPos; //Save current pedal position for next loop.
-        */
+    LastPedalPos = PedalPos; //Save current pedal position for next loop.
+    */
 
     return potnom;
 }
