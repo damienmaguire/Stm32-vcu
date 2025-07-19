@@ -382,7 +382,7 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
             }
             else if(UDCprevspnt < finalSpnt)//if out UDCprevspnt is under the final spnt increase this back up
             {
-                UDCprevspnt = RAMPUP(UDCprevspnt, UDCres, throttleRamp);
+                //UDCprevspnt = RAMPUP(UDCprevspnt, UDCres, throttleRamp);
             }
             else
             {
