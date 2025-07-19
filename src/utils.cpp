@@ -394,6 +394,7 @@ float ProcessThrottle(int speed)
 
     finalSpnt = utils::GetUserThrottleCommand();
 
+    /*
     if (Param::Get(Param::cruisespeed) > 0)
     {
         Throttle::brkcruise = 0;
@@ -403,13 +404,13 @@ float ProcessThrottle(int speed)
         float cruiseThrottle = Throttle::CalcCruiseSpeed(ABS(Param::GetInt(Param::speed)));
         finalSpnt = MAX(cruiseThrottle, finalSpnt);
     }
-
+*/
     finalSpnt = Throttle::RampThrottle(finalSpnt);
 
 
-    Throttle::UdcLimitCommand(finalSpnt,Param::GetFloat(Param::udc));
-    Throttle::IdcLimitCommand(finalSpnt, ABS(Param::GetFloat(Param::idc)));
-    Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));
+    //Throttle::UdcLimitCommand(finalSpnt,Param::GetFloat(Param::udc));
+    //Throttle::IdcLimitCommand(finalSpnt, ABS(Param::GetFloat(Param::idc)));
+    //Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));
 
     if (Throttle::TemperatureDerate(Param::Get(Param::tmphs), Param::Get(Param::tmphsmax), finalSpnt))
     {
