@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.22.A
+#define VER 2.30.A
 
 
 /* Entries must be ordered as follows:
