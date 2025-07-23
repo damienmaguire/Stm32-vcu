@@ -471,15 +471,7 @@ float ProcessThrottle(int speed)
 {
     float finalSpnt;
 
-    if (speed < Param::GetInt(Param::throtramprpm))
-    {
-        Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
-    }
-
-    else
-    {
-        Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
-    }
+    Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
 
     finalSpnt = utils::GetUserThrottleCommand();
 
