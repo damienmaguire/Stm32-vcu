@@ -372,24 +372,10 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
             float udcErr = udc - udcmin;
             UDCres = udcErr * 3.5; // error multiplied by
             UDCres = MAX(0, UDCres); // only allow positive UDCres limit
-            /*//OLD - Throttle ramping reorganised in V2.30A
-                        if(UDCprevspnt > UDCres) //if udc limit potnom spnt is lower ramp down to it
-                        {
-                            UDCprevspnt = RAMPDOWN(UDCprevspnt, UDCres, throttleRamp);
-                            DerateReason |= 1;
-                            Param::SetInt(Param::TorqDerate,DerateReason);
-                        }
-                        else if(UDCprevspnt < finalSpnt)//if out UDCprevspnt is under the final spnt increase this back up
-                        {
-                            //UDCprevspnt = RAMPUP(UDCprevspnt, UDCres, throttleRamp);
-                        }
-                        else
-                        {
-                            UDCprevspnt = finalSpnt;
-                        }
-                        finalSpnt = UDCprevspnt;
-                        */
-
+            if(finalSpnt > UDCres)
+            {
+                DerateReason |= 1;
+            }
             finalSpnt = MIN(finalSpnt, UDCres);
         }
         else
@@ -397,23 +383,10 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
             float udcErr = udc - udcmax;
             UDCres = udcErr * 3.5;
             UDCres = MIN(0, UDCres);
-            /*//OLD - Throttle ramping reorganised in V2.30A
-                        if(UDCprevspnt < UDCres)
-                        {
-                            UDCprevspnt = RAMPUP(UDCprevspnt, UDCres, regenRamp);
-                            DerateReason |= 2;
-                            Param::SetInt(Param::TorqDerate,DerateReason);
-                        }
-                        else if(UDCprevspnt > finalSpnt)//if out UDCprevspnt is over the final spnt decrease to meet finalspnt
-                        {
-                            UDCprevspnt = RAMPDOWN(UDCprevspnt, UDCres, regenRamp);
-                        }
-                        else
-                        {
-                            UDCprevspnt = finalSpnt;
-                        }
-                        finalSpnt = UDCprevspnt;
-                        */
+            if(finalSpnt < UDCres)
+            {
+                DerateReason |= 2;
+            }
             finalSpnt = MAX(finalSpnt, UDCres);
 
         }
@@ -424,6 +397,49 @@ void Throttle::UdcLimitCommand(float& finalSpnt, float udc)
         finalSpnt = finalSpnt;
     }
 }
+
+void Throttle::IdcLimitCommand(float& finalSpnt, float idc)
+{
+    static float idcFiltered = 0;
+    idcFiltered = IIRFILTERF(idcFiltered, idc, 4);
+
+    idcmax = Param::GetFloat(Param::idcmax);//Made dynamic
+    idcmin = Param::GetFloat(Param::idcmin);
+
+    uint16_t DerateReason = Param::GetInt(Param::TorqDerate);
+
+    if(idcmax>0)    //ignore if set to zero. useful for bench testing without isa shunt
+    {
+        if (finalSpnt >= 0)
+        {
+            float idcerr = idcmax - idcFiltered;
+            IDCres = idcerr * 1;//gain needs tuning
+            IDCres = MAX(0, IDCres);
+            if(finalSpnt < IDCres)
+            {
+                DerateReason |= 8;
+            }
+            finalSpnt = MIN(finalSpnt, IDCres);
+        }
+        else
+        {
+
+            float idcerr = idcmin + idcFiltered;
+            IDCres = idcerr * 1;//gain needs tuning
+            IDCres = MIN(0, IDCres);
+            if(finalSpnt > IDCres)
+            {
+                DerateReason |= 4;
+            }
+            finalSpnt = MAX(finalSpnt, IDCres);
+        }
+    }
+    else
+    {
+        finalSpnt = finalSpnt;
+    }
+}
+
 
 void Throttle::SpeedLimitCommand(float& finalSpnt, int speed)
 {
