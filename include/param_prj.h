@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.35.TB
+#define VER 2.35.0RR
 
 
 /* Entries must be ordered as follows:
@@ -138,8 +138,8 @@
     PARAM_ENTRY(CAT_IOPINS,    PWM3Func,    PINFUNCS,  0,      22,     2,      87 ) \
     PARAM_ENTRY(CAT_IOPINS,    GP12VInFunc, PINFUNCS,  0,      13,     12,     98 ) \
     PARAM_ENTRY(CAT_IOPINS,    HVReqFunc,   PINFUNCS,  0,      13,     12,     99 ) \
-    PARAM_ENTRY(CAT_IOPINS,    PB1InFunc,   PINFUNCS,  0,      13,     12,     140 ) \
-    PARAM_ENTRY(CAT_IOPINS,    PB2InFunc,   PINFUNCS,  0,      13,     12,     141 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PB1InFunc,   PINFUNCS,  0,      23,     12,     140 ) \
+    PARAM_ENTRY(CAT_IOPINS,    PB2InFunc,   PINFUNCS,  0,      23,     12,     141 ) \
     PARAM_ENTRY(CAT_IOPINS,    PB3InFunc,   PINFUNCS,  0,      13,     12,     142 ) \
     PARAM_ENTRY(CAT_IOPINS,    GPA1Func,    APINFUNCS, 0,      3,      0,      110 ) \
     PARAM_ENTRY(CAT_IOPINS,    GPA2Func,    APINFUNCS, 0,      3,      0,      111 ) \
@@ -259,6 +259,7 @@
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
     VALUE_ENTRY(compressStat,  COMP_STAT,           2111 ) \
     VALUE_ENTRY(compressRPM,   "",                  2109 ) \
+    
 //Next value Id: 2112
 
 //Dead params
@@ -272,7 +273,7 @@
 #define PINFUNCS     "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, 5=WarnIndication," \
                      "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, 11=HVRequest," \
                      "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, 16=ShiftLockNO, 17=PreHeatOut, 18=PwmTim3, 19=CpSpoof,"\
-                     "20=GS450pump, 21=PwmTempGauge, 22=PwmSocGauge"
+                     "20=GS450pump, 21=PwmTempGauge, 22=PwmSocGauge, 23=Switch_NoRegen"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
 #define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE      "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
