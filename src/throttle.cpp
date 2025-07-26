@@ -50,6 +50,7 @@ float Throttle::idcmin;
 float Throttle::idcmax;
 int Throttle::speedLimit;
 float Throttle::ThrotRpmFilt;
+bool Throttle::noregenreq;
 float UDCres;
 float IDCres;
 float UDCprevspnt = 0;
@@ -69,7 +70,6 @@ static float PedalPosTot =0;
 static float PedalPosArr[PedalPosArrLen];
 static uint8_t PedalPosIdx = 0;
 static int8_t PedalReq = 0; //positive is accel negative is decell
-
 
 /**
  * @brief Check the throttle input for sanity and limit the range to min/max values
@@ -235,18 +235,26 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     //Do clever bits for regen and such.
 
 
-    if(speed < 100 || speed <regenendRpm)//No regen under 100 rpm or speed under regenendRpm
+    if (noregenreq>0) //If forced to have no regen, like clutch pedal pressed
     {
         regenlim = 0;
     }
-    else if(speed < regenRpm)
-    {
-        regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
-    }
     else
     {
-        regenlim = regenmax;
+        if(speed < 100 || speed <regenendRpm)//No regen under 100 rpm or speed under regenendRpm
+        {
+            regenlim = 0;
+        }
+        else if(speed < regenRpm)
+        {
+            regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
+        }
+        else
+        {
+            regenlim = regenmax;
+        }
     }
+
 
 
     //!!!potnom is throttle position up to this point//
