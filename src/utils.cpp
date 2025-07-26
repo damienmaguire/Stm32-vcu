@@ -180,6 +180,17 @@ float GetUserThrottleCommand()
     if (direction == 2)//No throttle val if in PARK also.
         return 0.0;
 
+    /// cluch pedal, request no regen (Switch_NoRegen/NOREGEN)... probably safest part to add this code
+
+    if (IOMatrix::GetPin(IOMatrix::NOREGEN) != &DigIo::dummypin)
+    {
+        Throttle::noregenreq = IOMatrix::GetPin(IOMatrix::NOREGEN)->Get();
+    }
+    else
+    {
+        Throttle::noregenreq = 0;
+    }
+
     // calculate the throttle depending on the channel we've decided to use
     if (useChannel == 0)
         return Throttle::CalcThrottle(pot1val, 0, brake);
@@ -485,7 +496,7 @@ float ProcessThrottle(int speed)
         float cruiseThrottle = Throttle::CalcCruiseSpeed(ABS(Param::GetInt(Param::speed)));
         finalSpnt = MAX(cruiseThrottle, finalSpnt);
     }
-*/
+    */
     //finalSpnt = Throttle::RampThrottle(finalSpnt); //OLD - Throttle ramping reorganised in V2.30A
 
     Throttle::UdcLimitCommand(finalSpnt,Param::GetFloat(Param::udc));

@@ -20,7 +20,6 @@
 
 #include "throttle.h"
 #include "my_math.h"
-#include "iomatrix.h"
 
 #define POT_SLACK 200
 
@@ -234,18 +233,9 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 
 
     //Do clever bits for regen and such.
-    /// cluch pedal, request no regen (Switch_NoRegen/NOREGEN)... probably safest part to add this code
-    
-    if (IOMatrix::GetPin(IOMatrix::NOREGEN) != &DigIo::dummypin)
-    {
-        noregenreq = IOMatrix::GetPin(IOMatrix::NOREGEN)->Get();
-    }
-    else 
-    {
-        noregenreq=0;
-    }
 
-    if (noregenreq>0)
+
+    if (noregenreq>0) //If forced to have no regen, like clutch pedal pressed
     {
         regenlim = 0;
     }
