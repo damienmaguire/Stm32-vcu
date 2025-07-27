@@ -178,19 +178,26 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
 
     if (brkpedal)
     {
-        if(speed < 100 || speed < regenendRpm)
+        if (noregenreq>0)
         {
-            return 0;
+            return 0; // if brake pedal is pressed and noregen(clutch) switch is pressed, then reques no torque (helps allow downshift inter braking) otherwise do on brake regen
         }
-        else if (speed < regenRpm)
+        else 
         {
-            potnom = utils::change(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
-            return potnom;
-        }
-        else
-        {
-            potnom =  regenBrake;
-            return potnom;
+            if(speed < 100 || speed < regenendRpm)
+            {
+                return 0;
+            }
+            else if (speed < regenRpm)
+            {
+                potnom = utils::change(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
+                return potnom;
+            }
+            else
+            {
+                potnom =  regenBrake;
+                return potnom;
+            }
         }
     }
 
