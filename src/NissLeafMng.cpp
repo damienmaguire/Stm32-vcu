@@ -155,7 +155,19 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
         //   3: Precharging (0.4%)
         //   5: Starting discharge (3x10ms) (2.0%)
         //   7: Precharged (93%)
-        bytes[4] = 0x07 | (mprun10 << 6);
+        if (opmode == MOD_CHARGE || opmode == MOD_RUN)
+        {
+            bytes[4] = 0x07; //HV status is ON
+        }
+        else if(opmode == MOD_PRECHARGE)
+        {
+            bytes[4] = 0x03; //HV status is Precharge
+        }
+        else
+        {
+            bytes[4] = 0x02; //HV status is OFF
+        }
+        bytes[4] = bytes[4] | (mprun10 << 6);
         //bytes[4] = 0x02 | (mprun10 << 6);
         //Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
 
