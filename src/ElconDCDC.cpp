@@ -36,7 +36,7 @@ void ElconDCDC::DecodeCAN(int id, uint8_t *data)
    {
        Param::SetFloat(Param::U12V,(data[0] * 256 + data[1]) * 0.1);//Display 12v system voltage as read from the dcdc
        Param::SetFloat(Param::I12V,(data[2] * 256 + data[3]) * 0.1);//Display 12v system current as read from the dcdc
-       Param::SetFloat(Param::ChgTemp,data[7]);//Display dcdc coolant temp
+       Param::SetFloat(Param::ChgTemp,data[7] - 40);//Display dcdc coolant temp
 
    }
 
@@ -54,19 +54,6 @@ uint8_t bytes[8];
    {
 
    bytes[0]=0x01; // 1 to activate DC-DC
-   can->Send(0x18008FD0, bytes, 8);
-   timer200=0;
-   }
-
-   }
-
-   if(opmode==MOD_OFF)
-   {
-   timer200++;
-   if(timer200==2)
-   {
-
-   bytes[0]=0x00; // 0 to de-activate DC-DC
    can->Send(0x18008FD0, bytes, 8);
    timer200=0;
    }
