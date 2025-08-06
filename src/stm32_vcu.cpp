@@ -110,6 +110,7 @@
 #include "compressor.h"
 #include "noCompressor.h"
 #include "OutlanderCompressor.h"
+#include "ElconDCDC.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -200,6 +201,7 @@ static DaisychainBMS BMSdaisychain;
 static KangooBMS BMSRenaultKangoo33;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
+static ElconDCDC ElconDC;
 static BMS* selectedBMS = &BMSnone;
 static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
@@ -1079,6 +1081,10 @@ static void UpdateDCDC()
 
     case DCDCModes::TeslaG2:
         selectedDCDC = &DCDCTesla;
+        break;
+
+    case DCDCModes::DCDCElcon:
+        selectedDCDC = &ElconDC;
         break;
 
     default:
