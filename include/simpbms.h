@@ -43,7 +43,7 @@ private:
     float stateOfCharge = 0;
     float current = 0;
     float remainingKHW = 0;
-    float batteryVoltage = 500; //higher than possible so cannot complete precharge until BMS reports battery voltage#
-    float rawCurrent = 0;
+    float batteryVoltage = 500; //higher than possible so cannot complete precharge until BMS reports battery voltage
+
 };
 #endif // SIMPBMS_H
