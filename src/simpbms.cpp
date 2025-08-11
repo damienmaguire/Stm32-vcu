@@ -98,8 +98,10 @@ void SimpBMS::DecodeCAN(int id, uint8_t *data)
     else if (id == 0x356)
     {
         batteryVoltage = (data[0] | (data[1] << 8))*0.01; //comes in 0.01V scale
-        int16_t rawCurrent = (data[2] | (data[3] << 8))*0.1; //comes in 0.1A scale
-        current = rawCurrent;
+
+        int16_t rawCurrent = (int16_t)(data[2] | (data[3] << 8)); 
+        current = rawCurrent * 0.1f;  //comes in 0.1A scale
+
     }
     else if (id == 0x355)
     {
