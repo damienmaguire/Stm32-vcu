@@ -105,7 +105,7 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request)
         // 2016: 6E
 
         // Usually 07, but can have values between 07...70 (gen1)
-        bytes[1] = 0x07;
+        bytes[1] = 0x70;
         // 2016: 6E
 
         // override any torque commands if not in run mode.
