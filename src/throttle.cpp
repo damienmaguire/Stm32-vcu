@@ -254,7 +254,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     if(dir == 1)//Forward
     {
         //change limits to uint32, multiply by 10 then 0.1 to add a decimal to remove the hard edges
-        potnom = utils::change(potnom,0,100,regenlim*10,throtmax*10);
+        potnom = utils::changeFloat(potnom,0,100,regenlim*10,throtmax*10);
         potnom *= 0.1;
     }
     else //Reverse, as neutral already exited function
@@ -263,7 +263,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
         {
             regenlim = 0;
         }
-        potnom = utils::change(potnom,0,100,regenlim*10,throtmaxRev*10);
+        potnom = utils::changeFloat(potnom,0,100,regenlim*10,throtmaxRev*10);
         potnom *= 0.1;
     }
 
