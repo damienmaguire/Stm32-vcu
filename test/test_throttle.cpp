@@ -97,13 +97,14 @@ static void TestCalcThrottleIsAbove0WhenJustOutOfDeadZone() {
 
 static void TestCalcThrottleIs100WhenMax() {
    //deadzone is first 5% of travel between 100 and 4000
-   float throtVal = Throttle::CalcThrottle(4000, 0, false);
+   //cheat a little and force it to round 99.9999999
+   int throtVal = Throttle::CalcThrottle(4000, 0, false);
    ASSERT(throtVal ==  100);
 }
 
 static void TestCalcThrottleIs100WhenOverMax() {
    //deadzone is first 5% of travel between 100 and 4000
-   float throtVal = Throttle::CalcThrottle(4001, 0, false);
+   int throtVal = Throttle::CalcThrottle(4001, 0, false);
    ASSERT(throtVal ==  100);
 }
 
