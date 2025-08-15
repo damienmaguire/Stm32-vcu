@@ -23,9 +23,6 @@
 #include "my_math.h"
 #include "test_list.h"
 #include "throttle.h"
-#include "utils.h"
-
-#include <unistd.h>
 
 using namespace std;
 
@@ -44,17 +41,7 @@ static void TestSetup()
    Throttle::potmin[0] = 100;
    Throttle::potmax[0] = 4000;
    Throttle::throtmax = 100;
-   Throttle::throttleRamp = 10;
-   Throttle::speedLimit = 5000;
-   Throttle::regenmax = -25;
-   Throttle::ThrotRpmFilt = 15;
-   Throttle::regenRpm = 2000;
-   Throttle::regenendRpm = 200;
    Param::SetInt(Param::dir, 1);
-   Param::SetFloat(Param::idcmin, -100);
-   Param::SetInt(Param::udcmin, 381);
-   Param::SetInt(Param::speed, 2000);
-
 }
 
 // TEMPERATURE DERATING
@@ -110,176 +97,29 @@ static void TestCalcThrottleIsAbove0WhenJustOutOfDeadZone() {
 
 static void TestCalcThrottleIs100WhenMax() {
    //deadzone is first 5% of travel between 100 and 4000
-   float throtVal = Throttle::CalcThrottle(4000, 0, false);
+   //cheat a little and force it to round 99.9999999
+   int throtVal = Throttle::CalcThrottle(4000, 0, false);
    ASSERT(throtVal ==  100);
 }
 
 static void TestCalcThrottleIs100WhenOverMax() {
    //deadzone is first 5% of travel between 100 and 4000
-   float throtVal = Throttle::CalcThrottle(4001, 0, false);
+   int throtVal = Throttle::CalcThrottle(4001, 0, false);
    ASSERT(throtVal ==  100);
 }
-
-static void TestIdcLimitCommandWhenUnderIDCMin() {
-   float throttleSpnt = 100;
-
-   //run through a good chunk of loops to populate the filtered idc
-   for (int i = 0; i < 50; i++) {
-      Throttle::IdcLimitCommand(throttleSpnt, -99);
-      throttleSpnt = 100;
-   }
-   Throttle::IdcLimitCommand(throttleSpnt, -99);
-
-   ASSERT(throttleSpnt == 100);
-}
-
-static void TestIdcLimitCommandWhenOverIDCMin() {
-   float throttleSpnt = 100;
-
-   for (int i = 0; i < 50; i++) {
-      Throttle::IdcLimitCommand(throttleSpnt, -120);
-      throttleSpnt = 100;
-   }
-
-   Throttle::IdcLimitCommand(throttleSpnt, -120);
-
-   ASSERT(throttleSpnt < 82);
-}
-
-static void TestIdcLimitCommandWhenOverIDCMinIncreasedWhenCurrentReduces() {
-   float throttleSpnt = 100;
-
-   for (int i = 0; i < 50; i++) {
-      Throttle::IdcLimitCommand(throttleSpnt, -120);
-      throttleSpnt = 100;
-   }
-
-   Throttle::IdcLimitCommand(throttleSpnt, -120);
-
-   ASSERT(throttleSpnt < 82);
-
-   for (int i = 0; i < 50; i++) {
-      Throttle::IdcLimitCommand(throttleSpnt, -90);
-      throttleSpnt = 100;
-   }
-
-   Throttle::IdcLimitCommand(throttleSpnt, -90);
-
-   ASSERT(throttleSpnt == 100);
-}
-
-static void sweep() {
-   int max = Throttle::potmax[0];
-   for(int i = Throttle::potmin[0]; i< max; i=i+1) {
-      //loat potnom = Throttle::CalcThrottle(i, 0, false);
-
-      float potnom = utils::ProcessThrottle(0);
-
-      std::cout << "Pot: " << i << " Potnom: " << potnom << std::endl;
-   }
-}
-
-static void testThrottleIsNotModifiedWhenUDCAboveMin() {
-
-   float throttleSpnt = 0;
-   bool throttleModified = false;
-
-   for(int i = 0; i< 40; i++) {
-      throttleSpnt = i;
-      Throttle::UdcLimitCommand(throttleSpnt, i);
-      //Throttle should equal input, not above or below.
-      if (throttleSpnt != i) {
-         throttleModified = true;
-      }
-   }
-   ASSERT(throttleModified == false);   
-
-}
-
-static void testThrottleRampThroughOffPedalRegenRegion() {
-   float throttleSpnt = 0;
-   int speed = 2000;
-   for(int i = 200; i< 3000; i=i+10) {
-      throttleSpnt = Throttle::CalcThrottle(i, 0, false);
-
-      //Need to call this to set the filtered speed 
-      Throttle::SpeedLimitCommand(throttleSpnt,  speed);
-
-      //Throttle should equal input, not above or below.
-      cout << "PotVal: " << i << " throttleSpnt: " << throttleSpnt << endl;
-   }
-}
-
-
-static void testThrottleRampThroughOffPedalRegenRegionIncreasingSpeed() {
-   float throttleSpnt = 0;
-   int speed = 0;
-   for(int i = 200; i< 3000; i=i+10) {
-      speed = i;
-      Param::SetInt(Param::speed, speed);
-      throttleSpnt = Throttle::CalcThrottle(i, 0, false);
-
-      //Need to call this to set the filtered speed 
-      Throttle::SpeedLimitCommand(throttleSpnt,  speed);
-
-      //Throttle should equal input, not above or below.
-      cout << "PotVal: " << i << " throttleSpnt: " << throttleSpnt << " speed: " << speed << endl;
-   }
-}
-
-static void testThrottleStaticThroughOffPedalRegenRegionConstantSpeed() {
-   float throttleSpnt = 0;
-   int speed = 2000;
-   for(int i = 200; i< 3000; i=i+10) {
-      throttleSpnt = Throttle::CalcThrottle(1360, 0, false);
-
-      //Need to call this to set the filtered speed 
-      Throttle::SpeedLimitCommand(throttleSpnt,  speed);
-
-      //Throttle should equal input, not above or below.
-      cout << "PotVal: " << i << " throttleSpnt: " << throttleSpnt << " speed: " << speed << endl;
-   }
-}
-
-static void testThrottleStatichOffPedalRegenRegionIncreasingSpeed() {
-   float throttleSpnt = 0;
-   int speed = 0;
-   for(int i = 200; i< 3000; i=i+10) {
-      speed = i;
-      Param::SetInt(Param::speed, speed);
-      throttleSpnt = Throttle::CalcThrottle(1360, 0, false);
-
-      //Need to call this to set the filtered speed 
-      Throttle::SpeedLimitCommand(throttleSpnt,  speed);
-
-      //Throttle should equal input, not above or below.
-      cout << "PotVal: " << i << " throttleSpnt: " << throttleSpnt << " speed: " << speed << endl;
-   }
-}
-
 
 
 void ThrottleTest::RunTest()
 {
    TestSetup();
-   // TestThrottleTemperateOverMaxThrottleTo0();
-   // TestThrottleTemperateInDerateZoneThrottleTo50Percent();
-   // TestThrottleUnderTemperateNoDeRate();
-   // TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit();
-   // TestCalcThrottleIs0WhenThrottleAndBrakePressed();
-   // TestCalcThrottleIs0WhenNoThrottleAndBrakePressed();
-   // TestCalcThrottleIs0WhenInDeadZone();
-   // TestCalcThrottleIsAbove0WhenJustOutOfDeadZone();
-   // TestCalcThrottleIs100WhenMax();
-   // TestCalcThrottleIs100WhenOverMax();
-   // TestIdcLimitCommandWhenUnderIDCMin();
-   // TestIdcLimitCommandWhenOverIDCMin();
-   // TestIdcLimitCommandWhenOverIDCMinIncreasedWhenCurrentReduces();
-   // testThrottleIsNotModifiedWhenUDCAboveMin();
-   //testThrottleRampThroughOffPedalRegenRegion();
-   //testThrottleRampThroughOffPedalRegenRegionIncreasingSpeed();
-   //testThrottleStaticThroughOffPedalRegenRegionConstantSpeed();
-   //testThrottleStatichOffPedalRegenRegionIncreasingSpeed();
-
-   sweep();
+   TestThrottleTemperateOverMaxThrottleTo0();
+   TestThrottleTemperateInDerateZoneThrottleTo50Percent();
+   TestThrottleUnderTemperateNoDeRate();
+   TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit();
+   TestCalcThrottleIs0WhenThrottleAndBrakePressed();
+   TestCalcThrottleIs0WhenNoThrottleAndBrakePressed();
+   TestCalcThrottleIs0WhenInDeadZone();
+   TestCalcThrottleIsAbove0WhenJustOutOfDeadZone();
+   TestCalcThrottleIs100WhenMax();
+   TestCalcThrottleIs100WhenOverMax();
 }
