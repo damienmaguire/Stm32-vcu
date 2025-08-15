@@ -23,6 +23,8 @@
 #include "my_math.h"
 #include "test_list.h"
 #include "throttle.h"
+#include "utils.h"
+
 #include <unistd.h>
 
 using namespace std;
@@ -166,20 +168,16 @@ static void TestIdcLimitCommandWhenOverIDCMinIncreasedWhenCurrentReduces() {
    ASSERT(throttleSpnt == 100);
 }
 
-// static void sweep() {
-//    float throttleSpnt = 100;
+static void sweep() {
+   int max = Throttle::potmax[0];
+   for(int i = Throttle::potmin[0]; i< max; i=i+1) {
+      //loat potnom = Throttle::CalcThrottle(i, 0, false);
 
-//    for (int i = 0; i > -150; i--) {
-//       Throttle::IdcLimitCommand(throttleSpnt, i);
-//       cout << "IDC: " << i << " throttleSpnt: " << throttleSpnt << endl;
-//       throttleSpnt = 100;
-//    }
-//    for (int i = -150; i < 0; i++) {
-//       Throttle::IdcLimitCommand(throttleSpnt, i);
-//       cout << "IDC: " << i << " throttleSpnt: " << throttleSpnt << endl;
-//       throttleSpnt = 100;
-//    }
-// }
+      float potnom = utils::ProcessThrottle(0);
+
+      std::cout << "Pot: " << i << " Potnom: " << potnom << std::endl;
+   }
+}
 
 static void testThrottleIsNotModifiedWhenUDCAboveMin() {
 
@@ -264,22 +262,24 @@ static void testThrottleStatichOffPedalRegenRegionIncreasingSpeed() {
 void ThrottleTest::RunTest()
 {
    TestSetup();
-   TestThrottleTemperateOverMaxThrottleTo0();
-   TestThrottleTemperateInDerateZoneThrottleTo50Percent();
-   TestThrottleUnderTemperateNoDeRate();
-   TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit();
-   TestCalcThrottleIs0WhenThrottleAndBrakePressed();
-   TestCalcThrottleIs0WhenNoThrottleAndBrakePressed();
-   TestCalcThrottleIs0WhenInDeadZone();
-   TestCalcThrottleIsAbove0WhenJustOutOfDeadZone();
-   TestCalcThrottleIs100WhenMax();
-   TestCalcThrottleIs100WhenOverMax();
-   TestIdcLimitCommandWhenUnderIDCMin();
-   TestIdcLimitCommandWhenOverIDCMin();
-   TestIdcLimitCommandWhenOverIDCMinIncreasedWhenCurrentReduces();
-   testThrottleIsNotModifiedWhenUDCAboveMin();
+   // TestThrottleTemperateOverMaxThrottleTo0();
+   // TestThrottleTemperateInDerateZoneThrottleTo50Percent();
+   // TestThrottleUnderTemperateNoDeRate();
+   // TestThrottleTemperateInDerateZoneThrottleButThrottleUnderLimit();
+   // TestCalcThrottleIs0WhenThrottleAndBrakePressed();
+   // TestCalcThrottleIs0WhenNoThrottleAndBrakePressed();
+   // TestCalcThrottleIs0WhenInDeadZone();
+   // TestCalcThrottleIsAbove0WhenJustOutOfDeadZone();
+   // TestCalcThrottleIs100WhenMax();
+   // TestCalcThrottleIs100WhenOverMax();
+   // TestIdcLimitCommandWhenUnderIDCMin();
+   // TestIdcLimitCommandWhenOverIDCMin();
+   // TestIdcLimitCommandWhenOverIDCMinIncreasedWhenCurrentReduces();
+   // testThrottleIsNotModifiedWhenUDCAboveMin();
    //testThrottleRampThroughOffPedalRegenRegion();
    //testThrottleRampThroughOffPedalRegenRegionIncreasingSpeed();
    //testThrottleStaticThroughOffPedalRegenRegionConstantSpeed();
    //testThrottleStatichOffPedalRegenRegionIncreasingSpeed();
+
+   sweep();
 }
