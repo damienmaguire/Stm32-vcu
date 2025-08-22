@@ -16,10 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Based on the work of Tom de Bree : https://github.com/Tom-evnut/BMW-F-Series-Shifter
- * All credits to the Orignal Reverse engineering work and documenation
- * Project Gus and a forum post from Bimmerwelt
- * Based on info from https://openinverter.org/wiki/BMW_F-Series_Gear_Lever
+ * Based on the work of Tom de Bree :
+ * https://github.com/Tom-evnut/BMW-F-Series-Shifter All credits to the Orignal
+ * Reverse engineering work and documenation Project Gus and a forum post from
+ * Bimmerwelt Based on info from
+ * https://openinverter.org/wiki/BMW_F-Series_Gear_Lever
  */
 
 #ifndef E65_Lever_h
@@ -27,23 +28,17 @@
 
 #include "shifter.h"
 
-
-class E65_Lever: public Shifter
-{
+class E65_Lever : public Shifter {
 public:
-
-
-   void Task10Ms();
-   void Task100Ms();
-   void DecodeCAN(int, uint32_t*);
-   bool GetGear(Shifter::Sgear& outGear);//if shifter class knows gear return true and set dir
-   void SetCanInterface(CanHardware* c);
+  void Task10Ms();
+  void Task100Ms();
+  void DecodeCAN(int, uint32_t *);
+  bool GetGear(Shifter::Sgear &outGear); // if shifter class knows gear return
+                                         // true and set dir
+  void SetCanInterface(CanHardware *c);
 
 private:
-   Shifter::Sgear gear;
+  Shifter::Sgear gear;
 };
 
-
 #endif // E65_Lever_INCLUDED
-
-
