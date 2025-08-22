@@ -310,7 +310,7 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request) {
       bytes[3] =
           (((Vbatt & 0x07) << 6) | (0x2b)); // 0x2b should give no cut req, main
                                             // rly on permission,normal p limit.
-      bytes[4] = 0x40; // SOC for dash in Leaf. fixed val.
+      bytes[4] = 0x40;                      // SOC for dash in Leaf. fixed val.
       bytes[5] = 0x00;
       bytes[6] = mprun10;
 

@@ -312,7 +312,7 @@ float ProcessUdc(int motorSpeed) {
     Param::SetFloat(Param::udcsw,
                     udc2 - 20); // Set udcsw to 20V under battery voltage
     float udc3 = 0; //((float)ISA::Voltage3)/1000;//get voltage from isa sensor
-                    //and post to parameter database
+                    // and post to parameter database
     Param::SetFloat(Param::udc3, udc3);
     float idc =
         ((float)SBOX::Amperes) /
@@ -334,7 +334,7 @@ float ProcessUdc(int motorSpeed) {
     Param::SetFloat(Param::udcsw,
                     udc2 - 20); // Set udcsw to 20V under battery voltage
     float udc3 = 0; //((float)ISA::Voltage3)/1000;//get voltage from isa sensor
-                    //and post to parameter database
+                    // and post to parameter database
     Param::SetFloat(Param::udc3, udc3);
     float idc =
         ((float)VWBOX::Amperes) *

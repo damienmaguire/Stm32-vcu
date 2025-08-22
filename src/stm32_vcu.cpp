@@ -599,7 +599,7 @@ static void Ms10Task(void) {
         StartSig = true;
         opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
                                 // pressed , 2)ign on , 3)start signal rx
-        rlyDly = 25; // Recharge sequence timer
+        rlyDly = 25;            // Recharge sequence timer
         vehicleStartTime = rtc_get_counter_val();
         initbyStart = true;
       }

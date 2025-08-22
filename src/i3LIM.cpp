@@ -528,8 +528,8 @@ void i3LIMClass::Task100Ms() {
        (uint8_t)CHG_Ready); // charge readiness in bits 0 and 1. 1 = ready to
                             // charge.upper nibble is LSB of charge power.Charge
                             // power forecast not actual power!
-  bytes[4] = CHG_Pwr >> 4; // MSB of charge power.in this case 0x28 = 40x25 =
-                           // 1000W. Probably net DC power into the Batt.
+  bytes[4] = CHG_Pwr >> 4;  // MSB of charge power.in this case 0x28 = 40x25 =
+                            // 1000W. Probably net DC power into the Batt.
   bytes[5] = FC_Cur & 0xff; // LSB of the DC ccs current command
   bytes[6] =
       ((CONT_Ctrl << 4) |
@@ -595,8 +595,8 @@ void i3LIMClass::Task100Ms() {
              0xFF; // time remaining in seconds to hit soc target from byte 7 in
                    // ccs mode. LSB. 16 bit unsigned int. scale 10.Bulk SOC.
   bytes[6] = Bulk_SOCt >>
-             8; // time remaining in seconds to hit soc target from byte 7 in
-                // ccs mode. MSB. 16 bit unsigned int. scale 10.Bulk SOC.
+             8;    // time remaining in seconds to hit soc target from byte 7 in
+                   // ccs mode. MSB. 16 bit unsigned int. scale 10.Bulk SOC.
   bytes[7] = 0xA0; // Fast charge SOC target. 8 bit unsigned int. scale 0.5.
                    // 0xA0=160*0.5=80%
 

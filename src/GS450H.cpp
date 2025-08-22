@@ -319,7 +319,7 @@ void GS450HClass::Task100Ms() {
 }
 
 void GS450HClass::GS450Hgear() //!!! should be ran every 10ms - ran before
-                               //!calculating torque request
+                               //! calculating torque request
 {
   // Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update inverter
   // status on web interface

@@ -154,7 +154,7 @@ void BMW_E65::Task100Ms() {
     data[0] = 0x8261; // sets max rpm on tach (temp thing)
 
     /////////////////this can id must be sent once at T15 on to fire up the
-    ///instrument cluster/////////////////////////
+    /// instrument cluster/////////////////////////
     if (!this->dashInit) {
       for (int i = 0; i < 3; i++) {
         can->Send(0x332, data, 2); // Send on CAN2

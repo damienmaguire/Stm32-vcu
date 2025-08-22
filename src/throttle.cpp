@@ -279,7 +279,7 @@ float Throttle::RampThrottle(float potnom) {
       potnom = throttleRamped;
     }
   } else //(potnom < throttleRamped) // lower throttle command than currently
-         //applied
+         // applied
   {
     if (potnom >= 0) {
       throttleRamped = potnom; // No ramping from high throttle to low throttle

@@ -103,7 +103,7 @@ void AmperaHeater::SetPower(uint16_t power, bool heatReq) {
   if (power == 0)
     isAwake = false; // if we are disabled do nothing but set isAwake to false
                      // for next wakeup ...
-  else // otherwise do everything
+  else               // otherwise do everything
   {
 
     if (!isAwake) {
