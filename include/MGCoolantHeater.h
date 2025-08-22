@@ -19,27 +19,24 @@
 #ifndef MGCOOLANTHEATER_H
 #define MGCOOLANTHEATER_H
 
-//#include <libopencm3/stm32/usart.h>
+// #include <libopencm3/stm32/usart.h>
 #include <heater.h>
 
+class mgCoolantHeater : public Heater {
+public:
+  void SetTargetTemperature(float temp);
+  void SetCanInterface(CanHardware *c);
+  void DecodeCAN(int id, uint32_t data[2]);
+  void SetPower(uint16_t power, bool HeatReq);
+  void Task100Ms();
 
-class mgCoolantHeater : public Heater
-{
-   public:
-      void SetTargetTemperature(float temp);
-      void SetCanInterface(CanHardware* c);
-      void DecodeCAN(int id, uint32_t data[2]);
-      void SetPower(uint16_t power, bool HeatReq);
-      void Task100Ms();
+private:
+  int8_t currentTemperature;
+  int8_t desiredTemperature;
 
-   private:
-      int8_t currentTemperature;
-      int8_t desiredTemperature;
-
-      bool shouldHeat;
-      static void handle2B5(uint32_t data[2]);
-      static void handle2B6(uint32_t data[2]);
-
+  bool shouldHeat;
+  static void handle2B5(uint32_t data[2]);
+  static void handle2B6(uint32_t data[2]);
 };
 
 #endif // MGCOOLANTHEATER_H
