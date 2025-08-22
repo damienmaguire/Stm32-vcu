@@ -20,32 +20,30 @@
 #ifndef SUBARUVEHICLE_H
 #define SUBARUVEHICLE_H
 
-#include <vehicle.h>
 #include "utils.h"
+#include <vehicle.h>
 
-class SubaruVehicle : public Vehicle
-{
-   public:
-      /** Default constructor */
-      SubaruVehicle();
-      void SetCanInterface(CanHardware* c);
-      bool GetGear(gear& gear);
-      bool Ready() { return true; }
-      void SetRevCounter(int speed);
-      void SetTemperatureGauge(float temp);
-      void SetFuelGauge(float level);
-      float GetFrontRearBalance();
-      int GetCruiseState();
-      bool EnableTractionControl();
+class SubaruVehicle : public Vehicle {
+public:
+  /** Default constructor */
+  SubaruVehicle();
+  void SetCanInterface(CanHardware *c);
+  bool GetGear(gear &gear);
+  bool Ready() { return true; }
+  void SetRevCounter(int speed);
+  void SetTemperatureGauge(float temp);
+  void SetFuelGauge(float level);
+  float GetFrontRearBalance();
+  int GetCruiseState();
+  bool EnableTractionControl();
 
-   protected:
-
-   private:
-      gear lastGear;
-      int timerPeriod;
-      float frontRearBalance;
-      bool tcOn;
-      bool ccOn;
+protected:
+private:
+  gear lastGear;
+  int timerPeriod;
+  float frontRearBalance;
+  bool tcOn;
+  bool ccOn;
 };
 
 #endif // SUBARUVEHICLE_H
