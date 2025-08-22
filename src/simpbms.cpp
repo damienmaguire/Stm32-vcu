@@ -117,12 +117,6 @@ void SimpBMS::Task100Ms()
     // Update informational parameters.
     Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
 
-    //minCellV = Param::GetFloat(Param::udc)/96;
-    //maxCellV = Param::GetFloat(Param::udc)/96;
-    //minTempC = 20;
-    //maxTempC= 25;
-    //chargeCurrentLimit = 20;
-
     Param::SetFloat(Param::BMS_Vmin, minCellV);
     Param::SetFloat(Param::BMS_Vmax, maxCellV);
     Param::SetFloat(Param::BMS_Tmin, minTempC);
@@ -131,7 +125,7 @@ void SimpBMS::Task100Ms()
     if (Param::GetInt(Param::ShuntType) == 0)//No Shunt Used
     {
         Param::SetFloat(Param::udc2, batteryVoltage);
-        Param::SetFloat(Param::idc, batteryVoltage);
+        Param::SetFloat(Param::udc, batteryVoltage);
         Param::SetFloat(Param::udcsw, batteryVoltage - 30);
 
         if (BMSDataValid())
