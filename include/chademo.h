@@ -67,8 +67,10 @@ private:
   static void SetContactor(bool state) { contactorOpen = !state; }
   static void SetGeneralFault() { fault = true; }
 
-  static void SetSoC(float soC) { soc = soC * 2; } // Set current state of
-                                                   // charge
+  static void SetSoC(float soC) {
+    soc = soC * 2;
+  } // Set current state of
+    // charge
   static int GetChargerOutputVoltage() { return chargerOutputVoltage; }
   static int GetChargerOutputCurrent() { return chargerOutputCurrent; }
   static int GetChargerMaxCurrent() { return chargerMaxCurrent; }
