@@ -21,7 +21,7 @@
  */
 #ifndef VWAIRHEATER_H
 #define VWAIRTHEATER_H
-
+#include <cstdint>
 // #include <libopencm3/stm32/usart.h>
 #include "linbus.h"
 #include <heater.h>
