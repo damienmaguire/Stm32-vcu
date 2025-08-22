@@ -19,25 +19,24 @@
 
 #ifndef ElconDCDC_H
 #define ElconDCDC_H
-#include <stdint.h>
 #include "dcdc.h"
+#include <stdint.h>
 
 /* This is an interface for Elcon Chargers that require DC-DC messages
 
  */
 
-class ElconDCDC: public DCDC
-{
-   public:
-      void DecodeCAN(int, uint8_t *);
-      void DeInit() {};
-      void Task100Ms();
-      void SetCanInterface(CanHardware* c);
-   protected:
-      CanHardware* can;
-   private:
-      uint8_t timer200=0;
+class ElconDCDC : public DCDC {
+public:
+  void DecodeCAN(int, uint8_t *);
+  void DeInit() {};
+  void Task100Ms();
+  void SetCanInterface(CanHardware *c);
+
+protected:
+  CanHardware *can;
+
+private:
+  uint8_t timer200 = 0;
 };
 #endif // ElconDCDC_H
-
-

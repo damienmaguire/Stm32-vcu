@@ -21,19 +21,16 @@
 
 #include <compressor.h>
 
+class OutlanderCompressor : public Compressor {
+public:
+  /** Default constructor */
+  OutlanderCompressor();
+  void SetCanInterface(CanHardware *c);
+  void DecodeCAN(int id, uint32_t data[2]);
+  void Task100Ms();
 
-class OutlanderCompressor : public Compressor
-{
-   public:
-      /** Default constructor */
-      OutlanderCompressor();
-      void SetCanInterface(CanHardware* c);
-      void DecodeCAN(int id, uint32_t data[2]);
-      void Task100Ms();
-
-   private:
-      static void handle388(uint32_t data[2]);
-      
+private:
+  static void handle388(uint32_t data[2]);
 };
 
 #endif // OUTLANDERCOMPRESSOR_H
