@@ -24,26 +24,27 @@
 #include "canhardware.h"
 #include <stdint.h>
 
-class SimpBMS: public BMS
-{
+class SimpBMS : public BMS {
 public:
-    void SetCanInterface(CanHardware* c) override;
-    void DecodeCAN(int id, uint8_t * data) override;
-    float MaxChargeCurrent() override;
-    void Task100Ms() override;
-private:
-    bool BMSDataValid();
-    bool ChargeAllowed();
-    int chargeCurrentLimit = 0;  // Sent by Simp as 0.1A per digit and stored the same way.
-    int timeoutCounter = 0;
-    float minCellV = 0;
-    float maxCellV = 0;
-    float minTempC = 0;
-    float maxTempC = 0;
-    float stateOfCharge = 0;
-    float current = 0;
-    float remainingKHW = 0;
-    float batteryVoltage = 500; //higher than possible so cannot complete precharge until BMS reports battery voltage
+  void SetCanInterface(CanHardware *c) override;
+  void DecodeCAN(int id, uint8_t *data) override;
+  float MaxChargeCurrent() override;
+  void Task100Ms() override;
 
+private:
+  bool BMSDataValid();
+  bool ChargeAllowed();
+  int chargeCurrentLimit =
+      0; // Sent by Simp as 0.1A per digit and stored the same way.
+  int timeoutCounter = 0;
+  float minCellV = 0;
+  float maxCellV = 0;
+  float minTempC = 0;
+  float maxTempC = 0;
+  float stateOfCharge = 0;
+  float current = 0;
+  float remainingKHW = 0;
+  float batteryVoltage = 500; // higher than possible so cannot complete
+                              // precharge until BMS reports battery voltage
 };
 #endif // SIMPBMS_H

@@ -3,14 +3,10 @@
 
 #include <compressor.h>
 
-
-class NoCompressor: public Compressor
-{
+class NoCompressor : public Compressor {
 
 public:
-
 private:
-
 };
 
 #endif // NOCOMPRESSOR_H

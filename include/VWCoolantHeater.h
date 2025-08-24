@@ -15,26 +15,24 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * Controls the VW LIN based heater as : https://openinverter.org/wiki/Volkswagen_Heater
+ * Controls the VW LIN based heater as :
+ * https://openinverter.org/wiki/Volkswagen_Heater
  */
 #ifndef VWCOOLANTHEATER_H
 #define VWCOOLANTHEATER_H
-
-//#include <libopencm3/stm32/usart.h>
-#include <heater.h>
+#include <cstdint>
+// #include <libopencm3/stm32/usart.h>
 #include "linbus.h"
+#include <heater.h>
 
+class vwCoolantHeater : public Heater {
+public:
+  void SetTargetTemperature(float temp) { (void)temp; } // Not supported (yet)?
+  void SetPower(uint16_t power, bool HeatReq);
+  void SetLinInterface(LinBus *l);
 
-class vwCoolantHeater : public Heater
-{
-   public:
-      void SetTargetTemperature(float temp) { (void)temp; } //Not supported (yet)?
-      void SetPower(uint16_t power, bool HeatReq);
-      void SetLinInterface(LinBus* l);
-
-   private:
-      bool isAwake=false;
-      LinBus* lin;
-
+private:
+  bool isAwake = false;
+  LinBus *lin;
 };
 #endif // VWCOOLANTHEATER_H
