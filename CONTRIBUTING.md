@@ -66,7 +66,9 @@ Do not submit Pull Requests to this unless asked to do so by a Code Owner
 ### Vehicle_Testing 
 The code that lives here is ready or ongoing testing and validationg on various vehicles and configurations.
 Pull Requests will be accepted on the basis there has been some testing done already. 
-When contributing best to build off of this branch unless you have specific reasons to use the branch Developmental_NOT_VEHICLE
+When contributing best to build off of this branch unless you have specific reasons to use the branch Developmental_NOT_VEHICLE. 
+Once the change has been verified, reviewed, and tested in a working vehicle, one of the Code Owners will give the request to 
+merge the change in to master so it can be in the next release. 
 
 ### Developmental_NOT_VEHICLE 
 The code that lives here is untested beyond the fact it compiles, any major changes or frameworks will be published here for review
