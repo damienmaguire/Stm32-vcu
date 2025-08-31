@@ -45,6 +45,7 @@
 #include "OutlanderCanHeater.h"
 #include "OutlanderCompressor.h"
 #include "OutlanderHeartBeat.h"
+#include "PWMHeater.h"
 #include "TeslaDCDC.h"
 #include "VWAirHeater.h"
 #include "VWCoolantHeater.h"
@@ -210,6 +211,7 @@ static Preheater preheater;
 static NoCompressor CompressorNone;
 static OutlanderCompressor outlanderCompressor;
 static Compressor *selectedCompressor = &CompressorNone;
+static PWMHeater pwmHeater;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void) {
@@ -1029,6 +1031,9 @@ static void UpdateHeater() {
   case HeatType::OutlanderHeater:
     selectedHeater = &outlanderCanHeater;
     OutlanderCAN = true;
+    break;
+  case HeatType::PWM:
+    selectedHeater = &pwmHeater;
     break;
   }
   // This will call SetCanFilters() via the Clear Callback

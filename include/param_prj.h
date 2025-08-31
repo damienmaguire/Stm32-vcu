@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 153
+// Next param id (increase when adding new parameter!): 155
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -108,7 +108,7 @@
   PARAM_ENTRY(CAT_BMS, BMS_VmaxLimit, "V", 0, 10, 4.2, 93)                     \
   PARAM_ENTRY(CAT_BMS, BMS_TminLimit, "°C", -100, 100, 5, 94)                  \
   PARAM_ENTRY(CAT_BMS, BMS_TmaxLimit, "°C", -100, 100, 50, 95)                 \
-  PARAM_ENTRY(CAT_HEATER, Heater, HTTYPE, 0, 5, 0, 57)                         \
+  PARAM_ENTRY(CAT_HEATER, Heater, HTTYPE, 0, 6, 0, 57)                         \
   PARAM_ENTRY(CAT_HEATER, Control, HTCTRL, 0, 2, 0, 58)                        \
   PARAM_ENTRY(CAT_HEATER, HeatPwr, "W", 0, 6500, 0, 59)                        \
   PARAM_ENTRY(CAT_HEATER, HeatPercnt, "%", 0, 100, 0, 124)                     \
@@ -133,9 +133,9 @@
   PARAM_ENTRY(CAT_IOPINS, Out3Func, PINFUNCS, 0, 18, 3, 82)                    \
   PARAM_ENTRY(CAT_IOPINS, SL1Func, PINFUNCS, 0, 18, 0, 83)                     \
   PARAM_ENTRY(CAT_IOPINS, SL2Func, PINFUNCS, 0, 18, 0, 84)                     \
-  PARAM_ENTRY(CAT_IOPINS, PWM1Func, PINFUNCS, 0, 23, 0, 85)                    \
-  PARAM_ENTRY(CAT_IOPINS, PWM2Func, PINFUNCS, 0, 23, 4, 86)                    \
-  PARAM_ENTRY(CAT_IOPINS, PWM3Func, PINFUNCS, 0, 23, 2, 87)                    \
+  PARAM_ENTRY(CAT_IOPINS, PWM1Func, PINFUNCS, 0, 24, 0, 85)                    \
+  PARAM_ENTRY(CAT_IOPINS, PWM2Func, PINFUNCS, 0, 24, 4, 86)                    \
+  PARAM_ENTRY(CAT_IOPINS, PWM3Func, PINFUNCS, 0, 24, 2, 87)                    \
   PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 18, 12, 98)                \
   PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 18, 12, 99)                  \
   PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PINFUNCS, 0, 18, 12, 140)                 \
@@ -258,9 +258,10 @@
   VALUE_ENTRY(powerheater, "W", 2098)                                          \
   VALUE_ENTRY(VehLockSt, ONOFF, 2100)                                          \
   VALUE_ENTRY(compressStat, COMP_STAT, 2111)                                   \
-  VALUE_ENTRY(compressRPM, "", 2109)
+  VALUE_ENTRY(compressRPM, "", 2109)                                           \
+  VALUE_ENTRY(PWMHeatOn, ONOFF, 2112)
 
-// Next value Id: 2112
+// Next value Id: 2113
 
 // Dead params
 /*
@@ -278,7 +279,8 @@
   "11=HVRequest,"                                                              \
   "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, "              \
   "16=ShiftLockNO, 17=PreHeatOut, 18=Switch_NoRegen,"                          \
-  "19=PwmTim3, 20=CpSpoof, 21=GS450pump, 22=PwmTempGauge, 23=PwmSocGauge"
+  "19=PwmTim3, 20=CpSpoof, 21=GS450pump, 22=PwmTempGauge, 23=PwmSocGauge,"     \
+  "24=PwmHeater"
 #define APINFUNCS "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
 #define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
@@ -323,7 +325,7 @@
   "1=Charging, 2=Malfunction, 4=ConnLock, 8=BatIncomp, 16=SystemMalfunction, " \
   "32=Stop"
 #define HTTYPE                                                                 \
-  "0=None, 1=Ampera, 2=VWCoolant, 3=VWAir, 4=OutlanderCan, 5=MGCoolant"
+  "0=None, 1=Ampera, 2=VWCoolant, 3=VWAir, 4=OutlanderCan, 5=MGCoolant, 6=PWM"
 #define HTCTRL "0=Disable, 1=Enable, 2=Timer"
 #define CHGMODS                                                                \
   "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, "    \
@@ -421,7 +423,8 @@ enum HeatType {
   VWCoolant = 2,
   VWAir = 3,
   OutlanderHeater = 4,
-  MGCoolant = 5
+  MGCoolant = 5,
+  PWM = 6
 };
 
 enum BMSModes {
