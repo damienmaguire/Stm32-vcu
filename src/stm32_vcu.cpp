@@ -142,6 +142,8 @@ static bool initbyStart = false;
 static bool initbyCharge = false;
 static bool OutlanderCAN = false;
 static bool ExtHVreq = false;
+static bool CheckHVIL = 0;
+static bool HVILok = 0;
 
 static volatile unsigned days = 0, hours = 0, minutes = 0, seconds = 0,
                          alarm = 0; // != 0 when alarm is pending
@@ -541,6 +543,24 @@ static void Ms100Task(void) {
   DigiPot::SetPot1Step(); // just for dev
   DigiPot::SetPot2Step(); // just for dev
 
+  //Reading HVIL input
+  if (IOMatrix::GetPin(IOMatrix::HVIL) != &DigIo::dummypin) {
+    CheckHVIL = IOMatrix::GetPin(IOMatrix::HVIL)->Get();
+    if (CheckHVIL > 0)
+    {
+      HVILok = 1;
+    }
+    else 
+    {
+      HVILok = 0;
+      ErrorMessage::Post(ERR_HVILERR);
+    }
+  } 
+  
+  else {
+    HVILok = 1;
+  }
+
   // Cooling Fan Control//
   if (opmode == MOD_CHARGE || opmode == MOD_RUN) {
     float tempTemp =
@@ -715,10 +735,10 @@ static void Ms10Task(void) {
     }
 
     if (Param::GetInt(Param::pot) < Param::GetInt(Param::potmin)) {
-      if ((selectedVehicle->Start() && selectedVehicle->Ready())) {
+      if (selectedVehicle->Start() && selectedVehicle->Ready() && (HVILok > 0)) {
         StartSig = true;
         opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
-                                // pressed , 2)ign on , 3)start signal rx
+                                // pressed , 2)ign on , 3)start signal rx, 4) HV IL input is grounded if selected.
         rlyDly = 25;            // Recharge sequence timer
         vehicleStartTime = rtc_get_counter_val();
         initbyStart = true;

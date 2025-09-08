@@ -45,6 +45,7 @@ public: // order of these matters!
     COOLINGFAN,
     HVACTIVE,
     SHIFTLOCKNO,
+    HVIL,
     PREHEATOUT,
     NOREGEN,
     PWM_TIM3,
