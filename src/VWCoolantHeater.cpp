@@ -79,7 +79,7 @@ void vwCoolantHeater::SetPower(uint16_t power, bool HeatReq) {
       lindata[0] = Param::GetInt(
           Param::HeatPercnt); // VW heater uses a % setting as opposed to a set
                               // power val. Regulates its temps to this.
-      lindata[1] = HeatReq;         // Always on for test. Can use heatreq here.
+      lindata[1] = HeatReq;   // Always on for test. Can use heatreq here.
       lindata[2] = 0;
       lindata[3] = 0;
       lin->Request(28, lindata, sizeof(lindata)); // 0x1C hex address
