@@ -136,8 +136,8 @@
   PARAM_ENTRY(CAT_IOPINS, PWM1Func, PINFUNCS, 0, 23, 0, 85)                    \
   PARAM_ENTRY(CAT_IOPINS, PWM2Func, PINFUNCS, 0, 23, 4, 86)                    \
   PARAM_ENTRY(CAT_IOPINS, PWM3Func, PINFUNCS, 0, 23, 2, 87)                    \
-  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 18, 12, 98)                \
-  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 18, 12, 99)                  \
+  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 19, 12, 98)                \
+  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 19, 12, 99)                  \
   PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PINFUNCS, 0, 19, 12, 140)                 \
   PARAM_ENTRY(CAT_IOPINS, PB2InFunc, PINFUNCS, 0, 19, 12, 141)                 \
   PARAM_ENTRY(CAT_IOPINS, PB3InFunc, PINFUNCS, 0, 19, 12, 142)                 \
