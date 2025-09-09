@@ -553,7 +553,6 @@ static void Ms100Task(void) {
       ErrorMessage::Post(ERR_HVILERR);
     }
   }
-  
   else {
     HVILok = 1;
   }
