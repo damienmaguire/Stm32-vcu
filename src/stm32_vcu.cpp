@@ -546,7 +546,7 @@ static void Ms100Task(void) {
   // Reading HVIL input
   if (IOMatrix::GetPin(IOMatrix::HVIL) != &DigIo::dummypin) {
     CheckHVIL = IOMatrix::GetPin(IOMatrix::HVIL)->Get();
-    if (CheckHVIL > 0){
+    if (CheckHVIL > 0) {
       HVILok = 1;
     } else {
       HVILok = 0;
@@ -732,7 +732,7 @@ static void Ms10Task(void) {
     }
 
     if (Param::GetInt(Param::pot) < Param::GetInt(Param::potmin)) {
-      if (selectedVehicle->Start() && selectedVehicle->Ready() && 
+      if (selectedVehicle->Start() && selectedVehicle->Ready() &&
           (HVILok > 0)) {
         StartSig = true;
         opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
