@@ -543,15 +543,12 @@ static void Ms100Task(void) {
   DigiPot::SetPot1Step(); // just for dev
   DigiPot::SetPot2Step(); // just for dev
 
-  //Reading HVIL input
+  // Reading HVIL input
   if (IOMatrix::GetPin(IOMatrix::HVIL) != &DigIo::dummypin) {
     CheckHVIL = IOMatrix::GetPin(IOMatrix::HVIL)->Get();
-    if (CheckHVIL > 0)
-    {
+    if (CheckHVIL > 0){
       HVILok = 1;
-    }
-    else 
-    {
+    } else {
       HVILok = 0;
       ErrorMessage::Post(ERR_HVILERR);
     }
@@ -735,10 +732,12 @@ static void Ms10Task(void) {
     }
 
     if (Param::GetInt(Param::pot) < Param::GetInt(Param::potmin)) {
-      if (selectedVehicle->Start() && selectedVehicle->Ready() && (HVILok > 0)) {
+      if (selectedVehicle->Start() && selectedVehicle->Ready() && 
+          (HVILok > 0)) {
         StartSig = true;
         opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
-                                // pressed , 2)ign on , 3)start signal rx, 4) HV IL input is grounded if selected.
+                                // pressed , 2)ign on , 3)start signal rx, 4) HV
+                                // IL input is grounded if selected.
         rlyDly = 25;            // Recharge sequence timer
         vehicleStartTime = rtc_get_counter_val();
         initbyStart = true;
