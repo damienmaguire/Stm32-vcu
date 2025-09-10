@@ -21,6 +21,7 @@
 
 #include "hwinit.h"
 #include "digio.h"
+#include "errormessage.h"
 #include "hwdefs.h"
 #include "iomatrix.h"
 #include "params.h"
@@ -242,7 +243,7 @@ void tim3_setup() {
   // 2 PA7. General purpose pwm output. Push/pull driven to +12v/gnd. Timer 3
   // Chan 1 PA6.
   ////////////////////////////////////////////////////////////////////////
-  bool Fixed1K = 0;
+  bool Fixed1K = false;
   /// PWM3
   if (Param::GetInt(Param::PWM3Func) == IOMatrix::PWM_TIM3) {
     gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, // Low speed (only need 1khz)
@@ -253,7 +254,7 @@ void tim3_setup() {
              Param::GetInt(Param::PWM3Func) == IOMatrix::PWMSOCGAUGE) {
     gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, // Low speed (only need 1khz)
                   GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO0); // GPIOB0=TIM3.CH3
-    Fixed1K = 1;                                          // Running 1kHz Fixed
+    Fixed1K = true;                                       // Running 1kHz Fixed
   } else {
     DigIo::PWM3.Configure(GPIOB, GPIO0, PinMode::OUTPUT);
   }
@@ -268,7 +269,7 @@ void tim3_setup() {
              Param::GetInt(Param::PWM2Func) == IOMatrix::PWMSOCGAUGE) {
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, // Low speed (only need 1khz)
                   GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO7); // GPIOE9=TIM3.CH2
-    Fixed1K = 1;                                          // Running 1kHz Fixed
+    Fixed1K = true;                                       // Running 1kHz Fixed
   } else {
     DigIo::PWM2.Configure(GPIOA, GPIO7, PinMode::OUTPUT);
   }
@@ -283,7 +284,7 @@ void tim3_setup() {
              Param::GetInt(Param::PWM1Func) == IOMatrix::PWMSOCGAUGE) {
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, // Low speed (only need 1khz)
                   GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO6); // GPIOA6=TIM3.CH1
-    Fixed1K = 1;                                          // Running 1kHz Fixed
+    Fixed1K = true;                                       // Running 1kHz Fixed
   } else {
     DigIo::PWM1.Configure(GPIOA, GPIO6, PinMode::OUTPUT);
   }
@@ -307,7 +308,12 @@ void tim3_setup() {
   timer_enable_oc_output(TIM3, TIM_OC2);
   timer_enable_oc_output(TIM3, TIM_OC3);
 
-  if (Fixed1K == 0) // No CP Spoof Selected or GS450h Oil pump or Gauges
+  // Fixed1K uses are incompatible with PWM Heater, throw an error.
+  if (Fixed1K && Param::GetInt(Param::Heater) == HeatType::PWM) {
+    ErrorMessage::Post(ERR_PWMCONFIGERROR);
+  }
+
+  if (!Fixed1K) // No CP Spoof Selected or GS450h Oil pump or Gauges
   {
     timer_set_period(TIM3, Param::GetInt(Param::Tim3_Period));
     timer_set_oc_value(TIM3, TIM_OC1, Param::GetInt(Param::Tim3_1_OC));
@@ -319,11 +325,17 @@ void tim3_setup() {
   } else // No CP Spoof or GS450h Oil pump output selected locks TIM3 Force 1khz
          // clock (996khz)
   {
+    // Set the params to indicate that custom params are being ignored.
+    Param::SetInt(Param::Tim3_Period, 3999);
     timer_set_period(TIM3, 3999);
+    Param::SetInt(Param::Tim3_1_OC, 1);
     timer_set_oc_value(TIM3, TIM_OC1, 1); // No duty set here
+    Param::SetInt(Param::Tim3_2_OC, 1);
     timer_set_oc_value(TIM3, TIM_OC2, 1); // No duty set here
+    Param::SetInt(Param::Tim3_3_OC, 1);
     timer_set_oc_value(TIM3, TIM_OC3, 1); // No duty set here
     timer_generate_event(TIM3, TIM_EGR_UG);
+    Param::SetInt(Param::Tim3_Presc, 17);
     timer_set_prescaler(TIM3, 17);
     timer_enable_counter(TIM3);
   }
