@@ -47,6 +47,7 @@ public: // order of these matters!
     SHIFTLOCKNO,
     PREHEATOUT,
     NOREGEN,
+    HVIL,
     PWM_TIM3,
     CP_SPOOF,
     GS450HOIL,

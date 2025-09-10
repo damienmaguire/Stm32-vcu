@@ -136,11 +136,11 @@
   PARAM_ENTRY(CAT_IOPINS, PWM1Func, PINFUNCS, 0, 23, 0, 85)                    \
   PARAM_ENTRY(CAT_IOPINS, PWM2Func, PINFUNCS, 0, 23, 4, 86)                    \
   PARAM_ENTRY(CAT_IOPINS, PWM3Func, PINFUNCS, 0, 23, 2, 87)                    \
-  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 18, 12, 98)                \
-  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 18, 12, 99)                  \
-  PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PINFUNCS, 0, 18, 12, 140)                 \
-  PARAM_ENTRY(CAT_IOPINS, PB2InFunc, PINFUNCS, 0, 18, 12, 141)                 \
-  PARAM_ENTRY(CAT_IOPINS, PB3InFunc, PINFUNCS, 0, 18, 12, 142)                 \
+  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 19, 12, 98)                \
+  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 19, 12, 99)                  \
+  PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PINFUNCS, 0, 19, 12, 140)                 \
+  PARAM_ENTRY(CAT_IOPINS, PB2InFunc, PINFUNCS, 0, 19, 12, 141)                 \
+  PARAM_ENTRY(CAT_IOPINS, PB3InFunc, PINFUNCS, 0, 19, 12, 142)                 \
   PARAM_ENTRY(CAT_IOPINS, GPA1Func, APINFUNCS, 0, 3, 0, 110)                   \
   PARAM_ENTRY(CAT_IOPINS, GPA2Func, APINFUNCS, 0, 3, 0, 111)                   \
   PARAM_ENTRY(CAT_IOPINS, ppthresh, "dig", 0, 4095, 2500, 114)                 \
@@ -277,8 +277,8 @@
   "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, "  \
   "11=HVRequest,"                                                              \
   "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, "              \
-  "16=ShiftLockNO, 17=PreHeatOut, 18=Switch_NoRegen,"                          \
-  "19=PwmTim3, 20=CpSpoof, 21=GS450pump, 22=PwmTempGauge, 23=PwmSocGauge"
+  "16=ShiftLockNO, 17=PreHeatOut, 18=Switch_NoRegen, 19=HVIL,"                 \
+  "20=PwmTim3, 21=CpSpoof, 22=GS450pump, 23=PwmTempGauge, 24=PwmSocGauge"
 #define APINFUNCS "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
 #define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
