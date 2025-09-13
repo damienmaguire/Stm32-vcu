@@ -91,6 +91,7 @@
 #include "preheater.h"
 #include "printf.h"
 #include "rearoutlanderinverter.h"
+#include "sdocommands.h"
 #include "shifter.h"
 #include "simpbms.h"
 #include "stm32_can.h"
@@ -1472,9 +1473,15 @@ extern "C" int main(void) {
 
   while (1) {
     char c = 0;
+    CanSdo::SdoFrame *sdoFrame = sdo.GetPendingUserspaceSdo();
     t.Run();
     if (sdo.GetPrintRequest() == PRINT_JSON) {
       TerminalCommands::PrintParamsJson(&sdo, &c);
+    }
+    if (0 != sdoFrame) {
+      SdoCommands::ProcessStandardCommands(sdoFrame);
+
+      sdo.SendSdoReply(sdoFrame);
     }
   }
 
