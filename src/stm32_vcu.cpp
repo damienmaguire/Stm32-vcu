@@ -1434,6 +1434,7 @@ extern "C" int main(void) {
   c.AddCallback(&cb);
   c2.AddCallback(&cb);
   TerminalCommands::SetCanMap(&cm);
+  SdoCommands::SetCanMap(&cm);
   canMap = &cm;
 
   CanHardware *shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
