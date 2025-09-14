@@ -1040,8 +1040,8 @@ static void UpdateHeater() {
     heaterCoolantVW.SetLinInterface(lin);
     break;
   case HeatType::VWAir:
-    selectedHeater = &heaterCoolantVW;
-    heaterCoolantVW.SetLinInterface(lin);
+    selectedHeater = &heaterAirVW;
+    heaterAirVW.SetLinInterface(lin);
     break;
   case HeatType::MGCoolant:
     selectedHeater = &heaterCoolantMG;
