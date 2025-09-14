@@ -271,7 +271,12 @@
 */
 //////////
 
-#define VERSTR STRINGIFY(4 = VER)
+// Generate the version string. This must be formatted without spaces to meet
+// the format requirements of the "units".
+// clang-format off
+#define VERSTR STRINGIFY(4=VER)
+// clang-format on
+
 #define PINFUNCS                                                               \
   "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, "       \
   "5=WarnIndication,"                                                          \
