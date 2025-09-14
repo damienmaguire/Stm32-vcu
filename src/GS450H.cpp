@@ -302,10 +302,11 @@ float GS450HClass::GetMotorTemperature() {
                              // values from sensors in the gearbox
   int tmpmg2 = AnaIn::MG2_Temp.Get();
 
-  float t1 = (tmpmg1 * (-0.02058758)) +
-             56.56512898; // Trying a best fit line approach.
-  float t2 = (tmpmg2 * (-0.02058758)) + 56.56512898;
-  ;
+  //  float t1 = (tmpmg1*(-0.02058758))+56.56512898;//Trying a best fit line approach.
+  //  float t2 = (tmpmg2*(-0.02058758))+56.56512898;;
+
+  float t1=TempMeas::Lookup(tmpmg1, TempMeas::TEMP_TOYOTA);
+  float t2=TempMeas::Lookup(tmpmg2,TempMeas::TEMP_TOYOTA);
   float tmpm = MAX(t1, t2); // which ever is the hottest gets displayed
 
   return float(tmpm);
@@ -524,7 +525,8 @@ void GS450HClass::Task1Ms() {
       // exchange data and prepare next HTM frame
       dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
       statusInv = 1;
-      dc_bus_voltage = (((mth_data[82] | mth_data[83] << 8) - 5) / 2);
+      dcdc_voltage=(((mth_data[82]|mth_data[83]<<8)-5)/2);
+      dc_bus_voltage=((mth_data[84]|mth_data[85]<<8)/2);
       temp_inv_water = int8_t(mth_data[42]);
       temp_inv_inductor = int8_t(mth_data[86]);
       mg1_speed = mth_data[6] | mth_data[7] << 8;
