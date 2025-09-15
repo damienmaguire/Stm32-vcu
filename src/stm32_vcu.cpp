@@ -1393,7 +1393,7 @@ extern "C" void rtc_isr(void) {
   }
 }
 
-extern "C" int main(void) {
+int main(void) {
   extern const TERM_CMD TermCmds[];
 
   clock_setup();
