@@ -39,10 +39,10 @@ void teslaCharger::DecodeCAN(int id, uint32_t data[2]) {
   uint8_t *bytes = (uint8_t *)data;
 
   if (id == 0x109) {
-    if(bytes[5] == 0x05) {
+    if (bytes[5] == 0x05) {
       HVreq = true;
     }
-    if(bytes[5] == 0x00) {
+    if (bytes[5] == 0x00) {
       HVreq = false;
     }
 
