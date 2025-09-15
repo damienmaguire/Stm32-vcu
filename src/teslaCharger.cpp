@@ -38,19 +38,18 @@ void teslaCharger::SetCanInterface(CanHardware *c) {
 void teslaCharger::DecodeCAN(int id, uint32_t data[2]) {
   uint8_t *bytes = (uint8_t *)data;
 
-  if (id == 0x109)
-    {
-        if(bytes[5]==0x05) {
-            HVreq=true;
-        }
-        if(bytes[5]==0x00) {
-            HVreq=false;
-        }
+  if (id == 0x109){
+    if(bytes[5]==0x05) {
+        HVreq=true;
+    }
+    if(bytes[5]==0x00) {
+        HVreq=false;
+    }
 
-        // can->AddSend(Param::udc, 0x109, 8, 16, 1);
-        // can->AddSend(Param::idc, 0x109, 24, 16, 1);
-        // can->AddSend(Param::opmode, 0x109, 40, 3, 5); //Set charging and connlock
-        // at once
+    // can->AddSend(Param::udc, 0x109, 8, 16, 1);
+    // can->AddSend(Param::idc, 0x109, 24, 16, 1);
+    // can->AddSend(Param::opmode, 0x109, 40, 3, 5); //Set charging and connlock
+    // at once
     }
 }
 
@@ -73,20 +72,20 @@ void teslaCharger::Task100Ms() {
   CurReq = MIN(CurReq, 45); // Max allowed is 45A
 
   bytes[0] = 0x00;
-  bytes[1] = (HVvoltspnt&0xFF);        // HV voltage lowbyte
-  bytes[2] = ((HVvoltspnt&0xFF00)>>8); // HV voltage highbyte
-  bytes[3] = CurReq;                   // HV Current Request
+  bytes[1] = (HVvoltspnt&0xFF);          // HV voltage lowbyte
+  bytes[2] = ((HVvoltspnt&0xFF00) >> 8); // HV voltage highbyte
+  bytes[3] = CurReq;                     // HV Current Request
 
   if(ChRun){
-      bytes[5] = 0x01;  // send Chg enable
+    bytes[5] = 0x01; // send Chg enable
   } else {
-      bytes[5] = 0x00; // send Chg disable
+    bytes[5] = 0x00; // send Chg disable
   }
 
   bytes[6] = SOC;
   bytes[7] = 0x00;
 
-  can->Send(0x102, (uint32_t *)bytes,8);
+  can->Send(0x102, (uint32_t *)bytes, 8);
 }
 
 bool teslaCharger::ControlCharge(bool RunCh, bool ACReq) {
