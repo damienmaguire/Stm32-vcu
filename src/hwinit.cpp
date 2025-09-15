@@ -42,7 +42,7 @@
  * Start clocks of all needed peripherals
  */
 void clock_setup(void) {
-  RCC_CLOCK_SETUP();
+  rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 
   rcc_set_adcpre(RCC_CFGR_ADCPRE_PCLK2_DIV6);
 
@@ -104,24 +104,6 @@ void spi3_setup() // spi3 used for digi pots (fuel gauge etc)
                 GPIO12 | GPIO10); // MOSI , CLK
   gpio_set_mode(GPIOC, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO11); // MISO
   spi_enable(SPI3);
-}
-
-/**
- * Setup USART1 for LINbus
- */
-
-void usart1_setup(void) {
-  /* Setup GPIO pin GPIO_USART1_TX and GPIO_USART1_RX. */
-  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
-                GPIO_USART1_TX);
-  gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO_USART1_RX);
-  usart_set_baudrate(USART1, 19200);
-  usart_set_databits(USART1, 8);
-  usart_set_stopbits(USART1, USART_STOPBITS_1);
-  usart_set_mode(USART1, USART_MODE_TX_RX);
-  usart_set_parity(USART1, USART_PARITY_NONE);
-  usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
-  usart_enable(USART1);
 }
 
 /**

@@ -20,7 +20,7 @@
  * https://openinverter.org/wiki/Volkswagen_Heater
  */
 #ifndef VWAIRHEATER_H
-#define VWAIRTHEATER_H
+#define VWAIRHEATER_H
 #include <cstdint>
 // #include <libopencm3/stm32/usart.h>
 #include "linbus.h"
@@ -37,4 +37,4 @@ private:
   LinBus *lin;
 };
 
-#endif // VWAirHEATER_H
+#endif // VWAIRHEATER_H

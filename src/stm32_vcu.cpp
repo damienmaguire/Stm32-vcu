@@ -91,6 +91,7 @@
 #include "preheater.h"
 #include "printf.h"
 #include "rearoutlanderinverter.h"
+#include "sdocommands.h"
 #include "shifter.h"
 #include "simpbms.h"
 #include "stm32_can.h"
@@ -1039,8 +1040,8 @@ static void UpdateHeater() {
     heaterCoolantVW.SetLinInterface(lin);
     break;
   case HeatType::VWAir:
-    selectedHeater = &heaterCoolantVW;
-    heaterCoolantVW.SetLinInterface(lin);
+    selectedHeater = &heaterAirVW;
+    heaterAirVW.SetLinInterface(lin);
     break;
   case HeatType::MGCoolant:
     selectedHeater = &heaterCoolantMG;
@@ -1392,7 +1393,7 @@ extern "C" void rtc_isr(void) {
   }
 }
 
-extern "C" int main(void) {
+int main(void) {
   extern const TERM_CMD TermCmds[];
 
   clock_setup();
@@ -1433,6 +1434,7 @@ extern "C" int main(void) {
   c.AddCallback(&cb);
   c2.AddCallback(&cb);
   TerminalCommands::SetCanMap(&cm);
+  SdoCommands::SetCanMap(&cm);
   canMap = &cm;
 
   CanHardware *shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
@@ -1472,9 +1474,15 @@ extern "C" int main(void) {
 
   while (1) {
     char c = 0;
+    CanSdo::SdoFrame *sdoFrame = sdo.GetPendingUserspaceSdo();
     t.Run();
     if (sdo.GetPrintRequest() == PRINT_JSON) {
       TerminalCommands::PrintParamsJson(&sdo, &c);
+    }
+    if (0 != sdoFrame) {
+      SdoCommands::ProcessStandardCommands(sdoFrame);
+
+      sdo.SendSdoReply(sdoFrame);
     }
   }
 
