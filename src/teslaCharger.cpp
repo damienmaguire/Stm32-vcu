@@ -23,7 +23,6 @@
 
 static bool HVreq = false;
 static bool ChRun = false;
-static uint8_t counter_102 = 0;
 static uint8_t CurReq = 0;
 static uint16_t HVvolts = 0;
 static uint16_t HVspnt = 0;
@@ -72,8 +71,8 @@ void teslaCharger::Task100Ms() {
   CurReq = MIN(CurReq, 45); // Max allowed is 45A
 
   bytes[0] = 0x00;
-  bytes[1] = (HVvoltspnt & 0xFF);          // HV voltage lowbyte
-  bytes[2] = ((HVvoltspnt & 0xFF00) >> 8); // HV voltage highbyte
+  bytes[1] = (HVspnt & 0xFF);          // HV voltage lowbyte
+  bytes[2] = ((HVspnt & 0xFF00) >> 8); // HV voltage highbyte
   bytes[3] = CurReq;                       // HV Current Request
 
   if (ChRun) {
@@ -82,7 +81,7 @@ void teslaCharger::Task100Ms() {
     bytes[5] = 0x00; // send Chg disable
   }
 
-  bytes[6] = SOC;
+  bytes[6] = Param::GetInt(Param::SOC);
   bytes[7] = 0x00;
 
   can->Send(0x102, (uint32_t *)bytes, 8);
