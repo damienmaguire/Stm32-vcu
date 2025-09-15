@@ -39,11 +39,11 @@ void teslaCharger::DecodeCAN(int id, uint32_t data[2]) {
   uint8_t *bytes = (uint8_t *)data;
 
   if (id == 0x109){
-    if(bytes[5]==0x05) {
-        HVreq=true;
+    if(bytes[5] == 0x05) {
+        HVreq = true;
     }
-    if(bytes[5]==0x00) {
-        HVreq=false;
+    if(bytes[5] == 0x00) {
+        HVreq = false;
     }
 
     // can->AddSend(Param::udc, 0x109, 8, 16, 1);
@@ -72,11 +72,11 @@ void teslaCharger::Task100Ms() {
   CurReq = MIN(CurReq, 45); // Max allowed is 45A
 
   bytes[0] = 0x00;
-  bytes[1] = (HVvoltspnt&0xFF);          // HV voltage lowbyte
-  bytes[2] = ((HVvoltspnt&0xFF00) >> 8); // HV voltage highbyte
-  bytes[3] = CurReq;                     // HV Current Request
+  bytes[1] = (HVvoltspnt & 0xFF);          // HV voltage lowbyte
+  bytes[2] = ((HVvoltspnt & 0xFF00) >> 8); // HV voltage highbyte
+  bytes[3] = CurReq;                       // HV Current Request
 
-  if(ChRun){
+  if (ChRun) {
     bytes[5] = 0x01; // send Chg enable
   } else {
     bytes[5] = 0x00; // send Chg disable
