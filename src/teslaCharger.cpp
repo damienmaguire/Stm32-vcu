@@ -38,19 +38,19 @@ void teslaCharger::SetCanInterface(CanHardware *c) {
 void teslaCharger::DecodeCAN(int id, uint32_t data[2]) {
   uint8_t *bytes = (uint8_t *)data;
 
-  if (id == 0x109){
+  if (id == 0x109) {
     if(bytes[5] == 0x05) {
-        HVreq = true;
+      HVreq = true;
     }
     if(bytes[5] == 0x00) {
-        HVreq = false;
+      HVreq = false;
     }
 
     // can->AddSend(Param::udc, 0x109, 8, 16, 1);
     // can->AddSend(Param::idc, 0x109, 24, 16, 1);
     // can->AddSend(Param::opmode, 0x109, 40, 3, 5); //Set charging and connlock
     // at once
-    }
+  }
 }
 
 void teslaCharger::Task100Ms() {
