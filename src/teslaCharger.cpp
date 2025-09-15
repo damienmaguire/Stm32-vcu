@@ -73,7 +73,7 @@ void teslaCharger::Task100Ms() {
   bytes[0] = 0x00;
   bytes[1] = (HVspnt & 0xFF);          // HV voltage lowbyte
   bytes[2] = ((HVspnt & 0xFF00) >> 8); // HV voltage highbyte
-  bytes[3] = CurReq;                       // HV Current Request
+  bytes[3] = CurReq;                   // HV Current Request
 
   if (ChRun) {
     bytes[5] = 0x01; // send Chg enable
