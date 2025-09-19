@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 155
+// Next param id (increase when adding new parameter!): 156
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -51,6 +51,7 @@
   PARAM_ENTRY(CAT_SETUP, CompressorCan, CAN_DEV, 0, 1, 0, 148)                 \
   PARAM_ENTRY(CAT_SETUP, MotActive, MotorsAct, 0, 3, 0, 129)                   \
   PARAM_ENTRY(CAT_SETUP, ConfigCANOI, ONOFF, 0, 1, 0, 149)                     \
+  PARAM_ENTRY(CAT_SETUP, UseRS232, ONOFF, 0, 1, 0, 155)                        \
   PARAM_ENTRY(CAT_THROTTLE, potmin, "dig", 0, 4095, 0, 7)                      \
   PARAM_ENTRY(CAT_THROTTLE, potmax, "dig", 0, 4095, 4095, 8)                   \
   PARAM_ENTRY(CAT_THROTTLE, pot2min, "dig", 0, 4095, 4095, 9)                  \
