@@ -194,7 +194,7 @@
     VALUE_ENTRY(FrontRearBal,  "%",                 2082 ) \
     VALUE_ENTRY(cruisespeed,   "rpm",               2033 ) \
     VALUE_ENTRY(cruisestt,     CRUISESTATES,        2034 ) \
-    VALUE_ENTRY(din_cruise,    ONOFF,               2035 ) \
+    VALUE_ENTRY(din_HVreq,     ONOFF,               2035 ) \
     VALUE_ENTRY(din_start,     ONOFF,               2036 ) \
     VALUE_ENTRY(din_brake,     ONOFF,               2037 ) \
     VALUE_ENTRY(din_forward,   ONOFF,               2038 ) \
