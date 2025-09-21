@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.30.A
+#define VER 2.31.A
 
 
 /* Entries must be ordered as follows:
@@ -194,7 +194,7 @@
     VALUE_ENTRY(FrontRearBal,  "%",                 2082 ) \
     VALUE_ENTRY(cruisespeed,   "rpm",               2033 ) \
     VALUE_ENTRY(cruisestt,     CRUISESTATES,        2034 ) \
-    VALUE_ENTRY(din_cruise,    ONOFF,               2035 ) \
+    VALUE_ENTRY(din_HVreq,     ONOFF,               2035 ) \
     VALUE_ENTRY(din_start,     ONOFF,               2036 ) \
     VALUE_ENTRY(din_brake,     ONOFF,               2037 ) \
     VALUE_ENTRY(din_forward,   ONOFF,               2038 ) \
