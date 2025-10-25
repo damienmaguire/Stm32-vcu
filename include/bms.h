@@ -40,6 +40,7 @@ public:
   virtual void DecodeCAN(int, uint8_t *) {};
   virtual void DeInit() {};
   virtual float MaxChargeCurrent() { return 9999.0; };
+  virtual void Task10Ms() {};
   virtual void Task100Ms() {
     Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
     Param::SetFloat(Param::BMS_Vmin, 0);
