@@ -63,7 +63,7 @@ public:
   void SetOil(int16_t o) { oil = o; }
 
 private:
-  int16_t dc_bus_voltage, mg1_speed, mg2_speed, gear, oil;
+  int16_t dc_bus_voltage, dcdc_voltage, mg1_speed, mg2_speed, gear, oil;
   float temp_inv_water, temp_inv_inductor;
   bool timerIsRunning;
   int scaledTorqueTarget;
