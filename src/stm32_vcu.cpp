@@ -83,6 +83,7 @@
 #include "Can_OBD2.h"
 #include "dcdc.h"
 #include "TeslaDCDC.h"
+#include "iPaceDCDC.h"
 #include "BMW_E31.h"
 #include "shifter.h"
 #include "digipot.h"
@@ -90,6 +91,7 @@
 #include "E65_Lever.h"
 #include "JLR_G1.h"
 #include "JLR_G2.h"
+#include "JLR_iP.h"
 #include "no_Lever.h"
 #include "CPC.h"
 #include "Foccci.h"
@@ -184,6 +186,7 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
+static JLR_iP iPaceshift;
 static vwCoolantHeater heaterCoolantVW;
 static mgCoolantHeater heaterCoolantMG;
 static vwAirHeater heaterAirVW;
@@ -202,6 +205,7 @@ static DaisychainBMS BMSdaisychain;
 static KangooBMS BMSRenaultKangoo33;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
+static iPaceDCDC DCDCiPace;
 static BMS* selectedBMS = &BMSnone;
 static DCDC* selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
@@ -1086,6 +1090,10 @@ static void UpdateDCDC()
         selectedDCDC = &DCDCTesla;
         break;
 
+    case DCDCModes::ipace:
+        selectedDCDC = &DCDCiPace;
+        break;
+
     default:
         // Default to no DCDC
         selectedDCDC = &DCDCnone;
@@ -1137,6 +1145,10 @@ static void UpdateShifter()
 
     case ShifterModes::BMWE65:
         selectedShifter = &E65GearLever;
+        break;
+
+    case ShifterModes::JLRiP:
+        selectedShifter = &iPaceshift;
         break;
 
     default:

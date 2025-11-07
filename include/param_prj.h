@@ -274,7 +274,7 @@
                      "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, 16=ShiftLockNO, 17=PreHeatOut, 18=PwmTim3, 19=CpSpoof,"\
                      "20=GS450pump, 21=PwmTempGauge, 22=PwmSocGauge"
 #define APINFUNCS    "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
-#define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
+#define SHIFTERS     "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65, 5=JLR_iP"
 #define SHNTYPE      "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
 #define DMODES       "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES     "0=SingleChannel, 1=DualChannel"
@@ -287,7 +287,7 @@
 #define OPMODES      "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge, 5=Preheat"
 #define DOW          "0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat"
 #define CHGTYPS      "0=Off, 1=AC, 2=DCFC"
-#define DCDCTYPES    "0=NoDCDC, 1=TeslaG2"
+#define DCDCTYPES    "0=NoDCDC, 1=TeslaG2, 2=iPace"
 #define STATUS       "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, 32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
 #define CCS_STATUS   "0=NotRdy, 1=ready, 2=SWoff, 3=interruption, 4=Prech, 5=insulmon, 6=estop, 7=malfunction, 15=invalid"
 #define DIRS         "-1=Reverse, 0=Neutral, 1=Drive, 2=Park"
@@ -430,7 +430,8 @@ enum BMSModes
 enum DCDCModes
 {
     NoDCDC = 0,
-    TeslaG2 = 1
+    TeslaG2 = 1,
+    ipace =2
 
 };
 
@@ -440,7 +441,8 @@ enum ShifterModes
     BMWF30 = 1,
     JLRG1 = 2,
     JLRG2 =3,
-    BMWE65 =4
+    BMWE65 =4,
+    JLRiP =5
 
 };
 
