@@ -36,6 +36,11 @@ Now you can say : I drive a Jaaaaag!!!
  *
  */
 
+ //////////////CRC lookups for the 0x17A//////////////////////////////////////////////////
+const uint8_t CRC17A[16]={0x1B,0x2D,0xD6,0x74,0x8F,0xB9,0x42,0xF3,0x08,0x3E,0xC5,0x67,0x9C,0xAA,0x51,0xE0};
+const uint8_t Cnt17A[16]={0xA8,0x18,0x88,0xF8,0x68,0xD8,0x48,0xB8,0x28,0x98,0x08,0x78,0xE8,0x58,0xC8,0x38};
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+uint8_t Cycle17A=0;
 
 
  void iPaceDCDC::SetCanInterface(CanHardware* c)
@@ -69,26 +74,19 @@ uint8_t bytes[8];
    {
    bytes[0]=0x00;//This message will command the DCDC 12v setpoint
    bytes[1]=0x00;//goes at 100ms
-   bytes[2]=0xFF;
-   bytes[3]=0xC5;//crc here. will try static as dcdc may not care...
-   bytes[4]=0x08;
-   bytes[5]=0x00;
+   bytes[2]=0xFF;//these first bytes stay the same
+   bytes[3]=CRC17A[Cycle17A];//crc here.
+   bytes[4]=Cnt17A[Cycle17A];//Mod 16 counter
+   bytes[5]=0x00;//these last 3 stay the same
    bytes[6]=0x00;
-   bytes[7]=0x8D;
-   }
-   else
-   {
-   bytes[0]=0x00;//This message will command the DCDC the DCDC 12v setpoint
-   bytes[1]=0x00;//goes at 100ms
-   bytes[2]=0xFF;
-   bytes[3]=0x08;//crc here. will try static as dcdc may not care...
-   bytes[4]=0x28;
-   bytes[5]=0x00;
-   bytes[6]=0x00;
-   bytes[7]=0x7F;
+   bytes[7]=0x8D;//14.1V
+   if(Cycle17A>0x0F) Cycle17A=0;
+   Cycle17A++;
+   can->Send(0x17A, bytes, 8);
    }
 
-   can->Send(0x17A, bytes, 8);
+
+
 
 
    if(opmode==MOD_RUN || opmode==MOD_CHARGE)
