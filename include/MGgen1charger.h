@@ -33,11 +33,11 @@ class MGgen1charger: public Chargerhw
 {
 
 public:
-//void DecodeCAN(int id, uint32_t data[2]);
-//void Task100Ms();
+void DecodeCAN(int id, uint32_t data[2]);
+void Task100Ms();
 //void Off();
 bool ControlCharge(bool RunCh, bool ACReq);
-//void SetCanInterface(CanHardware* c);
+void SetCanInterface(CanHardware* c);
 
 
 private:
