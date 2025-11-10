@@ -24,7 +24,7 @@
 
 /* Control of the MG Gen 1 6.6kw single phase OBC */
 
-#include <stdint.h>"
+#include <stdint.h>
 #include "params.h"
 #include "chargerhw.h"
 
@@ -36,12 +36,12 @@ public:
 //void DecodeCAN(int id, uint32_t data[2]);
 //void Task100Ms();
 //void Off();
-//bool ControlCharge(bool RunCh, bool ACReq);
+bool ControlCharge(bool RunCh, bool ACReq);
 //void SetCanInterface(CanHardware* c);
 
 
 private:
-
+bool clearToStart=false;
 //static void handle38A(uint32_t data[2]);
 };
 

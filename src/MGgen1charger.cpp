@@ -21,6 +21,87 @@
 
 #include <MGgen1charger.h>
 
-/* Control of the MG Gen 1 charger. *
+/* Control of the MG Gen 1 charger. */
+static uint8_t PlugStat=0;
+
+
+
+
+bool MGgen1charger::ControlCharge(bool RunCh, bool ACReq)
+{
+    int chgmode = Param::GetInt(Param::interface);
+    PlugStat = Param::GetInt(Param::PlugDet);
+    switch(chgmode)
+    {
+    case Unused:
+        if (PlugStat == 1 && ACReq)
+        {
+            clearToStart=true;
+            return true;
+        }
+        else
+        {
+            clearToStart=false;
+            return false;
+        }
+
+        break;
+
+    case i3LIM:
+        if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
+        {
+            clearToStart=true;
+            return true;
+        }
+        else
+        {
+            clearToStart=false;
+            return false;
+        }
+        break;
+
+    case CPC:
+        if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
+        {
+            clearToStart=true;
+            return true;
+        }
+        else
+        {
+            clearToStart=false;
+            return false;
+        }
+        break;
+
+    case Foccci:
+        if(RunCh && ACReq)//we have a startup request to AC charge from a charge interface
+        {
+            clearToStart=true;
+            return true;
+        }
+        else
+        {
+            clearToStart=false;
+            return false;
+        }
+        break;
+
+    case Chademo:
+        if (RunCh && ACReq)
+        {
+            clearToStart=true;
+            return true;
+        }
+        else
+        {
+            clearToStart=false;
+            return false;
+        }
+
+        break;
+
+    }
+    return false;
+}
 
 
