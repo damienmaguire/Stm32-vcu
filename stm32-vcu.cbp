@@ -67,6 +67,7 @@
 		<Unit filename="include/JLR_iP.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/MGCoolantHeater.h" />
+		<Unit filename="include/MGgen1charger.h" />
 		<Unit filename="include/MGgen2V2Lcharger.h" />
 		<Unit filename="include/NissanPDM.h" />
 		<Unit filename="include/NoInverter.h" />
@@ -173,6 +174,7 @@
 		<Unit filename="src/JLR_iP.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/MGCoolantHeater.cpp" />
+		<Unit filename="src/MGgen1charger.cpp" />
 		<Unit filename="src/MGgen2V2Lcharger.cpp" />
 		<Unit filename="src/NissLeafMng.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />

@@ -46,7 +46,7 @@ OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.
            CPC.o ElconCharger.o RearOutlanderinverter.o linbus.o VWCoolantHeater.o JLR_G1.o JLR_G2.o Foccci.o digipot.o\
 		   OutlanderHeartBeat.o E65_Lever.o leafbms.o V_Classic.o kangoobms.o OutlanderCanHeater.o VWAirHeater.o\
 		   MGCoolantHeater.o NissLeafMng.o preheater.o MGgen2V2Lcharger.o OutlanderCompressor.o VolvoP1.o JLR_iP.o iPaceDCDC.o\
-		   
+		   MGgen1charger.o
 
 
 

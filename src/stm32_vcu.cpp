@@ -109,6 +109,7 @@
 #include "preheater.h"
 #include "MGCoolantHeater.h"
 #include "MGgen2V2Lcharger.h"
+#include "MGgen1charger.h"
 #include "compressor.h"
 #include "noCompressor.h"
 #include "OutlanderCompressor.h"
@@ -171,6 +172,7 @@ static extCharger chgdigi;
 static amperaCharger ampChg;
 static outlanderCharger outChg;
 static MGgen2V2Lcharger MGgen2v2l;
+static MGgen1charger MGgen1ch;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
@@ -982,6 +984,9 @@ static void UpdateCharger()
         break;
     case ChargeModes::MGgen2:
         selectedCharger = &MGgen2v2l;
+        break;
+    case ChargeModes::MGgen1:
+        selectedCharger = &MGgen1ch;
         break;
 
 
