@@ -759,6 +759,7 @@ static void Ms10Task(void)
         {
             DigIo::inv_out.Set(); //inverter power on
         }
+        DigIo::inv_out.Set(); //inverter power on. This is a temp bodge for the T3RD as M3 active disch on otherwise
         IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
         IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
         if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
@@ -803,12 +804,14 @@ static void Ms10Task(void)
     case MOD_PCHFAIL:
         StartSig=false;
         DigIo::prec_out.Clear();//explicitly turn off precharge relay in a fail condition
+        DigIo::inv_out.Clear(); //inverter power off. This is a temp bodge for the T3RD as M3 active disch on.
         if(initbyCharge && !chargeMode) opmode = MOD_OFF;//only go to off if the signal from charge or vehicle start is removed
         if(initbyStart && !selectedVehicle->Ready()) opmode = MOD_OFF;//this avoids oscillation in the event of a precharge system failure
         Param::SetInt(Param::opmode, opmode);
         break;
 
     case MOD_CHARGE:
+        DigIo::inv_out.Set(); //inverter power on. This is a temp bodge for the T3RD as M3 active disch on otherwise
         if(rlyDly!=0) rlyDly--;//here we are going to pause before energising precharge to prevent too many contactors pulling amps at the same time
         if(rlyDly==0)
         {

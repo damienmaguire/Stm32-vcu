@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include "params.h"
 #include "chargerhw.h"
+#include "iomatrix.h"
 
 
 class MGgen1charger: public Chargerhw
