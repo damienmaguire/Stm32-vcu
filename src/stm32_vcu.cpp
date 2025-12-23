@@ -375,7 +375,7 @@ static void Ms100Task(void)
     Param::SetInt(Param::cruisestt, selectedVehicle->GetCruiseState());
     Param::SetFloat(Param::FrontRearBal, selectedVehicle->GetFrontRearBalance());
 
-    utils::ProcessCruiseControlButtons();
+    //utils::ProcessCruiseControlButtons(); NOT SUPPORTED
 
     selectedInverter->Task100Ms();
     selectedVehicle->Task100Ms();

@@ -405,8 +405,6 @@ float ProcessThrottle(int speed)
         finalSpnt = MAX(cruiseThrottle, finalSpnt);
     }
 */
-    //finalSpnt = Throttle::RampThrottle(finalSpnt); //OLD - Throttle ramping reorganised in V2.30A
-
     Throttle::UdcLimitCommand(finalSpnt,Param::GetFloat(Param::udc));
     Throttle::IdcLimitCommand(finalSpnt, ABS(Param::GetFloat(Param::idc)));
     Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));
@@ -455,6 +453,7 @@ void CalcSOC()
     Param::SetFloat(Param::SOC,SOCVal);
 }
 
+/* Function NOT supported
 void ProcessCruiseControlButtons()
 {
     static bool transition = false;
@@ -549,6 +548,7 @@ void ProcessCruiseControlButtons()
         Param::SetInt(Param::cruisespeed, cruisespeed);
     }
 }
+*/
 
 void CpSpoofOutput()
 {
