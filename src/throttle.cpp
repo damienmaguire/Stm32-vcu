@@ -150,27 +150,6 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
         speed *= -1;
     }
 
-    //limiting speed change rate
-    if(ABS(speed-SpeedFiltered)>ThrotRpmFilt)
-    {
-        if(speed > SpeedFiltered)
-        {
-            SpeedFiltered +=  ThrotRpmFilt;
-        }
-        else
-        {
-            SpeedFiltered -=  ThrotRpmFilt;
-        }
-    }
-    else
-    {
-        SpeedFiltered = speed;
-    }
-
-    speed = SpeedFiltered;
-
-    ///////////////////////
-
     if(dir == 0)//neutral no torque command
     {
         return 0;
@@ -184,7 +163,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
         }
         else if (speed < regenRpm)
         {
-            potnom = utils::change(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
+            potnom = utils::changeFloat(speed, regenendRpm, regenRpm, 0, regenBrake);//taper regen according to speed
             return potnom;
         }
         else
@@ -241,7 +220,7 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal)
     }
     else if(speed < regenRpm)
     {
-        regenlim = utils::change(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
+        regenlim = utils::changeFloat(speed, regenendRpm, regenRpm, 0, regenmax);//taper regen according to speed
     }
     else
     {

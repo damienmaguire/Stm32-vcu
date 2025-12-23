@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.31.A
+#define VER 2.40.TA
 
 
 /* Entries must be ordered as follows:
@@ -243,8 +243,18 @@
     VALUE_ENTRY(udcheater,     "V",                 2097 ) \
     VALUE_ENTRY(powerheater,   "W",                 2098 ) \
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
+    VALUE_ENTRY(MG1Torque,"",                       2109 ) \
+    VALUE_ENTRY(MG2Torque,"",                       2110 ) \
+    VALUE_ENTRY(MG1Raw, "",                         2111 ) \
+    VALUE_ENTRY(MG2Raw, "",                         2112 ) \
+    VALUE_ENTRY(MG1Raw2,     "",                    2113 ) \
+    VALUE_ENTRY(DMA_RxComplete, ONOFF,              2114 ) \
+    VALUE_ENTRY(DMA_TxComplete, ONOFF,              2115 ) \
+    VALUE_ENTRY(DMA_RxTimeout,  "",                 2116 ) \
+    VALUE_ENTRY(DMA_ConsecFail, "",                 2117 ) \
+    VALUE_ENTRY(HTM_State,      "",                 2118 ) \
 
-//Next value Id: 2108
+//Next value Id: 2119
 
 //Dead params
 /*
