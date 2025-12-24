@@ -439,10 +439,63 @@ static void Ms100Task(void)
     {
         ACrequest=selectedChargeInt->ACRequest(RunChg);
     }
+    // End charge interface logic
 
-    if (IOMatrix::GetPin(IOMatrix::HEATREQ) != &DigIo::dummypin)
+    // Reading HeatReq inpput
+    if (IOMatrix::GetPin(IOMatrix::HEATREQ) !=
+            &DigIo::dummypin) // digital input has priority, check if used
     {
-        Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+        Param::SetInt(Param::HeatReq, IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+    }
+    else if (Param::GetInt(Param::GPA1Func) == IOMatrix::HEATER_POT ||
+             Param::GetInt(Param::GPA2Func) ==
+             IOMatrix::HEATER_POT) // check if Anolgue Heater input used
+    {
+        int htrPotVal = IOMatrix::GetAnaloguePin(IOMatrix::HEATER_POT)
+                        ->Get(); // Get input value
+        Param::SetInt(Param::HtPotVal, htrPotVal);
+
+        if (Param::GetInt(Param::HeatPotDir) == 2 ||
+                Param::GetInt(Param::HeatPotDir) ==
+                3) // If higher then threshold is HEAT ON
+        {
+
+            if (htrPotVal >
+                    Param::GetInt(Param::HeatPotOn)) // if value is above threshold
+            {
+                if (Param::GetInt(Param::HeatPotDir) == 3)
+                    Param::SetInt(
+                        Param::HeatPercnt,
+                        utils::change(htrPotVal, Param::GetInt(Param::HeatPotOn),
+                                      Param::GetInt(Param::HeatPotFull), 0,
+                                      100));        // map threshold to 0 and full to 100
+                Param::SetInt(Param::HeatReq, 1); // On
+            }
+            else
+            {
+                Param::SetInt(Param::HeatReq, 0); // Off
+            }
+        }
+        else if (Param::GetInt(Param::HeatPotDir) == 0 ||
+                 Param::GetInt(Param::HeatPotDir) ==
+                 1) // If higher then threshold is HEAT ON
+        {
+            if (htrPotVal <
+                    Param::GetInt(Param::HeatPotOn)) // if value is below threshold
+            {
+                if (Param::GetInt(Param::HeatPotDir) == 1)
+                    Param::SetInt(
+                        Param::HeatPercnt,
+                        utils::change(htrPotVal, Param::GetInt(Param::HeatPotOn),
+                                      Param::GetInt(Param::HeatPotFull), 0,
+                                      100));        // map threshold to 100 and full to 0
+                Param::SetInt(Param::HeatReq, 1); // On
+            }
+            else
+            {
+                Param::SetInt(Param::HeatReq, 0); // Of
+            }
+        }
     }
 
     DigiPot::SetPot1Step(); //just for dev

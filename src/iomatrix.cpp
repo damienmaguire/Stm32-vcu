@@ -30,37 +30,35 @@ AnaIn* const IOMatrix::paramToPinAnalgue[] = {
    &AnaIn::GP_analog1, &AnaIn::GP_analog2
 };
 
-DigIo* IOMatrix::functionToPin[];
+DigIo *IOMatrix::functionToPin[];
 
-void IOMatrix::AssignFromParams()
-{
-   for (int i = 0; i < LAST; i++)
-   {
-      functionToPin[i] = &DigIo::dummypin;
-   }
+void IOMatrix::AssignFromParams() {
+  for (int i = 0; i < LAST; i++) {
+    functionToPin[i] = &DigIo::dummypin;
+  }
 
-   for (int i = 0; i < 10; i++)//First orignal IO pin params
-   {
-      functionToPin[Param::GetInt((Param::PARAM_NUM)(FIRST_IO_PARAM + i))] = paramToPin[i]; //Hard coded so hard coded bodge to fix
-   }
+  for (int i = 0; i < 10; i++) // First orignal IO pin params
+  {
+    functionToPin[Param::GetInt((Param::PARAM_NUM)(FIRST_IO_PARAM + i))] =
+        paramToPin[i]; // Hard coded so hard coded bodge to fix
+  }
 
-   for (int i = 10; i < numPins; i++)//PB1 PB2 PB3 params
-   {
-      functionToPin[Param::GetInt((Param::PARAM_NUM)(SEC_IO_PARAM + i-10))] = paramToPin[i]; //Hard coded so hard coded bodge to fix
-   }
+  for (int i = 10; i < numPins; i++) // PB1 PB2 PB3 params
+  {
+    functionToPin[Param::GetInt((Param::PARAM_NUM)(SEC_IO_PARAM + i - 10))] =
+        paramToPin[i]; // Hard coded so hard coded bodge to fix
+  }
 }
 
-AnaIn* IOMatrix::functionToPinAnalgoue[];
+AnaIn *IOMatrix::functionToPinAnalgoue[];
 
-void IOMatrix::AssignFromParamsAnalogue()
-{
-   for (int i = 0; i < LAST_ANAL; i++)
-   {
-      functionToPinAnalgoue[i] = &AnaIn::dummyAnal;
-   }
+void IOMatrix::AssignFromParamsAnalogue() {
+  for (int i = 0; i < LAST_ANAL; i++) {
+    functionToPinAnalgoue[i] = &AnaIn::dummyAnal;
+  }
 
-   for (int i = 0; i < numAnaloguePins; i++)
-   {
-      functionToPinAnalgoue[Param::GetInt((Param::PARAM_NUM)(FIRST_AI_PARAM + i))] = paramToPinAnalgue[i];
-   }
+  for (int i = 0; i < numAnaloguePins; i++) {
+    functionToPinAnalgoue[Param::GetInt(
+        (Param::PARAM_NUM)(FIRST_AI_PARAM + i))] = paramToPinAnalgue[i];
+  }
 }
