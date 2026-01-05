@@ -1,79 +1,87 @@
 /*
  * This file is part of the tumanako_vc project.
  *
- * Copyright (C) 2010 Johannes Huebner <contact@johanneshuebner.com>
- * Copyright (C) 2010 Edward Cheeseman <cheesemanedward@gmail.com>
- * Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
+ * Copyright (C) 2010
+ * Johannes Huebner <contact@johanneshuebner.com>
+ * Copyright (C) 2010 Edward
+ * Cheeseman <cheesemanedward@gmail.com>
+ * Copyright (C) 2009 Uwe Hermann
+ * <uwe@hermann-uwe.de>
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
+ * This program is free software: you can
+ * redistribute it and/or modify
+ * it under the terms of the GNU General Public
+ * License as published by
+ * the Free Software Foundation, either version 3 of
+ * the License, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * This program is
+ * distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+
+ * *
  * You should have received a copy of the GNU General Public License
+ *
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "hwinit.h"
+#include "digio.h"
+#include "hwdefs.h"
+#include "iomatrix.h"
+#include "params.h"
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/dma.h>
+#include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/rcc.h>
-#include <libopencm3/stm32/usart.h>
-#include <libopencm3/stm32/adc.h>
-#include <libopencm3/stm32/timer.h>
-#include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/rtc.h>
 #include <libopencm3/stm32/spi.h>
-#include <libopencm3/stm32/exti.h>
-#include <libopencm3/stm32/rtc.h>
-#include "hwdefs.h"
-#include "hwinit.h"
-#include "params.h"
-#include "iomatrix.h"
-#include "digio.h"
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/usart.h>
 
 /**
 * Start clocks of all needed peripherals
 */
-void clock_setup(void)
-{
-    RCC_CLOCK_SETUP();
+void clock_setup(void) {
+  RCC_CLOCK_SETUP();
 
-    rcc_set_adcpre(RCC_CFGR_ADCPRE_PCLK2_DIV6);
+  rcc_set_adcpre(RCC_CFGR_ADCPRE_PCLK2_DIV6);
 
-    //The reset value for PRIGROUP (=0) is not actually a defined
-    //value. Explicitly set 16 preemtion priorities
-    SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIGROUP_GROUP16_NOSUB;
+  // The reset value for PRIGROUP (=0) is not actually a defined
+  // value. Explicitly set 16 preemtion priorities
+  SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIGROUP_GROUP16_NOSUB;
 
-    rcc_periph_clock_enable(RCC_GPIOA);
-    rcc_periph_clock_enable(RCC_GPIOB);
-    rcc_periph_clock_enable(RCC_GPIOC);
-    rcc_periph_clock_enable(RCC_GPIOD);
-    rcc_periph_clock_enable(RCC_GPIOE);
-    rcc_periph_clock_enable(RCC_USART3);
-    rcc_periph_clock_enable(RCC_USART2);//GS450H Inverter Comms
-	  rcc_periph_clock_enable(RCC_USART1);//LIN Comms
-    rcc_periph_clock_enable(RCC_TIM1); //GS450H oil pump pwm
-    rcc_periph_clock_enable(RCC_TIM2); //GS450H 500khz usart clock
-    rcc_periph_clock_enable(RCC_TIM3); //PWM outputs
-    rcc_periph_clock_enable(RCC_TIM4); //Scheduler
-    rcc_periph_clock_enable(RCC_DMA1);  //ADC, and UARTS
-    // rcc_periph_clock_enable(RCC_DMA2);
-    rcc_periph_clock_enable(RCC_ADC1);
-    rcc_periph_clock_enable(RCC_CRC);
-    rcc_periph_clock_enable(RCC_AFIO); //CAN AND USART3
-    rcc_periph_clock_enable(RCC_CAN1); //CAN1
-    rcc_periph_clock_enable(RCC_CAN2); //CAN2
-    rcc_periph_clock_enable(RCC_SPI2);  //CAN3
-    rcc_periph_clock_enable(RCC_SPI3);  //Digital POTS
+  rcc_periph_clock_enable(RCC_GPIOA);
+  rcc_periph_clock_enable(RCC_GPIOB);
+  rcc_periph_clock_enable(RCC_GPIOC);
+  rcc_periph_clock_enable(RCC_GPIOD);
+  rcc_periph_clock_enable(RCC_GPIOE);
+  rcc_periph_clock_enable(RCC_USART3);
+  rcc_periph_clock_enable(RCC_USART2); // GS450H Inverter Comms
+  rcc_periph_clock_enable(RCC_USART1); // LIN Comms
+  rcc_periph_clock_enable(RCC_TIM1);   // GS450H oil pump pwm
+  rcc_periph_clock_enable(RCC_TIM2);   // GS450H 500khz usart clock
+  rcc_periph_clock_enable(RCC_TIM3);   // PWM outputs
+  rcc_periph_clock_enable(RCC_TIM4);   // Scheduler
+  rcc_periph_clock_enable(RCC_DMA1);   // ADC, and UARTS
+  // rcc_periph_clock_enable(RCC_DMA2);
+  rcc_periph_clock_enable(RCC_ADC1);
+  rcc_periph_clock_enable(RCC_CRC);
+  rcc_periph_clock_enable(RCC_AFIO); // CAN AND USART3
+  rcc_periph_clock_enable(RCC_CAN1); // CAN1
+  rcc_periph_clock_enable(RCC_CAN2); // CAN2
+  rcc_periph_clock_enable(RCC_SPI2); // CAN3
+  rcc_periph_clock_enable(RCC_SPI3); // Digital POTS
 }
-
 
 void spi2_setup() // spi 2 used for CAN3
 {
@@ -292,7 +300,7 @@ void tim3_setup() {
   timer_enable_oc_output(TIM3, TIM_OC2);
   timer_enable_oc_output(TIM3, TIM_OC3);
 
-   if (!Fixed1K) // No CP Spoof Selected or GS450h Oil pump or Gauges
+  if (!Fixed1K) // No CP Spoof Selected or GS450h Oil pump or Gauges
   {
     timer_set_period(TIM3, Param::GetInt(Param::Tim3_Period));
     timer_set_oc_value(TIM3, TIM_OC1, Param::GetInt(Param::Tim3_1_OC));

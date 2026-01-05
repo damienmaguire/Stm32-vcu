@@ -29,48 +29,44 @@
  * any purpose, commercial or private, without restriction.
  */
 
-#include <stdint.h>
-#include "my_fp.h"
 #include "canhardware.h"
+#include "my_fp.h"
+#include <stdint.h>
 
-class ISA
-{
+class ISA {
 
-    ISA();
-    ~ISA();
-
-
+  ISA();
+  ~ISA();
 
 public:
-    static void RegisterCanMessages(CanHardware* can);
-    static void initialize(CanHardware* can);
-    static void initCurrent(CanHardware* can);
-    static void sendSTORE(CanHardware* can);
-    static void STOP(CanHardware* can);
-    static void START(CanHardware* can);
-    static void RESTART(CanHardware* can);
-    static void deFAULT(CanHardware* can);
-    static void DecodeCAN(int id, uint32_t data[2]);
+  static void RegisterCanMessages(CanHardware *can);
+  static void initialize(CanHardware *can);
+  static void initCurrent(CanHardware *can);
+  static void sendSTORE(CanHardware *can);
+  static void STOP(CanHardware *can);
+  static void START(CanHardware *can);
+  static void RESTART(CanHardware *can);
+  static void deFAULT(CanHardware *can);
+  static void DecodeCAN(int id, uint32_t data[2]);
 
-    static int32_t Voltage;
-    static int32_t Voltage2;
-    static int32_t Voltage3;
-    static int32_t Temperature;
-    static int32_t Amperes;   // Floating point with current in Amperes
-    static int32_t KW;
-    static int32_t KWh;
-    static int32_t Ah;
-
+  static int32_t Voltage;
+  static int32_t Voltage2;
+  static int32_t Voltage3;
+  static int32_t Temperature;
+  static int32_t Amperes; // Floating point with current in Amperes
+  static int32_t KW;
+  static int32_t KWh;
+  static int32_t Ah;
 
 private:
-    static void handle521(uint32_t data[2]);
-    static void handle522(uint32_t data[2]);
-    static void handle523(uint32_t data[2]);
-    static void handle524(uint32_t data[2]);
-    static void handle525(uint32_t data[2]);
-    static void handle526(uint32_t data[2]);
-    static void handle527(uint32_t data[2]);
-    static void handle528(uint32_t data[2]);
+  static void handle521(uint32_t data[2]);
+  static void handle522(uint32_t data[2]);
+  static void handle523(uint32_t data[2]);
+  static void handle524(uint32_t data[2]);
+  static void handle525(uint32_t data[2]);
+  static void handle526(uint32_t data[2]);
+  static void handle527(uint32_t data[2]);
+  static void handle528(uint32_t data[2]);
 };
 
 #endif /* SimpleISA_h */
