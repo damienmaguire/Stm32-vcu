@@ -49,8 +49,8 @@
 #include <libopencm3/stm32/usart.h>
 
 /**
-* Start clocks of all needed peripherals
-*/
+ * Start clocks of all needed peripherals
+ */
 void clock_setup(void) {
   RCC_CLOCK_SETUP();
 
