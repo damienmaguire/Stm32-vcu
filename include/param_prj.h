@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 139
+// Next param id (increase when adding new parameter!): 147
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -86,6 +86,8 @@
   PARAM_ENTRY(CAT_CONTACT, cruiselight, ONOFF, 0, 1, 0, 33)                    \
   PARAM_ENTRY(CAT_CONTACT, errlights, ERRLIGHTS, 0, 255, 0, 34)                \
   PARAM_ENTRY(CAT_COMM, CAN3Speed, CAN3SPD, 0, 2, 0, 77)                       \
+  PARAM_ENTRY(CAT_COMM, ConfigCANOI, ONOFF, 0, 1, 0, 139)                      \
+  PARAM_ENTRY(CAT_COMM, IsaInit, ONOFF, 0, 1, 0, 75)                           \
   PARAM_ENTRY(CAT_CHARGER, BattCap, "kWh", 0.1, 250, 22, 38)                   \
   PARAM_ENTRY(CAT_CHARGER, Voltspnt, "V", 0, 1000, 395, 40)                    \
   PARAM_ENTRY(CAT_CHARGER, Pwrspnt, "W", 0, 12000, 1500, 41)                   \
@@ -145,7 +147,6 @@
   PARAM_ENTRY(CAT_IOPINS, DigiPot2Step, "dig", 0, 255, 0, 118)                 \
   PARAM_ENTRY(CAT_IOPINS, FanTemp, "°C", 0, 100, 40, 134)                      \
   PARAM_ENTRY(CAT_IOPINS, TachoPPR, "PPR", 0, 100, 2, 136)                     \
-  PARAM_ENTRY(CAT_SHUNT, IsaInit, ONOFF, 0, 1, 0, 75)                          \
   PARAM_ENTRY(CAT_PWM, Tim3_Presc, "", 1, 72000, 719, 100)                     \
   PARAM_ENTRY(CAT_PWM, Tim3_Period, "", 1, 100000, 7200, 101)                  \
   PARAM_ENTRY(CAT_PWM, Tim3_1_OC, "", 1, 100000, 3600, 102)                    \

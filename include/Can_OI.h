@@ -26,6 +26,8 @@
 #include "inverter.h"
 #include <stdint.h>
 
+#define NODEIDCANOI 1
+
 class Can_OI : public Inverter {
 public:
   void Task100Ms() override;
@@ -37,6 +39,7 @@ public:
   float GetMotorSpeed() override { return speed; }
   int GetInverterState() override;
   void SetCanInterface(CanHardware *c) override;
+  void ConfigCan();
 
 private:
   static int16_t speed;
@@ -44,6 +47,7 @@ private:
   static int16_t motor_temp;
   static uint16_t voltage;
   static int16_t final_torque_request;
+  static void handleSDO(uint32_t data[2]);
 };
 
 #endif // CAN_OI_H
