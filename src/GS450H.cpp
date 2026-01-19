@@ -484,8 +484,8 @@ void GS450HClass::SetPrius() {
     htm_state = 5;
     inv_status = 0; // must be 0 for prius
   }
-  for (int i = 0; i < 100; i++)
-    htm_data[i] = htm_data_Prius[i];
+  //for (int i = 0; i < 100; i++)
+    //htm_data[i] = htm_data_Prius[i]; // Bricks Gen 3 Prius inverter
   DriveType = PRIUS;
 }
 
