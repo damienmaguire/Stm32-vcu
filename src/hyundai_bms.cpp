@@ -99,17 +99,27 @@ void HyundaiBMS::DecodeCAN(int id, uint8_t *data) {
     break;
 
   case ID_BMS_CURRENT:
-    current = ((int16_t)(data[3] << 8) + data[2]) * 0.05f;
-    // Param::SetFloat(Param::idc, current);
+    current = ((int16_t)(data[3] << 8) + data[2]) * -0.05f;
+    Param::SetFloat(Param::idc, current);
     break;
 
   case ID_BMS_AVAILABLE_POWER:
-    availableChargePower = (data[0] + (data[1] << 8)) * -10;
-    Param::SetFloat(Param::idcmin, availableChargePower / voltage);
-    Param::SetFloat(Param::idcmin, availableChargePower / voltage);
-    availableDischargePower = ((data[2] + (data[3] << 8)) * 10);
-    Param::SetFloat(Param::idcmax, availableDischargePower / voltage);
-    Param::SetFloat(Param::idcmax, availableDischargePower / voltage);
+    availableChargePower = (uint16_t)(((data[1] << 8) | data[0])) * 10;
+    if (voltage > 0) {
+      Param::SetFloat(Param::idcmax, availableChargePower / voltage);
+    } else {
+      Param::SetFloat(Param::idcmax, 0);
+    }
+    Param::SetFloat(Param::BMS_MaxInput, availableChargePower / 1000); // W to
+                                                                       // kW
+    availableDischargePower = ((uint16_t)((data[3] << 8) | data[2]) * -10);
+    if (voltage > 0) {
+      Param::SetFloat(Param::idcmin, availableDischargePower / voltage);
+    } else {
+      Param::SetFloat(Param::idcmin, 0);
+    }
+    Param::SetFloat(Param::BMS_MaxOutput,
+                    availableDischargePower / 1000); // W to kW
     break;
   default:
     break;
