@@ -19,6 +19,11 @@
 #include "hyundai_bms.h"
 
 uint32_t slow_can_counter = 0;
+int HyundaiBMS::availableChargePower;    // W
+int HyundaiBMS::availableDischargePower; // W
+float HyundaiBMS::soc;
+float HyundaiBMS::voltage;
+float HyundaiBMS::current;
 
 void HyundaiBMS::SetCanInterface(CanHardware *c) {
   can = c;
@@ -90,12 +95,12 @@ void HyundaiBMS::DecodeCAN(int id, uint8_t *data) {
 
   case ID_BMS_VOLTAGE:
     voltage = ((data[1] << 8) + data[0]) * 0.1f;
-    Param::SetFloat(Param::udc, voltage);
+    // Param::SetFloat(Param::udc2, voltage);
     break;
 
   case ID_BMS_CURRENT:
     current = ((int16_t)(data[3] << 8) + data[2]) * 0.05f;
-    Param::SetFloat(Param::idc, current);
+    // Param::SetFloat(Param::idc, current);
     break;
 
   case ID_BMS_AVAILABLE_POWER:

@@ -64,12 +64,10 @@ public:
   float MaxChargeCurrent();
   void Task10Ms();
   void Task100Ms();
-  int availableChargePower = 10000; // W
-  int availableDischargePower = 0;  // W
-  float soc;                        //%
-  float voltage;                    // V
-  float current;                    // A
-  uint8_t contactor_state;          // 0x02 -Precharge  0x01 -On
+  static int availableChargePower;    // W
+  static int availableDischargePower; // W
+  static float soc, voltage, current;
+  uint8_t contactor_state; // 0x02 -Precharge  0x01 -On
 
 private:
   bool BMSDataValid();

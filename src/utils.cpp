@@ -23,6 +23,7 @@
 
 #include "bmw_sbox.h"
 #include "hwinit.h"
+#include "hyundai_bms.h"
 #include "iomatrix.h"
 #include "isa_shunt.h"
 #include "my_math.h"
@@ -436,6 +437,24 @@ float ProcessUdc(int motorSpeed) {
     float idc =
         ((float)VWBOX::Amperes) *
         0.1; // get current from sbox sensor and post to parameter database
+    Param::SetFloat(Param::idc, idc);
+  } else if (Param::GetInt(Param::ShuntType) == 5) // Hyundai
+  {
+    if (Param::GetInt(Param::opmode) != MOD_OFF) {
+      float udc = Param::GetInt(
+          Param::INVudc); // get inverter voltage from parameter database
+      Param::SetFloat(Param::udc, udc);
+      float udc2 = HyundaiBMS::voltage; // get battery voltage from Hyundai BMS
+      Param::SetFloat(Param::udc2, udc2);
+    } else {
+      Param::SetFloat(Param::udc, 0);
+      Param::SetFloat(Param::udc2, 0);
+    }
+
+    Param::SetFloat(Param::udc3, 0);
+
+    float idc = HyundaiBMS::current; // get current from Hyundai BMS and post to
+                                     // parameter database
     Param::SetFloat(Param::idc, idc);
   }
 
