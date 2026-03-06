@@ -57,7 +57,7 @@ bool HyundaiBMS::ChargeAllowed() {
     return false;
 
   // Refuse to charge if the current limit is low.
-  if (availableChargePower > -1000)
+  if (availableChargePower < 1000)
     return false;
 
   // Otherwise, charging is permitted.
