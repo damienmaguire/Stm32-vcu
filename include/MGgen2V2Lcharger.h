@@ -45,7 +45,9 @@ public:
 private:
   int opmode;
   uint16_t setVolts, actVolts, termAmps;
+  uint8_t voltagesetpoint;
   int16_t actAmps;
+  float V2Ltimer = 0;
   uint8_t currentRamp;
   bool clearToStart = false, shutDownReq = false, pwmON = false;
   static uint8_t chgStatus, evseDuty;
@@ -56,6 +58,7 @@ private:
   static void handle324(uint32_t data[2]);
   static void handle323(uint32_t data[2]);
   static void handle39F(uint32_t data[2]);
+  static void handle33B(uint32_t data[2]);
   // static void handle38A(uint32_t data[2]);
 };
 
