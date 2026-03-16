@@ -75,6 +75,7 @@
 #include "iomatrix.h"
 #include "isa_shunt.h"
 #include "kangoobms.h"
+#include "stwmbms.h"
 #include "leafbms.h"
 #include "leafinv.h"
 #include "linbus.h"
@@ -202,6 +203,7 @@ static SimpBMS BMSsimp;
 static LeafBMS BMSleaf;
 static DaisychainBMS BMSdaisychain;
 static KangooBMS BMSRenaultKangoo33;
+static STWmBMS stwBms;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
 static ElconDCDC ElconDC;
@@ -1080,6 +1082,9 @@ static void UpdateBMS() {
     break;
   case BMSModes::BMSRenaultKangoo33BMS:
     selectedBMS = &BMSRenaultKangoo33;
+    break;
+  case BMSModes::BMSSTW:
+    selectedBMS = &stwBms;
     break;
   default:
     // Default to no BMS
