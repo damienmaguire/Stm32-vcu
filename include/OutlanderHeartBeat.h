@@ -17,28 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC Converter.
+ *Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC
+ *Converter.
  *
  */
 
 #ifndef OUTLANDERHEARTBEAT_H
 #define OUTLANDERHEARTBEAT_H
 
-#include <stdint.h>
-#include "params.h"
 #include "canhardware.h"
+#include "params.h"
+#include <stdint.h>
 
-class OutlanderHeartBeat
-{
+class OutlanderHeartBeat {
 
 public:
-static void Task100Ms();
-static void SetCanInterface(CanHardware* c);
-static void SetPullInEVSE(bool pullInEVSE);
-
+  static void Task100Ms();
+  static void SetCanInterface(CanHardware *c);
+  static void SetPullInEVSE(bool pullInEVSE);
 
 protected:
-
 };
 
 #endif // OUTLANDERHEARTBEAT_H

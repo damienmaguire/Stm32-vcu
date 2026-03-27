@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <iostream>
 #include "test.h"
+#include <iostream>
 #define EXPORT_TESTLIST
 #include "test_list.h"
 
@@ -27,26 +27,23 @@ using namespace std;
 
 int _failedAssertions = 0;
 
-int main()
-{
-   int dummy;
-   IUnitTest** currentTest = testList;
+int main() {
+  int dummy;
+  IUnitTest **currentTest = testList;
 
-   cout << "Starting unit Tests" << endl;
+  cout << "Starting unit Tests" << endl;
 
-   while (*currentTest)
-   {
-      (*currentTest)->RunTest();
-      currentTest++;
-   }
+  while (*currentTest) {
+    (*currentTest)->RunTest();
+    currentTest++;
+  }
 
-   if (_failedAssertions > 0)
-   {
-      cout << _failedAssertions << " assertions failed" << endl;
-      return -1;
-   }
+  if (_failedAssertions > 0) {
+    cout << _failedAssertions << " assertions failed" << endl;
+    return -1;
+  }
 
-   cout << "All tests passed" << endl;
+  cout << "All tests passed" << endl;
 
-   return 0;
+  return 0;
 }

@@ -19,31 +19,30 @@
  */
 #ifndef PREHEATER_H
 #define PREHEATER_H
-#include <stdint.h>
 #include "params.h"
+#include <stdint.h>
 
-class Preheater 
-{
+class Preheater {
 public:
-   Preheater();
-    void Task200Ms(int opmode, unsigned hours, unsigned minutes);
-    void Ms10Task();
-    void ParamsChange();
-    void SetInitByPreHeat(bool initbyPH);
+  Preheater();
+  void Task200Ms(int opmode, unsigned hours, unsigned minutes);
+  void Ms10Task();
+  void ParamsChange();
+  void SetInitByPreHeat(bool initbyPH);
 
-    bool GetRunPreHeat();
-    bool GetInitByPreHeat();
+  bool GetRunPreHeat();
+  bool GetInitByPreHeat();
 
 private:
-    //Preheat matching the charger timer
-    uint8_t PreHeatSet;
-    bool RunPreHeat;
-    uint32_t PreheatTicks;
-    uint32_t PreheatTicks_1Min;
-    uint8_t PreHeatHrs_tmp;
-    uint8_t PreHeatMins_tmp;
-    uint16_t PreHeatDur_tmp;
-    bool initbyPreHeat;
+  // Preheat matching the charger timer
+  uint8_t PreHeatSet;
+  bool RunPreHeat;
+  uint32_t PreheatTicks;
+  uint32_t PreheatTicks_1Min;
+  uint8_t PreHeatHrs_tmp;
+  uint8_t PreHeatMins_tmp;
+  uint16_t PreHeatDur_tmp;
+  bool initbyPreHeat;
 };
 
 #endif // PREHEATER_H
