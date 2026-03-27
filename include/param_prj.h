@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.40.0TA
+#define VER 2.40.0XA
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -35,7 +35,7 @@
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 4, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
-  PARAM_ENTRY(CAT_SETUP, chargemodes, CHGMODS, 0, 7, 0, 37)                    \
+  PARAM_ENTRY(CAT_SETUP, chargemodes, CHGMODS, 0, 6, 0, 37)                    \
   PARAM_ENTRY(CAT_SETUP, BMS_Mode, BMSMODES, 0, 5, 0, 90)                      \
   PARAM_ENTRY(CAT_SETUP, ShuntType, SHNTYPE, 0, 4, 0, 88)                      \
   PARAM_ENTRY(CAT_SETUP, InverterCan, CAN_DEV, 0, 1, 0, 70)                    \
@@ -48,7 +48,6 @@
   PARAM_ENTRY(CAT_SETUP, CanMapCan, CAN_DEV, 0, 1, 0, 97)                      \
   PARAM_ENTRY(CAT_SETUP, DCDCCan, CAN_DEV, 0, 1, 1, 107)                       \
   PARAM_ENTRY(CAT_SETUP, HeaterCan, CAN_DEV, 0, 1, 1, 138)                     \
-  PARAM_ENTRY(CAT_SETUP, CompressorCan, CAN_DEV, 0, 1, 0, 148)                 \
   PARAM_ENTRY(CAT_SETUP, MotActive, MotorsAct, 0, 3, 0, 129)                   \
   PARAM_ENTRY(CAT_SETUP, ConfigCANOI, ONOFF, 0, 1, 0, 149)                     \
   PARAM_ENTRY(CAT_SETUP, UseRS232, ONOFF, 0, 1, 0, 155)                        \
@@ -67,7 +66,7 @@
   PARAM_ENTRY(CAT_THROTTLE, DirChange, DIRLIM, 0, 2, 0, 147)                   \
   PARAM_ENTRY(CAT_THROTTLE, DirChangeRpm, "rpm", 0, 20000, 500, 139)           \
   PARAM_ENTRY(CAT_THROTTLE, reversemotor, ONOFF, 0, 1, 0, 127)                 \
-  PARAM_ENTRY(CAT_THROTTLE, throtramp, "%/10ms", 1, 100, 10, 13)               \
+  PARAM_ENTRY(CAT_THROTTLE, throtramp, "%/10ms", 0.1, 100, 10, 13)             \
   PARAM_ENTRY(CAT_THROTTLE, throtramprpm, "rpm", 0, 20000, 20000, 14)          \
   PARAM_ENTRY(CAT_THROTTLE, revlim, "rpm", 0, 20000, 6000, 15)                 \
   PARAM_ENTRY(CAT_THROTTLE, revRegen, ONOFF, 0, 1, 0, 137)                     \
@@ -118,8 +117,6 @@
   PARAM_ENTRY(CAT_HEATER, HeatPotDir, ABOVEBELOW, 0, 4, 0, 150)                \
   PARAM_ENTRY(CAT_HEATER, HeatPotOn, "dig", 0, 4095, 0, 151)                   \
   PARAM_ENTRY(CAT_HEATER, HeatPotFull, "dig", 0, 4095, 0, 152)                 \
-  PARAM_ENTRY(CAT_AIRCON, Compressor, COMPRESSMODES, 0, 1, 0, 153)             \
-  PARAM_ENTRY(CAT_AIRCON, AirConCtrl, ONOFF, 0, 1, 0, 154)                     \
   PARAM_ENTRY(CAT_CLOCK, Set_Day, DOW, 0, 6, 0, 46)                            \
   PARAM_ENTRY(CAT_CLOCK, Set_Hour, "Hours", 0, 23, 0, 47)                      \
   PARAM_ENTRY(CAT_CLOCK, Set_Min, "Mins", 0, 59, 0, 48)                        \
@@ -260,9 +257,6 @@
   VALUE_ENTRY(udcheater, "V", 2097)                                            \
   VALUE_ENTRY(powerheater, "W", 2098)                                          \
   VALUE_ENTRY(VehLockSt, ONOFF, 2100)                                          \
-  VALUE_ENTRY(compressStat, COMP_STAT, 2111)                                   \
-  VALUE_ENTRY(compressRPM, "", 2109)                                           \
-  VALUE_ENTRY(PWMHeatOn, ONOFF, 2112)                                          \
   VALUE_ENTRY(uptime, "sec", 2113)                                             \
   VALUE_ENTRY(MG1Torque, "", 2114)                                             \
   VALUE_ENTRY(MG2Torque, "", 2115)                                             \
@@ -298,8 +292,7 @@
   "11=HVRequest,"                                                              \
   "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, "              \
   "16=ShiftLockNO, 17=PreHeatOut, 18=Switch_NoRegen, 19=HVIL,"                 \
-  "20=PwmTim3, 21=CpSpoof, 22=GS450pump, 23=PwmTempGauge, 24=PwmSocGauge,"     \
-  "25=PwmHeater"
+  "20=PwmTim3, 21=CpSpoof, 22=GS450pump, 23=PwmTempGauge, 24=PwmSocGauge"
 #define APINFUNCS "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
 #define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
@@ -348,7 +341,7 @@
 #define HTCTRL "0=Disable, 1=Enable, 2=Timer"
 #define CHGMODS                                                                \
   "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, "    \
-  "6=Elcon, 7=MGgen2"
+  "6=Elcon"
 #define CHGCTRL "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Foccci"
 #define CAN3SPD "0=k33.3, 1=k500, 2=k100"
@@ -527,7 +520,5 @@ enum ccs_status {
 };
 
 enum can_devices { CAN_DEV1 = 0, CAN_DEV2 = 1 };
-
-enum CompressorOptions { NoCompress = 0, OutlanderCompress = 1 };
 
 extern const char *errorListString;

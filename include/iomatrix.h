@@ -53,7 +53,6 @@ public: // order of these matters!
     GS450HOIL,
     PWMTEMPGAUGE,
     PWMSOCGAUGE,
-    PWMHEATER,
     LAST
   };
   // order of these matters!

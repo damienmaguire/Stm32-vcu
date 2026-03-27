@@ -38,14 +38,11 @@
 #include "JLR_G1.h"
 #include "JLR_G2.h"
 #include "MGCoolantHeater.h"
-#include "MGgen2V2Lcharger.h"
 #include "NissanPDM.h"
 #include "NoInverter.h"
 #include "NoVehicle.h"
 #include "OutlanderCanHeater.h"
-#include "OutlanderCompressor.h"
 #include "OutlanderHeartBeat.h"
-#include "PWMHeater.h"
 #include "TeslaDCDC.h"
 #include "VWAirHeater.h"
 #include "VWCoolantHeater.h"
@@ -60,7 +57,6 @@
 #include "chademo.h"
 #include "chargerhw.h"
 #include "chargerint.h"
-#include "compressor.h"
 #include "daisychainbms.h"
 #include "dcdc.h"
 #include "digio.h"
@@ -79,7 +75,6 @@
 #include "leafinv.h"
 #include "linbus.h"
 #include "my_math.h"
-#include "noCompressor.h"
 #include "noHeater.h"
 #include "no_Lever.h"
 #include "nocharger.h"
@@ -170,7 +165,6 @@ static noCharger nochg;
 static extCharger chgdigi;
 static amperaCharger ampChg;
 static outlanderCharger outChg;
-static MGgen2V2Lcharger MGgen2v2l;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
@@ -212,10 +206,6 @@ static Shifter shifterNone;
 static RearOutlanderInverter rearoutlanderInv;
 static LinBus *lin;
 static Preheater preheater;
-static NoCompressor CompressorNone;
-static OutlanderCompressor outlanderCompressor;
-static Compressor *selectedCompressor = &CompressorNone;
-static PWMHeater pwmHeater;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void) {
@@ -344,8 +334,6 @@ static void Ms200Task(void) {
   if (opmode == MOD_RUN) {
     ChgLck = false; // reset charge lockout flag when we drive off
 
-    selectedCompressor->Task200Ms();
-
     // Brake Vac Sensor
     if (Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR ||
         Param::GetInt(Param::GPA2Func) == IOMatrix::VAC_SENSOR) {
@@ -411,11 +399,6 @@ static void Ms100Task(void) {
 
   if (OutlanderCAN == true) {
     OutlanderHeartBeat::Task100Ms();
-  }
-
-  if (opmode == MOD_RUN) // Just Comms
-  {
-    selectedCompressor->Task100Ms();
   }
 
   // Setting reverse light
@@ -693,8 +676,6 @@ static void Ms10Task(void) {
     Param::SetInt(Param::canctr,
                   (Param::GetInt(Param::canctr) + 1) &
                       0xF); // Update the OI can counter in RUN mode only
-  if (opmode == MOD_RUN)
-    selectedCompressor->Task10Ms();
 
   //////////////////////////////////////////////////
   //            MODE CONTROL SECTION              //
@@ -999,9 +980,6 @@ static void UpdateCharger() {
   case ChargeModes::Elcon:
     selectedCharger = &ChargerElcon;
     break;
-  case ChargeModes::MGgen2:
-    selectedCharger = &MGgen2v2l;
-    break;
   }
   // This will call SetCanFilters() via the Clear Callback
   canInterface[0]->ClearUserMessages();
@@ -1055,9 +1033,6 @@ static void UpdateHeater() {
   case HeatType::OutlanderHeater:
     selectedHeater = &outlanderCanHeater;
     OutlanderCAN = true;
-    break;
-  case HeatType::PWM:
-    selectedHeater = &pwmHeater;
     break;
   }
   // This will call SetCanFilters() via the Clear Callback
@@ -1116,22 +1091,6 @@ static void UpdateDCDC() {
   canInterface[1]->ClearUserMessages();
 }
 
-static void UpdateCompressor() {
-  switch (Param::GetInt(Param::Compressor)) {
-  case CompressorOptions::NoCompress:
-    selectedCompressor = &CompressorNone;
-    break;
-  case CompressorOptions::OutlanderCompress:
-    selectedCompressor = &outlanderCompressor;
-    OutlanderCAN = true;
-    break;
-  }
-
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
-}
-
 static void UpdateShifter() {
 
   switch (Param::GetInt(Param::GearLvr)) {
@@ -1177,8 +1136,6 @@ static void SetCanFilters() {
   CanHardware *obd2_can = canInterface[Param::GetInt(Param::OBD2Can)];
   CanHardware *dcdc_can = canInterface[Param::GetInt(Param::DCDCCan)];
   CanHardware *heater_can = canInterface[Param::GetInt(Param::HeaterCan)];
-  CanHardware *compressor_can =
-      canInterface[Param::GetInt(Param::CompressorCan)];
 
   selectedInverter->SetCanInterface(inverter_can);
   selectedVehicle->SetCanInterface(vehicle_can);
@@ -1189,7 +1146,6 @@ static void SetCanFilters() {
   selectedShifter->SetCanInterface(vehicle_can);
   canOBD2.SetCanInterface(obd2_can);
   selectedHeater->SetCanInterface(heater_can);
-  selectedCompressor->SetCanInterface(compressor_can);
 
   if (Param::GetInt(Param::ShuntType) == 1 ||
       Param::GetInt(Param::ShuntType) == 4)
@@ -1224,9 +1180,6 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   case Param::BMS_Mode:
     UpdateBMS();
     break;
-  case Param::Compressor:
-    UpdateCompressor();
-    break;
   case Param::DCdc_Type:
     UpdateDCDC();
     break;
@@ -1238,7 +1191,6 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   case Param::ShuntCan:
   case Param::LimCan:
   case Param::ChargerCan:
-  case Param::CompressorCan:
     canInterface[0]->ClearUserMessages();
     canInterface[1]->ClearUserMessages();
     break;
@@ -1349,7 +1301,6 @@ static bool CanCallback(
     selectedDCDC->DecodeCAN(id, (uint8_t *)data);
     selectedShifter->DecodeCAN(id, data);
     selectedHeater->DecodeCAN(id, data);
-    selectedCompressor->DecodeCAN(id, data);
     break;
   }
   return false;
@@ -1462,7 +1413,6 @@ int main(void) {
   UpdateHeater();
   UpdateDCDC();
   UpdateShifter();
-  UpdateCompressor();
 
   Stm32Scheduler s(TIM4); // We never exit main so it's ok to put it on stack
   scheduler = &s;

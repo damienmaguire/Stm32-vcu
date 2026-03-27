@@ -290,11 +290,6 @@ void tim3_setup() {
   timer_enable_oc_output(TIM3, TIM_OC2);
   timer_enable_oc_output(TIM3, TIM_OC3);
 
-  // Fixed1K uses are incompatible with PWM Heater, throw an error.
-  if (Fixed1K && Param::GetInt(Param::Heater) == HeatType::PWM) {
-    ErrorMessage::Post(ERR_PWMCONFIGERROR);
-  }
-
   if (!Fixed1K) // No CP Spoof Selected or GS450h Oil pump or Gauges
   {
     timer_set_period(TIM3, Param::GetInt(Param::Tim3_Period));

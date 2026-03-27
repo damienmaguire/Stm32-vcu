@@ -484,8 +484,8 @@ void GS450HClass::SetPrius() {
     htm_state = 5;
     inv_status = 0; // must be 0 for prius
   }
-  for (int i = 0; i < 100; i++)
-    htm_data[i] = htm_data_Prius[i];
+  // for (int i = 0; i < 100; i++)
+  //   htm_data[i] = htm_data_Prius[i];
   DriveType = PRIUS;
 }
 
@@ -637,7 +637,7 @@ void GS450HClass::Task1Ms() {
     speedSum /= 113;
     speedSum2 = speedSum;
 
-    htm_data[0] = speedSum2;
+    htm_data[0] = 0; // speedSum2;
     htm_data[75] = (mg1_torque * 4) & 0xFF;
     htm_data[76] = ((mg1_torque * 4) >> 8) & 0xFF;
 
