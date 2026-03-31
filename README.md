@@ -29,6 +29,7 @@ V2.20A now available : https://www.youtube.com/watch?v=wjlucUWX_lc
 - Modular BMS / SimpBMS Support
 - OpenInverter CAN Support
 - CCS DC fast charge via BMW i3 LIM
+- CCS DC fast charging via FOCCCI https://github.com/uhi22/ccs32clara
 - Chademo DC fast charge
 - ISA Shunt / BMW SBOX / VW EBOX supported via CAN
 - Lexus GS450H inverter / gearbox via sync serial
@@ -46,6 +47,10 @@ V2.20A now available : https://www.youtube.com/watch?v=wjlucUWX_lc
 - OBD2 Can support
 - TESLA Gen 2 DCDC Converter Can support
 
+
+# Contributing
+
+Information on how to contribute to this open source project can be found [Contributing Guide](./CONTRIBUTING.md)
 
 # Compiling
 You will need the arm-none-eabi toolchain: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
