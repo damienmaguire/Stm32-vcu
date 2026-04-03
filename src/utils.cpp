@@ -32,7 +32,6 @@
 #include <libopencm3/stm32/timer.h>
 
 namespace utils {
-namespace utils {
 
 #define CAN_TIMEOUT 1 // 1000ms
 #define CAN_TIMEOUT 1 // 1000ms
@@ -61,7 +60,6 @@ void PostErrorIfRunning(ERROR_MESSAGE_NUM err) {
       static bool canIoActive = false;
       int canio = Param::GetInt(Param::canio);
 
-      canIoActive |= canio != 0;
       canIoActive |= canio != 0;
 
       if ((rtc_get_counter_val() - can->GetLastRxTimestamp()) >= CAN_TIMEOUT &&
@@ -1183,4 +1181,3 @@ void PostErrorIfRunning(ERROR_MESSAGE_NUM err) {
                             }
 
                           } // namespace utils
-                        } // namespace utils
