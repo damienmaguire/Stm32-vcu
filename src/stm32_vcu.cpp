@@ -45,7 +45,7 @@
 #include "OutlanderHeartBeat.h"
 #include "TeslaDCDC.h"
 #include "VWAirHeater.h"
-#include "VWCoolantHeater.h"
+#include "VWHeater.h"
 #include "V_Classic.h"
 #include "amperacharger.h"
 #include "amperaheater.h"
