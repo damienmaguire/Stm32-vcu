@@ -32,13 +32,13 @@ bool extCharger::ControlCharge(bool RunCh, bool ACReq) {
   dummy = dummy;
 
   if (ACReq) {
-    chargeAllow = IOMatrix::GetPin(IOMatrix::HVREQ)->Get();
+    chargeAllow = IOMatrix::GetPinIn(IOMatrix::HVREQ)->Get();
     // enable charger digital line.
-    IOMatrix::GetPin(IOMatrix::OBCENABLE)->Set();
+    IOMatrix::GetPinOut(IOMatrix::OBCENABLE)->Set();
     return chargeAllow;
   } else {
     // disable charger digital line when requested by timer or webui.
-    IOMatrix::GetPin(IOMatrix::OBCENABLE)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::OBCENABLE)->Clear();
     return false;
   }
   return false;

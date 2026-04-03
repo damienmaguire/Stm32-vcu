@@ -61,7 +61,7 @@ void Preheater::Task200Ms(int opmode, unsigned hours, unsigned minutes) {
       } else {
         RunPreHeat = false;
       }
-      IOMatrix::GetPin(IOMatrix::PREHEATOUT)->Clear();
+      IOMatrix::GetPinOut(IOMatrix::PREHEATOUT)->Clear();
     }
 
     if (opmode == MOD_PREHEAT) {
@@ -80,11 +80,11 @@ void Preheater::Task200Ms(int opmode, unsigned hours, unsigned minutes) {
         PreheatTicks_1Min = 0;
         PreHeatDur_tmp--; // countdown minutes of charge time remaining.
       }
-      IOMatrix::GetPin(IOMatrix::PREHEATOUT)->Set();
+      IOMatrix::GetPinOut(IOMatrix::PREHEATOUT)->Set();
     }
 
   } else {
-    IOMatrix::GetPin(IOMatrix::PREHEATOUT)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::PREHEATOUT)->Clear();
   }
 }
 

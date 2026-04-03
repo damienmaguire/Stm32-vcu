@@ -348,21 +348,21 @@ static void Ms200Task(void) {
       if (brkVacThresh > BrkVacHyst) {
         // enable pump
         if (brkVacVal > brkVacThresh) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Clear();
         } else if (brkVacVal < BrkVacHyst) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Set();
         }
       } else {
         // enable pump
         if (brkVacVal < brkVacThresh) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Clear();
         } else if (brkVacVal > BrkVacHyst) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Set();
         }
       }
     }
   } else {
-    IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Clear();
   }
 
   preheater.Task200Ms(opmode, hours, minutes);
@@ -403,16 +403,16 @@ static void Ms100Task(void) {
 
   // Setting reverse light
   if (Param::GetInt(Param::dir) < 0) {
-    IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Set();
+    IOMatrix::GetPinOut(IOMatrix::REVERSELIGHT)->Set();
   } else {
-    IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::REVERSELIGHT)->Clear();
   }
 
   // Setting Run light
   if (opmode == MOD_RUN) {
-    IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Set();
+    IOMatrix::GetPinOut(IOMatrix::RUNINDICATION)->Set();
   } else {
-    IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::RUNINDICATION)->Clear();
   }
   // end lights
 
@@ -470,10 +470,10 @@ static void Ms100Task(void) {
   // End charge interface logic
 
   // Reading HeatReq inpput
-  if (IOMatrix::GetPin(IOMatrix::HEATREQ) !=
+  if (IOMatrix::GetPinIn(IOMatrix::HEATREQ) !=
       &DigIo::dummypin) // digital input has priority, check if used
   {
-    Param::SetInt(Param::HeatReq, IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+    Param::SetInt(Param::HeatReq, IOMatrix::GetPinIn(IOMatrix::HEATREQ)->Get());
   } else if (Param::GetInt(Param::GPA1Func) == IOMatrix::HEATER_POT ||
              Param::GetInt(Param::GPA2Func) ==
                  IOMatrix::HEATER_POT) // check if Anolgue Heater input used
@@ -521,8 +521,8 @@ static void Ms100Task(void) {
   }
 
   // Reading HVrequest inpput
-  if (IOMatrix::GetPin(IOMatrix::HVREQ) != &DigIo::dummypin) {
-    ExtHVreq = IOMatrix::GetPin(IOMatrix::HVREQ)
+  if (IOMatrix::GetPinIn(IOMatrix::HVREQ) != &DigIo::dummypin) {
+    ExtHVreq = IOMatrix::GetPinIn(IOMatrix::HVREQ)
                    ->Get(); // Read IO pin to determine if there is an external
                             // HV request
     if (ExtHVreq)
@@ -533,8 +533,8 @@ static void Ms100Task(void) {
   DigiPot::SetPot2Step(); // just for dev
 
   // Reading HVIL input
-  if (IOMatrix::GetPin(IOMatrix::HVIL) != &DigIo::dummypin) {
-    CheckHVIL = IOMatrix::GetPin(IOMatrix::HVIL)->Get();
+  if (IOMatrix::GetPinIn(IOMatrix::HVIL) != &DigIo::dummypin) {
+    CheckHVIL = IOMatrix::GetPinIn(IOMatrix::HVIL)->Get();
     if (CheckHVIL > 0) {
       HVILok = 1;
     } else {
@@ -551,26 +551,26 @@ static void Ms100Task(void) {
         MAX(Param::GetFloat(Param::tmphs), Param::GetFloat(Param::ChgTemp));
 
     if (Param::GetFloat(Param::FanTemp) < tempTemp) {
-      IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Set(); // Coolant Fan On
+      IOMatrix::GetPinOut(IOMatrix::COOLINGFAN)->Set(); // Coolant Fan On
     } else if ((Param::GetFloat(Param::FanTemp) - 5) > tempTemp) {
-      IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
+      IOMatrix::GetPinOut(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
     }
   } else {
-    IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
+    IOMatrix::GetPinOut(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
   }
 
   // HV Active output
   if (opmode == MOD_CHARGE || opmode == MOD_RUN || opmode == MOD_PREHEAT) {
-    IOMatrix::GetPin(IOMatrix::HVACTIVE)->Set(); // HV Active On
+    IOMatrix::GetPinOut(IOMatrix::HVACTIVE)->Set(); // HV Active On
   } else {
-    IOMatrix::GetPin(IOMatrix::HVACTIVE)->Clear(); // HV Active Off
+    IOMatrix::GetPinOut(IOMatrix::HVACTIVE)->Clear(); // HV Active Off
   }
 
   // ShiftLock Out output
   if (opmode == MOD_RUN && Param::GetInt(Param::ShiftLock) == 1) {
-    IOMatrix::GetPin(IOMatrix::SHIFTLOCKNO)->Set(); // Shift Lock Out On
+    IOMatrix::GetPinOut(IOMatrix::SHIFTLOCKNO)->Set(); // Shift Lock Out On
   } else {
-    IOMatrix::GetPin(IOMatrix::SHIFTLOCKNO)->Clear(); // Shift Lock Out Off
+    IOMatrix::GetPinOut(IOMatrix::SHIFTLOCKNO)->Clear(); // Shift Lock Out Off
   }
 }
 
@@ -579,13 +579,13 @@ static void ControlCabHeater(int opmode) {
   // preheat What about charge mode and timer mode?
   if ((opmode == MOD_RUN && Param::GetInt(Param::Control) >= 1) ||
       opmode == MOD_PREHEAT) {
-    IOMatrix::GetPin(IOMatrix::HEATERENABLE)
+    IOMatrix::GetPinOut(IOMatrix::HEATERENABLE)
         ->Set(); // Heater enable and coolant pump on
     selectedHeater->SetTargetTemperature(50); // TODO: Currently does nothing
     selectedHeater->SetPower(Param::GetInt(Param::HeatPwr),
                              Param::GetBool(Param::HeatReq));
   } else {
-    IOMatrix::GetPin(IOMatrix::HEATERENABLE)
+    IOMatrix::GetPinOut(IOMatrix::HEATERENABLE)
         ->Clear(); // Disable heater and coolant pump
     selectedHeater->SetPower(0, 0);
   }
@@ -645,9 +645,9 @@ static void Ms10Task(void) {
 
   if (Param::GetInt(Param::potnom) < Param::GetInt(Param::RegenBrakeLight)) {
     // enable Brake Light Ouput
-    IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+    IOMatrix::GetPinOut(IOMatrix::BRAKELIGHT)->Set();
   } else {
-    IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::BRAKELIGHT)->Clear();
   }
 
   // speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface
@@ -694,9 +694,9 @@ static void Ms10Task(void) {
     initbyCharge = false;
     preheater.SetInitByPreHeat(false);
 
-    DigIo::inv_out.Clear();                           // inverter power off
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
-                                                      // used
+    DigIo::inv_out.Clear();                              // inverter power off
+    IOMatrix::GetPinOut(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
+                                                         // used
     Param::SetInt(
         Param::dir,
         0); // shift to park/neutral on shutdown regardless of shifter pos
@@ -711,7 +711,7 @@ static void Ms10Task(void) {
     }
     if (rlyDly == 0) {
       DigIo::dcsw_out.Clear();
-      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)
+      IOMatrix::GetPinOut(IOMatrix::NEGCONTACTOR)
           ->Clear(); // Negative contactors off if used
       DigIo::prec_out.Clear();
     }
@@ -754,8 +754,8 @@ static void Ms10Task(void) {
     {
       DigIo::inv_out.Set(); // inverter power on
     }
-    IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
+    IOMatrix::GetPinOut(IOMatrix::NEGCONTACTOR)->Set();
+    IOMatrix::GetPinOut(IOMatrix::COOLANTPUMP)->Set();
     if (rlyDly != 0)
       rlyDly--; // here we are going to pause before energising precharge to
                 // prevent too many contactors pulling amps at the same time

@@ -128,19 +128,19 @@
   PARAM_ENTRY(CAT_CLOCK, Pre_Min, "Mins", 0, 59, 0, 54)                        \
   PARAM_ENTRY(CAT_CLOCK, Pre_Dur, "Mins", 0, 60, 0, 55)                        \
   PARAM_ENTRY(CAT_IOPINS, PumpPWM, PumpOutType, 0, 2, 0, 135)                  \
-  PARAM_ENTRY(CAT_IOPINS, Out1Func, PINFUNCS, 0, 18, 6, 80)                    \
-  PARAM_ENTRY(CAT_IOPINS, Out2Func, PINFUNCS, 0, 18, 7, 81)                    \
-  PARAM_ENTRY(CAT_IOPINS, Out3Func, PINFUNCS, 0, 18, 3, 82)                    \
-  PARAM_ENTRY(CAT_IOPINS, SL1Func, PINFUNCS, 0, 18, 0, 83)                     \
-  PARAM_ENTRY(CAT_IOPINS, SL2Func, PINFUNCS, 0, 18, 0, 84)                     \
-  PARAM_ENTRY(CAT_IOPINS, PWM1Func, PINFUNCS, 0, 25, 0, 85)                    \
-  PARAM_ENTRY(CAT_IOPINS, PWM2Func, PINFUNCS, 0, 25, 4, 86)                    \
-  PARAM_ENTRY(CAT_IOPINS, PWM3Func, PINFUNCS, 0, 25, 2, 87)                    \
-  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 19, 12, 98)                \
-  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 19, 12, 99)                  \
-  PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PINFUNCS, 0, 19, 12, 140)                 \
-  PARAM_ENTRY(CAT_IOPINS, PB2InFunc, PINFUNCS, 0, 19, 12, 141)                 \
-  PARAM_ENTRY(CAT_IOPINS, PB3InFunc, PINFUNCS, 0, 19, 12, 142)                 \
+  PARAM_ENTRY(CAT_IOPINS, Out1Func, PINOUTFUNCS, 0, 14, 6, 80)                 \
+  PARAM_ENTRY(CAT_IOPINS, Out2Func, PINOUTFUNCS, 0, 14, 7, 81)                 \
+  PARAM_ENTRY(CAT_IOPINS, Out3Func, PINOUTFUNCS, 0, 14, 3, 82)                 \
+  PARAM_ENTRY(CAT_IOPINS, SL1Func, PINOUTFUNCS, 0, 14, 0, 83)                  \
+  PARAM_ENTRY(CAT_IOPINS, SL2Func, PINOUTFUNCS, 0, 14, 0, 84)                  \
+  PARAM_ENTRY(CAT_IOPINS, PWM1Func, PINOUTFUNCS, 0, 19, 0, 85)                 \
+  PARAM_ENTRY(CAT_IOPINS, PWM2Func, PINOUTFUNCS, 0, 19, 4, 86)                 \
+  PARAM_ENTRY(CAT_IOPINS, PWM3Func, PINOUTFUNCS, 0, 19, 2, 87)                 \
+  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PININFUNCS, 0, 5, 12, 98)               \
+  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PININFUNCS, 0, 5, 2, 99)                  \
+  PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PININFUNCS, 0, 5, 2, 140)                 \
+  PARAM_ENTRY(CAT_IOPINS, PB2InFunc, PININFUNCS, 0, 5, 2, 141)                 \
+  PARAM_ENTRY(CAT_IOPINS, PB3InFunc, PININFUNCS, 0, 5, 2, 142)                 \
   PARAM_ENTRY(CAT_IOPINS, GPA1Func, APINFUNCS, 0, 3, 0, 110)                   \
   PARAM_ENTRY(CAT_IOPINS, GPA2Func, APINFUNCS, 0, 3, 0, 111)                   \
   PARAM_ENTRY(CAT_IOPINS, ppthresh, "dig", 0, 4095, 2500, 114)                 \
@@ -285,14 +285,15 @@
 #define VERSTR STRINGIFY(4=VER)
 // clang-format on
 
-#define PINFUNCS                                                               \
-  "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, "       \
-  "5=WarnIndication,"                                                          \
-  "6=CoolantPump, 7=NegContactor, 8=BrakeLight, 9=ReverseLight, 10=HeatReq, "  \
-  "11=HVRequest,"                                                              \
-  "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, "              \
-  "16=ShiftLockNO, 17=PreHeatOut, 18=Switch_NoRegen, 19=HVIL,"                 \
-  "20=PwmTim3, 21=CpSpoof, 22=GS450pump, 23=PwmTempGauge, 24=PwmSocGauge"
+#define PININFUNCS                                                             \
+  "0=NoneIn, 1=HeatReq, 2=HVRequest, 3=DCFCRequest, 4=Switch_NoRegen,"         \
+  "5=HVIL"
+#define PINOUTFUNCS                                                            \
+  "0=NoneOut, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication,"     \
+  "5=WarnIndication, 6=CoolantPump, 7=NegContactor, 8=BrakeLight, "            \
+  "9=ReverseLight, 10=BrakeVacPump, 11=CoolingFan, 12=HvActive, "              \
+  "13=ShiftLockNO, 14=PreHeatOut, 15=PwmTim3, 16=CpSpoof, "                    \
+  "17=GS450pump, 18=PwmTempGauge, 19=PwmSocGauge"
 #define APINFUNCS "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
 #define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"

@@ -169,8 +169,8 @@ float GetUserThrottleCommand() {
   /// cluch pedal, request no regen (Switch_NoRegen/NOREGEN)... probably safest
   /// part to add this code
 
-  if (IOMatrix::GetPin(IOMatrix::NOREGEN) != &DigIo::dummypin) {
-    Throttle::noregenreq = IOMatrix::GetPin(IOMatrix::NOREGEN)->Get();
+  if (IOMatrix::GetPinIn(IOMatrix::NOREGEN) != &DigIo::dummypin) {
+    Throttle::noregenreq = IOMatrix::GetPinIn(IOMatrix::NOREGEN)->Get();
   } else {
     Throttle::noregenreq = 0;
   }
