@@ -49,72 +49,125 @@ void LeafINV::SetCanInterface(CanHardware *c) {
   NissLeafMng::SetCanInterface(
       c); // set Leaf VCM messages on same bus as Inverter
   can = c;
+  void LeafINV::SetCanInterface(CanHardware * c) {
+    NissLeafMng::SetCanInterface(
+        c); // set Leaf VCM messages on same bus as Inverter
+    can = c;
 
-  can->RegisterUserMessage(0x1DA); // Leaf inv msg
-  can->RegisterUserMessage(0x55A); // Leaf inv msg
-}
+    can->RegisterUserMessage(0x1DA); // Leaf inv msg
+    can->RegisterUserMessage(0x55A); // Leaf inv msg
+    can->RegisterUserMessage(0x1DA); // Leaf inv msg
+    can->RegisterUserMessage(0x55A); // Leaf inv msg
+  }
 
-void LeafINV::DecodeCAN(int id, uint32_t data[2]) {
-  uint8_t *bytes =
-      (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes.
-                       // See comments are useful:)
+  void LeafINV::DecodeCAN(int id, uint32_t data[2]) {
+    uint8_t *bytes =
+        (uint8_t *)data; // arrgghhh this converts the two 32bit array into
+                         // bytes. See comments are useful:)
+    void LeafINV::DecodeCAN(int id, uint32_t data[2]) {
+      uint8_t *bytes =
+          (uint8_t *)data; // arrgghhh this converts the two 32bit array into
+                           // bytes. See comments are useful:)
 
-  if (id == 0x1DA) // THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
-  {
-    voltage = (bytes[0] * 2); // MEASURED VOLTAGE FROM LEAF INVERTER
+      if (id ==
+          0x1DA) // THIS MSG CONTAINS INV VOLTAGE, MOTOR SPEED AND ERROR STATE
+      {
+        voltage = (bytes[0] * 2); // MEASURED VOLTAGE FROM LEAF INVERTER
 
-    if (Param::GetInt(Param::ShuntType) == 0 &&
-        voltage <
-            420) // Only populate if no shunt is used and voltage is under 420
+        if (Param::GetInt(Param::ShuntType) == 0 &&
+            voltage < 420) // Only populate if no shunt is used and voltage is
+                           // under 420
+        {
+          Param::SetFloat(Param::udc, voltage);
+        }
+        if (Param::GetInt(Param::ShuntType) == 0 &&
+            voltage < 420) // Only populate if no shunt is used and voltage is
+                           // under 420
+        {
+          Param::SetFloat(Param::udc, voltage);
+        }
+
+        int16_t parsed_speed = (bytes[4] << 7) | bytes[5] >> 1;
+        if (parsed_speed > 0x3fff)
+          parsed_speed -= 0x7fff; // 15 bit signed conversion
+        // speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
+        speed = parsed_speed;
+        error = (bytes[6] & 0xb0) != 0x00; // INVERTER ERROR STATE
+        int16_t parsed_speed = (bytes[4] << 7) | bytes[5] >> 1;
+        if (parsed_speed > 0x3fff)
+          parsed_speed -= 0x7fff; // 15 bit signed conversion
+        // speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
+        speed = parsed_speed;
+        error = (bytes[6] & 0xb0) != 0x00; // INVERTER ERROR STATE
+
+      } else if (id == 0x55A) // THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
+      {
+        inv_temp = fahrenheit_to_celsius(bytes[2]);   // INVERTER TEMP
+        motor_temp = fahrenheit_to_celsius(bytes[1]); // MOTOR TEMP
+      }
+    }
+    else if (id == 0x55A) // THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
     {
-      Param::SetFloat(Param::udc, voltage);
+      inv_temp = fahrenheit_to_celsius(bytes[2]);   // INVERTER TEMP
+      motor_temp = fahrenheit_to_celsius(bytes[1]); // MOTOR TEMP
+    }
+  }
+
+  void LeafINV::SetTorque(float torquePercent) {
+    final_torque_request = (torquePercent * 2047) / 100.0f;
+    void LeafINV::SetTorque(float torquePercent) {
+      final_torque_request = (torquePercent * 2047) / 100.0f;
+
+      if (Param::GetInt(Param::reversemotor) == 1) {
+        final_torque_request *=
+            -1; // reverse torque request to flip motor rotation
+      }
+      if (Param::GetInt(Param::reversemotor) == 1) {
+        final_torque_request *=
+            -1; // reverse torque request to flip motor rotation
+      }
+
+      Param::SetInt(Param::torque,
+                    final_torque_request); // post processed final torque value
+                                           // sent to inv to web interface
+      Param::SetInt(Param::torque,
+                    final_torque_request); // post processed final torque value
+                                           // sent to inv to web interface
     }
 
-    int16_t parsed_speed = (bytes[4] << 7) | bytes[5] >> 1;
-    if (parsed_speed > 0x3fff)
-      parsed_speed -= 0x7fff; // 15 bit signed conversion
-    // speed = (parsed_speed == 0x7fff ? 0 : parsed_speed);//LEAF MOTOR RPM
-    speed = parsed_speed;
-    error = (bytes[6] & 0xb0) != 0x00; // INVERTER ERROR STATE
+    void LeafINV::Task10Ms()     // ONLY RAN IN RUNMODE
+        void LeafINV::Task10Ms() // ONLY RAN IN RUNMODE
+    {
 
-  } else if (id == 0x55A) // THIS MSG CONTAINS INV TEMP AND MOTOR TEMP
-  {
-    inv_temp = fahrenheit_to_celsius(bytes[2]);   // INVERTER TEMP
-    motor_temp = fahrenheit_to_celsius(bytes[1]); // MOTOR TEMP
-  }
-}
+      NissLeafMng::Task10Ms(
+          final_torque_request); // This is only called when in run mode, send
+                                 // torque request with it
+      NissLeafMng::Task10Ms(
+          final_torque_request); // This is only called when in run mode, send
+                                 // torque request with it
+    }
 
-void LeafINV::SetTorque(float torquePercent) {
-  final_torque_request = (torquePercent * 2047) / 100.0f;
+    void LeafINV::Task100Ms()     // Always ran
+        void LeafINV::Task100Ms() // Always ran
+    {
+      // Inverter calling of 100ms VCM task takes precedences over PDM
+      NissLeafMng::Task100Ms();
+      // Inverter calling of 100ms VCM task takes precedences over PDM
+      NissLeafMng::Task100Ms();
+    }
 
-  if (Param::GetInt(Param::reversemotor) == 1) {
-    final_torque_request *= -1; // reverse torque request to flip motor rotation
-  }
-
-  Param::SetInt(Param::torque,
-                final_torque_request); // post processed final torque value sent
-                                       // to inv to web interface
-}
-
-void LeafINV::Task10Ms() // ONLY RAN IN RUNMODE
-{
-
-  NissLeafMng::Task10Ms(
-      final_torque_request); // This is only called when in run mode, send
-                             // torque request with it
-}
-
-void LeafINV::Task100Ms() // Always ran
-{
-  // Inverter calling of 100ms VCM task takes precedences over PDM
-  NissLeafMng::Task100Ms();
-}
-
-int8_t LeafINV::fahrenheit_to_celsius(uint16_t fahrenheit) {
-  int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
-  if (result < -128)
-    return -128;
-  if (result > 127)
-    return 127;
-  return result;
-}
+    int8_t LeafINV::fahrenheit_to_celsius(uint16_t fahrenheit) {
+      int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
+      if (result < -128)
+        return -128;
+      if (result > 127)
+        return 127;
+      return result;
+      int8_t LeafINV::fahrenheit_to_celsius(uint16_t fahrenheit) {
+        int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
+        if (result < -128)
+          return -128;
+        if (result > 127)
+          return 127;
+        return result;
+      }
