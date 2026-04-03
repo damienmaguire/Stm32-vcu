@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.40.0XA
+#define VER 2.40A
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -276,9 +276,6 @@
     PARAM_ENTRY(CAT_THROTTLE,  bmslimhigh,  "%",       0,      100,    50, 17 )
    \
     PARAM_ENTRY(CAT_THROTTLE,  bmslimlow,   "%",      -100,    0,     -1, 18 ) \
-    PARAM_ENTRY(CAT_THROTTLE,  bmslimhigh,  "%",       0,      100,    50, 17 )
-   \
-    PARAM_ENTRY(CAT_THROTTLE,  bmslimlow,   "%",      -100,    0,     -1, 18 ) \
 */
 //////////
 
@@ -400,8 +397,6 @@
 
 #define CAN_PERIOD_100MS 0
 #define CAN_PERIOD_10MS 1
-#define CAN_PERIOD_100MS 0
-#define CAN_PERIOD_10MS 1
 
 #define FIRST_IO_PARAM Param::Out1Func
 #define SEC_IO_PARAM Param::PB1InFunc
@@ -419,122 +414,134 @@ enum modes {
 enum ctyps { OFF = 0, AC = 1, DCFC = 2, DCEXT = 4 };
 
 enum _tripmodes { TRIP_ALLOFF = 0, TRIP_DCSWON, TRIP_PRECHARGEON };
-enum _tripmodes { TRIP_ALLOFF = 0, TRIP_DCSWON, TRIP_PRECHARGEON };
 
 enum _dirmodes {
-  DIR_BUTTON = 0, DIR_SWITCH = 1, DIR_REVERSED = 2,
-  DIR_DEFAULTFORWARD =
-      4 enum _dirmodes{DIR_BUTTON = 0, DIR_SWITCH = 1, DIR_REVERSED = 2,
-                       DIR_DEFAULTFORWARD = 4};
+  DIR_BUTTON = 0,
+  DIR_SWITCH = 1,
+  DIR_REVERSED = 2,
+  DIR_DEFAULTFORWARD = 4
+};
 
-  enum InvModes{
-      NoInv = 0, Leaf_Gen1 = 1, GS450H = 2, UserCAN = 3, OpenI = 4,
-      Prius_Gen3 = 5, Outlander = 6, GS300H = 7,
-      RearOutlander =
-          8 enum InvModes{NoInv = 0, Leaf_Gen1 = 1, GS450H = 2, UserCAN = 3,
-                          OpenI = 4, Prius_Gen3 = 5, Outlander = 6, GS300H = 7,
-                          RearOutlander = 8};
+enum InvModes {
+  NoInv = 0,
+  Leaf_Gen1 = 1,
+  GS450H = 2,
+  UserCAN = 3,
+  OpenI = 4,
+  Prius_Gen3 = 5,
+  Outlander = 6,
+  GS300H = 7,
+  RearOutlander = 8
+};
 
-      enum ChargeModes{Off = 0, EXT_DIGI = 1, Volt_Ampera = 2, Leaf_PDM = 3,
-                       TeslaOI = 4, Out_lander = 5, Elcon = 6, MGgen2 = 7};
+enum ChargeModes {
+  Off = 0,
+  EXT_DIGI = 1,
+  Volt_Ampera = 2,
+  Leaf_PDM = 3,
+  TeslaOI = 4,
+  Out_lander = 5,
+  Elcon = 6,
+  MGgen2 = 7
+};
 
-      enum ChargeInterfaces{
-          Unused = 0, i3LIM = 1, Chademo = 2, CPC = 3,
-          Foccci = 4 enum ChargeInterfaces{Unused = 0, i3LIM = 1, Chademo = 2,
-                                           CPC = 3, Foccci = 4};
+enum ChargeInterfaces {
+  Unused = 0,
+  i3LIM = 1,
+  Chademo = 2,
+  CPC = 3,
+  Foccci = 4
+};
 
-          enum HeatType{Noheater = 0, AmpHeater = 1, VWCoolant = 2, VWAir = 3,
-                        OutlanderHeater = 4, MGCoolant = 5, PWM = 6};
+enum HeatType {
+  Noheater = 0,
+  AmpHeater = 1,
+  VWCoolant = 2,
+  VWAir = 3,
+  OutlanderHeater = 4,
+  MGCoolant = 5,
+  PWM = 6
+};
 
-          enum BMSModes{
-              BMSModeNoBMS = 0, BMSModeSimpBMS = 1,
-              BMSModeDaisychainSingleBMS = 2, BMSModeDaisychainDualBMS = 3,
-              BMSModeLeafBMS = 4,
-              BMSRenaultKangoo33BMS =
-                  5 enum BMSModes{BMSModeNoBMS = 0, BMSModeSimpBMS = 1,
-                                  BMSModeDaisychainSingleBMS = 2,
-                                  BMSModeDaisychainDualBMS = 3,
-                                  BMSModeLeafBMS = 4,
-                                  BMSRenaultKangoo33BMS = 5};
+enum BMSModes {
+  BMSModeNoBMS = 0,
+  BMSModeSimpBMS = 1,
+  BMSModeDaisychainSingleBMS = 2,
+  BMSModeDaisychainDualBMS = 3,
+  BMSModeLeafBMS = 4,
+  BMSRenaultKangoo33BMS = 5
+};
 
-              enum DCDCModes{NoDCDC = 0, TeslaG2 = 1, DCDCElcon = 2
+enum DCDCModes {
+  NoDCDC = 0,
+  TeslaG2 = 1,
+  DCDCElcon = 2
 
-              };
+};
 
-              enum ShifterModes{
-                  NoShifter = 0, BMWF30 = 1, JLRG1 = 2, JLRG2 = 3,
-                  BMWE65 = 4 enum ShifterModes{NoShifter = 0, BMWF30 = 1,
-                                               JLRG1 = 2, JLRG2 = 3, BMWE65 = 4
+enum ShifterModes {
+  NoShifter = 0,
+  BMWF30 = 1,
+  JLRG1 = 2,
+  JLRG2 = 3,
+  BMWE65 = 4
 
-                  };
+};
 
-                  enum ChargeControl{Enable = 0, Disable = 1, Timer = 2};
-                  enum ChargeControl{Enable = 0, Disable = 1, Timer = 2};
+enum ChargeControl { Enable = 0, Disable = 1, Timer = 2 };
 
-                  enum Gear{LOW = 0, HIGH = 1, AUTO = 2};
-                  enum Gear{LOW = 0, HIGH = 1, AUTO = 2};
+enum Gear { LOW = 0, HIGH = 1, AUTO = 2 };
 
-                  enum vehicles{
-                      vBMW_E46 = 0, vBMW_E65 = 1,
-                      Classic = 2, // used as a flag
-                      None = 4, vBMW_E39 = 5, vVAG = 6, vSUBARU = 7,
-                      vBMW_E31 =
-                          8 enum vehicles{vBMW_E46 = 0, vBMW_E65 = 1,
-                                          Classic = 2, // used as a flag
-                                          None = 4, vBMW_E39 = 5, vVAG = 6,
-                                          vSUBARU = 7, vBMW_E31 = 8};
+enum vehicles {
+  vBMW_E46 = 0,
+  vBMW_E65 = 1,
+  Classic = 2, // used as a flag
+  None = 4,
+  vBMW_E39 = 5,
+  vVAG = 6,
+  vSUBARU = 7,
+  vBMW_E31 = 8
+};
 
-                      enum _potmodes{
-                          POTMODE_SINGLECHANNEL = 0, POTMODE_DUALCHANNEL,
-                          enum _potmodes{
-                              POTMODE_SINGLECHANNEL = 0,
-                              POTMODE_DUALCHANNEL,
-                          };
+enum _potmodes {
+  POTMODE_SINGLECHANNEL = 0,
+  POTMODE_DUALCHANNEL,
+};
 
-                          enum _canio{
-                              CAN_IO_CRUISE = 1, CAN_IO_START = 2,
-                              CAN_IO_BRAKE = 4, CAN_IO_FWD = 8, CAN_IO_REV = 16,
-                              CAN_IO_BMS =
-                                  32 enum _canio{
-                                      CAN_IO_CRUISE = 1, CAN_IO_START = 2,
-                                      CAN_IO_BRAKE = 4, CAN_IO_FWD = 8,
-                                      CAN_IO_REV = 16, CAN_IO_BMS = 32};
+enum _canio {
+  CAN_IO_CRUISE = 1,
+  CAN_IO_START = 2,
+  CAN_IO_BRAKE = 4,
+  CAN_IO_FWD = 8,
+  CAN_IO_REV = 16,
+  CAN_IO_BMS = 32
+};
 
-                              enum status{
-                                  STAT_NONE = 0, STAT_UDCLOW = 1,
-                                  STAT_UDCHIGH = 2, STAT_UDCBELOWUDCSW = 4,
-                                  STAT_UDCLIM = 8, STAT_EMCYSTOP = 16,
-                                  STAT_MPROT = 32, STAT_POTPRESSED = 64,
-                                  STAT_TMPHS = 128,
-                                  STAT_WAITSTART =
-                                      256 enum status{
-                                          STAT_NONE = 0, STAT_UDCLOW = 1,
-                                          STAT_UDCHIGH = 2,
-                                          STAT_UDCBELOWUDCSW = 4,
-                                          STAT_UDCLIM = 8, STAT_EMCYSTOP = 16,
-                                          STAT_MPROT = 32, STAT_POTPRESSED = 64,
-                                          STAT_TMPHS = 128,
-                                          STAT_WAITSTART = 256};
+enum status {
+  STAT_NONE = 0,
+  STAT_UDCLOW = 1,
+  STAT_UDCHIGH = 2,
+  STAT_UDCBELOWUDCSW = 4,
+  STAT_UDCLIM = 8,
+  STAT_EMCYSTOP = 16,
+  STAT_MPROT = 32,
+  STAT_POTPRESSED = 64,
+  STAT_TMPHS = 128,
+  STAT_WAITSTART = 256
+};
 
-                                  enum ccs_status{
-                                      CCS_NOTREADY = 0, CCS_READY = 1,
-                                      CCS_SWITCHOFF = 2, CCS_INTERRUPTION = 3,
-                                      CCS_PRECHARGE = 4, CCS_INSULATION = 5,
-                                      CCS_ESTOP = 6, CCS_MALFUNCTION = 7,
-                                      CCS_INVAID =
-                                          15 enum ccs_status{
-                                              CCS_NOTREADY = 0, CCS_READY = 1,
-                                              CCS_SWITCHOFF = 2,
-                                              CCS_INTERRUPTION = 3,
-                                              CCS_PRECHARGE = 4,
-                                              CCS_INSULATION = 5, CCS_ESTOP = 6,
-                                              CCS_MALFUNCTION = 7,
-                                              CCS_INVAID = 15};
+enum ccs_status {
+  CCS_NOTREADY = 0,
+  CCS_READY = 1,
+  CCS_SWITCHOFF = 2,
+  CCS_INTERRUPTION = 3,
+  CCS_PRECHARGE = 4,
+  CCS_INSULATION = 5,
+  CCS_ESTOP = 6,
+  CCS_MALFUNCTION = 7,
+  CCS_INVAID = 15
+};
 
-                                      enum can_devices{CAN_DEV1 = 0,
-                                                       CAN_DEV2 = 1};
-                                      enum can_devices{CAN_DEV1 = 0,
-                                                       CAN_DEV2 = 1};
+enum can_devices { CAN_DEV1 = 0, CAN_DEV2 = 1 };
 
-                                      extern const char * errorListString;
-                                      extern const char * errorListString;
+extern const char *errorListString;
