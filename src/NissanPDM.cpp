@@ -31,8 +31,6 @@
 static bool PPStat = false;
 static uint8_t OBCVoltStat = 0;
 static uint8_t PlugStat = 0;
-static uint8_t OBCVoltStat = 0;
-static uint8_t PlugStat = 0;
 static uint8_t OBCAvailPwr = 0;
 static uint8_t OBCActPwr = 0;
 
@@ -81,208 +79,130 @@ void NissanPDM::SetCanInterface(CanHardware *c) {
   can = c;
   can->RegisterUserMessage(0x679); // Leaf obc msg
   can->RegisterUserMessage(0x390); // Leaf obc msg
-  void NissanPDM::SetCanInterface(CanHardware * c) {
-    NissLeafMng::SetCanInterface(c); // set Leaf VCM messages on same bus as PDM
-    can = c;
-    can->RegisterUserMessage(0x679); // Leaf obc msg
-    can->RegisterUserMessage(0x390); // Leaf obc msg
+}
+
+void NissanPDM::DecodeCAN(int id, uint32_t data[2]) {
+  uint8_t *bytes =
+      (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes.
+                       // See comments are useful:)
+
+  if (id == 0x679) // WAKE UP MSG FROM PDM
+  {
+    Param::SetInt(Param::CanAct,
+                  1); // PDM wants to talk so we need to talk back to it.
   }
 
-  void NissanPDM::DecodeCAN(int id, uint32_t data[2]) {
-    uint8_t *bytes =
-        (uint8_t *)data; // arrgghhh this converts the two 32bit array into
-                         // bytes. See comments are useful:)
-    void NissanPDM::DecodeCAN(int id, uint32_t data[2]) {
-      uint8_t *bytes =
-          (uint8_t *)data; // arrgghhh this converts the two 32bit array into
-                           // bytes. See comments are useful:)
+  if (id == 0x390) // THIS MSG FROM PDM
+  {
+    OBCVoltStat = (bytes[3] >> 3) & 0x03;
 
-      if (id == 0x679) // WAKE UP MSG FROM PDM
-      {
-        Param::SetInt(Param::CanAct,
-                      1); // PDM wants to talk so we need to talk back to it.
-      }
-      if (id == 0x679) // WAKE UP MSG FROM PDM
-      {
-        Param::SetInt(Param::CanAct,
-                      1); // PDM wants to talk so we need to talk back to it.
-      }
-
-      if (id == 0x390) // THIS MSG FROM PDM
-      {
-        OBCVoltStat = (bytes[3] >> 3) & 0x03;
-        if (id == 0x390) // THIS MSG FROM PDM
-        {
-          OBCVoltStat = (bytes[3] >> 3) & 0x03;
-
-          if (OBCVoltStat == 0x1) {
-            Param::SetInt(Param::AC_Volts, 110);
-          } else if (OBCVoltStat == 0x2) {
-            Param::SetInt(Param::AC_Volts, 230);
-          } else {
-            Param::SetInt(Param::AC_Volts, 0);
-          }
-          if (OBCVoltStat == 0x1) {
-            Param::SetInt(Param::AC_Volts, 110);
-          } else if (OBCVoltStat == 0x2) {
-            Param::SetInt(Param::AC_Volts, 230);
-          } else {
-            Param::SetInt(Param::AC_Volts, 0);
-          }
-
-          OBCActPwr = bytes[1];   // Power in 0.1kW
-          OBCAvailPwr = bytes[6]; // Power in 0.1kW
-          OBCActPwr = bytes[1];   // Power in 0.1kW
-          OBCAvailPwr = bytes[6]; // Power in 0.1kW
-
-          PlugStat = bytes[5] & 0x0F;
-
-          if (PlugStat == 0x08)
-            PPStat = true; // plug inserted 32A
-          else if (PlugStat == 0x04)
-            PPStat = true; // plug inserted 16A
-          else
-            PPStat = false; // plug not inserted
-
-          Param::SetInt(Param::PlugDet, PPStat);
-        }
-        Param::SetInt(Param::PlugDet, PPStat);
-      }
+    if (OBCVoltStat == 0x1) {
+      Param::SetInt(Param::AC_Volts, 110);
+    } else if (OBCVoltStat == 0x2) {
+      Param::SetInt(Param::AC_Volts, 230);
+    } else {
+      Param::SetInt(Param::AC_Volts, 0);
     }
 
-    bool NissanPDM::ControlCharge(
-        bool RunCh,
-        bool ACReq) // Modeled off of Outlander Charger
-        bool NissanPDM::ControlCharge(
-            bool RunCh,
-            bool ACReq) // Modeled off of Outlander Charger
-    {
-      bool dummy = RunCh;
-      dummy = dummy;
-      bool dummy = RunCh;
-      dummy = dummy;
+    OBCActPwr = bytes[1];   // Power in 0.1kW
+    OBCAvailPwr = bytes[6]; // Power in 0.1kW
 
-      int chgmode = Param::GetInt(Param::interface);
-      switch (chgmode) {
-      case Unused:
-        if (PPStat && ACReq) {
-          return true;
-        } else {
-          return false;
-        }
-        break;
+    PlugStat = bytes[5] & 0x0F;
 
-      case Chademo:
-        if (PPStat && ACReq) {
-          return true;
-        } else {
-          return false;
-        }
+    if (PlugStat == 0x08)
+      PPStat = true; // plug inserted 32A
+    else if (PlugStat == 0x04)
+      PPStat = true; // plug inserted 16A
+    else
+      PPStat = false; // plug not inserted
 
-        break;
-        break;
+    Param::SetInt(Param::PlugDet, PPStat);
+  }
+}
 
-      case i3LIM:
-        if (RunCh && ACReq) // we have a startup request to AC charge from a
-                            // charge interface
-        {
-          return true;
-        } else {
-          return false;
-        }
-        break;
-      case i3LIM:
-        if (RunCh && ACReq) // we have a startup request to AC charge from a
-                            // charge interface
-        {
-          return true;
-        } else {
-          return false;
-        }
-        break;
+bool NissanPDM::ControlCharge(bool RunCh,
+                              bool ACReq) // Modeled off of Outlander Charger
+{
+  bool dummy = RunCh;
+  dummy = dummy;
 
-      case CPC:
-        if (RunCh && ACReq) // we have a startup request to AC charge from a
-                            // charge interface
-        {
-          return true;
-        } else {
-          return false;
-        }
-        break;
-      case CPC:
-        if (RunCh && ACReq) // we have a startup request to AC charge from a
-                            // charge interface
-        {
-          return true;
-        } else {
-          return false;
-        }
-        break;
+  int chgmode = Param::GetInt(Param::interface);
+  switch (chgmode) {
+  case Unused:
+    if (PPStat && ACReq) {
+      return true;
+    } else {
+      return false;
+    }
+    break;
 
-      case Foccci:
-        if (RunCh && ACReq) // we have a startup request to AC charge from a
-                            // charge interface
-        {
-          return true;
-        } else {
-          return false;
-        }
-        break;
-      }
+  case Chademo:
+    if (PPStat && ACReq) {
+      return true;
+    } else {
       return false;
     }
 
-    void NissanPDM::Task10Ms() {
-      int opmode = Param::GetInt(Param::opmode);
-      void NissanPDM::Task10Ms() {
-        int opmode = Param::GetInt(Param::opmode);
+    break;
 
-        if (opmode != MOD_RUN) // Outside of Run PDM sends VCM 10ms task else
-                               // sent by leafinv.cpp
-        {
-          NissLeafMng::Task10Ms(
-              0); // request no torque, MODE handling done inside
-        }
-        if (opmode != MOD_RUN) // Outside of Run PDM sends VCM 10ms task else
-                               // sent by leafinv.cpp
-        {
-          NissLeafMng::Task10Ms(
-              0); // request no torque, MODE handling done inside
-        }
-      }
+  case i3LIM:
+    if (RunCh &&
+        ACReq) // we have a startup request to AC charge from a charge interface
+    {
+      return true;
+    } else {
+      return false;
+    }
+    break;
 
-      void NissanPDM::Task100Ms() {
-        if (Param::GetInt(Param::Inverter) !=
-            InvModes::Leaf_Gen1) // only run 100ms VCM task if leaf inverter not
-                                 // used
-        {
-          NissLeafMng::Task100Ms();
-        }
-        void NissanPDM::Task100Ms() {
-          if (Param::GetInt(Param::Inverter) !=
-              InvModes::Leaf_Gen1) // only run 100ms VCM task if leaf inverter
-                                   // not used
-          {
-            NissLeafMng::Task100Ms();
-          }
+  case CPC:
+    if (RunCh &&
+        ACReq) // we have a startup request to AC charge from a charge interface
+    {
+      return true;
+    } else {
+      return false;
+    }
+    break;
 
-          Param::SetInt(Param::PilotLim, float(OBCAvailPwr / 2.25));
-          Param::SetInt(Param::PilotLim, float(OBCAvailPwr / 2.25));
-        }
+  case Foccci:
+    if (RunCh &&
+        ACReq) // we have a startup request to AC charge from a charge interface
+    {
+      return true;
+    } else {
+      return false;
+    }
+    break;
+  }
+  return false;
+}
 
-        int8_t NissanPDM::fahrenheit_to_celsius(uint16_t fahrenheit) {
-          int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
-          if (result < -128)
-            return -128;
-          if (result > 127)
-            return 127;
-          return result;
-          int8_t NissanPDM::fahrenheit_to_celsius(uint16_t fahrenheit) {
-            int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
-            if (result < -128)
-              return -128;
-            if (result > 127)
-              return 127;
-            return result;
-          }
+void NissanPDM::Task10Ms() {
+  int opmode = Param::GetInt(Param::opmode);
+
+  if (opmode != MOD_RUN) // Outside of Run PDM sends VCM 10ms task else sent by
+                         // leafinv.cpp
+  {
+    NissLeafMng::Task10Ms(0); // request no torque, MODE handling done inside
+  }
+}
+
+void NissanPDM::Task100Ms() {
+  if (Param::GetInt(Param::Inverter) !=
+      InvModes::Leaf_Gen1) // only run 100ms VCM task if leaf inverter not used
+  {
+    NissLeafMng::Task100Ms();
+  }
+
+  Param::SetInt(Param::PilotLim, float(OBCAvailPwr / 2.25));
+}
+
+int8_t NissanPDM::fahrenheit_to_celsius(uint16_t fahrenheit) {
+  int16_t result = ((int16_t)fahrenheit - 32) * 5 / 9;
+  if (result < -128)
+    return -128;
+  if (result > 127)
+    return 127;
+  return result;
+}

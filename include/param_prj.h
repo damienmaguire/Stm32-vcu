@@ -372,28 +372,6 @@
 #define DIRLIM "0=None, 1=SpeedThres, 2=SpeedBrake"
 #define ABOVEBELOW "0=BelowOF,1=BelowScale, 2=AboveOF, 3=AboveScale"
 #define DRIVEINHIBITMODES "0=Off,1=Plug detect"
-#define CAT_POWER "Power Limit"
-#define CAT_CONTACT "Contactor Control"
-#define CAT_TEST "Testing"
-#define CAT_COMM "Communication"
-#define CAT_SETUP "General Setup"
-#define CAT_CLOCK "RTC Module"
-#define CAT_HEATER "Heater Module"
-#define CAT_BMS "Battery Management"
-#define CAT_CRUISE "Cruise Control"
-#define CAT_LEXUS "Gearbox Control"
-#define CAT_CHARGER "Charger Control"
-#define CAT_DCDC "DC-DC Converter"
-#define CAT_SHUNT "ISA Shunt Control"
-#define CAT_IOPINS "General Purpose I/O"
-#define CAT_PWM "PWM Control"
-#define MotorsAct "0=Mg1and2, 1=Mg1, 2=Mg2, 3=BlendingMG2and1"
-#define PumpOutType "0=GS450hOil, 1=TachoOut, 2=SpeedoOut"
-#define LIMITREASON                                                            \
-  "0=None, 1=UDClimLow, 2=UDClimHigh, 4=IDClimLow, 8=IDClimHigh, 16=TempLim"
-#define DIRLIM "0=None, 1=SpeedThres, 2=SpeedBrake"
-#define ABOVEBELOW "0=BelowOF,1=BelowScale, 2=AboveOF, 3=AboveScale"
-#define DRIVEINHIBITMODES "0=Off,1=Plug detect"
 
 #define CAN_PERIOD_100MS 0
 #define CAN_PERIOD_10MS 1

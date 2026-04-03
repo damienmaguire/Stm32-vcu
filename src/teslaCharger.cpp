@@ -32,80 +32,68 @@ static uint16_t calcBMSpwr = 0;
 void teslaCharger::SetCanInterface(CanHardware *c) {
   can = c;
   can->RegisterUserMessage(0x108);
-  void teslaCharger::SetCanInterface(CanHardware * c) {
-    can = c;
-    can->RegisterUserMessage(0x108);
-  }
+}
 
-  void teslaCharger::DecodeCAN(int id, uint32_t data[2]) {
-    uint8_t *bytes = (uint8_t *)data;
+void teslaCharger::DecodeCAN(int id, uint32_t data[2]) {
+  uint8_t *bytes = (uint8_t *)data;
 
-    if (id == 0x109) {
-      if (bytes[5] == 0x05) {
-        HVreq = true;
-      }
-      if (bytes[5] == 0x00) {
-        HVreq = false;
-      }
-
-      // can->AddSend(Param::udc, 0x109, 8, 16, 1);
-      // can->AddSend(Param::idc, 0x109, 24, 16, 1);
-      // can->AddSend(Param::opmode, 0x109, 40, 3, 5); //Set charging and
-      // connlock at once
+  if (id == 0x109) {
+    if (bytes[5] == 0x05) {
+      HVreq = true;
     }
-  }
-
-  void teslaCharger::Task100Ms() {
-    uint8_t bytes[8];
-
-    HVvolts = Param::GetInt(Param::udc);
-    HVspnt = Param::GetInt(Param::Voltspnt);
-    HVpwr = Param::GetInt(Param::Pwrspnt);
-
-    calcBMSpwr =
-        (HVvolts *
-         Param::GetInt(
-             Param::BMS_ChargeLim)); // BMS charge current limit but needs to be
-                                     // power for most AC charger types.
-    HVpwr = MIN(HVpwr, calcBMSpwr);
-
-    CurReq = HVpwr / HVvolts; // Calculate requested current
-
-    CurReq = MIN(CurReq, 45); // Max allowed is 45A
-
-    bytes[0] = 0x00;
-    bytes[1] = (HVspnt & 0xFF);          // HV voltage lowbyte
-    bytes[2] = ((HVspnt & 0xFF00) >> 8); // HV voltage highbyte
-    bytes[3] = CurReq;                   // HV Current Request
-
-    if (ChRun) {
-      bytes[5] = 0x01; // send Chg enable
-    } else {
-      bytes[5] = 0x00; // send Chg disable
+    if (bytes[5] == 0x00) {
+      HVreq = false;
     }
 
-    bytes[6] = Param::GetInt(Param::SOC);
-    bytes[7] = 0x00;
+    // can->AddSend(Param::udc, 0x109, 8, 16, 1);
+    // can->AddSend(Param::idc, 0x109, 24, 16, 1);
+    // can->AddSend(Param::opmode, 0x109, 40, 3, 5); //Set charging and connlock
+    // at once
+  }
+}
 
-    can->Send(0x102, (uint32_t *)bytes, 8);
+void teslaCharger::Task100Ms() {
+  uint8_t bytes[8];
+
+  HVvolts = Param::GetInt(Param::udc);
+  HVspnt = Param::GetInt(Param::Voltspnt);
+  HVpwr = Param::GetInt(Param::Pwrspnt);
+
+  calcBMSpwr =
+      (HVvolts *
+       Param::GetInt(
+           Param::BMS_ChargeLim)); // BMS charge current limit but needs to be
+                                   // power for most AC charger types.
+  HVpwr = MIN(HVpwr, calcBMSpwr);
+
+  CurReq = HVpwr / HVvolts; // Calculate requested current
+
+  CurReq = MIN(CurReq, 45); // Max allowed is 45A
+
+  bytes[0] = 0x00;
+  bytes[1] = (HVspnt & 0xFF);          // HV voltage lowbyte
+  bytes[2] = ((HVspnt & 0xFF00) >> 8); // HV voltage highbyte
+  bytes[3] = CurReq;                   // HV Current Request
+
+  if (ChRun) {
+    bytes[5] = 0x01; // send Chg enable
+  } else {
+    bytes[5] = 0x00; // send Chg disable
   }
 
-  bool teslaCharger::ControlCharge(bool RunCh, bool ACReq) {
-    bool dummy = RunCh;
-    dummy = dummy;
-    ChRun = ACReq;
-    if (HVreq)
-      return true;
-    if (!HVreq)
-      return false;
+  bytes[6] = Param::GetInt(Param::SOC);
+  bytes[7] = 0x00;
+
+  can->Send(0x102, (uint32_t *)bytes, 8);
+}
+
+bool teslaCharger::ControlCharge(bool RunCh, bool ACReq) {
+  bool dummy = RunCh;
+  dummy = dummy;
+  ChRun = ACReq;
+  if (HVreq)
+    return true;
+  if (!HVreq)
     return false;
-    bool teslaCharger::ControlCharge(bool RunCh, bool ACReq) {
-      bool dummy = RunCh;
-      dummy = dummy;
-      ChRun = ACReq;
-      if (HVreq)
-        return true;
-      if (!HVreq)
-        return false;
-      return false;
-    }
+  return false;
+}

@@ -28,12 +28,12 @@ jobs:
         run: |
           make
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: Stm32-vcu firmware binary
           path: stm32_vcu.bin
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: Stm32-vcu firmware hex
           path: stm32_vcu.hex

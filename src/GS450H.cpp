@@ -52,34 +52,6 @@ static const uint8_t INVERTER_PROCESSING_TIME_MS =
 #define LOW_Gear 0
 #define HIGH_Gear 1
 #define AUTO_Gear 2
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/stm32/dma.h>
-#include <libopencm3/stm32/timer.h>
-
-// DMA completion flags - must be volatile for ISR access
-static volatile bool tx_complete_flag = false;
-static volatile bool rx_complete_flag = false;
-
-// Timeout and error tracking
-static uint16_t rx_timeout = 0;
-static const uint16_t RX_TIMEOUT_MS = 20; // 20ms timeout for inverter response
-static uint16_t consecutive_failures = 0;
-static const uint16_t MAX_FAILURES = 10; // Enter safe mode after 10 failures
-
-// Double buffering for DMA to prevent data corruption
-static uint8_t rx_buffer_a[140];
-static uint8_t rx_buffer_b[140];
-static uint8_t *active_rx_buffer = rx_buffer_a;     // DMA writes here
-static uint8_t *processing_rx_buffer = rx_buffer_b; // CPU reads here
-
-// Inverter processing delay counter
-static uint8_t inverter_delay_counter = 0;
-static const uint8_t INVERTER_PROCESSING_TIME_MS =
-    3; // Give inverter time to process
-
-#define LOW_Gear 0
-#define HIGH_Gear 1
-#define AUTO_Gear 2
 
 #define GS450H 1
 #define PRIUS 2
@@ -88,19 +60,15 @@ static const uint8_t INVERTER_PROCESSING_TIME_MS =
 static uint8_t DriveType = 0;
 static uint8_t htm_state = 0;
 static uint8_t inv_status = 1; // must be 1 for gs450h and gs300h
-static uint8_t inv_status = 1; // must be 1 for gs450h and gs300h
 uint16_t counter;
-// static uint16_t htm_checksum; //superseded by Checksum function
 // static uint16_t htm_checksum; //superseded by Checksum function
 static uint8_t frame_count;
 static uint8_t GearSW;
 static int16_t mg1_torque, mg2_torque, speedSum;
 static bool statusInv = 0;
-static bool statusInv = 0;
 static bool TorqueCut, ShiftInit = 0;
 static int8_t TorqueShiftRamp = 0;
 static uint8_t speedSum2;
-static uint8_t gearAct, gearReq, gearStep = 0;
 static uint8_t gearAct, gearReq, gearStep = 0;
 
 static void dma_read(uint8_t *data, int size);
@@ -142,67 +110,7 @@ static int VerifyMTHChecksumNew(uint8_t *data, int length) {
 }
 
 // 80 bytes out and 100 bytes back in (with offset of 8 bytes.
-// DMA interrupt service routines
-extern "C" void dma1_channel6_isr(void) {
-  // RX DMA complete interrupt
-  if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)) {
-    dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
-    rx_complete_flag = true;
-
-    // Swap buffers to prevent corruption while processing
-    uint8_t *temp = active_rx_buffer;
-    active_rx_buffer = processing_rx_buffer;
-    processing_rx_buffer = temp;
-  }
-}
-
-extern "C" void dma1_channel7_isr(void) {
-  // TX DMA complete interrupt
-  if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL7, DMA_TCIF)) {
-    dma_clear_interrupt_flags(DMA1, DMA_CHANNEL7, DMA_TCIF);
-    tx_complete_flag = true;
-  }
-}
-
-// Helper function to check if DMA channel is busy
-static bool dma_channel_is_enabled(uint32_t dma, uint8_t channel) {
-  return (DMA_CCR(dma, channel) & DMA_CCR_EN) != 0;
-}
-
-// Helper function to verify MTH frame checksum
-static int VerifyMTHChecksumNew(uint8_t *data, int length) {
-  uint8_t checksum = 0;
-  for (int i = 0; i < length - 1; i++)
-    checksum += data[i];
-  return (checksum == data[length - 1]);
-}
-
-// 80 bytes out and 100 bytes back in (with offset of 8 bytes.
 static uint8_t mth_data[140];
-static const uint8_t htm_data_setup[100] = {
-    0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 4, 0, 0,  0,
-    0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 4, 0,  0,
-    0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0,
-    4, 0, 25, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 128, 0, 0, 0, 37, 1};
-static uint8_t htm_data[105] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static const uint8_t htm_data_GS300H[105] = {
-    0,   14, 0,   2,  0,  0,   0,   0,  0,   0,   0,  0, 0, 23, 0, 97, 0, 0,
-    0,   0,  0,   0,  0,  248, 254, 8,  1,   0,   0,  0, 0, 0,  0, 22, 0, 0,
-    0,   0,  0,   23, 0,  1,   0,   0,  0,   0,   0,  0, 0, 0,  0, 0,  0, 0,
-    0,   0,  0,   0,  0,  0,   0,   0,  0,   0,   0,  0, 0, 0,  0, 4,  0, 0,
-    0,   0,  0,   23, 0,  75,  22,  47, 250, 137, 14, 0, 0, 23, 0, 0,  0, 0,
-    201, 0,  218, 0,  16, 0,   0,   0,  29,  0,   0,  0, 0, 0,  0};
-static const uint8_t htm_data_Prius[100] = {
-    0, 30,  0,  2,   0,  0,   0,   55,  0,  128, 254, 0,  0,   40, 0,   97, 0,
-    0, 0,   0,  0,   0,  136, 249, 120, 6,  143, 255, 50, 255, 48, 255, 49, 0,
-    0, 0,   48, 255, 43, 0,   1,   128, 0,  0,   0,   0,  0,   0,  0,   0,  0,
-    0, 0,   0,  0,   0,  0,   0,   0,   0,  0,   0,   0,  0,   0,  0,   0,  4,
-    0, 0,   0,  0,   40, 0,   75,  33,  68, 246, 51,  8,  0,   0,  40,  0,  0,
-    0, 201, 0,  222, 0,  16,  0,   0,   0,  211, 40,  0,  0,   62, 15};
 static const uint8_t htm_data_setup[100] = {
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 4, 0, 0,  0,
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 4, 0,  0,
@@ -283,81 +191,7 @@ uint8_t htm_data_init[7][100] = {
      0, 0,   0,  0,   0,  0,   0,   0,   0,  0,   0,   0,   0, 0,   0,  0,  4,
      0, 0,   0,  0,   16, 0,   75,  12,  45, 251, 21,  4,   0, 0,   16, 0,  0,
      0, 202, 0,  211, 0,  16,  0,   0,   0,  134, 16,  0,   0, 130, 10}};
-uint8_t htm_data_init[7][100] = {
-    {0, 14, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  4, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0,  0,
-     0, 4,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 0,   4, 0, 0, 0,   0, 0, 4, 0, 25, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 136, 0, 0, 0, 160, 0, 0, 0, 0, 0,  0, 0, 95, 1},
-    {0, 14, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  4, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0,  0,
-     0, 4,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 0,   4, 0, 0, 0,   0, 0, 4, 0, 25, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 136, 0, 0, 0, 160, 0, 0, 0, 0, 0,  0, 0, 95, 1},
-    {0, 30,  0, 0, 0, 0,   0,   18, 0,  154, 250, 0, 0, 0,  0, 97, 4,
-     0, 0,   0, 0, 0, 173, 255, 82, 0,  0,   0,   0, 0, 0,  0, 16, 0,
-     0, 0,   0, 0, 0, 0,   0,   4,  0,  0,   0,   0, 0, 0,  0, 0,  0,
-     0, 0,   0, 0, 0, 0,   0,   0,  0,  0,   0,   0, 0, 0,  0, 0,  4,
-     0, 0,   0, 0, 0, 4,   75,  12, 60, 251, 52,  4, 0, 0,  0, 0,  0,
-     0, 138, 0, 0, 0, 168, 0,   0,  0,  1,   0,   0, 0, 72, 7},
-    {0, 30, 0, 0, 0, 0, 0,   18, 0, 154, 250, 0, 0,  0, 0,  97, 4,  0,   0,  0,
-     0, 0,  0, 0, 0, 0, 0,   0,  0, 0,   0,   0, 16, 0, 0,  0,  0,  0,   0,  0,
-     0, 4,  0, 0, 0, 0, 0,   0,  0, 0,   0,   0, 0,  0, 0,  0,  0,  0,   0,  0,
-     0, 0,  0, 0, 0, 0, 0,   4,  0, 0,   0,   0, 0,  4, 75, 12, 60, 251, 52, 4,
-     0, 0,  0, 0, 0, 0, 138, 0,  0, 0,   168, 0, 0,  0, 2,  0,  0,  0,   75, 5},
-    {0, 30, 0, 0, 0, 0, 0,   18, 0, 154, 250, 0, 0,  0, 0,  97, 4,  0,   0,  0,
-     0, 0,  0, 0, 0, 0, 0,   0,  0, 0,   0,   0, 16, 0, 0,  0,  0,  0,   0,  0,
-     0, 4,  0, 0, 0, 0, 0,   0,  0, 0,   0,   0, 0,  0, 0,  0,  0,  0,   0,  0,
-     0, 0,  0, 0, 0, 0, 0,   4,  0, 0,   0,   0, 0,  4, 75, 12, 60, 251, 52, 4,
-     0, 0,  0, 0, 0, 0, 138, 0,  0, 0,   168, 0, 0,  0, 2,  0,  0,  0,   75, 5},
-    {0, 30,  0, 0, 0,   0,   0,  18, 0,  154, 250, 0, 0, 255, 0,   97, 4,
-     0, 0,   0, 0, 0,   0,   0,  0,  0,  0,   0,   0, 0, 0,   0,   16, 0,
-     0, 0,   0, 0, 255, 0,   0,  4,  0,  0,   0,   0, 0, 0,   0,   0,  0,
-     0, 0,   0, 0, 0,   0,   0,  0,  0,  0,   0,   0, 0, 0,   0,   0,  4,
-     0, 0,   0, 0, 255, 4,   73, 12, 60, 251, 52,  4, 0, 0,   255, 0,  0,
-     0, 138, 0, 0, 0,   168, 0,  0,  0,  3,   0,   0, 0, 70,  9},
-    {0, 30,  0,  2,   0,  0,   0,   18,  0,  154, 250, 0,   0, 16,  0,  97, 0,
-     0, 0,   0,  0,   0,  200, 249, 56,  6,  165, 0,   136, 0, 63,  0,  16, 0,
-     0, 0,   63, 0,   16, 0,   3,   128, 0,  0,   0,   0,   0, 0,   0,  0,  0,
-     0, 0,   0,  0,   0,  0,   0,   0,   0,  0,   0,   0,   0, 0,   0,  0,  4,
-     0, 0,   0,  0,   16, 0,   75,  12,  45, 251, 21,  4,   0, 0,   16, 0,  0,
-     0, 202, 0,  211, 0,  16,  0,   0,   0,  134, 16,  0,   0, 130, 10}};
 
-uint8_t htm_data_Init_GS300H[6][105] = {
-    {0, 14, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  4, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0, 0,  0,
-     4, 0,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 4,   0, 0, 0, 0,   0, 0, 4, 0, 25, 0, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 136, 0, 0, 0, 160, 0, 0, 0, 0, 0,  0, 0, 0, 95, 1},
-    {0, 14, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  4, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0, 0,  0,
-     4, 0,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 4,   0, 0, 0, 0,   0, 0, 4, 0, 25, 0, 0, 0, 0,  0,
-     0, 0,  0, 0, 0, 0, 136, 0, 0, 0, 160, 0, 0, 0, 0, 0,  0, 0, 0, 95, 1},
-    {0,   14, 0, 0, 0,   0,   0,   0,   0,   0,   0,  0, 0, 0,   0, 97, 4, 0,
-     0,   0,  0, 0, 0,   173, 255, 82,  0,   0,   0,  0, 0, 0,   0, 22, 0, 0,
-     0,   0,  0, 0, 0,   0,   4,   0,   0,   0,   0,  0, 0, 0,   0, 0,  0, 0,
-     0,   0,  0, 0, 0,   0,   0,   0,   0,   0,   0,  0, 0, 0,   0, 4,  0, 0,
-     0,   0,  0, 0, 4,   75,  25,  212, 254, 210, 15, 0, 0, 0,   0, 0,  0, 0,
-     137, 0,  0, 0, 168, 0,   0,   0,   1,   0,   0,  0, 0, 220, 6},
-    {0,   14, 0, 0, 0,   0,   0,   0,   0,   0,   0,  0, 0, 0,   0, 97, 4, 0,
-     0,   0,  0, 0, 0,   173, 255, 82,  0,   0,   0,  0, 0, 0,   0, 22, 0, 0,
-     0,   0,  0, 0, 0,   0,   4,   0,   0,   0,   0,  0, 0, 0,   0, 0,  0, 0,
-     0,   0,  0, 0, 0,   0,   0,   0,   0,   0,   0,  0, 0, 0,   0, 4,  0, 0,
-     0,   0,  0, 0, 4,   75,  25,  212, 254, 210, 15, 0, 0, 0,   0, 0,  0, 0,
-     137, 0,  0, 0, 168, 0,   0,   0,   1,   0,   0,  0, 0, 220, 6},
-    {0,   14, 0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 97, 4, 0,
-     0,   0,  0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 22, 0, 0,
-     0,   0,  0, 0, 0,   0,  4,  0,   0,   0,   0,  0, 0, 0,   0, 0,  0, 0,
-     0,   0,  0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 4,  0, 0,
-     0,   0,  0, 0, 4,   75, 25, 212, 254, 190, 15, 0, 0, 0,   0, 0,  0, 0,
-     137, 0,  0, 0, 168, 0,  0,  0,   2,   0,   0,  0, 0, 203, 4},
-    {0,   14, 0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 97, 4, 0,
-     0,   0,  0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 22, 0, 0,
-     0,   0,  0, 0, 0,   0,  4,  0,   0,   0,   0,  0, 0, 0,   0, 0,  0, 0,
-     0,   0,  0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 4,  0, 0,
-     0,   0,  0, 0, 4,   75, 25, 212, 254, 190, 15, 0, 0, 0,   0, 0,  0, 0,
-     137, 0,  0, 0, 168, 0,  0,  0,   2,   0,   0,  0, 0, 203, 4}};
 uint8_t htm_data_Init_GS300H[6][105] = {
     {0, 14, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  4, 0, 0, 0,  0,
      0, 0,  0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0,  0, 0, 0, 0,  0,
@@ -399,1738 +233,828 @@ void GS450HClass::SetTorque(float torquePercent) {
   if (DriveType == GS450H) {
     GS450Hgear(); // check if we need to shift - can modify torque limits so
                   // needs to ran before calculating requests
-    void GS450HClass::SetTorque(float torquePercent) {
-      uint8_t MotorActive = Param::GetInt(Param::MotActive);
-      if (DriveType == GS450H) {
-        GS450Hgear(); // check if we need to shift - can modify torque limits so
-                      // needs to ran before calculating requests
 
-        if (!TorqueCut) // Cut torque only when shifting for now
-        {
-          mg1_torque =
-              (torquePercent * 4375) / 100.0f; // mg1 does not need shifting
-                                               // !!!verify max allowed request
-          if (!TorqueCut) // Cut torque only when shifting for now
-          {
-            mg1_torque = (torquePercent * 4375) /
-                         100.0f; // mg1 does not need shifting !!!verify max
-                                 // allowed request
+    if (!TorqueCut) // Cut torque only when shifting for now
+    {
+      mg1_torque =
+          (torquePercent * 4375) /
+          100.0f; // mg1 does not need shifting !!!verify max allowed request
 
-            torquePercent =
-                TorqueShiftRamp * torquePercent *
-                0.01; // multiply by the torque ramp for when shifting
-            scaledTorqueTarget = (torquePercent * 3500) /
-                                 100.0f; // !!!verify max allowed request
-            mg2_torque = this->scaledTorqueTarget;
-            // mg1_torque = ((mg2_torque*5)/4); //no need to shift
-            torquePercent =
-                TorqueShiftRamp * torquePercent *
-                0.01; // multiply by the torque ramp for when shifting
-            scaledTorqueTarget = (torquePercent * 3500) /
-                                 100.0f; // !!!verify max allowed request
-            mg2_torque = this->scaledTorqueTarget;
-            // mg1_torque = ((mg2_torque*5)/4); //no need to shift
+      torquePercent = TorqueShiftRamp * torquePercent *
+                      0.01; // multiply by the torque ramp for when shifting
+      scaledTorqueTarget =
+          (torquePercent * 3500) / 100.0f; // !!!verify max allowed request
+      mg2_torque = this->scaledTorqueTarget;
+      // mg1_torque = ((mg2_torque*5)/4); //no need to shift
 
-            if (ShiftInit == true && TorqueShiftRamp > 0) {
-              TorqueShiftRamp -=
-                  (5 * Param::GetFloat(
-                           Param::throtramp)); // ramp down 5 x throtramp
-              if (TorqueShiftRamp < 0) {
-                TorqueShiftRamp = 0; // if we go below 0 force it to zero to
-                                     // signify finishing ramp down
-              }
-            }
-            if (ShiftInit == true && TorqueShiftRamp > 0) {
-              TorqueShiftRamp -=
-                  (5 * Param::GetFloat(
-                           Param::throtramp)); // ramp down 5 x throtramp
-              if (TorqueShiftRamp < 0) {
-                TorqueShiftRamp = 0; // if we go below 0 force it to zero to
-                                     // signify finishing ramp down
-              }
-            }
-
-            if (TorqueShiftRamp < 100 &&
-                ShiftInit == false) // ramp torque back in after shifting - Note
-                                    // this also runs on first power on so
-                                    // theoretically reduced throttle on start
-            {
-              TorqueShiftRamp += Param::GetFloat(
-                  Param::throtramp); // ramp back in 5% every time this is ran,
-                                     // every 10ms - Increased from 10.
-              if (TorqueShiftRamp > 100) {
-                TorqueShiftRamp = 100; // keep it limited to 100
-              }
-            }
-            if (TorqueShiftRamp < 100 &&
-                ShiftInit == false) // ramp torque back in after shifting - Note
-                                    // this also runs on first power on so
-                                    // theoretically reduced throttle on start
-            {
-              TorqueShiftRamp += Param::GetFloat(
-                  Param::throtramp); // ramp back in 5% every time this is ran,
-                                     // every 10ms - Increased from 10.
-              if (TorqueShiftRamp > 100) {
-                TorqueShiftRamp = 100; // keep it limited to 100
-              }
-            }
-
-            if (gear == 0) //!!!Low gear
-            {
-              if (torquePercent < 0) {
-                mg2_torque *= 0.5;
-                mg1_torque *= 0.5;
-              }
-            }
-          } else {
-            mg2_torque = 0;
-            mg1_torque = 0;
-          }
-          if (gear == 0) //!!!Low gear
-          {
-            if (torquePercent < 0) {
-              mg2_torque *= 0.5;
-              mg1_torque *= 0.5;
-            }
-          }
-        } else {
-          mg2_torque = 0;
-          mg1_torque = 0;
+      if (ShiftInit == true && TorqueShiftRamp > 0) {
+        TorqueShiftRamp -=
+            (5 * Param::GetFloat(Param::throtramp)); // ramp down 5 x throtramp
+        if (TorqueShiftRamp < 0) {
+          TorqueShiftRamp = 0; // if we go below 0 force it to zero to signify
+                               // finishing ramp down
         }
+      }
 
-        if (MotorActive == 0) // Both motors
-        {
-          if (scaledTorqueTarget < 0)
-            mg1_torque = 0;
-        } else if (MotorActive == 1) // Only Mg1 active
-        {
-          mg2_torque = 0;
-        } else if (MotorActive == 2) // Only Mg2 active
-        {
-          mg1_torque = 0;
-        } else if (MotorActive == 3) // MG1 only at high torque
-        {
-          mg1_torque = 0;
-          if (torquePercent > 50) // only have MG1 active above 50%
-          {
-            mg1_torque = utils::change(torquePercent, 50, 100, 0, 4375);
-          }
+      if (TorqueShiftRamp < 100 &&
+          ShiftInit == false) // ramp torque back in after shifting - Note this
+                              // also runs on first power on so theoretically
+                              // reduced throttle on start
+      {
+        TorqueShiftRamp += Param::GetFloat(
+            Param::throtramp); // ramp back in 5% every time this is ran, every
+                               // 10ms - Increased from 10.
+        if (TorqueShiftRamp > 100) {
+          TorqueShiftRamp = 100; // keep it limited to 100
         }
-      } else if (DriveType == PRIUS) {
-        if (!TorqueCut) // should not trigger at all, only used for shifting
-                        // GS450h
-        {
-          scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
-          mg2_torque = this->scaledTorqueTarget;
-          mg1_torque = ((mg2_torque * 5) / 4);
-          if (MotorActive == 0) // Both motors
-          {
-            if (scaledTorqueTarget < 0)
-              mg1_torque = 0;
-          } else if (MotorActive == 1) // Only Mg1 active
-          {
-            mg2_torque = 0;
-          } else if (MotorActive == 2) // Only Mg2 active
-          {
-            mg1_torque = 0;
-          } else if (MotorActive == 3) // MG1 only at high torque
-          {
-            mg1_torque = 0;
-            if (torquePercent > 50) // only have MG1 active above 50%
-            {
-              mg1_torque = utils::change(torquePercent, 50, 100, 0, 4375);
-            }
-          }
-        } else if (DriveType == PRIUS) {
-          if (!TorqueCut) // should not trigger at all, only used for shifting
-                          // GS450h
-          {
-            scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
-            mg2_torque = this->scaledTorqueTarget;
-            mg1_torque = ((mg2_torque * 5) / 4);
+      }
 
-            if (MotorActive == 0) // Both motors
-            {
-              if (scaledTorqueTarget < 0)
-                mg1_torque = 0;
-            } else if (MotorActive == 1) // Only Mg1 active
-            {
-              mg2_torque = 0;
-            } else if (MotorActive == 2) // Only Mg2 active
-            {
-              mg1_torque = 0;
-            }
-          } else {
-            mg2_torque = 0;
-            mg1_torque = 0;
-          }
-        } else if (DriveType == IS300H) {
-          if (!TorqueCut) // should not trigger at all, only used for shifting
-                          // GS450h
-          {
-            scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
-            mg2_torque = this->scaledTorqueTarget;
-            mg1_torque = ((mg2_torque * 5) / 4);
-            if (MotorActive == 0) // Both motors
-            {
-              if (scaledTorqueTarget < 0)
-                mg1_torque = 0;
-            } else if (MotorActive == 1) // Only Mg1 active
-            {
-              mg2_torque = 0;
-            } else if (MotorActive == 2) // Only Mg2 active
-            {
-              mg1_torque = 0;
-            }
-          } else {
-            mg2_torque = 0;
-            mg1_torque = 0;
-          }
-        } else if (DriveType == IS300H) {
-          if (!TorqueCut) // should not trigger at all, only used for shifting
-                          // GS450h
-          {
-            scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
-            mg2_torque = this->scaledTorqueTarget;
-            mg1_torque = ((mg2_torque * 5) / 4);
+      if (gear == 0) //!!!Low gear
+      {
+        if (torquePercent < 0) {
+          mg2_torque *= 0.5;
+          mg1_torque *= 0.5;
+        }
+      }
+    } else {
+      mg2_torque = 0;
+      mg1_torque = 0;
+    }
 
-            if (MotorActive == 0) // Both motors
-            {
-              if (scaledTorqueTarget < 0)
-                mg1_torque = 0;
-            } else if (MotorActive == 1) // Only Mg1 active
-            {
-              mg2_torque = 0;
-            } else if (MotorActive == 2) // Only Mg2 active
-            {
-              mg1_torque = 0;
-            } else if (MotorActive == 3) // MG1 only at high torque
-            {
-              mg1_torque = 0;
-              if (torquePercent > 50) // only have MG1 active above 50%
-              {
-                mg1_torque = utils::change(torquePercent, 50, 100, 0, 4375);
-              }
-            }
-          } else {
-            mg2_torque = 0;
-            mg1_torque = 0;
-          }
-        }
-        if (MotorActive == 0) // Both motors
-        {
-          if (scaledTorqueTarget < 0)
-            mg1_torque = 0;
-        } else if (MotorActive == 1) // Only Mg1 active
-        {
-          mg2_torque = 0;
-        } else if (MotorActive == 2) // Only Mg2 active
-        {
+    if (MotorActive == 0) // Both motors
+    {
+      if (scaledTorqueTarget < 0)
+        mg1_torque = 0;
+    } else if (MotorActive == 1) // Only Mg1 active
+    {
+      mg2_torque = 0;
+    } else if (MotorActive == 2) // Only Mg2 active
+    {
+      mg1_torque = 0;
+    } else if (MotorActive == 3) // MG1 only at high torque
+    {
+      mg1_torque = 0;
+      if (torquePercent > 50) // only have MG1 active above 50%
+      {
+        mg1_torque = utils::change(torquePercent, 50, 100, 0, 4375);
+      }
+    }
+  } else if (DriveType == PRIUS) {
+    if (!TorqueCut) // should not trigger at all, only used for shifting GS450h
+    {
+      scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
+      mg2_torque = this->scaledTorqueTarget;
+      mg1_torque = ((mg2_torque * 5) / 4);
+
+      if (MotorActive == 0) // Both motors
+      {
+        if (scaledTorqueTarget < 0)
           mg1_torque = 0;
-        } else if (MotorActive == 3) // MG1 only at high torque
-        {
-          mg1_torque = 0;
-          if (torquePercent > 50) // only have MG1 active above 50%
-          {
-            mg1_torque = utils::change(torquePercent, 50, 100, 0, 4375);
-          }
-        }
-      } else {
+      } else if (MotorActive == 1) // Only Mg1 active
+      {
         mg2_torque = 0;
+      } else if (MotorActive == 2) // Only Mg2 active
+      {
         mg1_torque = 0;
       }
+    } else {
+      mg2_torque = 0;
+      mg1_torque = 0;
+    }
+  } else if (DriveType == IS300H) {
+    if (!TorqueCut) // should not trigger at all, only used for shifting GS450h
+    {
+      scaledTorqueTarget = (torquePercent * 3500) / 100.0f;
+      mg2_torque = this->scaledTorqueTarget;
+      mg1_torque = ((mg2_torque * 5) / 4);
+
+      if (MotorActive == 0) // Both motors
+      {
+        if (scaledTorqueTarget < 0)
+          mg1_torque = 0;
+      } else if (MotorActive == 1) // Only Mg1 active
+      {
+        mg2_torque = 0;
+      } else if (MotorActive == 2) // Only Mg2 active
+      {
+        mg1_torque = 0;
+      } else if (MotorActive == 3) // MG1 only at high torque
+      {
+        mg1_torque = 0;
+        if (torquePercent > 50) // only have MG1 active above 50%
+        {
+          mg1_torque = utils::change(torquePercent, 50, 100, 0, 4375);
+        }
+      }
+    } else {
+      mg2_torque = 0;
+      mg1_torque = 0;
+    }
+  }
+}
+
+float GS450HClass::GetMotorTemperature() {
+  int tmpmg1 =
+      AnaIn::MG1_Temp.Get(); // in the gs450h case we must read the analog temp
+                             // values from sensors in the gearbox
+  int tmpmg2 = AnaIn::MG2_Temp.Get();
+
+  float t1 = (tmpmg1 * (-0.02058758)) +
+             56.56512898; // Trying a best fit line approach.
+  float t2 = (tmpmg2 * (-0.02058758)) + 56.56512898;
+  ;
+  float tmpm = MAX(t1, t2); // which ever is the hottest gets displayed
+
+  return float(tmpm);
+}
+
+// 100 ms code
+void GS450HClass::Task100Ms() {
+  if (DriveType == GS450H) {
+    GS450Houtput();
+  }
+}
+
+void GS450HClass::GS450Hgear() //!!! should be ran every 10ms - ran before
+                               //! calculating torque request
+{
+  // Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update inverter
+  // status on web interface
+  gear = (Param::GetInt(Param::Gear));
+
+  if (gear == 2) //!!!Auto Shifting always start in low gear when powered on
+  {
+    if (gearAct == 0 &&
+        mg2_speed > 7000) // Shift up when in low gear and mg2 is over 7000rpm
+    {
+      gearReq = 1;                               // request high gear
+    } else if (gearAct == 1 && mg2_speed < 2000) // Shift down when in high gear
+                                                 // and mg2 is under 8000rpm
+    {
+      gearReq = 0; // request high gear
+    }
+
+    if (gearAct != gearReq) // check if we need to shift gears
+    {
+      // TorqueCut = true; //Cut Torque to motor
+      // TorqueShiftRamp = 0; //Zero torque Limiter
+      ShiftInit = true;
+      if (TorqueShiftRamp == 0) {
+        gearStep++; // increase gearStep by 1 adds 10ms delay before shifting
+      }
+      if (gearStep == 4) // wait some cycles before changing
+      {
+        gear = gearReq; // change the outputs
+      } else if (gearStep == 5) {
+        gearAct = gearReq; // we have now shifted gear
+        gearStep = 0;      // reset shift loop
+        // TorqueCut = false;//allow torque again
+        ShiftInit = false; // Allow troque ramping we are done shifting
+      }
+    } else // no shifting needed so gear should be gearAct
+    {
+      gear = gearAct;
+      ShiftInit = false; // always force it into false when not trying to shift.
+                         // In case of exiting shifting boundries during process
     }
   }
 
-  float GS450HClass::GetMotorTemperature() {
-    int tmpmg1 =
-        AnaIn::MG1_Temp.Get(); // in the gs450h case we must read the analog
-                               // temp values from sensors in the gearbox
-    int tmpmg2 = AnaIn::MG2_Temp.Get();
-    float GS450HClass::GetMotorTemperature() {
-      int tmpmg1 =
-          AnaIn::MG1_Temp.Get(); // in the gs450h case we must read the analog
-                                 // temp values from sensors in the gearbox
-      int tmpmg2 = AnaIn::MG2_Temp.Get();
+  if (gear == 1) //!!!High gear
+  {
+    DigIo::SP_out.Clear();
+    DigIo::SL1_out.Clear();
+    DigIo::SL2_out.Clear();
+  }
 
-      float t1 = (tmpmg1 * (-0.02058758)) +
-                 56.56512898; // Trying a best fit line approach.
-      float t2 = (tmpmg2 * (-0.02058758)) + 56.56512898;
-      ;
-      float tmpm = MAX(t1, t2); // which ever is the hottest gets displayed
-      float t1 = (tmpmg1 * (-0.02058758)) +
-                 56.56512898; // Trying a best fit line approach.
-      float t2 = (tmpmg2 * (-0.02058758)) + 56.56512898;
-      ;
-      float tmpm = MAX(t1, t2); // which ever is the hottest gets displayed
+  if (gear == 0) //!!!Low gear
+  {
+    DigIo::SP_out.Clear();
+    DigIo::SL1_out.Set();
+    DigIo::SL2_out.Set();
+  }
 
-      return float(tmpm);
-      return float(tmpm);
+  if (gear == 3) //!!!High in FWD and Low in REV - Jamie Jones special
+  {
+    int dir = Param::GetInt(Param::dir);
+    if (dir == -1) // reverse go low
+    {
+      DigIo::SP_out.Clear();
+      DigIo::SL1_out.Set();
+      DigIo::SL2_out.Set();
+    } else // go high
+    {
+      DigIo::SP_out.Clear();
+      DigIo::SL1_out.Clear();
+      DigIo::SL2_out.Clear();
+    }
+  }
+}
+
+void GS450HClass::GS450Houtput() //!!! should be ran every 10ms
+{
+  if (Param::GetInt(Param::opmode) == MOD_OFF) {
+    utils::GS450hOilPump(0);
+  }
+
+  if (Param::GetInt(Param::opmode) == MOD_RUN) {
+    Param::SetInt(
+        Param::Gear1,
+        DigIo::gear1_in.Get()); // update web interface with status of gearbox
+                                // PB feedbacks for diag purposes.
+    Param::SetInt(Param::Gear2, DigIo::gear2_in.Get());
+    Param::SetInt(Param::Gear3, DigIo::gear3_in.Get());
+    GearSW = ((!DigIo::gear3_in.Get() << 2) | (!DigIo::gear2_in.Get() << 1) |
+              (!DigIo::gear1_in.Get()));
+    if (GearSW == 6)
+      Param::SetInt(Param::GearFB, LOW_Gear); // set low gear
+    if (GearSW == 5)
+      Param::SetInt(Param::GearFB, HIGH_Gear); // set high gear
+    utils::GS450hOilPump(Param::GetInt(
+        Param::OilPump)); // toyota hybrid oil pump pwm to run set point
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Dilbert's code here
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void GS450HClass::SetPrius() {
+  setTimerState(true); // start toyota timers
+  if (htm_state < 5) {
+    htm_state = 5;
+    inv_status = 0; // must be 0 for prius
+  }
+  // for (int i = 0; i < 100; i++)
+  //   htm_data[i] = htm_data_Prius[i];
+  DriveType = PRIUS;
+}
+
+void GS450HClass::SetGS450H() {
+  setTimerState(true); // start toyota timers
+  if (htm_state > 4) {
+    htm_state = 0;
+    inv_status = 1; // must be 1 for gs450h
+  }
+  DriveType = GS450H;
+}
+
+void GS450HClass::SetGS300H() {
+  setTimerState(true); // start toyota timers
+  if (htm_state < 10) {
+    htm_state = 10;
+  }
+  inv_status = 0; // must be 0 for gs300h
+  for (int i = 0; i < 105; i++)
+    htm_data[i] = htm_data_GS300H[i];
+  DriveType = IS300H;
+}
+
+uint8_t GS450HClass::VerifyMTHChecksum(uint16_t len) {
+
+  uint16_t mth_checksum = 0;
+
+  for (int i = 0; i < (len - 2); i++)
+    mth_checksum += mth_data[i];
+
+  if (mth_checksum == (mth_data[len - 2] | (mth_data[len - 1] << 8)))
+    return 1;
+  else
+    return 0;
+}
+
+void GS450HClass::CalcHTMChecksum(uint16_t len) {
+  uint16_t htm_checksum = 0;
+
+  for (int i = 0; i < (len - 2); i++)
+    htm_checksum += htm_data[i];
+  htm_data[len - 2] = htm_checksum & 0xFF;
+  htm_data[len - 1] = htm_checksum >> 8;
+}
+
+void GS450HClass::Task1Ms() {
+  // Update debug parameters
+  Param::SetInt(Param::DMA_RxComplete, rx_complete_flag ? 1 : 0);
+  Param::SetInt(Param::DMA_TxComplete, tx_complete_flag ? 1 : 0);
+  Param::SetInt(Param::DMA_RxTimeout, rx_timeout);
+  Param::SetInt(Param::DMA_ConsecFail, consecutive_failures);
+  Param::SetInt(Param::HTM_State, htm_state);
+
+  switch (htm_state) {
+  case 0:
+    // Start DMA read using double buffer - DMA writes to active_rx_buffer, we
+    // process from processing_rx_buffer
+    rx_complete_flag = false;
+    rx_timeout = 0;
+    dma_read(active_rx_buffer, 100);
+    DigIo::req_out
+        .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
+    htm_state++;
+    break;
+  case 1:
+    DigIo::req_out
+        .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
+
+    // Wait for next TIM2 update event (start of new clock period = rising edge)
+    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
+      // Wait for TIM2 update flag - indicates start of new CLK period
+    }
+    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+
+    // Now start DMA synchronized to the rising edge of CLK
+    // Only transmit if previous TX completed (checked via flag or channel not
+    // busy)
+    if (inv_status == 0) {
+      if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
+        tx_complete_flag = false;
+        dma_write(htm_data, 80);
+      }
+    } else {
+      tx_complete_flag = false;
+      dma_write(htm_data_setup, 80);
+      if (processing_rx_buffer[1] != 0)
+        inv_status--; // Use processing buffer
+      if (processing_rx_buffer[1] == 0)
+        inv_status = 1;
+    }
+    htm_state++;
+    break;
+  case 2:
+    // Add delay to give inverter time to process the command
+    inverter_delay_counter++;
+    if (inverter_delay_counter >= INVERTER_PROCESSING_TIME_MS) {
+      inverter_delay_counter = 0;
+      htm_state++;
+    }
+    break;
+  case 3:
+    // Wait for RX completion with timeout
+    if (rx_complete_flag) {
+      rx_complete_flag = false;
+      // Check buffer integrity - processing_rx_buffer was swapped by ISR
+      if (VerifyMTHChecksum(100) == 0 &&
+          VerifyMTHChecksumNew(processing_rx_buffer, 100) == 0) {
+        consecutive_failures++;
+        if (consecutive_failures > MAX_FAILURES) {
+          statusInv = 0;
+          mg1_speed = 0;
+          mg2_speed = 0;
+          Param::SetInt(Param::cruisespeed, 0);
+        }
+      } else {
+        // exchange data and prepare next HTM frame using processing buffer
+        consecutive_failures = 0;
+        statusInv = 1;
+        dc_bus_voltage =
+            ((processing_rx_buffer[84] | processing_rx_buffer[85] << 8) / 2);
+        temp_inv_water = int8_t(processing_rx_buffer[42]);
+        temp_inv_inductor = int8_t(processing_rx_buffer[86]);
+        mg1_speed = processing_rx_buffer[6] | processing_rx_buffer[7] << 8;
+        mg2_speed = processing_rx_buffer[31] | processing_rx_buffer[32] << 8;
+
+        // Copy to mth_data for compatibility with existing code
+        for (int i = 0; i < 100; i++)
+          mth_data[i] = processing_rx_buffer[i];
+      }
+      htm_state++;
+    } else {
+      // Handle timeout
+      rx_timeout++;
+      if (rx_timeout > RX_TIMEOUT_MS) {
+        consecutive_failures++;
+        statusInv = 0;
+        mg1_speed = 0;
+        mg2_speed = 0;
+        Param::SetInt(Param::cruisespeed, 0);
+        htm_state++; // Move on despite timeout
+      }
+    }
+    break;
+  case 4:
+    // -3500 (reverse) to 3500 (forward)
+
+    // speed feedback
+    speedSum = mg2_speed + mg1_speed;
+    speedSum /= 113;
+    speedSum2 = speedSum;
+
+    htm_data[0] = 0; // speedSum2;
+    htm_data[75] = (mg1_torque * 4) & 0xFF;
+    htm_data[76] = ((mg1_torque * 4) >> 8) & 0xFF;
+
+    // mg1
+    htm_data[5] = (-mg1_torque) & 0xFF; // negative is forward
+    htm_data[6] = ((-mg1_torque) >> 8);
+    htm_data[11] = htm_data[5];
+    htm_data[12] = htm_data[6];
+
+    // mg2
+    htm_data[26] = (mg2_torque) & 0xFF; // positive is forward
+    htm_data[27] = ((mg2_torque) >> 8) & 0xFF;
+    htm_data[32] = htm_data[26];
+    htm_data[33] = htm_data[27];
+
+    htm_data[63] = (-5000) & 0xFF; // regen ability of battery
+    htm_data[64] = ((-5000) >> 8);
+
+    htm_data[65] = (27500) & 0xFF; // discharge ability of battery
+    htm_data[66] = ((27500) >> 8);
+
+    Param::SetInt(Param::MG1Raw, htm_data[5] | (htm_data[6] << 8));
+    Param::SetInt(Param::MG1Raw2, htm_data[75] | (htm_data[76] << 8));
+    Param::SetInt(Param::MG2Raw, htm_data[26] | (htm_data[27] << 8));
+
+    //!!moved to checksum function.
+    /*
+    htm_checksum=0;
+
+    for (int i = 0; i < 78; i++)
+        htm_checksum += htm_data[i];
+
+    htm_data[78]=htm_checksum&0xFF;
+    htm_data[79]=htm_checksum>>8;
+    */
+    CalcHTMChecksum(80);
+
+    if (counter > 100) {
+      // HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin );
+      counter = 0;
+    } else {
+      counter++;
     }
 
-    // 100 ms code
-    void GS450HClass::Task100Ms() {
-      if (DriveType == GS450H) {
-        GS450Houtput();
-      }
-      void GS450HClass::Task100Ms() {
-        if (DriveType == GS450H) {
-          GS450Houtput();
-        }
-      }
+    htm_state = 0;
+    break;
 
-      void GS450HClass::GS450Hgear() //!!! should be ran every 10ms - ran before
-                                     //! calculating torque request
-          void GS450HClass::GS450Hgear() //!!! should be ran every 10ms - ran
-                                         //! before
-                                         //! calculating torque request
+  /***** Demo code for Gen3 Prius/Auris direct communications! */
+  case 5:
+    // Start DMA read using double buffer - DMA writes to active_rx_buffer, we
+    // process from processing_rx_buffer
+    rx_complete_flag = false;
+    rx_timeout = 0;
+    dma_read(active_rx_buffer, 120);
+    DigIo::req_out
+        .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
+    htm_state++;
+    break;
+  case 6:
+    DigIo::req_out
+        .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
+
+    // Wait for next TIM2 update event (start of new clock period = rising edge)
+    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
+      // Wait for TIM2 update flag - indicates start of new CLK period
+    }
+    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+
+    // Now start DMA synchronized to the rising edge of CLK
+    if (inv_status > 5) {
+      if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
+        tx_complete_flag = false;
+        dma_write(htm_data, 100);
+      }
+    } else {
+      tx_complete_flag = false;
+      dma_write(&htm_data_init[inv_status][0], 100);
+
+      inv_status++;
+      if (inv_status == 6) {
+        // memcpy(htm_data, &htm_data_init[ inv_status ][0], 100);
+      }
+    }
+    htm_state++;
+    break;
+  case 7:
+    // Add delay to give inverter time to process the command
+    inverter_delay_counter++;
+    if (inverter_delay_counter >= INVERTER_PROCESSING_TIME_MS) {
+      inverter_delay_counter = 0;
+      htm_state++;
+    }
+    break;
+  case 8:
+    // Wait for RX completion with timeout
+    if (rx_complete_flag) {
+      rx_complete_flag = false;
+      // Check buffer integrity - processing_rx_buffer was swapped by ISR
+      if (VerifyMTHChecksum(120) == 0 &&
+          VerifyMTHChecksumNew(processing_rx_buffer, 120) == 0) {
+        consecutive_failures++;
+        if (consecutive_failures > MAX_FAILURES) {
+          statusInv = 0;
+          mg1_speed = 0;
+          mg2_speed = 0;
+          Param::SetInt(Param::cruisespeed, 0);
+        }
+      } else {
+        // exchange data and prepare next HTM frame using processing buffer
+        consecutive_failures = 0;
+        statusInv = 1;
+        dc_bus_voltage =
+            (((processing_rx_buffer[100] | processing_rx_buffer[101] << 8) -
+              5) /
+             2);
+        temp_inv_water = int8_t(processing_rx_buffer[20]); // from 300h
+        temp_inv_inductor =
+            (processing_rx_buffer[86] | processing_rx_buffer[87] << 8);
+        mg1_speed = processing_rx_buffer[6] | processing_rx_buffer[7] << 8;
+        mg2_speed = processing_rx_buffer[38] | processing_rx_buffer[39] << 8;
+
+        // Copy to mth_data for compatibility with existing code
+        for (int i = 0; i < 120; i++)
+          mth_data[i] = processing_rx_buffer[i];
+      }
+      htm_state++;
+    } else {
+      // Handle timeout
+      rx_timeout++;
+      if (rx_timeout > RX_TIMEOUT_MS) {
+        consecutive_failures++;
+        statusInv = 0;
+        mg1_speed = 0;
+        mg2_speed = 0;
+        Param::SetInt(Param::cruisespeed, 0);
+        htm_state++; // Move on despite timeout
+      }
+    }
+    break;
+  case 9:
+    Param::SetInt(Param::torque,
+                  mg2_torque); // post processed final torue value sent to inv
+                               // to web interface
+
+    // speed feedback
+    speedSum = mg2_speed + mg1_speed;
+    speedSum /= 113;
+    // Possibly not needed
+    // uint8_t speedSum2=speedSum;
+    // htm_data[0]=speedSum2;
+
+    // these bytes are used, and seem to be MG1 for startup, but can't work out
+    // the relatino to the bytes earlier in the stream, possibly the byte order
+    // has been flipped on these 2 bytes could be a software bug ?
+    // htm_data[76]=(mg1_torque*4) & 0xFF; //Possibly wrong
+    // htm_data[75]=((mg1_torque*4)>>8) & 0xFF; //Possibly wrong
+
+    // mg1
+    htm_data[5] = (mg1_torque) & 0xFF; // negative is forward
+    htm_data[6] = ((mg1_torque) >> 8);
+    htm_data[11] = htm_data[5];
+    htm_data[12] = htm_data[6];
+
+    // mg2 the MG2 values are now beside each other!
+    htm_data[30] = (mg2_torque) & 0xFF; // positive is forward
+    htm_data[31] = ((mg2_torque) >> 8) & 0xFF;
+
+    if (scaledTorqueTarget > 0) {
+      // forward direction these bytes should match
+      htm_data[26] = htm_data[30];
+      htm_data[27] = htm_data[31];
+      htm_data[28] = (mg2_torque / 2) & 0xFF; // positive is forward
+      htm_data[29] = ((mg2_torque / 2) >> 8) & 0xFF;
+    }
+
+    if (scaledTorqueTarget < 0) {
+      // reverse direction these bytes should match
+      htm_data[28] = htm_data[30];
+      htm_data[29] = htm_data[31];
+      htm_data[26] = (mg2_torque / 2) & 0xFF; // positive is forward
+      htm_data[27] = ((mg2_torque / 2) >> 8) & 0xFF;
+    }
+
+    // Battery Limits
+    /*
+            htm_data[85]=(-5000)&0xFF;  // regen ability of battery !!!increased
+            htm_data[86]=((-5000)>>8);
+
+            htm_data[87]=(-10000)&0xFF;  // discharge ability of battery
+       !!!Remove negative and increased htm_data[88]=((-10000)>>8);
+    */
+    // Battery Limits = forced zero
+    // 40	4	75	12	60	251	52	4
+
+    htm_data[72] = 0x40;
+    htm_data[73] = 0x04;
+    htm_data[74] = 0x75;
+    htm_data[75] = 0x12;
+    htm_data[76] = 0x60;
+    htm_data[77] = 0x25;
+    htm_data[78] = 0x52;
+    htm_data[79] = 0x04;
+
+    htm_data[86] = 137; // from start up
+    htm_data[88] = 137; // 221 on start
+
+    // checksum
+    if (++frame_count & 0x01) {
+      // b94_count++;
+      htm_data[94]++;
+    }
+
+    CalcHTMChecksum(100);
+
+    htm_state = 5;
+    break;
+
+  /***** Code for Lexus GS300H */
+  case 10:
+    if (Param::GetInt(Param::opmode) != MOD_RUN)
+      inv_status = 0;
+    // Start DMA read using double buffer - DMA writes to active_rx_buffer, we
+    // process from processing_rx_buffer
+    rx_complete_flag = false;
+    rx_timeout = 0;
+    dma_read(active_rx_buffer, 140);
+    DigIo::req_out
+        .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 0);
+    htm_state++;
+    break;
+  case 11:
+    DigIo::req_out
+        .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
+
+    // Wait for next TIM2 update event (start of new clock period = rising edge)
+    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
+      // Wait for TIM2 update flag - indicates start of new CLK period
+    }
+    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+
+    // Now start DMA synchronized to the rising edge of CLK
+    if (inv_status > 6) {
+      if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
+        tx_complete_flag = false;
+        dma_write(htm_data, 105);
+      }
+    } else {
+      tx_complete_flag = false;
+      dma_write(&htm_data_Init_GS300H[inv_status][0], 105);
+
+      inv_status++;
+    }
+    htm_state++;
+    break;
+  case 12:
+    // Add delay to give inverter time to process the command
+    inverter_delay_counter++;
+    if (inverter_delay_counter >= INVERTER_PROCESSING_TIME_MS) {
+      inverter_delay_counter = 0;
+      htm_state++;
+    }
+    break;
+  case 13:
+    // Wait for RX completion with timeout
+    if (rx_complete_flag) {
+      rx_complete_flag = false;
+      // Check buffer integrity - processing_rx_buffer was swapped by ISR
+      if (VerifyMTHChecksum(140) == 0 &&
+          VerifyMTHChecksumNew(processing_rx_buffer, 140) == 0) {
+        consecutive_failures++;
+        if (consecutive_failures > MAX_FAILURES) {
+          statusInv = 0;
+          // Optionally reset inv_status if needed
+          // inv_status=0;
+        }
+      } else {
+        // exchange data and prepare next HTM frame using processing buffer
+        consecutive_failures = 0;
+        statusInv = 1;
+        dc_bus_voltage =
+            (((processing_rx_buffer[117] | processing_rx_buffer[118] << 8)) /
+             2);
+        temp_inv_water = int8_t(processing_rx_buffer[20]);
+        temp_inv_inductor =
+            (processing_rx_buffer[25] | processing_rx_buffer[26] << 8);
+        mg1_speed = processing_rx_buffer[10] | processing_rx_buffer[11] << 8;
+        mg2_speed = processing_rx_buffer[43] | processing_rx_buffer[44] << 8;
+
+        // Copy to mth_data for compatibility with existing code
+        for (int i = 0; i < 140; i++)
+          mth_data[i] = processing_rx_buffer[i];
+      }
+      htm_state++;
+    } else {
+      // Handle timeout
+      rx_timeout++;
+      if (rx_timeout > RX_TIMEOUT_MS) {
+        consecutive_failures++;
+        statusInv = 0;
+        htm_state++; // Move on despite timeout
+      }
+    }
+    break;
+  case 14:
+    Param::SetInt(Param::torque,
+                  mg2_torque); // post processed final torue value sent to inv
+                               // to web interface
+
+    // speed feedback
+    speedSum = mg2_speed + mg1_speed;
+    speedSum /= 113;
+
+    // mg1
+    htm_data[5] = (mg1_torque * -1) & 0xFF; // negative is forward
+    htm_data[6] = ((mg1_torque * -1) >> 8);
+    htm_data[11] = htm_data[5];
+    htm_data[12] = htm_data[6];
+
+    // mg2
+    htm_data[31] = (mg2_torque) & 0xFF; // positive is forward
+    htm_data[32] = ((mg2_torque) >> 8);
+    htm_data[37] = htm_data[26];
+    htm_data[38] = htm_data[27];
+
+    // Battery Limits
+
+    htm_data[79] = (-5000) & 0xFF; // regen ability of battery
+    htm_data[80] = ((-5000) >> 8);
+
+    htm_data[81] = (10000) & 0xFF; // discharge ability of battery
+    htm_data[82] = ((10000) >> 8);
+    CalcHTMChecksum(105);
+
+    htm_state = 10;
+    break;
+  }
+}
+
+void GS450HClass::setTimerState(bool desiredTimerState) {
+  if (desiredTimerState != this->timerIsRunning) {
+    if (desiredTimerState) {
+      if (Param::GetInt(Param::PumpPWM) ==
+          0) // If Pump PWM out is set to Oil Pump
       {
-        // Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update
-        // inverter status on web interface
-        gear = (Param::GetInt(Param::Gear));
-        // Param::SetInt(Param::InvStat, GS450HClass::statusFB()); //update
-        // inverter status on web interface
-        gear = (Param::GetInt(Param::Gear));
-
-        if (gear ==
-            2) //!!!Auto Shifting always start in low gear when powered on
-        {
-          if (gearAct == 0 &&
-              mg2_speed >
-                  7000) // Shift up when in low gear and mg2 is over 7000rpm
-          {
-            gearReq = 1; // request high gear
-          } else if (gearAct == 1 &&
-                     mg2_speed < 2000) // Shift down when in high gear
-                                       // and mg2 is under 8000rpm
-          {
-            gearReq = 0; // request high gear
-          }
-          if (gear ==
-              2) //!!!Auto Shifting always start in low gear when powered on
-          {
-            if (gearAct == 0 &&
-                mg2_speed >
-                    7000) // Shift up when in low gear and mg2 is over 7000rpm
-            {
-              gearReq = 1; // request high gear
-            } else if (gearAct == 1 &&
-                       mg2_speed < 2000) // Shift down when in high gear
-                                         // and mg2 is under 8000rpm
-            {
-              gearReq = 0; // request high gear
-            }
-
-            if (gearAct != gearReq) // check if we need to shift gears
-            {
-              // TorqueCut = true; //Cut Torque to motor
-              // TorqueShiftRamp = 0; //Zero torque Limiter
-              ShiftInit = true;
-              if (TorqueShiftRamp == 0) {
-                gearStep++; // increase gearStep by 1 adds 10ms delay before
-                            // shifting
-              }
-              if (gearStep == 4) // wait some cycles before changing
-              {
-                gear = gearReq; // change the outputs
-              } else if (gearStep == 5) {
-                gearAct = gearReq; // we have now shifted gear
-                gearStep = 0;      // reset shift loop
-                // TorqueCut = false;//allow torque again
-                ShiftInit = false; // Allow troque ramping we are done shifting
-              }
-            } else // no shifting needed so gear should be gearAct
-            {
-              gear = gearAct;
-              ShiftInit =
-                  false; // always force it into false when not trying to shift.
-                         // In case of exiting shifting boundries during process
-            }
-          }
-          if (gearAct != gearReq) // check if we need to shift gears
-          {
-            // TorqueCut = true; //Cut Torque to motor
-            // TorqueShiftRamp = 0; //Zero torque Limiter
-            ShiftInit = true;
-            if (TorqueShiftRamp == 0) {
-              gearStep++; // increase gearStep by 1 adds 10ms delay before
-                          // shifting
-            }
-            if (gearStep == 4) // wait some cycles before changing
-            {
-              gear = gearReq; // change the outputs
-            } else if (gearStep == 5) {
-              gearAct = gearReq; // we have now shifted gear
-              gearStep = 0;      // reset shift loop
-              // TorqueCut = false;//allow torque again
-              ShiftInit = false; // Allow troque ramping we are done shifting
-            }
-          } else // no shifting needed so gear should be gearAct
-          {
-            gear = gearAct;
-            ShiftInit =
-                false; // always force it into false when not trying to shift.
-                       // In case of exiting shifting boundries during process
-          }
-        }
-
-        if (gear == 1) //!!!High gear
-        {
-          DigIo::SP_out.Clear();
-          DigIo::SL1_out.Clear();
-          DigIo::SL2_out.Clear();
-        }
-        if (gear == 1) //!!!High gear
-        {
-          DigIo::SP_out.Clear();
-          DigIo::SL1_out.Clear();
-          DigIo::SL2_out.Clear();
-        }
-
-        if (gear == 0) //!!!Low gear
-        {
-          DigIo::SP_out.Clear();
-          DigIo::SL1_out.Set();
-          DigIo::SL2_out.Set();
-        }
-        if (gear == 0) //!!!Low gear
-        {
-          DigIo::SP_out.Clear();
-          DigIo::SL1_out.Set();
-          DigIo::SL2_out.Set();
-        }
-
-        if (gear == 3) //!!!High in FWD and Low in REV - Jamie Jones special
-        {
-          int dir = Param::GetInt(Param::dir);
-          if (dir == -1) // reverse go low
-          {
-            DigIo::SP_out.Clear();
-            DigIo::SL1_out.Set();
-            DigIo::SL2_out.Set();
-          } else // go high
-          {
-            DigIo::SP_out.Clear();
-            DigIo::SL1_out.Clear();
-            DigIo::SL2_out.Clear();
-          }
-        }
-        if (gear == 3) //!!!High in FWD and Low in REV - Jamie Jones special
-        {
-          int dir = Param::GetInt(Param::dir);
-          if (dir == -1) // reverse go low
-          {
-            DigIo::SP_out.Clear();
-            DigIo::SL1_out.Set();
-            DigIo::SL2_out.Set();
-          } else // go high
-          {
-            DigIo::SP_out.Clear();
-            DigIo::SL1_out.Clear();
-            DigIo::SL2_out.Clear();
-          }
-        }
+        tim_setup(); // trigger pump pwm out setup
       }
-
-      void GS450HClass::GS450Houtput()     //!!! should be ran every 10ms
-          void GS450HClass::GS450Houtput() //!!! should be ran every 10ms
-      {
-        if (Param::GetInt(Param::opmode) == MOD_OFF) {
-          utils::GS450hOilPump(0);
-        }
-        if (Param::GetInt(Param::opmode) == MOD_OFF) {
-          utils::GS450hOilPump(0);
-        }
-
-        if (Param::GetInt(Param::opmode) == MOD_RUN) {
-          Param::SetInt(
-              Param::Gear1,
-              DigIo::gear1_in.Get()); // update web interface with status of
-                                      // gearbox PB feedbacks for diag purposes.
-          Param::SetInt(Param::Gear2, DigIo::gear2_in.Get());
-          Param::SetInt(Param::Gear3, DigIo::gear3_in.Get());
-          GearSW = ((!DigIo::gear3_in.Get() << 2) |
-                    (!DigIo::gear2_in.Get() << 1) | (!DigIo::gear1_in.Get()));
-          if (GearSW == 6)
-            Param::SetInt(Param::GearFB, LOW_Gear); // set low gear
-          if (GearSW == 5)
-            Param::SetInt(Param::GearFB, HIGH_Gear); // set high gear
-          utils::GS450hOilPump(Param::GetInt(
-              Param::OilPump)); // toyota hybrid oil pump pwm to run set point
-        }
-        if (Param::GetInt(Param::opmode) == MOD_RUN) {
-          Param::SetInt(
-              Param::Gear1,
-              DigIo::gear1_in.Get()); // update web interface with status of
-                                      // gearbox PB feedbacks for diag purposes.
-          Param::SetInt(Param::Gear2, DigIo::gear2_in.Get());
-          Param::SetInt(Param::Gear3, DigIo::gear3_in.Get());
-          GearSW = ((!DigIo::gear3_in.Get() << 2) |
-                    (!DigIo::gear2_in.Get() << 1) | (!DigIo::gear1_in.Get()));
-          if (GearSW == 6)
-            Param::SetInt(Param::GearFB, LOW_Gear); // set low gear
-          if (GearSW == 5)
-            Param::SetInt(Param::GearFB, HIGH_Gear); // set high gear
-          utils::GS450hOilPump(Param::GetInt(
-              Param::OilPump)); // toyota hybrid oil pump pwm to run set point
-        }
-      }
-
-      //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-      // Dilbert's code here
-      // Dilbert's code here
-      //////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      void GS450HClass::SetPrius() {
-        setTimerState(true); // start toyota timers
-        if (htm_state < 5) {
-          htm_state = 5;
-          inv_status = 0; // must be 0 for prius
-        }
-        // for (int i = 0; i < 100; i++)
-        //   htm_data[i] = htm_data_Prius[i];
-        DriveType = PRIUS;
-      }
-
-      void GS450HClass::SetGS450H() {
-        setTimerState(true); // start toyota timers
-        if (htm_state > 4) {
-          htm_state = 0;
-          inv_status = 1; // must be 1 for gs450h
-        }
-        DriveType = GS450H;
-        void GS450HClass::SetGS450H() {
-          setTimerState(true); // start toyota timers
-          if (htm_state > 4) {
-            htm_state = 0;
-            inv_status = 1; // must be 1 for gs450h
-          }
-          DriveType = GS450H;
-        }
-
-        void GS450HClass::SetGS300H() {
-          setTimerState(true); // start toyota timers
-          if (htm_state < 10) {
-            htm_state = 10;
-          }
-          inv_status = 0; // must be 0 for gs300h
-          for (int i = 0; i < 105; i++)
-            htm_data[i] = htm_data_GS300H[i];
-          DriveType = IS300H;
-          void GS450HClass::SetGS300H() {
-            setTimerState(true); // start toyota timers
-            if (htm_state < 10) {
-              htm_state = 10;
-            }
-            inv_status = 0; // must be 0 for gs300h
-            for (int i = 0; i < 105; i++)
-              htm_data[i] = htm_data_GS300H[i];
-            DriveType = IS300H;
-          }
-
-          uint8_t GS450HClass::VerifyMTHChecksum(uint16_t len) {
-            uint8_t GS450HClass::VerifyMTHChecksum(uint16_t len) {
-
-              uint16_t mth_checksum = 0;
-              uint16_t mth_checksum = 0;
-
-              for (int i = 0; i < (len - 2); i++)
-                mth_checksum += mth_data[i];
-              for (int i = 0; i < (len - 2); i++)
-                mth_checksum += mth_data[i];
-
-              if (mth_checksum ==
-                  (mth_data[len - 2] | (mth_data[len - 1] << 8)))
-                return 1;
-              else
-                return 0;
-              if (mth_checksum ==
-                  (mth_data[len - 2] | (mth_data[len - 1] << 8)))
-                return 1;
-              else
-                return 0;
-            }
-
-            void GS450HClass::CalcHTMChecksum(uint16_t len) {
-              uint16_t htm_checksum = 0;
-              void GS450HClass::CalcHTMChecksum(uint16_t len) {
-                uint16_t htm_checksum = 0;
-
-                for (int i = 0; i < (len - 2); i++)
-                  htm_checksum += htm_data[i];
-                htm_data[len - 2] = htm_checksum & 0xFF;
-                htm_data[len - 1] = htm_checksum >> 8;
-                for (int i = 0; i < (len - 2); i++)
-                  htm_checksum += htm_data[i];
-                htm_data[len - 2] = htm_checksum & 0xFF;
-                htm_data[len - 1] = htm_checksum >> 8;
-              }
-
-              void GS450HClass::Task1Ms() {
-                // Update debug parameters
-                Param::SetInt(Param::DMA_RxComplete, rx_complete_flag ? 1 : 0);
-                Param::SetInt(Param::DMA_TxComplete, tx_complete_flag ? 1 : 0);
-                Param::SetInt(Param::DMA_RxTimeout, rx_timeout);
-                Param::SetInt(Param::DMA_ConsecFail, consecutive_failures);
-                Param::SetInt(Param::HTM_State, htm_state);
-
-                switch (htm_state) {
-                case 0:
-                  // Start DMA read using double buffer - DMA writes to
-                  // active_rx_buffer, we process from processing_rx_buffer
-                  rx_complete_flag = false;
-                  rx_timeout = 0;
-                  dma_read(active_rx_buffer, 100);
-                  DigIo::req_out
-                      .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                // HTM_SYNC_Pin, 0);
-                  htm_state++;
-                  break;
-                case 1:
-                  DigIo::req_out.Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                        // HTM_SYNC_Pin, 1);
-                  void GS450HClass::Task1Ms() {
-                    // Update debug parameters
-                    Param::SetInt(Param::DMA_RxComplete,
-                                  rx_complete_flag ? 1 : 0);
-                    Param::SetInt(Param::DMA_TxComplete,
-                                  tx_complete_flag ? 1 : 0);
-                    Param::SetInt(Param::DMA_RxTimeout, rx_timeout);
-                    Param::SetInt(Param::DMA_ConsecFail, consecutive_failures);
-                    Param::SetInt(Param::HTM_State, htm_state);
-
-                    switch (htm_state) {
-                    case 0:
-                      // Start DMA read using double buffer - DMA writes to
-                      // active_rx_buffer, we process from processing_rx_buffer
-                      rx_complete_flag = false;
-                      rx_timeout = 0;
-                      dma_read(active_rx_buffer, 100);
-                      DigIo::req_out
-                          .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                    // HTM_SYNC_Pin, 0);
-                      htm_state++;
-                      break;
-                    case 1:
-                      DigIo::req_out
-                          .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                  // HTM_SYNC_Pin, 1);
-
-                      // Wait for next TIM2 update event (start of new clock
-                      // period = rising edge)
-                      while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-                        // Wait for TIM2 update flag - indicates start of new
-                        // CLK period
-                      }
-                      TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
-
-                      // Now start DMA synchronized to the rising edge of CLK
-                      // Only transmit if previous TX completed (checked via
-                      // flag or channel not busy)
-                      if (inv_status == 0) {
-                        if (tx_complete_flag ||
-                            !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
-                          tx_complete_flag = false;
-                          dma_write(htm_data, 80);
-                        }
-                      } else {
-                        tx_complete_flag = false;
-                        dma_write(htm_data_setup, 80);
-                        if (processing_rx_buffer[1] != 0)
-                          inv_status--; // Use processing buffer
-                        if (processing_rx_buffer[1] == 0)
-                          inv_status = 1;
-                      }
-                      htm_state++;
-                      break;
-                    case 2:
-                      // Add delay to give inverter time to process the command
-                      inverter_delay_counter++;
-                      if (inverter_delay_counter >=
-                          INVERTER_PROCESSING_TIME_MS) {
-                        inverter_delay_counter = 0;
-                        htm_state++;
-                      }
-                      break;
-                    case 3:
-                      // Wait for RX completion with timeout
-                      if (rx_complete_flag) {
-                        rx_complete_flag = false;
-                        // Check buffer integrity - processing_rx_buffer was
-                        // swapped by ISR
-                        if (VerifyMTHChecksum(100) == 0 &&
-                            VerifyMTHChecksumNew(processing_rx_buffer, 100) ==
-                                0) {
-                          consecutive_failures++;
-                          if (consecutive_failures > MAX_FAILURES) {
-                            statusInv = 0;
-                            mg1_speed = 0;
-                            mg2_speed = 0;
-                            Param::SetInt(Param::cruisespeed, 0);
-                            // Wait for next TIM2 update event (start of new
-                            // clock period = rising edge)
-                            while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-                              // Wait for TIM2 update flag - indicates start of
-                              // new CLK period
-                            }
-                            TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
-
-                            // Now start DMA synchronized to the rising edge of
-                            // CLK Only transmit if previous TX completed
-                            // (checked via flag or channel not busy)
-                            if (inv_status == 0) {
-                              if (tx_complete_flag ||
-                                  !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
-                                tx_complete_flag = false;
-                                dma_write(htm_data, 80);
-                              }
-                            } else {
-                              tx_complete_flag = false;
-                              dma_write(htm_data_setup, 80);
-                              if (processing_rx_buffer[1] != 0)
-                                inv_status--; // Use processing buffer
-                              if (processing_rx_buffer[1] == 0)
-                                inv_status = 1;
-                            }
-                            htm_state++;
-                            break;
-                          case 2:
-                            // Add delay to give inverter time to process the
-                            // command
-                            inverter_delay_counter++;
-                            if (inverter_delay_counter >=
-                                INVERTER_PROCESSING_TIME_MS) {
-                              inverter_delay_counter = 0;
-                              htm_state++;
-                            }
-                            break;
-                          case 3:
-                            // Wait for RX completion with timeout
-                            if (rx_complete_flag) {
-                              rx_complete_flag = false;
-                              // Check buffer integrity - processing_rx_buffer
-                              // was swapped by ISR
-                              if (VerifyMTHChecksum(100) == 0 &&
-                                  VerifyMTHChecksumNew(processing_rx_buffer,
-                                                       100) == 0) {
-                                consecutive_failures++;
-                                if (consecutive_failures > MAX_FAILURES) {
-                                  statusInv = 0;
-                                  mg1_speed = 0;
-                                  mg2_speed = 0;
-                                  Param::SetInt(Param::cruisespeed, 0);
-                                }
-                              } else {
-                                // exchange data and prepare next HTM frame
-                                // using processing buffer
-                                consecutive_failures = 0;
-                                statusInv = 1;
-                                dc_bus_voltage =
-                                    ((processing_rx_buffer[84] |
-                                      processing_rx_buffer[85] << 8) /
-                                     2);
-                                temp_inv_water =
-                                    int8_t(processing_rx_buffer[42]);
-                                temp_inv_inductor =
-                                    int8_t(processing_rx_buffer[86]);
-                                mg1_speed = processing_rx_buffer[6] |
-                                            processing_rx_buffer[7] << 8;
-                                mg2_speed = processing_rx_buffer[31] |
-                                            processing_rx_buffer[32] << 8;
-
-                                // Copy to mth_data for compatibility with
-                                // existing code
-                                for (int i = 0; i < 100; i++)
-                                  mth_data[i] = processing_rx_buffer[i];
-                              }
-                              htm_state++;
-                            } else {
-                              // Handle timeout
-                              rx_timeout++;
-                              if (rx_timeout > RX_TIMEOUT_MS) {
-                                consecutive_failures++;
-                                statusInv = 0;
-                                mg1_speed = 0;
-                                mg2_speed = 0;
-                                Param::SetInt(Param::cruisespeed, 0);
-                                htm_state++; // Move on despite timeout
-                              }
-                            }
-                            break;
-                          case 4:
-                            // -3500 (reverse) to 3500 (forward)
-
-                            // speed feedback
-                            speedSum = mg2_speed + mg1_speed;
-                            speedSum /= 113;
-                            speedSum2 = speedSum;
-
-                            htm_data[0] = 0; // speedSum2;
-                            htm_data[75] = (mg1_torque * 4) & 0xFF;
-                            htm_data[76] = ((mg1_torque * 4) >> 8) & 0xFF;
-
-                            // mg1
-                            htm_data[5] =
-                                (-mg1_torque) & 0xFF; // negative is forward
-                            htm_data[6] = ((-mg1_torque) >> 8);
-                            htm_data[11] = htm_data[5];
-                            htm_data[12] = htm_data[6];
-                            // mg1
-                            htm_data[5] =
-                                (-mg1_torque) & 0xFF; // negative is forward
-                            htm_data[6] = ((-mg1_torque) >> 8);
-                            htm_data[11] = htm_data[5];
-                            htm_data[12] = htm_data[6];
-
-                            // mg2
-                            htm_data[26] =
-                                (mg2_torque) & 0xFF; // positive is forward
-                            htm_data[27] = ((mg2_torque) >> 8) & 0xFF;
-                            htm_data[32] = htm_data[26];
-                            htm_data[33] = htm_data[27];
-                            // mg2
-                            htm_data[26] =
-                                (mg2_torque) & 0xFF; // positive is forward
-                            htm_data[27] = ((mg2_torque) >> 8) & 0xFF;
-                            htm_data[32] = htm_data[26];
-                            htm_data[33] = htm_data[27];
-
-                            htm_data[63] =
-                                (-5000) & 0xFF; // regen ability of battery
-                            htm_data[64] = ((-5000) >> 8);
-                            htm_data[63] =
-                                (-5000) & 0xFF; // regen ability of battery
-                            htm_data[64] = ((-5000) >> 8);
-
-                            htm_data[65] =
-                                (27500) & 0xFF; // discharge ability of battery
-                            htm_data[66] = ((27500) >> 8);
-
-                            Param::SetInt(Param::MG1Raw,
-                                          htm_data[5] | (htm_data[6] << 8));
-                            Param::SetInt(Param::MG1Raw2,
-                                          htm_data[75] | (htm_data[76] << 8));
-                            Param::SetInt(Param::MG2Raw,
-                                          htm_data[26] | (htm_data[27] << 8));
-                            htm_data[65] =
-                                (27500) & 0xFF; // discharge ability of battery
-                            htm_data[66] = ((27500) >> 8);
-
-                            Param::SetInt(Param::MG1Raw,
-                                          htm_data[5] | (htm_data[6] << 8));
-                            Param::SetInt(Param::MG1Raw2,
-                                          htm_data[75] | (htm_data[76] << 8));
-                            Param::SetInt(Param::MG2Raw,
-                                          htm_data[26] | (htm_data[27] << 8));
-
-                            //!!moved to checksum function.
-                            /*
-                            htm_checksum=0;
-                            //!!moved to checksum function.
-                            /*
-                            htm_checksum=0;
-
-                            for (int i = 0; i < 78; i++)
-                                htm_checksum += htm_data[i];
-                            for (int i = 0; i < 78; i++)
-                                htm_checksum += htm_data[i];
-
-                            htm_data[78]=htm_checksum&0xFF;
-                            htm_data[79]=htm_checksum>>8;
-                            */
-                            CalcHTMChecksum(80);
-                            htm_data[78] = htm_checksum & 0xFF;
-                            htm_data[79] = htm_checksum >> 8;
-                            */ CalcHTMChecksum(80);
-
-                            if (counter > 100) {
-                              // HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin );
-                              counter = 0;
-                            } else {
-                              counter++;
-                            }
-                            if (counter > 100) {
-                              // HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin );
-                              counter = 0;
-                            } else {
-                              counter++;
-                            }
-
-                            htm_state = 0;
-                            break;
-                            htm_state = 0;
-                            break;
-
-                          /***** Demo code for Gen3 Prius/Auris direct
-                           * communications! */
-                          case 5:
-                            // Start DMA read using double buffer - DMA writes
-                            // to active_rx_buffer, we process from
-                            // processing_rx_buffer
-                            rx_complete_flag = false;
-                            rx_timeout = 0;
-                            dma_read(active_rx_buffer, 120);
-                            DigIo::req_out
-                                .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                          // HTM_SYNC_Pin, 0);
-                            htm_state++;
-                            break;
-                          case 6:
-                            DigIo::req_out
-                                .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                        // HTM_SYNC_Pin, 1);
-                          /***** Demo code for Gen3 Prius/Auris direct
-                           * communications! */
-                          case 5:
-                            // Start DMA read using double buffer - DMA writes
-                            // to active_rx_buffer, we process from
-                            // processing_rx_buffer
-                            rx_complete_flag = false;
-                            rx_timeout = 0;
-                            dma_read(active_rx_buffer, 120);
-                            DigIo::req_out
-                                .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                          // HTM_SYNC_Pin, 0);
-                            htm_state++;
-                            break;
-                          case 6:
-                            DigIo::req_out
-                                .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                        // HTM_SYNC_Pin, 1);
-
-                            // Wait for next TIM2 update event (start of new
-                            // clock period = rising edge)
-                            while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-                              // Wait for TIM2 update flag - indicates start of
-                              // new CLK period
-                            }
-                            TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
-
-                            // Now start DMA synchronized to the rising edge of
-                            // CLK
-                            if (inv_status > 5) {
-                              if (tx_complete_flag ||
-                                  !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
-                                tx_complete_flag = false;
-                                dma_write(htm_data, 100);
-                              }
-                            } else {
-                              tx_complete_flag = false;
-                              dma_write(&htm_data_init[inv_status][0], 100);
-                              // Wait for next TIM2 update event (start of new
-                              // clock period = rising edge)
-                              while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-                                // Wait for TIM2 update flag - indicates start
-                                // of new CLK period
-                              }
-                              TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
-
-                              // Now start DMA synchronized to the rising edge
-                              // of CLK
-                              if (inv_status > 5) {
-                                if (tx_complete_flag ||
-                                    !dma_channel_is_enabled(DMA1,
-                                                            DMA_CHANNEL7)) {
-                                  tx_complete_flag = false;
-                                  dma_write(htm_data, 100);
-                                }
-                              } else {
-                                tx_complete_flag = false;
-                                dma_write(&htm_data_init[inv_status][0], 100);
-
-                                inv_status++;
-                                if (inv_status == 6) {
-                                  // memcpy(htm_data, &htm_data_init[ inv_status
-                                  // ][0], 100);
-                                }
-                              }
-                              htm_state++;
-                              break;
-                            case 7:
-                              // Add delay to give inverter time to process the
-                              // command
-                              inverter_delay_counter++;
-                              if (inverter_delay_counter >=
-                                  INVERTER_PROCESSING_TIME_MS) {
-                                inverter_delay_counter = 0;
-                                htm_state++;
-                              }
-                              break;
-                            case 8:
-                              // Wait for RX completion with timeout
-                              if (rx_complete_flag) {
-                                rx_complete_flag = false;
-                                // Check buffer integrity - processing_rx_buffer
-                                // was swapped by ISR
-                                if (VerifyMTHChecksum(120) == 0 &&
-                                    VerifyMTHChecksumNew(processing_rx_buffer,
-                                                         120) == 0) {
-                                  consecutive_failures++;
-                                  if (consecutive_failures > MAX_FAILURES) {
-                                    statusInv = 0;
-                                    mg1_speed = 0;
-                                    mg2_speed = 0;
-                                    Param::SetInt(Param::cruisespeed, 0);
-                                    inv_status++;
-                                    if (inv_status == 6) {
-                                      // memcpy(htm_data, &htm_data_init[
-                                      // inv_status ][0], 100);
-                                    }
-                                  }
-                                  htm_state++;
-                                  break;
-                                case 7:
-                                  // Add delay to give inverter time to process
-                                  // the command
-                                  inverter_delay_counter++;
-                                  if (inverter_delay_counter >=
-                                      INVERTER_PROCESSING_TIME_MS) {
-                                    inverter_delay_counter = 0;
-                                    htm_state++;
-                                  }
-                                  break;
-                                case 8:
-                                  // Wait for RX completion with timeout
-                                  if (rx_complete_flag) {
-                                    rx_complete_flag = false;
-                                    // Check buffer integrity -
-                                    // processing_rx_buffer was swapped by ISR
-                                    if (VerifyMTHChecksum(120) == 0 &&
-                                        VerifyMTHChecksumNew(
-                                            processing_rx_buffer, 120) == 0) {
-                                      consecutive_failures++;
-                                      if (consecutive_failures > MAX_FAILURES) {
-                                        statusInv = 0;
-                                        mg1_speed = 0;
-                                        mg2_speed = 0;
-                                        Param::SetInt(Param::cruisespeed, 0);
-                                      }
-                                    } else {
-                                      // exchange data and prepare next HTM
-                                      // frame using processing buffer
-                                      consecutive_failures = 0;
-                                      statusInv = 1;
-                                      dc_bus_voltage =
-                                          (((processing_rx_buffer[100] |
-                                             processing_rx_buffer[101] << 8) -
-                                            5) /
-                                           2);
-                                      temp_inv_water = int8_t(
-                                          processing_rx_buffer[20]); // from
-                                                                     // 300h
-                                      temp_inv_inductor =
-                                          (processing_rx_buffer[86] |
-                                           processing_rx_buffer[87] << 8);
-                                      mg1_speed = processing_rx_buffer[6] |
-                                                  processing_rx_buffer[7] << 8;
-                                      mg2_speed = processing_rx_buffer[38] |
-                                                  processing_rx_buffer[39] << 8;
-
-                                      // Copy to mth_data for compatibility with
-                                      // existing code
-                                      for (int i = 0; i < 120; i++)
-                                        mth_data[i] = processing_rx_buffer[i];
-                                    }
-                                    htm_state++;
-                                  } else {
-                                    // Handle timeout
-                                    rx_timeout++;
-                                    if (rx_timeout > RX_TIMEOUT_MS) {
-                                      consecutive_failures++;
-                                      statusInv = 0;
-                                      mg1_speed = 0;
-                                      mg2_speed = 0;
-                                      Param::SetInt(Param::cruisespeed, 0);
-                                      htm_state++; // Move on despite timeout
-                                    }
-                                  }
-                                  break;
-                                case 9:
-                                  Param::SetInt(
-                                      Param::torque,
-                                      mg2_torque); // post processed final torue
-                                                   // value sent to inv to web
-                                                   // interface
-                                } else {
-                                  // exchange data and prepare next HTM frame
-                                  // using processing buffer
-                                  consecutive_failures = 0;
-                                  statusInv = 1;
-                                  dc_bus_voltage =
-                                      (((processing_rx_buffer[100] |
-                                         processing_rx_buffer[101] << 8) -
-                                        5) /
-                                       2);
-                                  temp_inv_water = int8_t(
-                                      processing_rx_buffer[20]); // from 300h
-                                  temp_inv_inductor =
-                                      (processing_rx_buffer[86] |
-                                       processing_rx_buffer[87] << 8);
-                                  mg1_speed = processing_rx_buffer[6] |
-                                              processing_rx_buffer[7] << 8;
-                                  mg2_speed = processing_rx_buffer[38] |
-                                              processing_rx_buffer[39] << 8;
-
-                                  // Copy to mth_data for compatibility with
-                                  // existing code
-                                  for (int i = 0; i < 120; i++)
-                                    mth_data[i] = processing_rx_buffer[i];
-                                }
-                                htm_state++;
-                              } else {
-                                // Handle timeout
-                                rx_timeout++;
-                                if (rx_timeout > RX_TIMEOUT_MS) {
-                                  consecutive_failures++;
-                                  statusInv = 0;
-                                  mg1_speed = 0;
-                                  mg2_speed = 0;
-                                  Param::SetInt(Param::cruisespeed, 0);
-                                  htm_state++; // Move on despite timeout
-                                }
-                              }
-                              break;
-                            case 9:
-                              Param::SetInt(Param::torque,
-                                            mg2_torque); // post processed final
-                                                         // torue value sent to
-                                                         // inv to web interface
-
-                              // speed feedback
-                              speedSum = mg2_speed + mg1_speed;
-                              speedSum /= 113;
-                              // Possibly not needed
-                              // uint8_t speedSum2=speedSum;
-                              // htm_data[0]=speedSum2;
-                              // speed feedback
-                              speedSum = mg2_speed + mg1_speed;
-                              speedSum /= 113;
-                              // Possibly not needed
-                              // uint8_t speedSum2=speedSum;
-                              // htm_data[0]=speedSum2;
-
-                              // these bytes are used, and seem to be MG1 for
-                              // startup, but can't work out the relatino to the
-                              // bytes earlier in the stream, possibly the byte
-                              // order has been flipped on these 2 bytes could
-                              // be a software bug ? htm_data[76]=(mg1_torque*4)
-                              // & 0xFF; //Possibly wrong
-                              // htm_data[75]=((mg1_torque*4)>>8) & 0xFF;
-                              // //Possibly wrong these bytes are used, and seem
-                              // to be MG1 for startup, but can't work out the
-                              // relatino to the bytes earlier in the stream,
-                              // possibly the byte order has been flipped on
-                              // these 2 bytes could be a software bug ?
-                              // htm_data[76]=(mg1_torque*4) & 0xFF; //Possibly
-                              // wrong htm_data[75]=((mg1_torque*4)>>8) & 0xFF;
-                              // //Possibly wrong
-
-                              // mg1
-                              htm_data[5] =
-                                  (mg1_torque) & 0xFF; // negative is forward
-                              htm_data[6] = ((mg1_torque) >> 8);
-                              htm_data[11] = htm_data[5];
-                              htm_data[12] = htm_data[6];
-                              // mg1
-                              htm_data[5] =
-                                  (mg1_torque) & 0xFF; // negative is forward
-                              htm_data[6] = ((mg1_torque) >> 8);
-                              htm_data[11] = htm_data[5];
-                              htm_data[12] = htm_data[6];
-
-                              // mg2 the MG2 values are now beside each other!
-                              htm_data[30] =
-                                  (mg2_torque) & 0xFF; // positive is forward
-                              htm_data[31] = ((mg2_torque) >> 8) & 0xFF;
-                              // mg2 the MG2 values are now beside each other!
-                              htm_data[30] =
-                                  (mg2_torque) & 0xFF; // positive is forward
-                              htm_data[31] = ((mg2_torque) >> 8) & 0xFF;
-
-                              if (scaledTorqueTarget > 0) {
-                                // forward direction these bytes should match
-                                htm_data[26] = htm_data[30];
-                                htm_data[27] = htm_data[31];
-                                htm_data[28] = (mg2_torque / 2) &
-                                               0xFF; // positive is forward
-                                htm_data[29] = ((mg2_torque / 2) >> 8) & 0xFF;
-                              }
-                              if (scaledTorqueTarget > 0) {
-                                // forward direction these bytes should match
-                                htm_data[26] = htm_data[30];
-                                htm_data[27] = htm_data[31];
-                                htm_data[28] = (mg2_torque / 2) &
-                                               0xFF; // positive is forward
-                                htm_data[29] = ((mg2_torque / 2) >> 8) & 0xFF;
-                              }
-
-                              if (scaledTorqueTarget < 0) {
-                                // reverse direction these bytes should match
-                                htm_data[28] = htm_data[30];
-                                htm_data[29] = htm_data[31];
-                                htm_data[26] = (mg2_torque / 2) &
-                                               0xFF; // positive is forward
-                                htm_data[27] = ((mg2_torque / 2) >> 8) & 0xFF;
-                              }
-                              if (scaledTorqueTarget < 0) {
-                                // reverse direction these bytes should match
-                                htm_data[28] = htm_data[30];
-                                htm_data[29] = htm_data[31];
-                                htm_data[26] = (mg2_torque / 2) &
-                                               0xFF; // positive is forward
-                                htm_data[27] = ((mg2_torque / 2) >> 8) & 0xFF;
-                              }
-
-                              // Battery Limits
-                              /*
-                                      htm_data[85]=(-5000)&0xFF;  // regen
-                              ability of battery !!!increased
-                                      htm_data[86]=((-5000)>>8);
-                              // Battery Limits
-                              /*
-                                      htm_data[85]=(-5000)&0xFF;  // regen
-                              ability of battery !!!increased
-                                      htm_data[86]=((-5000)>>8);
-
-                                      htm_data[87]=(-10000)&0xFF;  // discharge
-                              ability of battery
-                                 !!!Remove negative and increased
-                              htm_data[88]=((-10000)>>8);
-                              */
-                              // Battery Limits = forced zero
-                              // 40	4	75	12	60	251
-                              // 52	4
-                              htm_data[87] =
-                                  (-10000) &
-                                  0xFF; // discharge ability of battery
-                              !!!Remove negative and increased htm_data[88] =
-                                  ((-10000) >> 8);
-                              */
-                                  // Battery Limits = forced zero
-                                  // 40	4	75	12	60	251
-                                  // 52	4
-
-                                  htm_data[72] = 0x40;
-                              htm_data[73] = 0x04;
-                              htm_data[74] = 0x75;
-                              htm_data[75] = 0x12;
-                              htm_data[76] = 0x60;
-                              htm_data[77] = 0x25;
-                              htm_data[78] = 0x52;
-                              htm_data[79] = 0x04;
-                              htm_data[72] = 0x40;
-                              htm_data[73] = 0x04;
-                              htm_data[74] = 0x75;
-                              htm_data[75] = 0x12;
-                              htm_data[76] = 0x60;
-                              htm_data[77] = 0x25;
-                              htm_data[78] = 0x52;
-                              htm_data[79] = 0x04;
-
-                              htm_data[86] = 137; // from start up
-                              htm_data[88] = 137; // 221 on start
-                              htm_data[86] = 137; // from start up
-                              htm_data[88] = 137; // 221 on start
-
-                              // checksum
-                              if (++frame_count & 0x01) {
-                                // b94_count++;
-                                htm_data[94]++;
-                              }
-                              // checksum
-                              if (++frame_count & 0x01) {
-                                // b94_count++;
-                                htm_data[94]++;
-                              }
-
-                              CalcHTMChecksum(100);
-                              CalcHTMChecksum(100);
-
-                              htm_state = 5;
-                              break;
-                              htm_state = 5;
-                              break;
-
-                            /***** Code for Lexus GS300H */
-                            case 10:
-                              if (Param::GetInt(Param::opmode) != MOD_RUN)
-                                inv_status = 0;
-                              // Start DMA read using double buffer - DMA writes
-                              // to active_rx_buffer, we process from
-                              // processing_rx_buffer
-                              rx_complete_flag = false;
-                              rx_timeout = 0;
-                              dma_read(active_rx_buffer, 140);
-                              DigIo::req_out
-                                  .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                            // HTM_SYNC_Pin, 0);
-                              htm_state++;
-                              break;
-                            case 11:
-                              DigIo::req_out
-                                  .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                          // HTM_SYNC_Pin, 1);
-
-                              // Wait for next TIM2 update event (start of new
-                              // clock period = rising edge)
-                              while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-                                // Wait for TIM2 update flag - indicates start
-                                // of new CLK period
-                              }
-                              TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
-
-                              // Now start DMA synchronized to the rising edge
-                              // of CLK
-                              if (inv_status > 6) {
-                                if (tx_complete_flag ||
-                                    !dma_channel_is_enabled(DMA1,
-                                                            DMA_CHANNEL7)) {
-                                  tx_complete_flag = false;
-                                  dma_write(htm_data, 105);
-                                }
-                              } else {
-                                tx_complete_flag = false;
-                                dma_write(&htm_data_Init_GS300H[inv_status][0],
-                                          105);
-                              /***** Code for Lexus GS300H */
-                              case 10:
-                                if (Param::GetInt(Param::opmode) != MOD_RUN)
-                                  inv_status = 0;
-                                // Start DMA read using double buffer - DMA
-                                // writes to active_rx_buffer, we process from
-                                // processing_rx_buffer
-                                rx_complete_flag = false;
-                                rx_timeout = 0;
-                                dma_read(active_rx_buffer, 140);
-                                DigIo::req_out
-                                    .Clear(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                              // HTM_SYNC_Pin, 0);
-                                htm_state++;
-                                break;
-                              case 11:
-                                DigIo::req_out
-                                    .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port,
-                                            // HTM_SYNC_Pin, 1);
-
-                                // Wait for next TIM2 update event (start of new
-                                // clock period = rising edge)
-                                while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-                                  // Wait for TIM2 update flag - indicates start
-                                  // of new CLK period
-                                }
-                                TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
-
-                                // Now start DMA synchronized to the rising edge
-                                // of CLK
-                                if (inv_status > 6) {
-                                  if (tx_complete_flag ||
-                                      !dma_channel_is_enabled(DMA1,
-                                                              DMA_CHANNEL7)) {
-                                    tx_complete_flag = false;
-                                    dma_write(htm_data, 105);
-                                  }
-                                } else {
-                                  tx_complete_flag = false;
-                                  dma_write(
-                                      &htm_data_Init_GS300H[inv_status][0],
-                                      105);
-
-                                  inv_status++;
-                                }
-                                htm_state++;
-                                break;
-                              case 12:
-                                // Add delay to give inverter time to process
-                                // the command
-                                inverter_delay_counter++;
-                                if (inverter_delay_counter >=
-                                    INVERTER_PROCESSING_TIME_MS) {
-                                  inverter_delay_counter = 0;
-                                  htm_state++;
-                                }
-                                break;
-                              case 13:
-                                // Wait for RX completion with timeout
-                                if (rx_complete_flag) {
-                                  rx_complete_flag = false;
-                                  // Check buffer integrity -
-                                  // processing_rx_buffer was swapped by ISR
-                                  if (VerifyMTHChecksum(140) == 0 &&
-                                      VerifyMTHChecksumNew(processing_rx_buffer,
-                                                           140) == 0) {
-                                    consecutive_failures++;
-                                    if (consecutive_failures > MAX_FAILURES) {
-                                      statusInv = 0;
-                                      // Optionally reset inv_status if needed
-                                      // inv_status=0;
-                                    }
-                                  } else {
-                                    // exchange data and prepare next HTM frame
-                                    // using processing buffer
-                                    consecutive_failures = 0;
-                                    statusInv = 1;
-                                    dc_bus_voltage =
-                                        (((processing_rx_buffer[117] |
-                                           processing_rx_buffer[118] << 8)) /
-                                         2);
-                                    temp_inv_water =
-                                        int8_t(processing_rx_buffer[20]);
-                                    temp_inv_inductor =
-                                        (processing_rx_buffer[25] |
-                                         processing_rx_buffer[26] << 8);
-                                    mg1_speed = processing_rx_buffer[10] |
-                                                processing_rx_buffer[11] << 8;
-                                    mg2_speed = processing_rx_buffer[43] |
-                                                processing_rx_buffer[44] << 8;
-
-                                    // Copy to mth_data for compatibility with
-                                    // existing code
-                                    for (int i = 0; i < 140; i++)
-                                      mth_data[i] = processing_rx_buffer[i];
-                                  }
-                                  htm_state++;
-                                } else {
-                                  // Handle timeout
-                                  rx_timeout++;
-                                  if (rx_timeout > RX_TIMEOUT_MS) {
-                                    consecutive_failures++;
-                                    statusInv = 0;
-                                    htm_state++; // Move on despite timeout
-                                  }
-                                }
-                                break;
-                              case 14:
-                                Param::SetInt(
-                                    Param::torque,
-                                    mg2_torque); // post processed final torue
-                                                 // value sent to inv to web
-                                                 // interface
-                                inv_status++;
-                              }
-                              htm_state++;
-                              break;
-                            case 12:
-                              // Add delay to give inverter time to process the
-                              // command
-                              inverter_delay_counter++;
-                              if (inverter_delay_counter >=
-                                  INVERTER_PROCESSING_TIME_MS) {
-                                inverter_delay_counter = 0;
-                                htm_state++;
-                              }
-                              break;
-                            case 13:
-                              // Wait for RX completion with timeout
-                              if (rx_complete_flag) {
-                                rx_complete_flag = false;
-                                // Check buffer integrity - processing_rx_buffer
-                                // was swapped by ISR
-                                if (VerifyMTHChecksum(140) == 0 &&
-                                    VerifyMTHChecksumNew(processing_rx_buffer,
-                                                         140) == 0) {
-                                  consecutive_failures++;
-                                  if (consecutive_failures > MAX_FAILURES) {
-                                    statusInv = 0;
-                                    // Optionally reset inv_status if needed
-                                    // inv_status=0;
-                                  }
-                                } else {
-                                  // exchange data and prepare next HTM frame
-                                  // using processing buffer
-                                  consecutive_failures = 0;
-                                  statusInv = 1;
-                                  dc_bus_voltage =
-                                      (((processing_rx_buffer[117] |
-                                         processing_rx_buffer[118] << 8)) /
-                                       2);
-                                  temp_inv_water =
-                                      int8_t(processing_rx_buffer[20]);
-                                  temp_inv_inductor =
-                                      (processing_rx_buffer[25] |
-                                       processing_rx_buffer[26] << 8);
-                                  mg1_speed = processing_rx_buffer[10] |
-                                              processing_rx_buffer[11] << 8;
-                                  mg2_speed = processing_rx_buffer[43] |
-                                              processing_rx_buffer[44] << 8;
-
-                                  // Copy to mth_data for compatibility with
-                                  // existing code
-                                  for (int i = 0; i < 140; i++)
-                                    mth_data[i] = processing_rx_buffer[i];
-                                }
-                                htm_state++;
-                              } else {
-                                // Handle timeout
-                                rx_timeout++;
-                                if (rx_timeout > RX_TIMEOUT_MS) {
-                                  consecutive_failures++;
-                                  statusInv = 0;
-                                  htm_state++; // Move on despite timeout
-                                }
-                              }
-                              break;
-                            case 14:
-                              Param::SetInt(Param::torque,
-                                            mg2_torque); // post processed final
-                                                         // torue value sent to
-                                                         // inv to web interface
-
-                              // speed feedback
-                              speedSum = mg2_speed + mg1_speed;
-                              speedSum /= 113;
-                              // speed feedback
-                              speedSum = mg2_speed + mg1_speed;
-                              speedSum /= 113;
-
-                              // mg1
-                              htm_data[5] = (mg1_torque * -1) &
-                                            0xFF; // negative is forward
-                              htm_data[6] = ((mg1_torque * -1) >> 8);
-                              htm_data[11] = htm_data[5];
-                              htm_data[12] = htm_data[6];
-                              // mg1
-                              htm_data[5] = (mg1_torque * -1) &
-                                            0xFF; // negative is forward
-                              htm_data[6] = ((mg1_torque * -1) >> 8);
-                              htm_data[11] = htm_data[5];
-                              htm_data[12] = htm_data[6];
-
-                              // mg2
-                              htm_data[31] =
-                                  (mg2_torque) & 0xFF; // positive is forward
-                              htm_data[32] = ((mg2_torque) >> 8);
-                              htm_data[37] = htm_data[26];
-                              htm_data[38] = htm_data[27];
-                              // mg2
-                              htm_data[31] =
-                                  (mg2_torque) & 0xFF; // positive is forward
-                              htm_data[32] = ((mg2_torque) >> 8);
-                              htm_data[37] = htm_data[26];
-                              htm_data[38] = htm_data[27];
-
-                              // Battery Limits
-                              // Battery Limits
-
-                              htm_data[79] =
-                                  (-5000) & 0xFF; // regen ability of battery
-                              htm_data[80] = ((-5000) >> 8);
-                              htm_data[79] =
-                                  (-5000) & 0xFF; // regen ability of battery
-                              htm_data[80] = ((-5000) >> 8);
-
-                              htm_data[81] =
-                                  (10000) &
-                                  0xFF; // discharge ability of battery
-                              htm_data[82] = ((10000) >> 8);
-                              CalcHTMChecksum(105);
-                              htm_data[81] =
-                                  (10000) &
-                                  0xFF; // discharge ability of battery
-                              htm_data[82] = ((10000) >> 8);
-                              CalcHTMChecksum(105);
-
-                              htm_state = 10;
-                              break;
-                            }
-                            htm_state = 10;
-                            break;
-                          }
-                        }
-
-                        void GS450HClass::setTimerState(
-                            bool desiredTimerState) {
-                          if (desiredTimerState != this->timerIsRunning) {
-                            if (desiredTimerState) {
-                              if (Param::GetInt(Param::PumpPWM) ==
-                                  0) // If Pump PWM out is set to Oil Pump
-                              {
-                                tim_setup(); // trigger pump pwm out setup
-                              }
-                              tim2_setup(); // TOYOTA HYBRID INVERTER INTERFACE
-                                            // CLOCK
-                              this->timerIsRunning =
-                                  true; // timers are now running
-                            } else {
-                              // These are only used with the Totoa hybrid
-                              // option.
-                              timer_disable_counter(
-                                  TIM2); // TOYOTA HYBRID INVERTER INTERFACE
-                                         // CLOCK
-                              this->timerIsRunning =
-                                  false; // timers are now stopped
-                            }
-                          }
-                          void GS450HClass::setTimerState(
-                              bool desiredTimerState) {
-                            if (desiredTimerState != this->timerIsRunning) {
-                              if (desiredTimerState) {
-                                if (Param::GetInt(Param::PumpPWM) ==
-                                    0) // If Pump PWM out is set to Oil Pump
-                                {
-                                  tim_setup(); // trigger pump pwm out setup
-                                }
-                                tim2_setup(); // TOYOTA HYBRID INVERTER
-                                              // INTERFACE CLOCK
-                                this->timerIsRunning =
-                                    true; // timers are now running
-                              } else {
-                                // These are only used with the Totoa hybrid
-                                // option.
-                                timer_disable_counter(
-                                    TIM2); // TOYOTA HYBRID INVERTER INTERFACE
-                                           // CLOCK
-                                this->timerIsRunning =
-                                    false; // timers are now stopped
-                              }
-                            }
-                          }
-
-                          int GS450HClass::GetInverterState() {
-                            return statusInv;
-                          }
-                          int GS450HClass::GetInverterState() {
-                            return statusInv;
-                          }
-                          //////////////////////////////////////////////////////////////
-
-                          ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                          // Usart 2 DMA Transmitt and Receive Section
-                          // Usart 2 DMA Transmitt and Receive Section
-                          //////////////////////////////////////////////////////////////////////////
-
-                          static void dma_write(const uint8_t *data, int size) {
-                            /*
-                             * Using channel 7 for USART2_TX
-                             */
-                            static void dma_write(const uint8_t *data,
-                                                  int size) {
-                              /*
-                               * Using channel 7 for USART2_TX
-                               */
-
-                              /* Reset DMA channel*/
-                              dma_channel_reset(DMA1, DMA_CHANNEL7);
-                              /* Reset DMA channel*/
-                              dma_channel_reset(DMA1, DMA_CHANNEL7);
-
-                              dma_set_peripheral_address(DMA1, DMA_CHANNEL7,
-                                                         (uint32_t)&USART2_DR);
-                              dma_set_memory_address(DMA1, DMA_CHANNEL7,
-                                                     (uint32_t)data);
-                              dma_set_number_of_data(DMA1, DMA_CHANNEL7, size);
-                              dma_set_read_from_memory(DMA1, DMA_CHANNEL7);
-                              dma_enable_memory_increment_mode(DMA1,
-                                                               DMA_CHANNEL7);
-                              dma_set_peripheral_size(DMA1, DMA_CHANNEL7,
-                                                      DMA_CCR_PSIZE_8BIT);
-                              dma_set_memory_size(DMA1, DMA_CHANNEL7,
-                                                  DMA_CCR_MSIZE_8BIT);
-                              dma_set_priority(DMA1, DMA_CHANNEL7,
-                                               DMA_CCR_PL_MEDIUM);
-
-                              // Enable DMA transfer complete interrupt
-                              dma_enable_transfer_complete_interrupt(
-                                  DMA1, DMA_CHANNEL7);
-
-                              // Enable NVIC for DMA channel 7
-                              nvic_enable_irq(NVIC_DMA1_CHANNEL7_IRQ);
-                              nvic_set_priority(NVIC_DMA1_CHANNEL7_IRQ, 0x40);
-                              dma_set_peripheral_address(DMA1, DMA_CHANNEL7,
-                                                         (uint32_t)&USART2_DR);
-                              dma_set_memory_address(DMA1, DMA_CHANNEL7,
-                                                     (uint32_t)data);
-                              dma_set_number_of_data(DMA1, DMA_CHANNEL7, size);
-                              dma_set_read_from_memory(DMA1, DMA_CHANNEL7);
-                              dma_enable_memory_increment_mode(DMA1,
-                                                               DMA_CHANNEL7);
-                              dma_set_peripheral_size(DMA1, DMA_CHANNEL7,
-                                                      DMA_CCR_PSIZE_8BIT);
-                              dma_set_memory_size(DMA1, DMA_CHANNEL7,
-                                                  DMA_CCR_MSIZE_8BIT);
-                              dma_set_priority(DMA1, DMA_CHANNEL7,
-                                               DMA_CCR_PL_MEDIUM);
-
-                              // Enable DMA transfer complete interrupt
-                              dma_enable_transfer_complete_interrupt(
-                                  DMA1, DMA_CHANNEL7);
-
-                              // Enable NVIC for DMA channel 7
-                              nvic_enable_irq(NVIC_DMA1_CHANNEL7_IRQ);
-                              nvic_set_priority(NVIC_DMA1_CHANNEL7_IRQ, 0x40);
-
-                              dma_enable_channel(DMA1, DMA_CHANNEL7);
-                              dma_enable_channel(DMA1, DMA_CHANNEL7);
-
-                              usart_enable_tx_dma(USART2);
-                              usart_enable_tx_dma(USART2);
-                            }
-
-                            static void dma_read(uint8_t *data, int size) {
-                              /*
-                               * Using channel 6 for USART2_RX
-                               */
-                              static void dma_read(uint8_t *data, int size) {
-                                /*
-                                 * Using channel 6 for USART2_RX
-                                 */
-
-                                /* Reset DMA channel*/
-                                dma_channel_reset(DMA1, DMA_CHANNEL6);
-                                /* Reset DMA channel*/
-                                dma_channel_reset(DMA1, DMA_CHANNEL6);
-
-                                dma_set_peripheral_address(
-                                    DMA1, DMA_CHANNEL6, (uint32_t)&USART2_DR);
-                                dma_set_memory_address(DMA1, DMA_CHANNEL6,
-                                                       (uint32_t)data);
-                                dma_set_number_of_data(DMA1, DMA_CHANNEL6,
-                                                       size);
-                                dma_set_read_from_peripheral(DMA1,
-                                                             DMA_CHANNEL6);
-                                dma_enable_memory_increment_mode(DMA1,
-                                                                 DMA_CHANNEL6);
-                                dma_set_peripheral_size(DMA1, DMA_CHANNEL6,
-                                                        DMA_CCR_PSIZE_8BIT);
-                                dma_set_memory_size(DMA1, DMA_CHANNEL6,
-                                                    DMA_CCR_MSIZE_8BIT);
-                                dma_set_priority(DMA1, DMA_CHANNEL6,
-                                                 DMA_CCR_PL_LOW);
-
-                                // Enable DMA transfer complete interrupt
-                                dma_enable_transfer_complete_interrupt(
-                                    DMA1, DMA_CHANNEL6);
-
-                                // Enable NVIC for DMA channel 6
-                                nvic_enable_irq(NVIC_DMA1_CHANNEL6_IRQ);
-                                nvic_set_priority(NVIC_DMA1_CHANNEL6_IRQ, 0x40);
-                                dma_set_peripheral_address(
-                                    DMA1, DMA_CHANNEL6, (uint32_t)&USART2_DR);
-                                dma_set_memory_address(DMA1, DMA_CHANNEL6,
-                                                       (uint32_t)data);
-                                dma_set_number_of_data(DMA1, DMA_CHANNEL6,
-                                                       size);
-                                dma_set_read_from_peripheral(DMA1,
-                                                             DMA_CHANNEL6);
-                                dma_enable_memory_increment_mode(DMA1,
-                                                                 DMA_CHANNEL6);
-                                dma_set_peripheral_size(DMA1, DMA_CHANNEL6,
-                                                        DMA_CCR_PSIZE_8BIT);
-                                dma_set_memory_size(DMA1, DMA_CHANNEL6,
-                                                    DMA_CCR_MSIZE_8BIT);
-                                dma_set_priority(DMA1, DMA_CHANNEL6,
-                                                 DMA_CCR_PL_LOW);
-
-                                // Enable DMA transfer complete interrupt
-                                dma_enable_transfer_complete_interrupt(
-                                    DMA1, DMA_CHANNEL6);
-
-                                // Enable NVIC for DMA channel 6
-                                nvic_enable_irq(NVIC_DMA1_CHANNEL6_IRQ);
-                                nvic_set_priority(NVIC_DMA1_CHANNEL6_IRQ, 0x40);
-
-                                dma_enable_channel(DMA1, DMA_CHANNEL6);
-                                dma_enable_channel(DMA1, DMA_CHANNEL6);
-
-                                usart_enable_rx_dma(USART2);
-                                usart_enable_rx_dma(USART2);
-                              }
+      tim2_setup();                // TOYOTA HYBRID INVERTER INTERFACE CLOCK
+      this->timerIsRunning = true; // timers are now running
+    } else {
+      // These are only used with the Totoa hybrid option.
+      timer_disable_counter(TIM2);  // TOYOTA HYBRID INVERTER INTERFACE CLOCK
+      this->timerIsRunning = false; // timers are now stopped
+    }
+  }
+}
+
+int GS450HClass::GetInverterState() { return statusInv; }
+//////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Usart 2 DMA Transmitt and Receive Section
+//////////////////////////////////////////////////////////////////////////
+
+static void dma_write(const uint8_t *data, int size) {
+  /*
+   * Using channel 7 for USART2_TX
+   */
+
+  /* Reset DMA channel*/
+  dma_channel_reset(DMA1, DMA_CHANNEL7);
+
+  dma_set_peripheral_address(DMA1, DMA_CHANNEL7, (uint32_t)&USART2_DR);
+  dma_set_memory_address(DMA1, DMA_CHANNEL7, (uint32_t)data);
+  dma_set_number_of_data(DMA1, DMA_CHANNEL7, size);
+  dma_set_read_from_memory(DMA1, DMA_CHANNEL7);
+  dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL7);
+  dma_set_peripheral_size(DMA1, DMA_CHANNEL7, DMA_CCR_PSIZE_8BIT);
+  dma_set_memory_size(DMA1, DMA_CHANNEL7, DMA_CCR_MSIZE_8BIT);
+  dma_set_priority(DMA1, DMA_CHANNEL7, DMA_CCR_PL_MEDIUM);
+
+  // Enable DMA transfer complete interrupt
+  dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNEL7);
+
+  // Enable NVIC for DMA channel 7
+  nvic_enable_irq(NVIC_DMA1_CHANNEL7_IRQ);
+  nvic_set_priority(NVIC_DMA1_CHANNEL7_IRQ, 0x40);
+
+  dma_enable_channel(DMA1, DMA_CHANNEL7);
+
+  usart_enable_tx_dma(USART2);
+}
+
+static void dma_read(uint8_t *data, int size) {
+  /*
+   * Using channel 6 for USART2_RX
+   */
+
+  /* Reset DMA channel*/
+  dma_channel_reset(DMA1, DMA_CHANNEL6);
+
+  dma_set_peripheral_address(DMA1, DMA_CHANNEL6, (uint32_t)&USART2_DR);
+  dma_set_memory_address(DMA1, DMA_CHANNEL6, (uint32_t)data);
+  dma_set_number_of_data(DMA1, DMA_CHANNEL6, size);
+  dma_set_read_from_peripheral(DMA1, DMA_CHANNEL6);
+  dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL6);
+  dma_set_peripheral_size(DMA1, DMA_CHANNEL6, DMA_CCR_PSIZE_8BIT);
+  dma_set_memory_size(DMA1, DMA_CHANNEL6, DMA_CCR_MSIZE_8BIT);
+  dma_set_priority(DMA1, DMA_CHANNEL6, DMA_CCR_PL_LOW);
+
+  // Enable DMA transfer complete interrupt
+  dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNEL6);
+
+  // Enable NVIC for DMA channel 6
+  nvic_enable_irq(NVIC_DMA1_CHANNEL6_IRQ);
+  nvic_set_priority(NVIC_DMA1_CHANNEL6_IRQ, 0x40);
+
+  dma_enable_channel(DMA1, DMA_CHANNEL6);
+
+  usart_enable_rx_dma(USART2);
+}
