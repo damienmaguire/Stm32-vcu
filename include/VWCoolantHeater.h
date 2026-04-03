@@ -17,8 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Controls the VW LIN based heater as :
  * https://openinverter.org/wiki/Volkswagen_Heater
- * Controls the VW LIN based heater as :
- * https://openinverter.org/wiki/Volkswagen_Heater
  */
 #ifndef VWCOOLANTHEATER_H
 #define VWCOOLANTHEATER_H
@@ -36,10 +34,5 @@ public:
 private:
   bool isAwake = false;
   LinBus *lin;
-
-private:
-  bool isAwake = false;
-  LinBus *lin;
 };
-
-#endif // VWHEATER_H
+#endif // VWCOOLANTHEATER_H
