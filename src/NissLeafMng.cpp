@@ -35,6 +35,8 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request) {
 
   int opmode = Param::GetInt(Param::opmode);
 
+  int Dir = Param::GetInt(Param::dir);
+
   if (SendCan == true) // only send CAN when needed
   {
     mprun10 = (mprun10 + 1) % 4; // mprun10 cycles between 0-1-2-3-0-1...
@@ -62,10 +64,20 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request) {
     //      non-gears 0 and 1 (44% of the time in LeafLogs)
 
     // byte 0 determines motor rotation direction
-    if (opmode == MOD_CHARGE)
+    if (opmode == MOD_CHARGE) {
       bytes[0] = 0x01; // Car in park when charging
-    if (opmode != MOD_CHARGE)
-      bytes[0] = 0x4E;
+    } else {
+      if (Dir == 1) // drive
+      {
+        bytes[0] = 0x4E;    // Drive
+      } else if (Dir == -1) // reverse
+      {
+        bytes[0] = 0x2E; // Reverse
+      } else {
+        bytes[0] = 0x01; // Park
+      }
+    }
+
     // 0x40 when car is ON, 0x80 when OFF, 0x50 when ECO. Car must be off when
     // charing 0x80
     if (opmode == MOD_CHARGE)
@@ -99,11 +111,12 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request) {
     // move at about 10% throttle: F70700E0C74430D4
 
     // Usually F7, but can have values between 9A...F7 (gen1)
-    bytes[0] = 0xF7;
+    bytes[0] = 0xF7; // Upper Torque Limit 2.5Nm/bit 617Nm
     // 2016: 6E
 
     // Usually 07, but can have values between 07...70 (gen1)
-    bytes[1] = 0x07; // Gen 1 issues for regen with 0x70, reverting
+    bytes[1] = 0xF7; // 0x07; // Lower Torque Limit -2.5Nm/bit Lets for fun
+                     // allow ALL power
     // 2016: 6E
 
     // override any torque commands if not in run mode.
@@ -129,7 +142,14 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request) {
     //   3: Precharging (0.4%)
     //   5: Starting discharge (3x10ms) (2.0%)
     //   7: Precharged (93%)
-    bytes[4] = 0x07 | (mprun10 << 6);
+    if (opmode == MOD_CHARGE || opmode == MOD_RUN) {
+      bytes[4] = 0x07; // HV status is ON
+    } else if (opmode == MOD_PRECHARGE) {
+      bytes[4] = 0x03; // HV status is Precharge
+    } else {
+      bytes[4] = 0x02; // HV status is OFF
+    }
+    bytes[4] = bytes[4] | (mprun10 << 6);
     // bytes[4] = 0x02 | (mprun10 << 6);
     // Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
 
@@ -256,18 +276,23 @@ void NissLeafMng::Task10Ms(int16_t final_torque_request) {
     if (opmode == MOD_CHARGE &&
         Param::GetInt(Param::Chgctrl) == ChargeControl::Enable) {
       // clamp min and max values
-      if (OBCpwrSP > 0xA0)
+      if (OBCpwrSP > 0xA0) {
         OBCpwrSP = 0xA0;
-      else if (OBCpwrSP < 0x64)
-        OBCpwrSP = 0x64;
+      }
 
       // if measured vbatt is less than setpoint got to max power from web ui
-      if (Vbatt < VbattSP)
+      if (Vbatt < VbattSP) {
         OBCpwr = OBCpwrSP;
+      }
 
       // decrement charger power if volt setpoint is reached
-      if (Vbatt >= VbattSP)
+      if (Vbatt >= VbattSP) {
         OBCpwr--;
+      }
+
+      if (OBCpwrSP < 0x64) {
+        OBCpwrSP = 0x64;
+      }
     } else {
       // set power to 0 if charge control is set to off or not in charge mode
       OBCpwr = 0x64;

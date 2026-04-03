@@ -1,7 +1,7 @@
 /*
  * This file is part of the Zombieverter project.
  *
- * Copyright (C) 2023 Damien Maguire
+ * Copyright (C) 2023 Damien Maguire & Tom de Bree
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,6 +54,8 @@ void JLR_G1::DecodeCAN(int id, uint32_t *data) {
 void JLR_G1::sendcan() {
   uint8_t bytes[8];
   //-1=Reverse, 0=Neutral, 1=Forward , 2=Park
+  // int8_t selectedDir = Param::GetInt(Param::dir);
+
   if (Param::GetInt(Param::opmode) == !MOD_RUN)
     DirJLRG1 = JLR_Park;
 
@@ -83,7 +85,6 @@ void JLR_G1::sendcan() {
     bytes[5] = 0xFF;
     bytes[6] = 0x01;
     bytes[7] = 0x00;
-
     this->gear = REVERSE;
   }
 
@@ -94,7 +95,6 @@ void JLR_G1::sendcan() {
     bytes[5] = 0xFF;
     bytes[6] = 0x02;
     bytes[7] = 0x00;
-
     this->gear = NEUTRAL;
   }
 
@@ -105,7 +105,6 @@ void JLR_G1::sendcan() {
     bytes[5] = 0xFF;
     bytes[6] = 0x04;
     bytes[7] = 0x00;
-
     this->gear = DRIVE;
   }
 

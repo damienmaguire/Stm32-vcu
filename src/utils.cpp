@@ -166,6 +166,15 @@ float GetUserThrottleCommand() {
   if (direction == 2) // No throttle val if in PARK also.
     return 0.0;
 
+  /// cluch pedal, request no regen (Switch_NoRegen/NOREGEN)... probably safest
+  /// part to add this code
+
+  if (IOMatrix::GetPinIn(IOMatrix::NOREGEN) != &DigIo::dummypin) {
+    Throttle::noregenreq = IOMatrix::GetPinIn(IOMatrix::NOREGEN)->Get();
+  } else {
+    Throttle::noregenreq = 0;
+  }
+
   // calculate the throttle depending on the channel we've decided to use
   if (useChannel == 0)
     return Throttle::CalcThrottle(pot1val, 0, brake);
@@ -180,43 +189,45 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
   Shifter::Sgear gearS;
   int8_t selectedDir = Param::GetInt(Param::dir);
   int8_t userDirSelection = 0;
+  int8_t prevValidDir = 0;
   int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
+  uint8_t ChangeLim =
+      Param::GetInt(Param::DirChange); //"0=None, 1=Speed Thres, 2=Speed+Brake"
 
+  // Collecting Inputs//
   if (vehicle->GetGear(gear)) {
     // if the vehicle class supplies gear selection then use that
     switch (gear) {
     case Vehicle::PARK:
-      selectedDir = 2; // Park
+      userDirSelection = 2; // Park
       break;
     case Vehicle::REVERSE:
-      selectedDir = -1; // Reverse
+      userDirSelection = -1; // Reverse
       break;
     case Vehicle::NEUTRAL:
-      selectedDir = 0; // Neutral
+      userDirSelection = 0; // Neutral
       break;
     case Vehicle::DRIVE:
-      selectedDir = 1; // Drive
+      userDirSelection = 1; // Drive
       break;
     }
   } else if (shifter->GetGear(gearS)) {
     // if the shifter class supplies gear selection then use that
     switch (gearS) {
     case Shifter::PARK:
-      selectedDir = 2; // Park
+      userDirSelection = 2; // Park
       break;
     case Shifter::REVERSE:
-      selectedDir = -1; // Reverse
+      userDirSelection = -1; // Reverse
       break;
     case Shifter::NEUTRAL:
-      selectedDir = 0; // Neutral
+      userDirSelection = 0; // Neutral
       break;
     case Shifter::DRIVE:
-      selectedDir = 1; // Drive
+      userDirSelection = 1; // Drive
       break;
     }
-  }
-
-  else {
+  } else {
     // otherwise use the traditional inputs
     if (Param::GetInt(Param::dirmode) == DIR_DEFAULTFORWARD) {
       if (Param::GetBool(Param::din_forward) &&
@@ -248,17 +259,80 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
       else if (Param::GetBool(Param::din_reverse))
         userDirSelection = -1 * dirSign;
     }
+    if (Param::GetInt(Param::DriveInhibit) ==
+        1) // drive inhibit selected, check for plug
+    {
+      if (Param::GetInt(Param::PlugDet) ==
+          1) // If charge socket is not empty. Force Neutral
+      {
+        userDirSelection = 0;
+      }
+    }
+  }
+  // Change Allowed Logic//
 
-    /* Only change direction when below certain motor speed */
-    //   if ((int)Encoder::GetSpeed() < Param::GetInt(Param::dirchrpm))
-    selectedDir = userDirSelection;
-
-    /* Current direction doesn't match selected direction -> neutral */
-    if (selectedDir != userDirSelection)
-      selectedDir = 0;
+  if (selectedDir != userDirSelection) // only run if requested change
+  {
+    if (ChangeLim == 0) // No limits on requesting new direction
+    {
+      selectedDir = userDirSelection; // direct pass through
+    } else if (ChangeLim == 1 ||
+               2) // speed limit only when changing F to R or R to F, note
+                  // last selected direction is valid,ignore neautral
+    {
+      if (userDirSelection != 0 &&
+          userDirSelection !=
+              prevValidDir) // neutral changes always allowed, check if we are
+                            // not going back into same mode as before neutral
+      {
+        if (Param::GetInt(Param::DirChangeRpm) >
+            (ABS(Param::GetInt(Param::speed)))) {
+          if (Param::GetBool(Param::din_brake) && ChangeLim == 2) {
+            selectedDir = userDirSelection;
+            prevValidDir =
+                selectedDir; // update only when its a valid forward or
+                             // reverse action under speed threshold
+          } else if (ChangeLim == 1) {
+            selectedDir = userDirSelection;
+            prevValidDir =
+                selectedDir; // update only when its a valid forward or
+                             // reverse action under speed threshold
+          }
+        }
+      } else {
+        selectedDir = userDirSelection; // direct pass through
+      }
+    }
   }
 
-  Param::SetInt(Param::dir, selectedDir);
+  // Shiftlock out control
+  if (ChangeLim == 0) // No limits on requesting new direction
+  {
+    SetInt(Param::ShiftLock, 0); // No shift lock out ever
+  } else if (Param::GetInt(Param::DirChangeRpm) >
+             (ABS(Param::GetInt(Param::speed)))) // speed based limit
+  {
+    if (Param::GetBool(Param::din_brake) &&
+        ChangeLim == 2) // brake input required
+    {
+      SetInt(Param::ShiftLock,
+             1);               // Solenoid pull out brake pressed and speed low
+    } else if (ChangeLim == 1) // if only speed
+    {
+      SetInt(Param::ShiftLock, 1); // Solenoid pull out speed low
+    } else {
+      SetInt(Param::ShiftLock, 0); // No shift lock out speed too high
+    }
+  } else {
+    SetInt(Param::ShiftLock, 0); // No shift lock out speed too high
+  }
+
+  // Always off outside of run
+  if (Param::GetInt(Param::opmode) != MOD_RUN) {
+    SetInt(Param::ShiftLock, 0); // No shift lock out speed too high
+  }
+
+  Param::SetInt(Param::dir, selectedDir); // final writing of DIR
 }
 
 float ProcessUdc(int motorSpeed) {
@@ -268,8 +342,10 @@ float ProcessUdc(int motorSpeed) {
     // This way we can have ShuntType 0 and still pull latests info
     if (Param::GetInt(Param::opmode) == MOD_OFF) {
       udc = 0; // ensure we reset udc during off state to keep precharge working
+      Param::SetFloat(Param::udc, udc);
     }
-  } else if (Param::GetInt(Param::ShuntType) == 1) // ISA shunt
+  } else if (Param::GetInt(Param::ShuntType) == 1 ||
+             Param::GetInt(Param::ShuntType) == 4) // ISA shunt
   {
     float udc =
         ((float)ISA::Voltage) /
@@ -297,23 +373,42 @@ float ProcessUdc(int motorSpeed) {
                  3600; // get Ah from isa sensor and post to parameter database
     Param::SetFloat(Param::AMPh, Amph);
     float deltaVolts1 = (udc2 / 2) - udc3;
-    float deltaVolts2 = (udc2 + udc3) - udc;
-    Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
-  } else if (Param::GetInt(Param::ShuntType) == 2) // BMs Sbox
+    Param::SetFloat(Param::deltaV, deltaVolts1);
+    if (Param::GetInt(Param::ShuntType) == 4) // ISA Shunt with udcsw update
+    {
+      if (udc2 >
+          Param::GetFloat(
+              Param::udcmin)) // only update UDCsw if UDC2 is above udcmin
+      {
+        Param::SetFloat(Param::udcsw,
+                        udc2 - 20); // Set udcsw to 20V under battery voltage
+      }
+    }
+  } else if (Param::GetInt(Param::ShuntType) == 2) // BMS Sbox
   {
-    float udc =
-        ((float)SBOX::Voltage2) / 1000; // get output voltage from sbox sensor
-                                        // and post to parameter database
-    Param::SetFloat(Param::udc, udc);
-    float udc2 =
-        ((float)SBOX::Voltage) / 1000; // get battery voltage from sbox sensor
-                                       // and post to parameter database
-    Param::SetFloat(Param::udc2, udc2);
-    Param::SetFloat(Param::udcsw,
-                    udc2 - 20); // Set udcsw to 20V under battery voltage
-    float udc3 = 0; //((float)ISA::Voltage3)/1000;//get voltage from isa sensor
-                    // and post to parameter database
-    Param::SetFloat(Param::udc3, udc3);
+    if (Param::GetInt(Param::opmode) != MOD_OFF) {
+      float udc =
+          ((float)SBOX::Voltage2) / 1000; // get output voltage from sbox sensor
+                                          // and post to parameter database
+      Param::SetFloat(Param::udc, udc);
+      float udc2 =
+          ((float)SBOX::Voltage) / 1000; // get battery voltage from sbox sensor
+                                         // and post to parameter database
+      Param::SetFloat(Param::udc2, udc2);
+      if (udc2 >
+          Param::GetFloat(
+              Param::udcmin)) // only update UDCsw if UDC2 is above udcmin
+      {
+        Param::SetFloat(Param::udcsw,
+                        udc2 - 20); // Set udcsw to 20V under battery voltage
+      }
+    } else {
+      Param::SetFloat(Param::udc, 0);
+      Param::SetFloat(Param::udc2, 0);
+    }
+
+    Param::SetFloat(Param::udc3, 0);
+
     float idc =
         ((float)SBOX::Amperes) /
         1000; // get current from sbox sensor and post to parameter database
@@ -323,19 +418,29 @@ float ProcessUdc(int motorSpeed) {
     Param::SetFloat(Param::power, kw);
   } else if (Param::GetInt(Param::ShuntType) == 3) // VW
   {
-    float udc =
-        ((float)VWBOX::Voltage) * 0.5; // get output voltage from sbox sensor
-                                       // and post to parameter database
-    Param::SetFloat(Param::udc, udc);
-    float udc2 = ((float)VWBOX::Voltage2) *
-                 0.0625; // get battery voltage from sbox sensor and post to
-                         // parameter database
-    Param::SetFloat(Param::udc2, udc2);
-    Param::SetFloat(Param::udcsw,
-                    udc2 - 20); // Set udcsw to 20V under battery voltage
-    float udc3 = 0; //((float)ISA::Voltage3)/1000;//get voltage from isa sensor
-                    // and post to parameter database
-    Param::SetFloat(Param::udc3, udc3);
+    if (Param::GetInt(Param::opmode) != MOD_OFF) {
+      float udc =
+          ((float)VWBOX::Voltage) * 0.5; // get output voltage from sbox sensor
+                                         // and post to parameter database
+      Param::SetFloat(Param::udc, udc);
+      float udc2 = ((float)VWBOX::Voltage2) *
+                   0.0625; // get battery voltage from sbox sensor and post to
+                           // parameter database
+      Param::SetFloat(Param::udc2, udc2);
+      if (udc2 >
+          Param::GetFloat(
+              Param::udcmin)) // only update UDCsw if UDC2 is above udcmin
+      {
+        Param::SetFloat(Param::udcsw,
+                        udc2 - 20); // Set udcsw to 20V under battery voltage
+      }
+    } else {
+      Param::SetFloat(Param::udc, 0);
+      Param::SetFloat(Param::udc2, 0);
+    }
+
+    Param::SetFloat(Param::udc3, 0);
+
     float idc =
         ((float)VWBOX::Amperes) *
         0.1; // get current from sbox sensor and post to parameter database
@@ -381,9 +486,7 @@ float ProcessThrottle(int speed) {
 
   if (speed < Param::GetInt(Param::throtramprpm)) {
     Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
-  }
-
-  else {
+  } else {
     Throttle::throttleRamp = Param::GetAttrib(Param::throtramp)->max;
   }
 
@@ -400,7 +503,8 @@ float ProcessThrottle(int speed) {
   Throttle::CalcCruiseSpeed(ABS(Param::GetInt(Param::speed))); finalSpnt =
   MAX(cruiseThrottle, finalSpnt);
   }
-*/
+  */
+
   Throttle::UdcLimitCommand(finalSpnt, Param::GetFloat(Param::udc));
   Throttle::IdcLimitCommand(finalSpnt, ABS(Param::GetFloat(Param::idc)));
   Throttle::SpeedLimitCommand(finalSpnt, ABS(speed));
@@ -447,107 +551,77 @@ void CalcSOC() {
   Param::SetFloat(Param::SOC, SOCVal);
 }
 
-/* Function NOT supported
-void ProcessCruiseControlButtons()
-{
-    static bool transition = false;
-    static int cruiseTarget = 0;
-    int cruisespeed = Param::GetInt(Param::cruisespeed);
-    int cruisestt = Param::GetInt(Param::cruisestt);
+void ProcessCruiseControlButtons() {
+  static bool transition = false;
+  static int cruiseTarget = 0;
+  int cruisespeed = Param::GetInt(Param::cruisespeed);
+  int cruisestt = Param::GetInt(Param::cruisestt);
 
-    if (transition)
-    {
-        if ((cruisestt & (Vehicle::CC_RESUME | Vehicle::CC_SET)) == 0)
-        {
-            transition = false;
-        }
-        return;
+  if (transition) {
+    if ((cruisestt & (Vehicle::CC_RESUME | Vehicle::CC_SET)) == 0) {
+      transition = false;
     }
-    else
-    {
-        if (cruisestt & (Vehicle::CC_RESUME | Vehicle::CC_SET))
-        {
-            transition = true;
-        }
+    return;
+  } else {
+    if (cruisestt & (Vehicle::CC_RESUME | Vehicle::CC_SET)) {
+      transition = true;
     }
+  }
 
-    if (cruisestt & Vehicle::CC_ON && Param::GetInt(Param::opmode) == MOD_RUN)
-    {
-        if (cruisespeed <= 0)
-        {
-            int currentSpeed = Param::GetInt(Param::speed);
+  if (cruisestt & Vehicle::CC_ON && Param::GetInt(Param::opmode) == MOD_RUN) {
+    if (cruisespeed <= 0) {
+      int currentSpeed = Param::GetInt(Param::speed);
 
-            if (cruisestt & Vehicle::CC_SET && currentSpeed > 500) //Start
-cruise control at current speed
-            {
-                cruiseTarget = currentSpeed;
-                cruisespeed = cruiseTarget;
-            }
-            else if (cruisestt & Vehicle::CC_RESUME && cruiseTarget > 0)
-//resume via ramp
-            {
-                cruisespeed = currentSpeed;
-            }
-        }
-        else
-        {
-            if (cruisestt & Vehicle::CC_CANCEL ||
-Param::GetBool(Param::din_brake))
-            {
-                cruisespeed = 0;
-            }
-            else if (cruisestt & Vehicle::CC_RESUME)
-            {
-                cruiseTarget += Param::GetInt(Param::cruisestep);
-            }
-            else if (cruisestt & Vehicle::CC_SET)
-            {
-                cruiseTarget -= Param::GetInt(Param::cruisestep);
-            }
-        }
-    }
-    else
-    {
+      if (cruisestt & Vehicle::CC_SET &&
+          currentSpeed > 500) // Start cruise control at current speed
+      {
+        cruiseTarget = currentSpeed;
+        cruisespeed = cruiseTarget;
+      } else if (cruisestt & Vehicle::CC_RESUME &&
+                 cruiseTarget > 0) // resume via ramp
+      {
+        cruisespeed = currentSpeed;
+      }
+    } else {
+      if (cruisestt & Vehicle::CC_CANCEL || Param::GetBool(Param::din_brake)) {
         cruisespeed = 0;
-        cruiseTarget = 0;
+      } else if (cruisestt & Vehicle::CC_RESUME) {
+        cruiseTarget += Param::GetInt(Param::cruisestep);
+      } else if (cruisestt & Vehicle::CC_SET) {
+        cruiseTarget -= Param::GetInt(Param::cruisestep);
+      }
+    }
+  } else {
+    cruisespeed = 0;
+    cruiseTarget = 0;
 
-        //When pressing cruise control buttons while cruise control is off
-        //Use them to adjust regen level
-        int regenLevel = Param::GetInt(Param::regenlevel);
-        if (cruisestt & Vehicle::CC_RESUME)
-        {
-            regenLevel++;
-            regenLevel = MIN(3, regenLevel);
-        }
-        else if (cruisestt & Vehicle::CC_SET)
-        {
-            regenLevel--;
-            regenLevel = MAX(0, regenLevel);
-        }
-
-        Param::SetInt(Param::regenlevel, regenLevel);
+    // When pressing cruise control buttons while cruise control is off
+    // Use them to adjust regen level
+    int regenLevel = Param::GetInt(Param::regenlevel);
+    if (cruisestt & Vehicle::CC_RESUME) {
+      regenLevel++;
+      regenLevel = MIN(3, regenLevel);
+    } else if (cruisestt & Vehicle::CC_SET) {
+      regenLevel--;
+      regenLevel = MAX(0, regenLevel);
     }
 
-    if (cruisespeed <= 0)
-    {
-        Param::SetInt(Param::cruisespeed, 0);
-    }
-    else if (cruisespeed < cruiseTarget)
-    {
-        Param::SetInt(Param::cruisespeed, RAMPUP(cruisespeed, cruiseTarget,
-Param::GetInt(Param::cruiseramp)));
-    }
-    else if (cruisespeed > cruiseTarget)
-    {
-        Param::SetInt(Param::cruisespeed, RAMPDOWN(cruisespeed, cruiseTarget,
-Param::GetInt(Param::cruiseramp)));
-    }
-    else
-    {
-        Param::SetInt(Param::cruisespeed, cruisespeed);
-    }
+    Param::SetInt(Param::regenlevel, regenLevel);
+  }
+
+  if (cruisespeed <= 0) {
+    Param::SetInt(Param::cruisespeed, 0);
+  } else if (cruisespeed < cruiseTarget) {
+    Param::SetInt(Param::cruisespeed, RAMPUP(cruisespeed, cruiseTarget,
+                                             Param::GetInt(Param::cruiseramp)));
+  } else if (cruisespeed > cruiseTarget) {
+    Param::SetInt(
+        Param::cruisespeed,
+        RAMPDOWN(cruisespeed, cruiseTarget, Param::GetInt(Param::cruiseramp)));
+  } else {
+    Param::SetInt(Param::cruisespeed, cruisespeed);
+  }
 }
-*/
 
 void CpSpoofOutput() {
   uint16_t CpVal = 0;

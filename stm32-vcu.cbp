@@ -66,10 +66,12 @@
 		<Unit filename="include/JLR_G2.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/MGCoolantHeater.h" />
+		<Unit filename="include/MGgen2V2Lcharger.h" />
 		<Unit filename="include/NissanPDM.h" />
 		<Unit filename="include/NoInverter.h" />
 		<Unit filename="include/NoVehicle.h" />
 		<Unit filename="include/OutlanderCanHeater.h" />
+		<Unit filename="include/OutlanderCompressor.h" />
 		<Unit filename="include/OutlanderHeartBeat.h" />
 		<Unit filename="include/TeslaDCDC.h" />
 		<Unit filename="include/VWAirHeater.h" />
@@ -82,6 +84,7 @@
 		<Unit filename="include/chademo.h" />
 		<Unit filename="include/chargerhw.h" />
 		<Unit filename="include/chargerint.h" />
+		<Unit filename="include/compressor.h" />
 		<Unit filename="include/daisychainbms.h" />
 		<Unit filename="include/dcdc.h" />
 		<Unit filename="include/digio_prj.h" />
@@ -97,6 +100,7 @@
 		<Unit filename="include/kangoobms.h" />
 		<Unit filename="include/leafbms.h" />
 		<Unit filename="include/leafinv.h" />
+		<Unit filename="include/noCompressor.h" />
 		<Unit filename="include/noHeater.h" />
 		<Unit filename="include/no_Lever.h" />
 		<Unit filename="include/nocharger.h" />
@@ -165,8 +169,11 @@
 		<Unit filename="src/JLR_G2.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/MGCoolantHeater.cpp" />
+		<Unit filename="src/MGgen2V2Lcharger.cpp" />
+		<Unit filename="src/NissLeafMng.cpp" />
 		<Unit filename="src/NissanPDM.cpp" />
 		<Unit filename="src/OutlanderCanHeater.cpp" />
+		<Unit filename="src/OutlanderCompressor.cpp" />
 		<Unit filename="src/OutlanderHeartBeat.cpp" />
 		<Unit filename="src/RearOutlanderinverter.cpp" />
 		<Unit filename="src/TeslaDCDC.cpp" />

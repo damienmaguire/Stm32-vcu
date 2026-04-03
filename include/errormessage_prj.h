@@ -22,7 +22,7 @@
 #ifndef ERRORMESSAGE_PRJ_H_INCLUDED
 #define ERRORMESSAGE_PRJ_H_INCLUDED
 
-#define ERROR_BUF_SIZE 4
+#define ERROR_BUF_SIZE 16
 
 #define ERROR_MESSAGE_LIST                                                     \
   ERROR_MESSAGE_ENTRY(BMSCOMM, ERROR_STOP)                                     \
@@ -34,7 +34,9 @@
   ERROR_MESSAGE_ENTRY(THROTTLE12DIFF, ERROR_DISPLAY)                           \
   ERROR_MESSAGE_ENTRY(THROTTLEMODE, ERROR_DISPLAY)                             \
   ERROR_MESSAGE_ENTRY(CANTIMEOUT, ERROR_DISPLAY)                               \
+  ERROR_MESSAGE_ENTRY(PWMCONFIGERROR, ERROR_DISPLAY)                           \
   ERROR_MESSAGE_ENTRY(TMPHSMAX, ERROR_DERATE)                                  \
-  ERROR_MESSAGE_ENTRY(TMPMMAX, ERROR_DERATE)
+  ERROR_MESSAGE_ENTRY(TMPMMAX, ERROR_DERATE)                                   \
+  ERROR_MESSAGE_ENTRY(HVILERR, ERROR_DISPLAY)
 
 #endif // ERRORMESSAGE_PRJ_H_INCLUDED

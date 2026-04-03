@@ -18,15 +18,14 @@
  * Controls the VW LIN based heater as :
  * https://openinverter.org/wiki/Volkswagen_Heater
  */
-
-#ifndef VWHEATER_H
-#define VWHEATER_H
+#ifndef VWCOOLANTHEATER_H
+#define VWCOOLANTHEATER_H
 #include <cstdint>
 // #include <libopencm3/stm32/usart.h>
 #include "linbus.h"
 #include <heater.h>
 
-class vwHeater : public Heater {
+class vwCoolantHeater : public Heater {
 public:
   void SetTargetTemperature(float temp) { (void)temp; } // Not supported (yet)?
   void SetPower(uint16_t power, bool HeatReq);
@@ -36,5 +35,4 @@ private:
   bool isAwake = false;
   LinBus *lin;
 };
-
-#endif // VWHEATER_H
+#endif // VWCOOLANTHEATER_H

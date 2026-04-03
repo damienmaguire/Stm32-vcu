@@ -29,24 +29,24 @@
  * running approx 4kw : 0x32, 0xFC, 0x80, 0x80, 0x8D, 0x5D, 0x7A, 0x77
  */
 
-#include <VWheater.h>
+#include <VWCoolantHeater.h>
 
 static uint8_t processedPower = 0;
 static uint8_t TenCount = 0;
 
-void vwHeater::SetLinInterface(LinBus *l) {
+void vwCoolantHeater::SetLinInterface(LinBus *l) {
   lin = l;
   DigIo::lin_wake.Clear(); // Not used on TJA1027
   DigIo::lin_nslp.Set();   // Wakes the device
   // Johannes for president!
 }
 
-void vwHeater::SetPower(uint16_t power, bool HeatReq) {
+void vwCoolantHeater::SetPower(uint16_t power, bool HeatReq) {
   TenCount++;
   if (TenCount == 5) // slow down to 50ms as this is called in 10ms task.
   {
     TenCount = 0;
-    HeatReq = HeatReq;
+    HeatReq = Param::GetInt(Param::HeatReq);
     // going to ignore heatreq just for test.
 
     if (power >= 255)
@@ -79,7 +79,7 @@ void vwHeater::SetPower(uint16_t power, bool HeatReq) {
       lindata[0] = Param::GetInt(
           Param::HeatPercnt); // VW heater uses a % setting as opposed to a set
                               // power val. Regulates its temps to this.
-      lindata[1] = 1;         // Always on for test. Can use heatreq here.
+      lindata[1] = HeatReq;   // Always on for test. Can use heatreq here.
       lindata[2] = 0;
       lindata[3] = 0;
       lin->Request(28, lindata, sizeof(lindata)); // 0x1C hex address

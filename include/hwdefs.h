@@ -29,8 +29,6 @@
 #define MIN_PWM_DIGITS 11
 #define PERIPH_CLK ((uint32_t)36000000)
 
-#define RCC_CLOCK_SETUP rcc_clock_setup_in_hse_8mhz_out_72mhz
-
 #define PWM_TIMER TIM1
 #define PWM_TIMRST RST_TIM1
 #define PWM_TIMER_IRQ NVIC_TIM1_UP_IRQ

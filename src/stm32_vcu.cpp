@@ -31,18 +31,21 @@
 #include "Can_VAG.h"
 #include "E65_Lever.h"
 #include "ElconCharger.h"
+#include "ElconDCDC.h"
 #include "F30_Lever.h"
 #include "Foccci.h"
 #include "GS450H.h"
 #include "JLR_G1.h"
 #include "JLR_G2.h"
+#include "MGCoolantHeater.h"
 #include "NissanPDM.h"
 #include "NoInverter.h"
 #include "NoVehicle.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderHeartBeat.h"
 #include "TeslaDCDC.h"
-#include "VWheater.h"
+#include "VWAirHeater.h"
+#include "VWCoolantHeater.h"
 #include "V_Classic.h"
 #include "amperacharger.h"
 #include "amperaheater.h"
@@ -80,8 +83,10 @@
 #include "outlanderinverter.h"
 #include "param_save.h"
 #include "params.h"
+#include "preheater.h"
 #include "printf.h"
 #include "rearoutlanderinverter.h"
+#include "sdocommands.h"
 #include "shifter.h"
 #include "simpbms.h"
 #include "stm32_can.h"
@@ -119,6 +124,7 @@ static bool chargeModeDC = false;
 static bool ChgLck = false;
 static CanHardware *canInterface[3];
 static CanMap *canMap;
+static CanSdo *canSdo;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
 static uint8_t ChgSet; // Temp variable storing Param::Chgctrl. 0=enable,
@@ -133,11 +139,15 @@ static bool ACrequest = false;
 static bool initbyStart = false;
 static bool initbyCharge = false;
 static bool OutlanderCAN = false;
+static bool ExtHVreq = false;
+static bool CheckHVIL = 0;
+static bool HVILok = 0;
 
 static volatile unsigned days = 0, hours = 0, minutes = 0, seconds = 0,
                          alarm = 0; // != 0 when alarm is pending
 
 static uint16_t rlyDly = 25;
+static uint16_t prechargeMinTime = 100;
 
 // Instantiate Classes
 static BMW_E31 e31Vehicle;
@@ -170,7 +180,9 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
-static vwHeater heaterVW;
+static vwCoolantHeater heaterCoolantVW;
+static mgCoolantHeater heaterCoolantMG;
+static vwAirHeater heaterAirVW;
 static NoVehicle VehicleNone;
 static V_Classic classVehicle;
 static Inverter *selectedInverter = &openInv;
@@ -186,12 +198,14 @@ static DaisychainBMS BMSdaisychain;
 static KangooBMS BMSRenaultKangoo33;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
+static ElconDCDC ElconDC;
 static BMS *selectedBMS = &BMSnone;
 static DCDC *selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
 static Shifter shifterNone;
 static RearOutlanderInverter rearoutlanderInv;
 static LinBus *lin;
+static Preheater preheater;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void) {
@@ -201,6 +215,19 @@ static void Ms200Task(void) {
   if (opmode == MOD_CHARGE)
     selectedCharger->Task200Ms();
 
+  // in chademo , we do not want to run the 200ms task unless in dc charge mode
+  if (targetChgint == ChargeInterfaces::Chademo && chargeModeDC)
+    selectedChargeInt->Task200Ms();
+  // In case of the LIM we want to send it all the time if lim in use
+  if ((targetChgint == ChargeInterfaces::i3LIM) ||
+      (targetChgint == ChargeInterfaces::Unused) ||
+      (targetChgint == ChargeInterfaces::CPC) ||
+      (targetChgint == ChargeInterfaces::Foccci))
+    selectedChargeInt->Task200Ms();
+  // and just to be thorough ...
+  if (targetChgint == ChargeInterfaces::Unused)
+    selectedChargeInt->Task200Ms();
+
   // if(opmode==MOD_CHARGE) utils::CpSpoofOutput;
   utils::CpSpoofOutput();
 
@@ -208,7 +235,11 @@ static void Ms200Task(void) {
   Param::SetInt(Param::Hour, hours);
   Param::SetInt(Param::Min, minutes);
   Param::SetInt(Param::Sec, seconds);
+  Param::SetInt(Param::uptime, rtc_get_counter_val());
   Param::SetInt(Param::ChgT, ChgDur_tmp);
+
+  // Setting of RunChg - main okay to charge param
+
   if (ChgSet == 2 && !ChgLck) // if in timer mode and not locked out from a
                               // previous full charge.
   {
@@ -244,28 +275,29 @@ static void Ms200Task(void) {
   if (ChgSet == 1)
     RunChg = false; // disable from webui
 
-  // If we detect we are getting a hardwired DCFC request (chademo ect.) DO NOT
-  // run PP detect
-  if (IOMatrix::GetPin(IOMatrix::DCFCREQUEST) != &DigIo::dummypin &&
-      !(IOMatrix::GetPin(IOMatrix::DCFCREQUEST)->Get())) {
-    // Handle PP on the Charging port
-    if (Param::GetInt(Param::GPA1Func) == IOMatrix::PILOT_PROX ||
-        Param::GetInt(Param::GPA2Func) == IOMatrix::PILOT_PROX) {
-      int ppThresh = Param::GetInt(Param::ppthresh);
-      int ppValue = IOMatrix::GetAnaloguePin(IOMatrix::PILOT_PROX)->Get();
-      Param::SetInt(Param::PPVal, ppValue);
+  // Handle PP on the Charging port - Changes RunChg
+  if (Param::GetInt(Param::GPA1Func) == IOMatrix::PILOT_PROX ||
+      Param::GetInt(Param::GPA2Func) == IOMatrix::PILOT_PROX) {
+    int ppThresh = Param::GetInt(Param::ppthresh);
+    int ppValue = IOMatrix::GetAnaloguePin(IOMatrix::PILOT_PROX)->Get();
+    Param::SetInt(Param::PPVal, ppValue);
 
-      // If PP is at or below threshold and currently disabled and not already
-      // finished
-      if (ppValue <= ppThresh && ChgSet == 1 && !ChgLck) {
+    // If PP is at or below threshold and currently disabled and not already
+    // finished
+    if (ppValue <= ppThresh) {
+      if (ChgSet == 1 && !ChgLck) {
         RunChg = true;
-      } else if (ppValue > ppThresh) {
-        // even if timer was enabled, change to disabled, we've unplugged
-        RunChg = false;
       }
+      Param::SetInt(Param::PlugDet, 1);
+    } else if (ppValue > ppThresh) {
+      // even if timer was enabled, change to disabled, we've unplugged
+      RunChg = false;
+      Param::SetInt(Param::PlugDet, 0);
     }
   }
+  // END Setting of RunChg - main okay to charge param
 
+  // Check if we want to AC charge via charger
   if (selectedCharger->ControlCharge(RunChg, ACrequest) &&
       (opmode != MOD_RUN)) {
     chargeMode = true; // AC charge mode
@@ -274,19 +306,7 @@ static void Ms200Task(void) {
     Param::SetInt(Param::chgtyp, OFF);
     chargeMode = false; // no charge mode
   }
-
-  // in chademo , we do not want to run the 200ms task unless in dc charge mode
-  if (targetChgint == ChargeInterfaces::Chademo && chargeModeDC)
-    selectedChargeInt->Task200Ms();
-  // In case of the LIM we want to send it all the time if lim in use
-  if ((targetChgint == ChargeInterfaces::i3LIM) ||
-      (targetChgint == ChargeInterfaces::Unused) ||
-      (targetChgint == ChargeInterfaces::CPC) ||
-      (targetChgint == ChargeInterfaces::Foccci))
-    selectedChargeInt->Task200Ms();
-  // and just to be thorough ...
-  if (targetChgint == ChargeInterfaces::Unused)
-    selectedChargeInt->Task200Ms();
+  // end check
 
   ///////////////////////////////////////
   // Charge term logic for AC charge
@@ -309,6 +329,8 @@ static void Ms200Task(void) {
       ChgLck = true;  // set charge lockout flag
     }
   }
+  // End Charge Term Logic
+
   if (opmode == MOD_RUN) {
     ChgLck = false; // reset charge lockout flag when we drive off
 
@@ -326,22 +348,24 @@ static void Ms200Task(void) {
       if (brkVacThresh > BrkVacHyst) {
         // enable pump
         if (brkVacVal > brkVacThresh) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Clear();
         } else if (brkVacVal < BrkVacHyst) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Set();
         }
       } else {
         // enable pump
         if (brkVacVal < brkVacThresh) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Clear();
         } else if (brkVacVal > BrkVacHyst) {
-          IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Set();
+          IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Set();
         }
       }
     }
   } else {
-    IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::BRAKEVACPUMP)->Clear();
   }
+
+  preheater.Task200Ms(opmode, hours, minutes);
 }
 
 static void Ms100Task(void) {
@@ -361,7 +385,7 @@ static void Ms100Task(void) {
   Param::SetInt(Param::cruisestt, selectedVehicle->GetCruiseState());
   Param::SetFloat(Param::FrontRearBal, selectedVehicle->GetFrontRearBalance());
 
-  // utils::ProcessCruiseControlButtons(); NOT SUPPORTED
+  utils::ProcessCruiseControlButtons();
 
   selectedInverter->Task100Ms();
   selectedVehicle->Task100Ms();
@@ -371,22 +395,26 @@ static void Ms100Task(void) {
   selectedShifter->Task100Ms();
   selectedHeater->Task100Ms();
   canMap->SendAll();
+  canSdo->TriggerTimeout(100);
 
   if (OutlanderCAN == true) {
     OutlanderHeartBeat::Task100Ms();
   }
 
+  // Setting reverse light
   if (Param::GetInt(Param::dir) < 0) {
-    IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Set();
+    IOMatrix::GetPinOut(IOMatrix::REVERSELIGHT)->Set();
   } else {
-    IOMatrix::GetPin(IOMatrix::REVERSELIGHT)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::REVERSELIGHT)->Clear();
   }
 
+  // Setting Run light
   if (opmode == MOD_RUN) {
-    IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Set();
+    IOMatrix::GetPinOut(IOMatrix::RUNINDICATION)->Set();
   } else {
-    IOMatrix::GetPin(IOMatrix::RUNINDICATION)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::RUNINDICATION)->Clear();
   }
+  // end lights
 
   Param::SetFloat(
       Param::tmphs,
@@ -407,16 +435,21 @@ static void Ms100Task(void) {
 
   Param::SetInt(Param::T15Stat, selectedVehicle->Ready());
 
+  // Needs to move to shunt handling
   int32_t IsaTemp = ISA::Temperature;
   Param::SetInt(Param::tmpaux, IsaTemp);
+  // end need to move
 
+  // Charge interface logic
   if (targetChgint == ChargeInterfaces::i3LIM ||
       targetChgint == ChargeInterfaces::Foccci || chargeModeDC)
     selectedChargeInt
         ->Task100Ms(); // send the 100ms task request for the lim all the time
                        // and for others if in DC charge mode
 
-  if (selectedChargeInt->DCFCRequest(RunChg)) // Request to run dc fast charge
+  if (selectedChargeInt->DCFCRequest(RunChg) ||
+      ExtHVreq) // Request to run dc fast charge via charge interface or
+                // external pin io
   {
     // Here we receive a valid DCFC startup request.
     if (opmode != MOD_RUN)
@@ -431,15 +464,16 @@ static void Ms100Task(void) {
   if (!chargeModeDC) // Request to run ac charge from the interface (e.g. LIM)
                      // if we are NOT in DC charge mode.
   {
-    ACrequest = selectedChargeInt->ACRequest(RunChg);
+    ACrequest = selectedChargeInt->ACRequest(
+        RunChg); // If using unused always returns true
   }
   // End charge interface logic
 
   // Reading HeatReq inpput
-  if (IOMatrix::GetPin(IOMatrix::HEATREQ) !=
+  if (IOMatrix::GetPinIn(IOMatrix::HEATREQ) !=
       &DigIo::dummypin) // digital input has priority, check if used
   {
-    Param::SetInt(Param::HeatReq, IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
+    Param::SetInt(Param::HeatReq, IOMatrix::GetPinIn(IOMatrix::HEATREQ)->Get());
   } else if (Param::GetInt(Param::GPA1Func) == IOMatrix::HEATER_POT ||
              Param::GetInt(Param::GPA2Func) ==
                  IOMatrix::HEATER_POT) // check if Anolgue Heater input used
@@ -486,8 +520,30 @@ static void Ms100Task(void) {
     }
   }
 
+  // Reading HVrequest inpput
+  if (IOMatrix::GetPinIn(IOMatrix::HVREQ) != &DigIo::dummypin) {
+    ExtHVreq = IOMatrix::GetPinIn(IOMatrix::HVREQ)
+                   ->Get(); // Read IO pin to determine if there is an external
+                            // HV request
+    if (ExtHVreq)
+      Param::SetInt(Param::chgtyp, DCEXT);
+  }
+
   DigiPot::SetPot1Step(); // just for dev
   DigiPot::SetPot2Step(); // just for dev
+
+  // Reading HVIL input
+  if (IOMatrix::GetPinIn(IOMatrix::HVIL) != &DigIo::dummypin) {
+    CheckHVIL = IOMatrix::GetPinIn(IOMatrix::HVIL)->Get();
+    if (CheckHVIL > 0) {
+      HVILok = 1;
+    } else {
+      HVILok = 0;
+      ErrorMessage::Post(ERR_HVILERR);
+    }
+  } else {
+    HVILok = 1;
+  }
 
   // Cooling Fan Control//
   if (opmode == MOD_CHARGE || opmode == MOD_RUN) {
@@ -495,33 +551,41 @@ static void Ms100Task(void) {
         MAX(Param::GetFloat(Param::tmphs), Param::GetFloat(Param::ChgTemp));
 
     if (Param::GetFloat(Param::FanTemp) < tempTemp) {
-      IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Set(); // Coolant Fan On
+      IOMatrix::GetPinOut(IOMatrix::COOLINGFAN)->Set(); // Coolant Fan On
     } else if ((Param::GetFloat(Param::FanTemp) - 5) > tempTemp) {
-      IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
+      IOMatrix::GetPinOut(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
     }
   } else {
-    IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
+    IOMatrix::GetPinOut(IOMatrix::COOLINGFAN)->Clear(); // Coolant Fan Off
   }
 
   // HV Active output
-  if (opmode == MOD_CHARGE || opmode == MOD_RUN) {
-    IOMatrix::GetPin(IOMatrix::HVACTIVE)->Set(); // HV Active On
+  if (opmode == MOD_CHARGE || opmode == MOD_RUN || opmode == MOD_PREHEAT) {
+    IOMatrix::GetPinOut(IOMatrix::HVACTIVE)->Set(); // HV Active On
   } else {
-    IOMatrix::GetPin(IOMatrix::HVACTIVE)->Clear(); // HV Active Off
+    IOMatrix::GetPinOut(IOMatrix::HVACTIVE)->Clear(); // HV Active Off
+  }
+
+  // ShiftLock Out output
+  if (opmode == MOD_RUN && Param::GetInt(Param::ShiftLock) == 1) {
+    IOMatrix::GetPinOut(IOMatrix::SHIFTLOCKNO)->Set(); // Shift Lock Out On
+  } else {
+    IOMatrix::GetPinOut(IOMatrix::SHIFTLOCKNO)->Clear(); // Shift Lock Out Off
   }
 }
 
 static void ControlCabHeater(int opmode) {
-  // Only run heater in run mode
-  // What about charge mode and timer mode?
-  if (opmode == MOD_RUN && Param::GetInt(Param::Control) == 1) {
-    IOMatrix::GetPin(IOMatrix::HEATERENABLE)
+  // Only run heater in run mode if enabled or timer set, also run is mode is
+  // preheat What about charge mode and timer mode?
+  if ((opmode == MOD_RUN && Param::GetInt(Param::Control) >= 1) ||
+      opmode == MOD_PREHEAT) {
+    IOMatrix::GetPinOut(IOMatrix::HEATERENABLE)
         ->Set(); // Heater enable and coolant pump on
     selectedHeater->SetTargetTemperature(50); // TODO: Currently does nothing
     selectedHeater->SetPower(Param::GetInt(Param::HeatPwr),
                              Param::GetBool(Param::HeatReq));
   } else {
-    IOMatrix::GetPin(IOMatrix::HEATERENABLE)
+    IOMatrix::GetPinOut(IOMatrix::HEATERENABLE)
         ->Clear(); // Disable heater and coolant pump
     selectedHeater->SetPower(0, 0);
   }
@@ -581,9 +645,9 @@ static void Ms10Task(void) {
 
   if (Param::GetInt(Param::potnom) < Param::GetInt(Param::RegenBrakeLight)) {
     // enable Brake Light Ouput
-    IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+    IOMatrix::GetPinOut(IOMatrix::BRAKELIGHT)->Set();
   } else {
-    IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+    IOMatrix::GetPinOut(IOMatrix::BRAKELIGHT)->Clear();
   }
 
   // speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface
@@ -628,30 +692,37 @@ static void Ms10Task(void) {
   case MOD_OFF:
     initbyStart = false;
     initbyCharge = false;
-    DigIo::inv_out.Clear();                           // inverter power off
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
-                                                      // used
+    preheater.SetInitByPreHeat(false);
+
+    DigIo::inv_out.Clear();                              // inverter power off
+    IOMatrix::GetPinOut(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
+                                                         // used
     Param::SetInt(
         Param::dir,
         0); // shift to park/neutral on shutdown regardless of shifter pos
     selectedVehicle->DashOff();
+
     StartSig = false; // reset for next time
 
-    if (rlyDly != 0)
+    if (rlyDly != 0) {
       rlyDly--; // here we are going to pause to allow system shut down before
                 // opening HV contactors
+      selectedCharger->Off(); // send message to charger to shut down
+    }
     if (rlyDly == 0) {
       DigIo::dcsw_out.Clear();
-      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)
+      IOMatrix::GetPinOut(IOMatrix::NEGCONTACTOR)
           ->Clear(); // Negative contactors off if used
       DigIo::prec_out.Clear();
     }
 
     if (Param::GetInt(Param::pot) < Param::GetInt(Param::potmin)) {
-      if ((selectedVehicle->Start() && selectedVehicle->Ready())) {
+      if (selectedVehicle->Start() && selectedVehicle->Ready() &&
+          (HVILok > 0)) {
         StartSig = true;
         opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
-                                // pressed , 2)ign on , 3)start signal rx
+                                // pressed , 2)ign on , 3)start signal rx, 4) HV
+                                // IL input is grounded if selected.
         rlyDly = 25;            // Recharge sequence timer
         vehicleStartTime = rtc_get_counter_val();
         initbyStart = true;
@@ -662,6 +733,12 @@ static void Ms10Task(void) {
       rlyDly = 25;            // Recharge sequence timer
       vehicleStartTime = rtc_get_counter_val();
       initbyCharge = true;
+    }
+    if (preheater.GetRunPreHeat()) {
+      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
+      rlyDly = 25;            // Recharge sequence timer
+      vehicleStartTime = rtc_get_counter_val();
+      preheater.SetInitByPreHeat(true);
     }
     Param::SetInt(Param::opmode, opmode);
     break;
@@ -677,15 +754,20 @@ static void Ms10Task(void) {
     {
       DigIo::inv_out.Set(); // inverter power on
     }
-    IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
+    IOMatrix::GetPinOut(IOMatrix::NEGCONTACTOR)->Set();
+    IOMatrix::GetPinOut(IOMatrix::COOLANTPUMP)->Set();
     if (rlyDly != 0)
       rlyDly--; // here we are going to pause before energising precharge to
                 // prevent too many contactors pulling amps at the same time
     if (rlyDly == 0)
       DigIo::prec_out.Set(); // commence precharge
-    if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) ==
-        STAT_NONE) {
+    if (prechargeMinTime != 0)
+      prechargeMinTime--; // 1 second minimum precharge time
+    if ((prechargeMinTime == 0) &&
+        (stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) ==
+            0) // Clarify operator precedence, exit precharge: time met and no
+               // faults
+    {
       if (StartSig) {
         opmode = MOD_RUN;
         StartSig = false;                    // reset for next time
@@ -695,6 +777,10 @@ static void Ms10Task(void) {
         opmode = MOD_CHARGE;
         rlyDly = 25;                         // Recharge sequence timer
         Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
+      } else if (preheater.GetRunPreHeat()) {
+        opmode = MOD_PREHEAT;
+        rlyDly = 25;                         // Recharge sequence timer
+        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
       }
     }
     if (initbyCharge && !chargeMode)
@@ -702,6 +788,9 @@ static void Ms10Task(void) {
                         // either start mode or run mode.
     if (initbyStart && !selectedVehicle->Ready())
       opmode = MOD_OFF;
+    if (preheater.GetInitByPreHeat() && !preheater.GetRunPreHeat())
+      opmode = MOD_OFF;
+
     if (udc < (Param::GetInt(Param::udcsw)) &&
         rtc_get_counter_val() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
       DigIo::prec_out.Clear();
@@ -754,6 +843,21 @@ static void Ms10Task(void) {
       rlyDly = 250; // Recharge sequence timer for delayed shutdown
     }
     Param::SetInt(Param::opmode, opmode);
+    break;
+
+  case MOD_PREHEAT:
+    if (rlyDly != 0)
+      rlyDly--; // here we are going to pause before energising precharge to
+                // prevent too many contactors pulling amps at the same time
+    if (rlyDly == 0) {
+      DigIo::dcsw_out.Set();
+    }
+
+    preheater.Ms10Task();
+
+    if (!preheater.GetRunPreHeat()) {
+      rlyDly = 250; // Recharge sequence timer for delayed shutdown
+    }
     break;
   }
 
@@ -915,9 +1019,16 @@ static void UpdateHeater() {
   case HeatType::AmpHeater:
     selectedHeater = &amperaHeater;
     break;
-  case HeatType::VW:
-    selectedHeater = &heaterVW;
-    heaterVW.SetLinInterface(lin);
+  case HeatType::VWCoolant:
+    selectedHeater = &heaterCoolantVW;
+    heaterCoolantVW.SetLinInterface(lin);
+    break;
+  case HeatType::VWAir:
+    selectedHeater = &heaterAirVW;
+    heaterAirVW.SetLinInterface(lin);
+    break;
+  case HeatType::MGCoolant:
+    selectedHeater = &heaterCoolantMG;
     break;
   case HeatType::OutlanderHeater:
     selectedHeater = &outlanderCanHeater;
@@ -964,6 +1075,10 @@ static void UpdateDCDC() {
 
   case DCDCModes::TeslaG2:
     selectedDCDC = &DCDCTesla;
+    break;
+
+  case DCDCModes::DCDCElcon:
+    selectedDCDC = &ElconDC;
     break;
 
   default:
@@ -1032,7 +1147,8 @@ static void SetCanFilters() {
   canOBD2.SetCanInterface(obd2_can);
   selectedHeater->SetCanInterface(heater_can);
 
-  if (Param::GetInt(Param::ShuntType) == 1)
+  if (Param::GetInt(Param::ShuntType) == 1 ||
+      Param::GetInt(Param::ShuntType) == 4)
     ISA::RegisterCanMessages(shunt_can); // select isa shunt
   if (Param::GetInt(Param::ShuntType) == 2)
     SBOX::RegisterCanMessages(shunt_can); // select bmw sbox
@@ -1155,6 +1271,8 @@ void Param::Change(Param::PARAM_NUM paramNum) {
        300); // number of 200ms ticks that equates to charge timer in minutes
   IOMatrix::AssignFromParams();
   IOMatrix::AssignFromParamsAnalogue();
+
+  preheater.ParamsChange();
 }
 
 static bool CanCallback(
@@ -1168,7 +1286,8 @@ static bool CanCallback(
     break;
 
   default:
-    if (Param::GetInt(Param::ShuntType) == 1)
+    if (Param::GetInt(Param::ShuntType) == 1 ||
+        Param::GetInt(Param::ShuntType) == 4)
       ISA::DecodeCAN(id, data);
     if (Param::GetInt(Param::ShuntType) == 2)
       SBOX::DecodeCAN(id, data);
@@ -1231,7 +1350,7 @@ extern "C" void rtc_isr(void) {
   }
 }
 
-extern "C" int main(void) {
+int main(void) {
   extern const TERM_CMD TermCmds[];
 
   clock_setup();
@@ -1250,7 +1369,7 @@ extern "C" int main(void) {
   DigIo::inv_out.Clear(); // inverter power off during bootup
   DigIo::mcp_sby.Clear(); // enable can3
 
-  Terminal t(USART3, TermCmds);
+  Terminal t(USART3, TermCmds, false, true, !Param::GetBool(Param::UseRS232));
   //   FunctionPointerCallback canCb(CanCallback, SetCanFilters);
   Stm32Can c(CAN1, CanHardware::Baud500);
   Stm32Can c2(CAN2, CanHardware::Baud500, true);
@@ -1272,7 +1391,9 @@ extern "C" int main(void) {
   c.AddCallback(&cb);
   c2.AddCallback(&cb);
   TerminalCommands::SetCanMap(&cm);
+  SdoCommands::SetCanMap(&cm);
   canMap = &cm;
+  canSdo = &sdo;
 
   CanHardware *shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
 
@@ -1310,9 +1431,15 @@ extern "C" int main(void) {
 
   while (1) {
     char c = 0;
+    CanSdo::SdoFrame *sdoFrame = sdo.GetPendingUserspaceSdo();
     t.Run();
     if (sdo.GetPrintRequest() == PRINT_JSON) {
       TerminalCommands::PrintParamsJson(&sdo, &c);
+    }
+    if (0 != sdoFrame) {
+      SdoCommands::ProcessStandardCommands(sdoFrame);
+
+      sdo.SendSdoReply(sdoFrame);
     }
   }
 

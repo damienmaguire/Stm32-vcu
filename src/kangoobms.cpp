@@ -63,7 +63,10 @@ void KangooBMS::DecodeCAN(int id, uint8_t *data) {
     rawCurrent = rawCurrent - 500;
     current = rawCurrent;
 
-    batteryVoltage = (float)((data[6] << 8) + data[7]) / 2;
+    float rawVoltage = (float)((data[6] << 8) + data[7]) / 2;
+    if (rawVoltage < 450 && rawVoltage > 200) {
+      batteryVoltage = rawVoltage;
+    }
 
     maxChargeAllowed = data[0] * 300;
 
@@ -125,6 +128,7 @@ void KangooBMS::Task100Ms() {
   Param::SetFloat(Param::KWh, remainingKHW);
   Param::SetFloat(Param::SOC, stateOfCharge);
   Param::SetFloat(Param::udcsw, batteryVoltage - 30);
+  Param::SetFloat(Param::udc2, batteryVoltage);
   Param::SetInt(Param::BMS_MaxCharge, maxChargeAllowed);
   Param::SetInt(Param::BMS_MaxInput, maxInput);
   Param::SetInt(Param::BMS_MaxOutput, maxOutput);
@@ -136,5 +140,6 @@ void KangooBMS::Task100Ms() {
     Param::SetFloat(Param::idc, current);
   } else {
     Param::SetFloat(Param::idc, 0);
+    Param::SetFloat(Param::udcsw, 500);
   }
 }
