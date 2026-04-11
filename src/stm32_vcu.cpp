@@ -40,8 +40,6 @@
 #include "MGCoolantHeater.h"
 #include "MGgen2V2Lcharger.h"
 #include "NissanPDM.h"
-#include "NoInverter.h"
-#include "NoVehicle.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderCompressor.h"
 #include "OutlanderHeartBeat.h"
@@ -77,14 +75,11 @@
 #include "isa_shunt.h"
 #include "kangoobms.h"
 #include "stwmbms.h"
+#include "oibms.h"
 #include "leafbms.h"
 #include "leafinv.h"
 #include "linbus.h"
 #include "my_math.h"
-#include "noCompressor.h"
-#include "noHeater.h"
-#include "no_Lever.h"
-#include "nocharger.h"
 #include "notused.h"
 #include "outlanderCharger.h"
 #include "outlanderinverter.h"
@@ -168,7 +163,6 @@ static NissanPDM chargerPDM;
 static teslaCharger ChargerTesla;
 static ElconCharger ChargerElcon;
 static notused UnUsed;
-static noCharger nochg;
 static extCharger chgdigi;
 static amperaCharger ampChg;
 static outlanderCharger outChg;
@@ -178,13 +172,10 @@ static i3LIMClass LIMFC;
 static CPCClass CPCcan;
 static FoccciClass Focccican;
 static Can_OI openInv;
-static NoInverterClass NoInverter;
 static OutlanderInverter outlanderInv;
-static noHeater Heaternone;
 static AmperaHeater amperaHeater;
 static WebastoHVH webastoHeater;
 static OutlanderCanHeater outlanderCanHeater;
-static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
@@ -192,16 +183,15 @@ static JLR_G2 JLRG2shift;
 static vwCoolantHeater heaterCoolantVW;
 static mgCoolantHeater heaterCoolantMG;
 static vwAirHeater heaterAirVW;
-static NoVehicle VehicleNone;
 static V_Classic classVehicle;
-static Inverter *selectedInverter = &openInv;
-static Vehicle *selectedVehicle = &VehicleNone;
-static Heater *selectedHeater = &Heaternone;
+static Inverter *selectedInverter = &UnUsed;
+static Vehicle *selectedVehicle = &UnUsed;
+static Heater *selectedHeater = &UnUsed;
 static Chargerhw *selectedCharger = &chargerPDM;
 static Chargerint *selectedChargeInt = &UnUsed;
-static Shifter *selectedShifter = &NoGearLever;
-static BMS BMSnone;
+static Shifter *selectedShifter = &UnUsed;
 static SimpBMS BMSsimp;
+static OIBMS flyingAdcBms;
 static LeafBMS BMSleaf;
 static DaisychainBMS BMSdaisychain;
 static KangooBMS BMSRenaultKangoo33;
@@ -209,16 +199,15 @@ static STWmBMS stwBms;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
 static ElconDCDC ElconDC;
-static BMS *selectedBMS = &BMSnone;
+static BMS *selectedBMS = &UnUsed;
 static DCDC *selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
 static Shifter shifterNone;
 static RearOutlanderInverter rearoutlanderInv;
 static LinBus *lin;
 static Preheater preheater;
-static NoCompressor CompressorNone;
 static OutlanderCompressor outlanderCompressor;
-static Compressor *selectedCompressor = &CompressorNone;
+static Compressor *selectedCompressor = &UnUsed;
 static PWMHeater pwmHeater;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -909,7 +898,7 @@ static void UpdateInv() {
   selectedInverter->DeInit();
   switch (Param::GetInt(Param::Inverter)) {
   case InvModes::NoInv:
-    selectedInverter = &NoInverter;
+    selectedInverter = &UnUsed;
     break;
   case InvModes::Leaf_Gen1:
     selectedInverter = &leafInv;
@@ -946,7 +935,7 @@ static void UpdateInv() {
 static void UpdateVehicle() {
   switch (Param::GetInt(Param::Vehicle)) {
   case vehicles::None:
-    selectedVehicle = &VehicleNone;
+    selectedVehicle = &UnUsed;
     break;
   case vehicles::vBMW_E39:
     selectedVehicle = &e39Vehicle;
@@ -982,7 +971,7 @@ static void UpdateCharger() {
   switch (Param::GetInt(Param::chargemodes)) {
   case ChargeModes::Off:
     chargeMode = false;
-    selectedCharger = &nochg;
+    selectedCharger = &UnUsed;
     break;
   case ChargeModes::EXT_DIGI:
     selectedCharger = &chgdigi;
@@ -1040,7 +1029,7 @@ static void UpdateHeater() {
   selectedHeater->DeInit();
   switch (Param::GetInt(Param::Heater)) {
   case HeatType::Noheater:
-    selectedHeater = &Heaternone;
+    selectedHeater = &UnUsed;
     break;
   case HeatType::AmpHeater:
     selectedHeater = &amperaHeater;
@@ -1098,9 +1087,12 @@ static void UpdateBMS() {
   case BMSModes::BMSSTW:
     selectedBMS = &stwBms;
     break;
+  case BMSModes::BMSOIFlyingAdc:
+    selectedBMS = &flyingAdcBms;
+    break;
   default:
     // Default to no BMS
-    selectedBMS = &BMSnone;
+    selectedBMS = &UnUsed;
     break;
   }
   // This will call SetCanFilters() via the Clear Callback
@@ -1136,7 +1128,7 @@ static void UpdateDCDC() {
 static void UpdateCompressor() {
   switch (Param::GetInt(Param::Compressor)) {
   case CompressorOptions::NoCompress:
-    selectedCompressor = &CompressorNone;
+    selectedCompressor = &UnUsed;
     break;
   case CompressorOptions::OutlanderCompress:
     selectedCompressor = &outlanderCompressor;

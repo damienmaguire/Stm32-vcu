@@ -68,8 +68,6 @@
 		<Unit filename="include/MGCoolantHeater.h" />
 		<Unit filename="include/MGgen2V2Lcharger.h" />
 		<Unit filename="include/NissanPDM.h" />
-		<Unit filename="include/NoInverter.h" />
-		<Unit filename="include/NoVehicle.h" />
 		<Unit filename="include/OutlanderCanHeater.h" />
 		<Unit filename="include/OutlanderCompressor.h" />
 		<Unit filename="include/OutlanderHeartBeat.h" />
@@ -101,11 +99,8 @@
 		<Unit filename="include/kangoobms.h" />
 		<Unit filename="include/leafbms.h" />
 		<Unit filename="include/leafinv.h" />
-		<Unit filename="include/noCompressor.h" />
-		<Unit filename="include/noHeater.h" />
-		<Unit filename="include/no_Lever.h" />
-		<Unit filename="include/nocharger.h" />
 		<Unit filename="include/notused.h" />
+		<Unit filename="include/oibms.h" />
 		<Unit filename="include/outlanderCharger.h" />
 		<Unit filename="include/outlanderinverter.h" />
 		<Unit filename="include/param_prj.h" />
@@ -205,6 +200,7 @@
 		<Unit filename="src/kangoobms.cpp" />
 		<Unit filename="src/leafbms.cpp" />
 		<Unit filename="src/leafinv.cpp" />
+		<Unit filename="src/oibms.cpp" />
 		<Unit filename="src/outlanderCharger.cpp" />
 		<Unit filename="src/outlanderinverter.cpp" />
 		<Unit filename="src/simpbms.cpp" />
