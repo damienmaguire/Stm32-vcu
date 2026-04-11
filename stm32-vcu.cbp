@@ -77,6 +77,7 @@
 		<Unit filename="include/VWAirHeater.h" />
 		<Unit filename="include/VWCoolantHeater.h" />
 		<Unit filename="include/V_Classic.h" />
+		<Unit filename="include/WebastoHVH.h" />
 		<Unit filename="include/amperaheater.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bms.h" />
@@ -119,6 +120,7 @@
 		<Unit filename="include/utils.h" />
 		<Unit filename="include/vag_sbox.h" />
 		<Unit filename="include/vehicle.h" />
+		<Unit filename="include/wbms.h" />
 		<Unit filename="libopeninv/include/anain.h" />
 		<Unit filename="libopeninv/include/canhardware.h" />
 		<Unit filename="libopeninv/include/canmap.h" />
@@ -137,8 +139,14 @@
 		<Unit filename="libopeninv/src/anain.cpp" />
 		<Unit filename="libopeninv/src/canhardware.cpp" />
 		<Unit filename="libopeninv/src/canmap.cpp" />
+		<Unit filename="libopeninv/src/canobd2.cpp" />
+		<Unit filename="libopeninv/src/cansdo.cpp" />
+		<Unit filename="libopeninv/src/crc8.cpp" />
 		<Unit filename="libopeninv/src/digio.cpp" />
 		<Unit filename="libopeninv/src/errormessage.cpp" />
+		<Unit filename="libopeninv/src/foc.cpp" />
+		<Unit filename="libopeninv/src/fu.cpp" />
+		<Unit filename="libopeninv/src/linbus.cpp" />
 		<Unit filename="libopeninv/src/my_fp.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -147,7 +155,10 @@
 		</Unit>
 		<Unit filename="libopeninv/src/param_save.cpp" />
 		<Unit filename="libopeninv/src/params.cpp" />
+		<Unit filename="libopeninv/src/picontroller.cpp" />
 		<Unit filename="libopeninv/src/printf.cpp" />
+		<Unit filename="libopeninv/src/sdocommands.cpp" />
+		<Unit filename="libopeninv/src/sine_core.cpp" />
 		<Unit filename="libopeninv/src/stm32_can.cpp" />
 		<Unit filename="libopeninv/src/stm32scheduler.cpp" />
 		<Unit filename="libopeninv/src/terminal.cpp" />
@@ -180,6 +191,7 @@
 		<Unit filename="src/VWAirHeater.cpp" />
 		<Unit filename="src/VWCoolantHeater.cpp" />
 		<Unit filename="src/V_Classic.cpp" />
+		<Unit filename="src/WebastoHVH.cpp" />
 		<Unit filename="src/amperacharger.cpp" />
 		<Unit filename="src/amperaheater.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
@@ -205,6 +217,7 @@
 		<Unit filename="src/throttle.cpp" />
 		<Unit filename="src/utils.cpp" />
 		<Unit filename="src/vag_sbox.cpp" />
+		<Unit filename="src/wbms.cpp" />
 		<Extensions>
 			<DoxyBlocks>
 				<comment_style block="0" line="0" />

@@ -52,6 +52,7 @@
 #include "V_Classic.h"
 #include "amperacharger.h"
 #include "amperaheater.h"
+#include "WebastoHVH.h"
 #include "anain.h"
 #include "bms.h"
 #include "bmw_sbox.h"
@@ -181,6 +182,7 @@ static NoInverterClass NoInverter;
 static OutlanderInverter outlanderInv;
 static noHeater Heaternone;
 static AmperaHeater amperaHeater;
+static WebastoHVH webastoHeater;
 static OutlanderCanHeater outlanderCanHeater;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
@@ -600,7 +602,7 @@ static void ControlCabHeater(int opmode) {
       opmode == MOD_PREHEAT) {
     IOMatrix::GetPin(IOMatrix::HEATERENABLE)
         ->Set(); // Heater enable and coolant pump on
-    selectedHeater->SetTargetTemperature(50); // TODO: Currently does nothing
+    selectedHeater->SetTargetTemperature(60); // TODO: Currently does nothing except on WebastoHVH
     selectedHeater->SetPower(Param::GetInt(Param::HeatPwr),
                              Param::GetBool(Param::HeatReq));
   } else {
@@ -1060,6 +1062,16 @@ static void UpdateHeater() {
     break;
   case HeatType::PWM:
     selectedHeater = &pwmHeater;
+    break;
+  case HeatType::HVH50:
+    selectedHeater = &webastoHeater;
+    webastoHeater.SetLinInterface(lin);
+    webastoHeater.SetSubtype(WebastoHVH::HVH50);
+    break;
+  case HeatType::HVH100:
+    selectedHeater = &webastoHeater;
+    webastoHeater.SetLinInterface(lin);
+    webastoHeater.SetSubtype(WebastoHVH::HVH100);
     break;
   }
   // This will call SetCanFilters() via the Clear Callback
