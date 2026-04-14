@@ -28,6 +28,7 @@
 #include "CPC.h"
 #include "Can_OBD2.h"
 #include "Can_OI.h"
+#include "InverterACP.h"
 #include "Can_VAG.h"
 #include "E65_Lever.h"
 #include "ElconCharger.h"
@@ -172,6 +173,7 @@ static i3LIMClass LIMFC;
 static CPCClass CPCcan;
 static FoccciClass Focccican;
 static Can_OI openInv;
+static InverterACP inverterAcp;
 static OutlanderInverter outlanderInv;
 static AmperaHeater amperaHeater;
 static WebastoHVH webastoHeater;
@@ -925,6 +927,9 @@ static void UpdateInv() {
   case InvModes::RearOutlander:
     selectedInverter = &rearoutlanderInv;
     OutlanderCAN = true;
+    break;
+  case InvModes::ACPropulsion:
+    selectedInverter = &inverterAcp;
     break;
   }
   // This will call SetCanFilters() via the Clear Callback
