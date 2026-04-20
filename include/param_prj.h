@@ -153,6 +153,10 @@
   PARAM_ENTRY(CAT_IOPINS, DigiPot2Step, "dig", 0, 255, 0, 118)                 \
   PARAM_ENTRY(CAT_IOPINS, FanTemp, "°C", 0, 100, 40, 134)                      \
   PARAM_ENTRY(CAT_IOPINS, TachoPPR, "PPR", 0, 100, 2, 136)                     \
+  PARAM_ENTRY(CAT_12V, uauxGain, "", 0, 500, 210, 157)                         \
+  PARAM_ENTRY(CAT_12V, minVolts, "", 11, 13, 12, 158)                          \
+  PARAM_ENTRY(CAT_12V, allowWakeup, ONOFF, 0, 1, 0, 159)                       \
+  PARAM_ENTRY(CAT_12V, wakeupMin, "Mins", 0, 20, 0, 160)                       \
   PARAM_ENTRY(CAT_SHUNT, IsaInit, ONOFF, 0, 1, 0, 75)                          \
   PARAM_ENTRY(CAT_PWM, Tim3_Presc, "", 1, 72000, 719, 100)                     \
   PARAM_ENTRY(CAT_PWM, Tim3_Period, "", 1, 100000, 7200, 101)                  \
@@ -263,6 +267,8 @@
   VALUE_ENTRY(compressStat, COMP_STAT, 2111)                                   \
   VALUE_ENTRY(compressRPM, "", 2109)                                           \
   VALUE_ENTRY(PWMHeatOn, ONOFF, 2112)                                          \
+  VALUE_ENTRY(maintainWakeups, "", 2124)                                       \
+  VALUE_ENTRY(minsUntilAllowedAgain, "", 2125)                                 \
   VALUE_ENTRY(uptime, "sec", 2113)                                             \
   VALUE_ENTRY(MG1Torque, "", 2114)                                             \
   VALUE_ENTRY(MG2Torque, "", 2115)                                             \
@@ -319,7 +325,8 @@
 #define BMSMODES                                                               \
   "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual, 4=LeafBms, "    \
   "5=RenaultKangoo33, 6=STW, 7=OIFlyingAdc"
-#define OPMODES "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge, 5=Preheat"
+#define OPMODES                                                                \
+  "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge, 5=12VMaintain, 6=Preheat"
 #define DOW "0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat"
 #define CHGTYPS "0=Off, 1=AC, 2=DCFC"
 #define DCDCTYPES "0=NoDCDC, 1=TeslaG2, 2=DCDCElcon"
@@ -372,6 +379,7 @@
 #define CAT_SHUNT "ISA Shunt Control"
 #define CAT_IOPINS "General Purpose I/O"
 #define CAT_PWM "PWM Control"
+#define CAT_12V "12V Battery"
 #define MotorsAct "0=Mg1and2, 1=Mg1, 2=Mg2, 3=BlendingMG2and1"
 #define PumpOutType "0=GS450hOil, 1=TachoOut, 2=SpeedoOut"
 #define LIMITREASON                                                            \
@@ -392,6 +400,7 @@ enum modes {
   MOD_PRECHARGE,
   MOD_PCHFAIL,
   MOD_CHARGE,
+  MOD_MAINTAIN,
   MOD_PREHEAT,
   MOD_LAST
 };

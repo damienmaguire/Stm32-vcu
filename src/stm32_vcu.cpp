@@ -40,6 +40,7 @@
 #include "JLR_G2.h"
 #include "MGCoolantHeater.h"
 #include "MGgen2V2Lcharger.h"
+#include "Maintainer12V.h"
 #include "NissanPDM.h"
 #include "OutlanderCanHeater.h"
 #include "OutlanderCompressor.h"
@@ -211,6 +212,7 @@ static Preheater preheater;
 static OutlanderCompressor outlanderCompressor;
 static Compressor *selectedCompressor = &UnUsed;
 static PWMHeater pwmHeater;
+static Maintainer12V maintainer12V;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void) {
@@ -372,6 +374,7 @@ static void Ms200Task(void) {
     IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
   }
 
+  maintainer12V.Task200Ms(opmode);
   preheater.Task200Ms(opmode, hours, minutes);
 }
 
@@ -708,6 +711,7 @@ static void Ms10Task(void) {
     initbyStart = false;
     initbyCharge = false;
     preheater.SetInitByPreHeat(false);
+    maintainer12V.SetInitByMaintainer(false);
 
     DigIo::inv_out.Clear();                           // inverter power off
     IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
@@ -755,6 +759,12 @@ static void Ms10Task(void) {
       vehicleStartTime = rtc_get_counter_val();
       preheater.SetInitByPreHeat(true);
     }
+    if (maintainer12V.GetRunMaintainer()) {
+      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
+      rlyDly = 25;            // Recharge sequence timer
+      vehicleStartTime = rtc_get_counter_val();
+      maintainer12V.SetInitByMaintainer(true);
+    }
     Param::SetInt(Param::opmode, opmode);
     break;
 
@@ -796,6 +806,12 @@ static void Ms10Task(void) {
         opmode = MOD_PREHEAT;
         rlyDly = 25;                         // Recharge sequence timer
         Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
+      } else if (maintainer12V.GetRunMaintainer()) {
+        opmode = MOD_MAINTAIN;
+        rlyDly = 25;                         // Recharge sequence timer
+        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
+        Param::SetInt(Param::maintainWakeups,
+                      Param::GetInt(Param::maintainWakeups) + 1);
       }
     }
     if (initbyCharge && !chargeMode)
@@ -804,6 +820,9 @@ static void Ms10Task(void) {
     if (initbyStart && !selectedVehicle->Ready())
       opmode = MOD_OFF;
     if (preheater.GetInitByPreHeat() && !preheater.GetRunPreHeat())
+      opmode = MOD_OFF;
+    if (maintainer12V.GetInitByMaintainer() &&
+        !maintainer12V.GetRunMaintainer())
       opmode = MOD_OFF;
 
     if (udc < (Param::GetInt(Param::udcsw)) &&
@@ -858,6 +877,26 @@ static void Ms10Task(void) {
       rlyDly = 250; // Recharge sequence timer for delayed shutdown
     }
     Param::SetInt(Param::opmode, opmode);
+    break;
+
+  case MOD_MAINTAIN:
+    if (rlyDly != 0)
+      rlyDly--; // here we are going to pause before energising precharge to
+                // prevent too many contactors pulling amps at the same time
+    if (rlyDly == 0) {
+      DigIo::dcsw_out.Set();
+    }
+
+    maintainer12V.Ms10Task();
+
+    if (!maintainer12V.GetRunMaintainer()) {
+      rlyDly = 250; // Recharge sequence timer for delayed shutdown
+    }
+
+    if ((selectedVehicle->Start() && selectedVehicle->Ready())) {
+      maintainer12V.CancelMaintainer();
+    }
+
     break;
 
   case MOD_PREHEAT:
@@ -1335,6 +1374,7 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   IOMatrix::AssignFromParams();
   IOMatrix::AssignFromParamsAnalogue();
 
+  maintainer12V.ParamsChange();
   preheater.ParamsChange();
 }
 
