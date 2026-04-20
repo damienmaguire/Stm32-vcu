@@ -93,7 +93,7 @@ void STWmBMS::Task100Ms() {
   Param::SetFloat(Param::SOC, stateOfCharge);
   Param::SetFloat(Param::udcsw, batteryVoltage - 30);
   Param::SetFloat(Param::udc2, batteryVoltage);
-  //Param::SetInt(Param::BMS_MaxCharge, maxChargeAllowed);
+  // Param::SetInt(Param::BMS_MaxCharge, maxChargeAllowed);
   Param::SetInt(Param::BMS_MaxInput, maxInput);
   Param::SetInt(Param::BMS_MaxOutput, maxOutput);
   Param::SetInt(Param::BMS_Isolation, isolationResistance);

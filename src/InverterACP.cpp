@@ -39,48 +39,46 @@ void InverterACP::SetCanInterface(CanHardware *c) {
 }
 
 void InverterACP::DecodeCAN(int id, uint32_t *wdata) {
-   uint8_t* data = (uint8_t*)wdata;
-   if (id == 0x201) {
-      inv_flags = data[0] + (data[1] << 8);
-      voltage = (float)((data[2] << 8) + data[3]);
-   }
-   else if (id == 0x221) {
-      speed = (int16_t)((data[4] << 8) + data[5]);
-   }
-   else if (id == 0x281) {
-      int16_t mtemp1 = ((int16_t)data[0]) - 40;
-      int16_t mtemp2 = ((int16_t)data[1]) - 40;
-      motor_temp = MAX(mtemp1, mtemp2);
-      int16_t invtemp1 = ((int16_t)data[2]) - 40;
-      int16_t invtemp2 = ((int16_t)data[3]) - 40;
-      int16_t invtemp3 = ((int16_t)data[4]) - 40;
-      inv_temp = MAX(invtemp1, MAX(invtemp2, invtemp3));
-   }
+  uint8_t* data = (uint8_t*)wdata;
+  if (id == 0x201) {
+    inv_flags = data[0] + (data[1] << 8);
+    voltage = (float)((data[2] << 8) + data[3]);
+  } else if (id == 0x221) {
+    speed = (int16_t)((data[4] << 8) + data[5]);
+  } else if (id == 0x281) {
+    int16_t mtemp1 = ((int16_t)data[0]) - 40;
+    int16_t mtemp2 = ((int16_t)data[1]) - 40;
+    motor_temp = MAX(mtemp1, mtemp2);
+    int16_t invtemp1 = ((int16_t)data[2]) - 40;
+    int16_t invtemp2 = ((int16_t)data[3]) - 40;
+    int16_t invtemp3 = ((int16_t)data[4]) - 40;
+    inv_temp = MAX(invtemp1, MAX(invtemp2, invtemp3));
+  }
 }
 
 void InverterACP::SetTorque(float torquePercent) {
-   static bool toggleBit = false;
-   uint8_t data[8];
-   int opmode = Param::GetInt(Param::opmode);
-   uint16_t udc = Param::GetInt(Param::udc);
+  static bool toggleBit = false;
+  uint8_t data[8];
+  int opmode = Param::GetInt(Param::opmode);
+  uint16_t udc = Param::GetInt(Param::udc);
 
-   data[0] = toggleBit;
-   data[6] = udc >> 8;
-   data[7] = udc & 0xFF;
-   toggleBit = !toggleBit;
+  data[0] = toggleBit;
+  data[6] = udc >> 8;
+  data[7] = udc & 0xFF;
+  toggleBit = !toggleBit;
 
-   if (opmode == MOD_RUN) {
-     int16_t torque = (int16_t)(10 * torquePercent);
-     data[0] |= ACP_DRIVE_ENABLE | ACP_CONT_CLOSED | ACP_MODE_TORQUE;
-     data[1] = torque >> 8;
-     data[2] = torque & 0xFF; //Big endian
-   }
+  if (opmode == MOD_RUN) {
+    int16_t torque = (int16_t)(10 * torquePercent);
+    data[0] |= ACP_DRIVE_ENABLE | ACP_CONT_CLOSED | ACP_MODE_TORQUE;
+    data[1] = torque >> 8;
+    data[2] = torque & 0xFF; //Big endian
+  }
 
-   can->Send(0x100, data, 8);
+  can->Send(0x100, data, 8);
 }
 
 int InverterACP::GetInverterState() {
-   return (inv_flags & 0xF) == ACP_STATE_DRIVE;
+  return (inv_flags & 0xF) == ACP_STATE_DRIVE;
 }
 
 void InverterACP::Task100Ms() {

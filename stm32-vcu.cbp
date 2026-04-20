@@ -62,6 +62,7 @@
 		<Unit filename="include/F30_Lever.h" />
 		<Unit filename="include/Foccci.h" />
 		<Unit filename="include/GS450H.h" />
+		<Unit filename="include/InverterACP.h" />
 		<Unit filename="include/JLR_G1.h" />
 		<Unit filename="include/JLR_G2.h" />
 		<Unit filename="include/MCP2515.h" />
@@ -171,6 +172,7 @@
 		<Unit filename="src/F30_Lever.cpp" />
 		<Unit filename="src/Foccci.cpp" />
 		<Unit filename="src/GS450H.cpp" />
+		<Unit filename="src/InverterACP.cpp" />
 		<Unit filename="src/JLR_G1.cpp" />
 		<Unit filename="src/JLR_G2.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
@@ -232,6 +234,7 @@
 					<options conn_type="0" additional_cmds="load&#x0A;r" />
 				</remote_debugging>
 			</debugger>
+			<editor_config active="1" use_tabs="0" tab_indents="1" tab_width="2" indent="2" eol_mode="2" />
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

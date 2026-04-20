@@ -591,9 +591,10 @@ static void ControlCabHeater(int opmode) {
   // preheat What about charge mode and timer mode?
   if ((opmode == MOD_RUN && Param::GetInt(Param::Control) >= 1) ||
       opmode == MOD_PREHEAT) {
-    IOMatrix::GetPin(IOMatrix::HEATERENABLE)
-        ->Set(); // Heater enable and coolant pump on
-    selectedHeater->SetTargetTemperature(60); // TODO: Currently does nothing except on WebastoHVH
+    // Heater enable and coolant pump on
+    IOMatrix::GetPin(IOMatrix::HEATERENABLE)->Set();
+    // TODO: Currently does nothing except on WebastoHVH
+    selectedHeater->SetTargetTemperature(60);
     selectedHeater->SetPower(Param::GetInt(Param::HeatPwr),
                              Param::GetBool(Param::HeatReq));
   } else {
