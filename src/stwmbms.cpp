@@ -44,9 +44,7 @@ bool STWmBMS::BMSDataValid() {
 }
 
 // Return the maximum charge current allowed by the BMS.
-float STWmBMS::MaxChargeCurrent() {
-  return chargeCurrentLimit;
-}
+float STWmBMS::MaxChargeCurrent() { return chargeCurrentLimit; }
 
 // Process voltage and temperature message from SimpBMS.
 void STWmBMS::DecodeCAN(int id, uint8_t *data) {

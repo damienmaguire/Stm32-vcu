@@ -21,14 +21,13 @@
  */
 
 #include "InverterACP.h"
-#include "params.h"
 #include "my_math.h"
+#include "params.h"
 
 #define ACP_DRIVE_ENABLE 0x2
-#define ACP_CONT_CLOSED  0x4
-#define ACP_MODE_TORQUE  0x8
-#define ACP_STATE_DRIVE  0x3
-
+#define ACP_CONT_CLOSED 0x4
+#define ACP_MODE_TORQUE 0x8
+#define ACP_STATE_DRIVE 0x3
 
 void InverterACP::SetCanInterface(CanHardware *c) {
   can = c;
@@ -39,7 +38,7 @@ void InverterACP::SetCanInterface(CanHardware *c) {
 }
 
 void InverterACP::DecodeCAN(int id, uint32_t *wdata) {
-  uint8_t* data = (uint8_t*)wdata;
+  uint8_t *data = (uint8_t *)wdata;
   if (id == 0x201) {
     inv_flags = data[0] + (data[1] << 8);
     voltage = (float)((data[2] << 8) + data[3]);
@@ -71,7 +70,7 @@ void InverterACP::SetTorque(float torquePercent) {
     int16_t torque = (int16_t)(10 * torquePercent);
     data[0] |= ACP_DRIVE_ENABLE | ACP_CONT_CLOSED | ACP_MODE_TORQUE;
     data[1] = torque >> 8;
-    data[2] = torque & 0xFF; //Big endian
+    data[2] = torque & 0xFF; // Big endian
   }
 
   can->Send(0x100, data, 8);
@@ -81,7 +80,4 @@ int InverterACP::GetInverterState() {
   return (inv_flags & 0xF) == ACP_STATE_DRIVE;
 }
 
-void InverterACP::Task100Ms() {
-
-}
-
+void InverterACP::Task100Ms() {}
