@@ -91,3 +91,5 @@ March 24 : V1.1 Hardware and V2.05A firmware now running in 3 vehicles :
 -BMW E31 with Tesla LDU Drivetrain, Tesla DCDC, ISA Shunt , Chademo Fast Charge
 
 All hardware / software is tested in these vehicles before release. More vehicles with different configuration in progress to ensure as much testing as possible.
+
+Apr 26 : Added Zombie Relay box V1 full kicad project to hardware directory.
