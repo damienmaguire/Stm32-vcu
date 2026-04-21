@@ -29,6 +29,7 @@ public:
   void Ms10Task();
   void ParamsChange();
   void SetInitByPreHeat(bool initbyPH);
+  void CancelPreHeater();
 
   bool GetRunPreHeat();
   bool GetInitByPreHeat();
