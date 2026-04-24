@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.40.0TA
+#define VER 2.41.0TA
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -30,7 +30,7 @@
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
-  PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 9, 0, 5)                       \
+  PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 10, 0, 5)                      \
   PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 8, 0, 6)                        \
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 4, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
@@ -317,7 +317,7 @@
   "0=Button, 1=Switch, 2=ButtonReversed, 3=SwitchReversed, 4=DefaultForward"
 #define INVMODES                                                               \
   "0=None, 1=Leaf_Gen1, 2=GS450H, 3=UserCAN, 4=OpenI, 5=Prius_Gen3, "          \
-  "6=Outlander, 7=GS300H, 8=RearOutlander, 9=ACPropulsion"
+  "6=Outlander, 7=GS300H, 8=RearOutlander, 9=ACPropulsion, 10=VescController"
 #define PLTMODES                                                               \
   "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES                                                               \
@@ -427,7 +427,8 @@ enum InvModes {
   Outlander = 6,
   GS300H = 7,
   RearOutlander = 8,
-  ACPropulsion = 9
+  ACPropulsion = 9,
+  VescController =10
 };
 
 enum ChargeModes {

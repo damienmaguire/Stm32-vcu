@@ -36,6 +36,7 @@
 #include "Foccci.h"
 #include "GS450H.h"
 #include "InverterACP.h"
+#include "InverterVESC.h"
 #include "JLR_G1.h"
 #include "JLR_G2.h"
 #include "MGCoolantHeater.h"
@@ -175,6 +176,7 @@ static CPCClass CPCcan;
 static FoccciClass Focccican;
 static Can_OI openInv;
 static InverterACP inverterAcp;
+static InverterVESC inverterVESC;
 static OutlanderInverter outlanderInv;
 static AmperaHeater amperaHeater;
 static WebastoHVH webastoHeater;
@@ -970,6 +972,9 @@ static void UpdateInv() {
     break;
   case InvModes::ACPropulsion:
     selectedInverter = &inverterAcp;
+    break;
+  case InvModes::VescController:
+    selectedInverter = &inverterVESC;
     break;
   }
   // This will call SetCanFilters() via the Clear Callback

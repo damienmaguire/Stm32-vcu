@@ -63,6 +63,7 @@
 		<Unit filename="include/Foccci.h" />
 		<Unit filename="include/GS450H.h" />
 		<Unit filename="include/InverterACP.h" />
+		<Unit filename="include/InverterVESC.h" />
 		<Unit filename="include/JLR_G1.h" />
 		<Unit filename="include/JLR_G2.h" />
 		<Unit filename="include/MCP2515.h" />
@@ -173,6 +174,7 @@
 		<Unit filename="src/Foccci.cpp" />
 		<Unit filename="src/GS450H.cpp" />
 		<Unit filename="src/InverterACP.cpp" />
+		<Unit filename="src/InverterVESC.cpp" />
 		<Unit filename="src/JLR_G1.cpp" />
 		<Unit filename="src/JLR_G2.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
