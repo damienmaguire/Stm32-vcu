@@ -7,6 +7,8 @@ Project based on the OpenInverter System by Johannes Huebner to provide a univer
 Please visit the development thread on the Openinverter Forum for more information : https://openinverter.org/forum/viewtopic.php?f=3&t=1277
 ![Screenshot from 2025-01-28 14-17-28](https://github.com/user-attachments/assets/ff066c9e-8c79-470d-aa04-bc3b34198900)
 
+V1.3 Hardware now released. PDFs and Gerber here on Github, full Kicad 9 design is on Patreon at the 10Eur level.
+
 ## Videos on progress
 
 Project introduction : https://vimeo.com/506480876
