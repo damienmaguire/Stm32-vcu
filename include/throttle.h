@@ -66,6 +66,7 @@ public:
   static float regenendRpm;
   static float ThrotRpmFilt;
   static bool noregenreq;
+  static float linearity;
 
 private:
   static int speedFiltered;

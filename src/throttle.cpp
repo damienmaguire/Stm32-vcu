@@ -51,6 +51,7 @@ float Throttle::idcmax;
 int Throttle::speedLimit;
 float Throttle::ThrotRpmFilt;
 bool Throttle::noregenreq = 0;
+float Throttle::linearity;
 float UDCres;
 float IDCres;
 float UDCprevspnt = 0;
@@ -181,6 +182,15 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal) {
     potnom = 0.0f;
   } else {
     potnom = (potnom - throtdead) * (100.0f / (100.0f - throtdead));
+  }
+
+  // Apply quadratic-linear throttle map
+  if (potnom > 0) {
+    potnom /= 100.0f;
+    float quad = potnom * potnom;
+    quad *= 1.0f - linearity;
+    float quadlinear = quad + potnom * linearity;
+    potnom = quadlinear * 100.0f;
   }
 
   //!! pedal command intent coding
