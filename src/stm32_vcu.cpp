@@ -1352,6 +1352,7 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
   Throttle::throtmaxRev = Param::GetFloat(throtmaxRev);
   Throttle::regenBrake = Param::GetFloat(Param::regenBrake);
+  Throttle::linearity = Param::GetFloat(Param::potlinearity) / 100.0f;
 
   targetCharger = static_cast<ChargeModes>(
       Param::GetInt(Param::chargemodes)); // get charger setting from menu
