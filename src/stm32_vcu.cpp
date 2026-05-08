@@ -612,8 +612,8 @@ static void ControlCabHeater(int opmode) {
 static void Ms10Task(void) {
   static uint32_t vehicleStartTime = 0;
 
-  int16_t previousSpeed = Param::GetInt(Param::speed);
-  int16_t speed = 0;
+  int32_t previousSpeed = Param::GetInt(Param::speed);
+  int32_t speed = 0;
   float torquePercent;
   int opmode = Param::GetInt(Param::opmode);
   int stt = STAT_NONE;
@@ -1352,7 +1352,7 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   // code section can impact Throttle::idcmax = Param::GetFloat(Param::idcmax);
   // Throttle::udcmin = Param::GetFloat(Param::udcmin);
   // Throttle::udcmax = Param::GetFloat(Param::udclim);
-  Throttle::speedLimit = Param::GetInt(Param::revlim);
+  Throttle::speedLimit = Param::GetInt(Param::rpmlim);
   Throttle::regenRamp = Param::GetFloat(Param::regenramp);
   Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
   Throttle::throtmaxRev = Param::GetFloat(throtmaxRev);

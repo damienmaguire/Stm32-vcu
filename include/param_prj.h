@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.41.0TA
+#define VER 2.41.TB
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -69,7 +69,7 @@
   PARAM_ENTRY(CAT_THROTTLE, reversemotor, ONOFF, 0, 1, 0, 127)                 \
   PARAM_ENTRY(CAT_THROTTLE, throtramp, "%/10ms", 1, 100, 10, 13)               \
   PARAM_ENTRY(CAT_THROTTLE, throtramprpm, "rpm", 0, 20000, 20000, 14)          \
-  PARAM_ENTRY(CAT_THROTTLE, revlim, "rpm", 0, 20000, 6000, 15)                 \
+  PARAM_ENTRY(CAT_THROTTLE, rpmlim, "rpm", 0, 200000, 6000, 15)                \
   PARAM_ENTRY(CAT_THROTTLE, revRegen, ONOFF, 0, 1, 0, 137)                     \
   PARAM_ENTRY(CAT_THROTTLE, udcmin, "V", 0, 1000, 450, 19)                     \
   PARAM_ENTRY(CAT_THROTTLE, udclim, "V", 0, 1000, 520, 20)                     \

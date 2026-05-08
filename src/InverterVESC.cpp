@@ -41,8 +41,8 @@ void InverterVESC::DecodeCAN(int id, uint32_t *wdata) {
     speed =
       ((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3]));
   } else if (id == 0x1001) {
-    motor_temp = (int16_t)((data[0] << 8) + data[1]) * 0.1;
-    inv_temp = (int16_t)((data[2] << 8) + data[3]) * 0.1;
+    inv_temp = (int16_t)((data[0] << 8) + data[1]) * 0.1;
+    motor_temp = (int16_t)((data[2] << 8) + data[3]) * 0.1;
   } else if (id == 0x1B01) {
     voltage = (int16_t)((data[4] << 8) + data[5]) * 0.1;
   }
@@ -62,7 +62,20 @@ void InverterVESC::SetTorque(float torquePercent) {
     Param::SetInt(Param::torque,torque); // post processed final torque value sent
                                          // to inv to web interface
 
-    can->Send(0x1, data, 4, true); //ID 1
+    can->Send(0xA01, data, 4, true); //ID 1
+
+      /* Duty cycle command
+    int32_t torque = torquePercent * 1000;
+    data[0] = (torque >> 24) & 0xFF;
+    data[1] = (torque >> 16) & 0xFF;
+    data[2] = (torque >> 8) & 0xFF; // Big endian
+    data[3] = torque & 0xFF; // Big endian
+
+    Param::SetInt(Param::torque,torque); // post processed final torque value sent
+                                         // to inv to web interface
+
+    can->Send(0x001, data, 4, true); //ID 1
+    */
   }
 }
 
