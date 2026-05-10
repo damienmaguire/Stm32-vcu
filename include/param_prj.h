@@ -462,7 +462,8 @@ enum ShifterModes {
   BMWF30 = 1,
   JLRG1 = 2,
   JLRG2 = 3,
-  BMWE65 = 4
+  BMWE65 = 4,
+  BMWiX4 = 5
 
 };
 

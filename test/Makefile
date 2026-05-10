@@ -6,7 +6,7 @@ CFLAGS    = -std=c99 -ggdb -I../include -I../libopeninv/include
 CPPFLAGS    = -ggdb -I../include -I../libopeninv/include
 LDFLAGS     = -g
 BINARY		= test_vcu
-OBJS		= test_main.o my_string.o params.o throttle.o test_throttle.o
+OBJS		= test_main.o my_string.o params.o throttle.o test_throttle.o iX4_Lever.o test_iX4_Lever.o canhardware_stub.o
 VPATH = ../src ../libopeninv/src
 
 all: $(BINARY)
@@ -22,3 +22,6 @@ $(BINARY): $(OBJS)
 
 clean:
 	rm -f $(OBJS) $(BINARY)
+
+%.o: %.cpp
+	$(CPP) $(CPPFLAGS) -o $@ -c $<

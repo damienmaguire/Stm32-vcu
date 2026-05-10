@@ -33,6 +33,7 @@
 #include "ElconCharger.h"
 #include "ElconDCDC.h"
 #include "F30_Lever.h"
+#include "iX4_Lever.h"
 #include "Foccci.h"
 #include "GS450H.h"
 #include "JLR_G1.h"
@@ -178,6 +179,7 @@ static OutlanderCanHeater outlanderCanHeater;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
+static iX4_Lever iX4GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
 static vwCoolantHeater heaterCoolantVW;
@@ -1112,6 +1114,10 @@ static void UpdateShifter() {
 
   case ShifterModes::BMWE65:
     selectedShifter = &E65GearLever;
+    break;
+
+  case ShifterModes::BMWiX4:
+    selectedShifter = &iX4GearLever;
     break;
 
   default:
