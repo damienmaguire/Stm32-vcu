@@ -75,6 +75,7 @@
 #include "leafinv.h"
 #include "linbus.h"
 #include "my_math.h"
+#include "my_string.h"
 #include "noHeater.h"
 #include "no_Lever.h"
 #include "nocharger.h"
@@ -1273,6 +1274,325 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   IOMatrix::AssignFromParamsAnalogue();
 
   preheater.ParamsChange();
+}
+
+/*===========================================================================
+ * leafres — Leaf resolver-offset read/write terminal command
+ *
+ * Reads/writes the traction-inverter resolver offset over raw CAN
+ * (req 0x784 / resp 0x78C). Writes are two-step: a
+ * preview ("leafres write <code>") stores a pending request, then
+ * "leafres write <code> confirm" applies it and verifies by re-reading.
+ * All bus access is gated on LeafINV's stationary + Neutral + no-throttle
+ * interlock, and the diagnostic session is always closed afterwards.
+ *===========================================================================*/
+static bool resPendingValid = false;
+static char resPendingCode[16];
+static uint8_t resPendingBytes[5];
+static uint8_t resPendingMask;
+
+static int ResHexNibble(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  return -1;
+}
+
+// Parse an even-length hex string into bytes. Returns count, or -1 on error.
+static int ResHexToBytes(const char *s, uint8_t *out, int maxOut) {
+  int len = my_strlen(s);
+  if (len == 0 || (len & 1))
+    return -1;
+  int n = len / 2;
+  if (n > maxOut)
+    return -1;
+  for (int i = 0; i < n; i++) {
+    int hi = ResHexNibble(s[2 * i]);
+    int lo = ResHexNibble(s[2 * i + 1]);
+    if (hi < 0 || lo < 0)
+      return -1;
+    out[i] = (uint8_t)((hi << 4) | lo);
+  }
+  return n;
+}
+
+static void ResPrintCode(Terminal *t, const ResolverCode &c) {
+  for (uint8_t i = 0; i < c.length; i++)
+    fprintf(t, "%02X", c.bytes[i]);
+}
+
+static void ResRecordList(Terminal *t, uint8_t mask) {
+  fprintf(t, "[");
+  if (mask & RESOLVER_REC01)
+    fprintf(t, "01");
+  if (mask & RESOLVER_REC03)
+    fprintf(t, " 03");
+  if (mask & RESOLVER_REC04)
+    fprintf(t, " 04");
+  fprintf(t, "]");
+}
+
+// Decode the common UDS negative-response codes (ISO 14229).
+static const char *ResNrcName(uint8_t nrc) {
+  switch (nrc) {
+  case 0x10:
+    return "general reject";
+  case 0x11:
+    return "service not supported";
+  case 0x12:
+    return "subfunction not supported";
+  case 0x13:
+    return "bad length/format";
+  case 0x22:
+    return "conditions not correct";
+  case 0x31:
+    return "request out of range";
+  case 0x33:
+    return "security access denied";
+  case 0x35:
+    return "invalid key";
+  case 0x7E:
+    return "subfunc not supported in session";
+  case 0x7F:
+    return "service not supported in session";
+  default:
+    return "see ISO 14229";
+  }
+}
+
+// Print a message for a non-OK status. Returns true only if status was OK.
+static bool ResReportStatus(Terminal *t, ResolverStatus s) {
+  switch (s) {
+  case ResolverStatus::OK:
+    return true;
+  case ResolverStatus::Moving:
+    fprintf(t, "leafres: refused - vehicle is moving\r\n");
+    break;
+  case ResolverStatus::ThrottleApplied:
+    fprintf(
+        t, "leafres: refused - release throttle (torque request not zero)\r\n");
+    break;
+  case ResolverStatus::NotNeutral:
+    fprintf(t, "leafres: refused - selector must be in Neutral\r\n");
+    break;
+  case ResolverStatus::NoResponse:
+    fprintf(t, "leafres: no reply - power on the inverter (key to RUN), "
+               "keep stationary in Neutral\r\n");
+    break;
+  case ResolverStatus::NegativeResponse: {
+    uint8_t f[8];
+    leafInv.GetLastDiagFrame(f);
+    fprintf(t,
+            "leafres: inverter rejected request [%02X %02X %02X %02X %02X %02X "
+            "%02X %02X]\r\n",
+            f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7]);
+    // Negative frame layout: [0]=len [1]=7F [2]=service [3]=NRC
+    if (f[1] == 0x7F)
+      fprintf(t, "         service %02X, NRC %02X (%s)\r\n", f[2], f[3],
+              ResNrcName(f[3]));
+    else
+      fprintf(t, "         unexpected response byte %02X (wanted 50/61/7B)\r\n",
+              f[1]);
+    break;
+  }
+  case ResolverStatus::WriteStaged:
+    fprintf(t, "leafres: write accepted (acked) - value is staged. Power-cycle "
+               "the inverter, then 'leafres read' to confirm it applied.\r\n");
+    break;
+  }
+  return false;
+}
+
+void LeafResolverCommand(Terminal *t, char *arg) {
+  if (Param::GetInt(Param::Inverter) != InvModes::Leaf_Gen1) {
+    fprintf(t, "leafres: Leaf inverter not selected (set Inverter=1)\r\n");
+    return;
+  }
+
+  arg = my_trim(arg);
+  char *sp = (char *)my_strchr(arg, ' ');
+  char *rest = (char *)"";
+  if (*sp != 0) {
+    *sp = 0;
+    rest = my_trim(sp + 1);
+  }
+
+  if (my_strcmp(arg, "read") == 0) {
+    ResolverCode cur;
+    if (!ResReportStatus(t, leafInv.ResolverRead(cur)))
+      return;
+    fprintf(t, "leafres: code = ");
+    ResPrintCode(t, cur);
+    fprintf(t, "  records ");
+    ResRecordList(t, cur.recordMask);
+    fprintf(t, "\r\n");
+    return;
+  }
+
+  if (my_strcmp(arg, "raw") == 0) {
+    // Low-level probe: send one frame, print the raw reply. e.g.
+    //   leafres raw 0210AA   (enter session)   leafres raw 022101   (read 01)
+    if (*rest == 0) {
+      fprintf(t, "usage: leafres raw <hexframe>   e.g. leafres raw 0210AA\r\n");
+      return;
+    }
+    uint8_t tx[8];
+    int n = ResHexToBytes(rest, tx, 8);
+    if (n < 0) {
+      fprintf(t, "leafres: bad hex frame '%s' (contiguous hex, no spaces)\r\n",
+              rest);
+      return;
+    }
+    uint8_t rx[8];
+    ResolverStatus s = leafInv.ResolverRaw(tx, (uint8_t)n, rx);
+    if (s != ResolverStatus::OK) {
+      ResReportStatus(t,
+                      s); // Moving / ThrottleApplied / NotNeutral / NoResponse
+      return;
+    }
+    fprintf(t, "leafres raw reply: %02X %02X %02X %02X %02X %02X %02X %02X\r\n",
+            rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+    return;
+  }
+
+  if (my_strcmp(arg, "probe") == 0) {
+    // Discover which diagnostic session this inverter accepts. First check if
+    // record 01 reads with no session at all, then sweep candidate session
+    // sub-functions; on a positive (50) reply, immediately try reading rec 01.
+    // Only changes the diagnostic session (benign, auto-expires).
+    uint8_t rx[8];
+    uint8_t rd[] = {0x02, 0x21, 0x01};
+
+    ResolverStatus s = leafInv.ResolverRaw(rd, sizeof(rd), rx);
+    if (s == ResolverStatus::Moving || s == ResolverStatus::ThrottleApplied ||
+        s == ResolverStatus::NotNeutral) {
+      ResReportStatus(t, s);
+      return;
+    }
+    if (s == ResolverStatus::NoResponse)
+      fprintf(t, "no-session 21 01: no reply\r\n");
+    else
+      fprintf(t, "no-session 21 01: %02X %02X %02X %02X\r\n", rx[0], rx[1],
+              rx[2], rx[3]);
+
+    static const uint8_t subs[] = {0x01, 0x03, 0x40, 0x81, 0x85, 0x87,
+                                   0x92, 0xA0, 0xAA, 0xC0, 0xFA, 0xFB};
+    for (unsigned k = 0; k < sizeof(subs); k++) {
+      uint8_t tx[] = {0x02, 0x10, subs[k]};
+      s = leafInv.ResolverRaw(tx, sizeof(tx), rx);
+      if (s == ResolverStatus::Moving || s == ResolverStatus::ThrottleApplied ||
+          s == ResolverStatus::NotNeutral) {
+        ResReportStatus(t, s);
+        return;
+      }
+      if (s == ResolverStatus::NoResponse) {
+        fprintf(t, "10 %02X: no reply\r\n", subs[k]);
+        continue;
+      }
+      if (rx[1] == 0x50) {
+        uint8_t r2[8];
+        leafInv.ResolverRaw(rd, sizeof(rd), r2);
+        fprintf(t, "10 %02X: SESSION OK -> 21 01 = %02X %02X %02X %02X\r\n",
+                subs[k], r2[0], r2[1], r2[2], r2[3]);
+      } else if (rx[1] == 0x7F) {
+        fprintf(t, "10 %02X: 7F NRC %02X\r\n", subs[k], rx[3]);
+      } else {
+        fprintf(t, "10 %02X: ? %02X\r\n", subs[k], rx[1]);
+      }
+    }
+    fprintf(t, "leafres: probe done\r\n");
+    return;
+  }
+
+  if (my_strcmp(arg, "write") == 0) {
+    // Split rest into <code> and optional "confirm".
+    char *code = rest;
+    char *sp2 = (char *)my_strchr(rest, ' ');
+    bool confirm = false;
+    if (*sp2 != 0) {
+      *sp2 = 0;
+      confirm = (my_strcmp(my_trim(sp2 + 1), "confirm") == 0);
+    }
+    if (*code == 0) {
+      fprintf(t, "usage: leafres write <hexcode> [confirm]\r\n");
+      return;
+    }
+
+    if (confirm) {
+      // Confirm step: must match the previewed code exactly.
+      if (!resPendingValid || my_strcmp(resPendingCode, code) != 0) {
+        fprintf(
+            t,
+            "leafres: no matching preview - run 'leafres write %s' first\r\n",
+            code);
+        return;
+      }
+      ResolverCode verified;
+      ResolverStatus s =
+          leafInv.ResolverWrite(resPendingBytes, resPendingMask, verified);
+      resPendingValid = false; // single-shot, even on failure
+      if (!ResReportStatus(t, s))
+        return;
+      fprintf(t, "leafres: write OK, verified ");
+      ResPrintCode(t, verified);
+      fprintf(t, "\r\n");
+      return;
+    }
+
+    // Preview step: read current to learn the present record set + values.
+    ResolverCode cur;
+    if (!ResReportStatus(t, leafInv.ResolverRead(cur)))
+      return;
+
+    uint8_t newBytes[5];
+    int n = ResHexToBytes(code, newBytes, 5);
+    if (n < 0) {
+      fprintf(t, "leafres: bad hex code '%s'\r\n", code);
+      return;
+    }
+    if ((uint8_t)n != cur.length) {
+      fprintf(t, "leafres: this car expects %d hex digits (records ",
+              cur.length * 2);
+      ResRecordList(t, cur.recordMask);
+      fprintf(t, "), got %d\r\n", n * 2);
+      return;
+    }
+
+    fprintf(t, "leafres WRITE preview:\r\n");
+    uint8_t idx = 0;
+    if (cur.recordMask & RESOLVER_REC01) {
+      fprintf(t, "  rec01: %02X -> %02X\r\n", cur.bytes[idx], newBytes[idx]);
+      idx += 1;
+    }
+    if (cur.recordMask & RESOLVER_REC03) {
+      fprintf(t, "  rec03: %02X%02X -> %02X%02X\r\n", cur.bytes[idx],
+              cur.bytes[idx + 1], newBytes[idx], newBytes[idx + 1]);
+      idx += 2;
+    }
+    if (cur.recordMask & RESOLVER_REC04) {
+      fprintf(t, "  rec04: %02X%02X -> %02X%02X\r\n", cur.bytes[idx],
+              cur.bytes[idx + 1], newBytes[idx], newBytes[idx + 1]);
+      idx += 2;
+    }
+
+    my_strcpy(resPendingCode, code);
+    for (int i = 0; i < n; i++)
+      resPendingBytes[i] = newBytes[i];
+    resPendingMask = cur.recordMask;
+    resPendingValid = true;
+
+    fprintf(t, "to APPLY:   leafres write %s confirm\r\n", code);
+    fprintf(t, "to RESTORE: leafres write ");
+    ResPrintCode(t, cur);
+    fprintf(t, " confirm\r\n");
+    return;
+  }
+
+  fprintf(t, "usage: leafres read | leafres write <hexcode> [confirm] | "
+             "leafres probe | leafres raw <hexframe>\r\n");
 }
 
 static bool CanCallback(
