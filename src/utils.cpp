@@ -378,7 +378,7 @@ float ProcessUdc(int motorSpeed) {
     {
       if (udc2 > Param::GetFloat(Param::udcmin)) {
         // only update UDCsw if UDC2 is above udcmin
-        Param::SetFloat(Param::udcsw, udc2 - 20); 
+        Param::SetFloat(Param::udcsw, udc2 - 20);
         // Set udcsw to 20V under battery voltage
       }
     }
@@ -395,7 +395,7 @@ float ProcessUdc(int motorSpeed) {
       Param::SetFloat(Param::udc2, udc2);
       if (udc2 > Param::GetFloat(Param::udcmin)) {
         // only update UDCsw if UDC2 is above udcmin
-        Param::SetFloat(Param::udcsw, udc2 - 20); 
+        Param::SetFloat(Param::udcsw, udc2 - 20);
         // Set udcsw to 20V under battery voltage
       }
     } else {

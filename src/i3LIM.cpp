@@ -551,7 +551,8 @@ void i3LIMClass::Task100Ms() {
   bytes[5] = 0x26;
   bytes[6] = 0xf3;
   bytes[7] = 0x4b;
-  can->Send(0x431, (uint32_t *)bytes, 8); //.average 197ms but as low as 49ms.
+  can->Send(0x431, (uint32_t *)bytes,
+            8); //.average 197ms but as low as 49ms.
 
   bytes[0] = 0xf5; // Wake up message.
   bytes[1] = 0x28;
