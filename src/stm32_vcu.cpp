@@ -114,6 +114,7 @@
 #include "noCompressor.h"
 #include "OutlanderCompressor.h"
 #include "VolvoP1.h"
+#include "NissanAC.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
