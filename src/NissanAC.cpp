@@ -34,3 +34,62 @@
  */
 
  #include <NissanAC.h>
+
+
+ LeafCompressor::LeafCompressor()
+{
+   //ctor
+}
+
+ void LeafCompressor::SetLinInterface(LinBus* l)
+ {
+    lin = l;
+    DigIo::lin_wake.Clear();//Not used on TJA1027
+    DigIo::lin_nslp.Set();//Wakes the device
+    //Johannes for president!
+
+ }
+
+
+ void LeafCompressor::Task10Ms()
+ {
+  uint8_t airConCtrl = Param::GetInt(Param::AirConCtrl);
+  uint16_t airconPwr = Param::GetInt(Param::AirConPwr);
+
+   static bool read = true;
+
+   if (lin->HasReceived(33, 8))//0x21 hex address
+   {
+      uint8_t* data = lin->GetReceivedBytes();
+
+      Param::SetInt(Param::udcompressor, data[7] * 2);
+   }
+
+   if (read)
+   {
+      lin->Request(33, 0, 0);//0x21 hex address
+   }
+   else
+   {
+      uint8_t lindata[8];//Send control command 0x3B here.
+     if(airConCtrl==0) lindata[0] = 0xb2;//Deactivate compressor
+     if(airConCtrl==1) lindata[0] = 0xb3;//Activate compressor
+     if (airconPwr < 500)  lindata[1] = 0x00; // off
+else if (airconPwr < 1500) lindata[1] = 0x05;   // ~1 kW
+else if (airconPwr < 2500) lindata[1] = 0x12;   // ~2 kW
+else                        lindata[1] = 0x16;   // ~3 kW
+
+
+      lindata[2] = 0x00;
+      lindata[3] = 0x90;
+      lindata[4] = 0xff;
+      lindata[5] = 0x00;
+      lindata[6] = 0x00;
+      lindata[7] = 0x00;
+      lin->Request(59, lindata, sizeof(lindata));//0x3B hex address
+   }
+
+   read = !read;
+   }
+
+

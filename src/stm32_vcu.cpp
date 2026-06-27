@@ -218,6 +218,7 @@ static LinBus* lin;
 static Preheater preheater;
 static NoCompressor CompressorNone;
 static OutlanderCompressor outlanderCompressor;
+static LeafCompressor leafCompressor;
 static Compressor* selectedCompressor = &CompressorNone;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1123,6 +1124,10 @@ static void UpdateCompressor() {
             selectedCompressor = &outlanderCompressor;
             OutlanderCAN = true;
             break;
+        case CompressorOptions::LeafCompress:
+            selectedCompressor = &leafCompressor;
+            break;
+
     }
 
     //This will call SetCanFilters() via the Clear Callback

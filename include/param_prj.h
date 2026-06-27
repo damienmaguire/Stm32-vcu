@@ -27,7 +27,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 153
+//Next param id (increase when adding new parameter!): 156
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
@@ -115,8 +115,9 @@
     PARAM_ENTRY(CAT_HEATER,    HeatPotDir, ABOVEBELOW, 0,      4,      0,      150 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPotOn,   "dig",     0,      4095,   0,      151 ) \
     PARAM_ENTRY(CAT_HEATER,    HeatPotFull, "dig",     0,      4095,   0,      152 ) \
-    PARAM_ENTRY(CAT_AIRCON,     Compressor, COMPRESSMODES, 0, 1,      0,      153  ) \
+    PARAM_ENTRY(CAT_AIRCON,    Compressor, COMPRESSMODES,   0, 2,      0,      153  ) \
     PARAM_ENTRY(CAT_AIRCON,    AirConCtrl,  ONOFF,     0,      1,      0,      154) \
+    PARAM_ENTRY(CAT_AIRCON,    AirConPwr,   "W",       0,      3000,   0,      155) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Min,     "Mins",    0,      59,     0,      48 ) \
@@ -259,7 +260,8 @@
     VALUE_ENTRY(VehLockSt,     ONOFF,               2100 ) \
     VALUE_ENTRY(compressStat,  COMP_STAT,           2111 ) \
     VALUE_ENTRY(compressRPM,   "",                  2109 ) \
-//Next value Id: 2112
+    VALUE_ENTRY(udcompressor,  "",                  2112 ) \
+//Next value Id: 2113
 
 //Dead params
 /*
@@ -297,7 +299,7 @@
 #define CANSPEEDS    "0=125k, 1=250k, 2=500k, 3=800k, 4=1M"
 #define CANIOS       "1=Cruise, 2=Start, 4=Brake, 8=Fwd, 16=Rev, 32=Bms"
 #define CANPERIODS   "0=100ms, 1=10ms"
-#define COMPRESSMODES "0=None, 1=Outlander"
+#define COMPRESSMODES "0=None, 1=Outlander, 2=Leaf"
 #define COMP_STAT    "0=NoHv, 1=HvPresent, 2=NoHeartBeat, 3=Start, 4=Running"
 #define ERRLIGHTS    "0=Off, 4=EPC, 8=engine"
 #define CRUISESTATES "0=None, 1=On, 2=Disable, 4=Set, 8=Resume"
@@ -526,7 +528,8 @@ enum can_devices
 enum CompressorOptions
 {
     NoCompress = 0,
-    OutlanderCompress = 1
+    OutlanderCompress = 1,
+    LeafCompress = 2
 };
 
 
