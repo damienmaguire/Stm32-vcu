@@ -1126,6 +1126,7 @@ static void UpdateCompressor() {
             break;
         case CompressorOptions::LeafCompress:
             selectedCompressor = &leafCompressor;
+            leafCompressor.SetLinInterface(lin);
             break;
 
     }
@@ -1433,6 +1434,9 @@ extern "C" int main(void)
     Param::Change(Param::PARAM_LAST);
     DigIo::inv_out.Clear();//inverter power off during bootup
     DigIo::mcp_sby.Clear();//enable can3
+
+    DigIo::CANEN.Set();//enable can1 on V1.3 HW
+    DigIo::CANSBY.Set();
 
     Terminal t(USART3, TermCmds);
 //   FunctionPointerCallback canCb(CanCallback, SetCanFilters);

@@ -34,6 +34,8 @@
  */
 
  #include <NissanAC.h>
+static bool airConCtrl = 0;
+static uint16_t airconPwr = 0;
 
 
  LeafCompressor::LeafCompressor()
@@ -50,11 +52,16 @@
 
  }
 
+ void LeafCompressor::Task200Ms()
+ {
+   airConCtrl = Param::GetInt(Param::AirConCtrl);
+   airconPwr = Param::GetInt(Param::AirConPwr);
+
+ }
+
 
  void LeafCompressor::Task10Ms()
  {
-  uint8_t airConCtrl = Param::GetInt(Param::AirConCtrl);
-  uint16_t airconPwr = Param::GetInt(Param::AirConPwr);
 
    static bool read = true;
 
@@ -72,13 +79,15 @@
    else
    {
       uint8_t lindata[8];//Send control command 0x3B here.
-     if(airConCtrl==0) lindata[0] = 0xb2;//Deactivate compressor
-     if(airConCtrl==1) lindata[0] = 0xb3;//Activate compressor
-     if (airconPwr < 500)  lindata[1] = 0x00; // off
-else if (airconPwr < 1500) lindata[1] = 0x05;   // ~1 kW
-else if (airconPwr < 2500) lindata[1] = 0x12;   // ~2 kW
-else                        lindata[1] = 0x16;   // ~3 kW
+     if(!airConCtrl) lindata[0] = 0xb2;//Deactivate compressor
+     if(airConCtrl) lindata[0] = 0xb3;//Activate compressor
 
+     //if (airconPwr < 500)  lindata[1] = 0x00; // off
+//else if (airconPwr < 1500) lindata[1] = 0x05;   // ~1 kW
+//else if (airconPwr < 2500) lindata[1] = 0x12;   // ~2 kW
+//else                        lindata[1] = 0x16;   // ~3 kW
+      if(Param::GetBool(Param::AirConReq))  lindata[1] = 0x05;
+      else lindata[1] = 0x00;
 
       lindata[2] = 0x00;
       lindata[3] = 0x90;

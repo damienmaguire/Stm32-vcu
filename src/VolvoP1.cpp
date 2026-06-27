@@ -31,6 +31,9 @@
  * BCM= Body Control Module. Following ids are of interest :
  * 0x02000026 contains brake pedal position sensors and brake fluid pressure
  * 0x02104136 contains vehicle speed.
+ * 0x100082c byte 4 contains Aircon button status.
+ * AC button off = 0x66
+ * AC button on = 0x6E
  */
 
 #include <VolvoP1.h>
@@ -57,6 +60,7 @@ void Volvo_P1::SetCanInterface(CanHardware* c)
     can->RegisterUserMessage(0x0110483C);//CEM Data. Key pos , clutch pos , Accelerator pos.
     can->RegisterUserMessage(0x02000026);//BCM Data , brake pedal pos , brake pressure.
     can->RegisterUserMessage(0x02104136);//BCM Data , vehicle speed.
+    can->RegisterUserMessage(0x100082C);//BCM Data , climate control info
 }
 
 
@@ -78,6 +82,10 @@ void Volvo_P1::DecodeCAN(int id, uint32_t* data)
 
     case 0x02104136:
         Volvo_P1::handle136(data);
+        break;
+
+    case 0x100082C:
+        Volvo_P1::handle82c(data);
         break;
 
     default:
@@ -106,6 +114,12 @@ void Volvo_P1::handle136(uint32_t data[2])//BCM
     vehSpeed = ((bytes[6]<<8) | bytes[7])*0.01;//BCM vehicle speed in kph. 0.01 scale.
     Param::SetFloat(Param::Veh_Speed, vehSpeed);
 
+}
+
+void Volvo_P1::handle82c(uint32_t data[2])//BCM
+{
+    uint8_t* bytes = (uint8_t*)data;
+    Param::SetInt(Param::AirConReq, (bytes[4] >> 3) & 0x01); //AC button in car
 }
 
 int Volvo_P1::GetThrotl()

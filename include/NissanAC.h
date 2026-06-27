@@ -31,6 +31,7 @@ class LeafCompressor : public Compressor
       LeafCompressor();
       void SetLinInterface(LinBus* l);
       void Task10Ms();
+      void Task200Ms();
 
    private:
       bool isAwake=false;

@@ -45,6 +45,7 @@ public:
    void handle83C(uint32_t data[2]);
    void handle026(uint32_t data[2]);
    void handle136(uint32_t data[2]);
+   void handle82c(uint32_t data[2]);
    bool Ready() { return terminal15On; }
    bool Start() { return terminal50On; }
    void SetRevCounter(int speed);

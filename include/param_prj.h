@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.37.VL
+#define VER 2.40.VL
 
 
 /* Entries must be ordered as follows:
@@ -261,7 +261,8 @@
     VALUE_ENTRY(compressStat,  COMP_STAT,           2111 ) \
     VALUE_ENTRY(compressRPM,   "",                  2109 ) \
     VALUE_ENTRY(udcompressor,  "",                  2112 ) \
-//Next value Id: 2113
+    VALUE_ENTRY(AirConReq,     ONOFF,               2113 ) \
+//Next value Id: 2114
 
 //Dead params
 /*
