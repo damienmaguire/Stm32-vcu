@@ -102,6 +102,24 @@ void FCChademo::Task100Ms() // sends chademo messages every 100ms
   bool curSensFault = curTimeout > 10;
   bool vtgSensFault = vtgTimeout > 50;
 
+  float udc2 = Param::GetFloat(Param::udc2);
+  data[0] = udc2;
+  data[1] = 0;
+
+  txMessage.frame.idType = dSTANDARD_CAN_MSG_ID_2_0B;
+  txMessage.frame.id = 0x103;
+  txMessage.frame.dlc = 8;
+  txMessage.frame.data0 = (data[0] & 0xFF);
+  txMessage.frame.data1 = (data[0] >> 8 & 0xFF);
+  txMessage.frame.data2 = (data[0] >> 16 & 0xFF);
+  txMessage.frame.data3 = (data[0] >> 24 & 0xFF);
+  txMessage.frame.data4 = (data[1] & 0xFF);
+  txMessage.frame.data5 = (data[1] >> 8 & 0xFF);
+  txMessage.frame.data6 = (data[1] >> 16 & 0xFF);
+  txMessage.frame.data7 = (data[1] >> 24 & 0xFF);
+  CANSPI_Transmit(&txMessage);
+  delay();
+
   // Capacity fixed to 200 - so SoC resolution is 0.5
   data[0] = 0;
   data[1] = (targetBatteryVoltage + 40) | 200 << 16;
