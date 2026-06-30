@@ -22,7 +22,7 @@
 
 #include <compressor.h>
 #include "linbus.h"
-
+#include "my_string.h"
 
 class LeafCompressor : public Compressor
 {

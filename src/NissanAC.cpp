@@ -64,6 +64,8 @@ static uint16_t airconPwr = 0;
  {
 
    static bool read = true;
+   static int state = 0;
+   uint8_t lindata[8];//Send control command 0x3B here.
 
    if (lin->HasReceived(33, 8))//0x21 hex address
    {
@@ -72,6 +74,45 @@ static uint16_t airconPwr = 0;
       Param::SetInt(Param::udcompressor, data[7] * 2);
    }
 
+      switch (state)
+   {
+   case 0:
+      lin->Request(17, 0, 0);
+      break;
+   case 1:
+      lin->Request(33, 0, 0);
+      break;
+   case 2:
+      lin->Request(35, 0, 0);
+      break;
+   case 3:
+      lin->Request(38, 0, 0);
+      break;
+   case 4:
+      memset32((int*)lindata, 0, 2);
+      lindata[0] = 1;
+      lin->Request(32, lindata, 8);
+      break;
+   case 5:
+     if(!airConCtrl) lindata[0] = 0xb2;//Deactivate compressor
+     if(airConCtrl) lindata[0] = 0xb3;//Activate compressor
+      if(Param::GetBool(Param::AirConReq))  lindata[1] = 0x05;
+      else lindata[1] = 0x00;
+
+      lindata[2] = 0x00;
+      lindata[3] = 0x90;
+      lindata[4] = 0xff;
+      lindata[5] = 0x00;
+      lindata[6] = 0x00;
+      lindata[7] = 0x00;
+      lin->Request(59, lindata, 8);
+      break;
+   }
+
+      state = (state + 1) % 6;
+
+
+/*
    if (read)
    {
       lin->Request(33, 0, 0);//0x21 hex address
@@ -99,6 +140,56 @@ static uint16_t airconPwr = 0;
    }
 
    read = !read;
+   */
    }
 
+
+   /*
+   static void RunLin()
+{
+   static int state = 0;
+   int compCmd = Param::GetInt(Param::compressor);
+   uint8_t data[8] = { 0xb2, 0x00, 0x00, 0x90, 0xff, 0x00, 0x00, 0x00 };
+   //b[1] = 0x05 -> 1kw,  b[1] = 0x12 -> 2kw, b[1] = 0x16 -> 3kw
+
+   if (compCmd > 0)
+   {
+      data[0] = 0xb3;
+      data[1] = compCmd;
+   }
+
+   if (lin->HasReceived(33, 8))
+   {
+      uint8_t* data = lin->GetReceivedBytes();
+
+      Param::SetInt(Param::udcompressor, data[7] * 2);
+   }
+
+   switch (state)
+   {
+   case 0:
+      lin->Request(17, 0, 0);
+      break;
+   case 1:
+      lin->Request(33, 0, 0);
+      break;
+   case 2:
+      lin->Request(35, 0, 0);
+      break;
+   case 3:
+      lin->Request(38, 0, 0);
+      break;
+   case 4:
+      memset32((int*)data, 0, 2);
+      data[0] = 1;
+      lin->Request(32, data, 8);
+      break;
+   case 5:
+      lin->Request(59, data, 8);
+      break;
+   }
+
+      state = (state + 1) % 6;
+}
+   */
 

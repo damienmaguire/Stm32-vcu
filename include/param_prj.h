@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.40.VL
+#define VER 2.41.VL
 
 
 /* Entries must be ordered as follows:

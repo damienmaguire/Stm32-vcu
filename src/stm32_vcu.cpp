@@ -540,7 +540,9 @@ static void Ms100Task(void)
     DigiPot::SetPot1Step(); //just for dev
     DigiPot::SetPot2Step(); //just for dev
 
-    //Cooling Fan Control//
+    //Cooling Fan Control for non Volvo P1//
+    if(selectedVehicle != &P1Vehicle)
+    {
     if(opmode==MOD_CHARGE || opmode==MOD_RUN)
     {
         float tempTemp = MAX(Param::GetFloat(Param::tmphs),Param::GetFloat(Param::ChgTemp));
@@ -557,6 +559,7 @@ static void Ms100Task(void)
     else
     {
         IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Clear();//Coolant Fan Off
+    }
     }
 
     //HV Active output

@@ -34,11 +34,13 @@
 #include "vehicle.h"
 #include "my_math.h"
 #include "params.h"
+#include "iomatrix.h"
 
 class Volvo_P1: public Vehicle
 {
 public:
    void SetCanInterface(CanHardware*);
+   void Task1Ms();
    void Task10Ms();
    void Task100Ms();
    void DecodeCAN(int, uint32_t* data);

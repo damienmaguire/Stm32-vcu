@@ -52,6 +52,8 @@ static uint8_t BrakeFluidPress = 0;
 static float ThrotPedal = 0;
 static float tempGauge = 0;
 static float vehSpeed = 0;
+static uint8_t fan_pwm_counter = 0;
+static uint8_t fan_duty = 50;        // 0–100 %
 
 void Volvo_P1::SetCanInterface(CanHardware* c)
 {
@@ -133,6 +135,21 @@ int Volvo_P1::GetThrotl()
 
 }
 
+void Volvo_P1::Task1Ms()
+{
+        if (Param::GetInt(Param::opmode) == MOD_RUN)
+        {
+        fan_pwm_counter++;
+        if (fan_pwm_counter >= 10)          // 10 ticks = 10 ms = 100 Hz
+        fan_pwm_counter = 0;
+
+        if (fan_pwm_counter < (fan_duty / 10))
+        IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Set();// Pin high
+        else
+        IOMatrix::GetPin(IOMatrix::COOLINGFAN)->Clear();// Pin low
+        }
+}
+
 void Volvo_P1::Task10Ms()
 {
         uint8_t bytes[8];
@@ -163,6 +180,10 @@ void Volvo_P1::Task10Ms()
             can->Send(0x19E00006, (uint32_t*)bytes,8);//ECM msg.
             flip_bit=!flip_bit;
         }
+
+
+
+
 }
 
 void Volvo_P1::SetRevCounter(int speed)
