@@ -34,6 +34,9 @@ public:
   virtual float GetInverterVoltage() = 0;
   virtual float GetMotorSpeed() = 0;
   virtual int GetInverterState() = 0;
+  // Whether this inverter honours the reversemotor parameter (flips rotation).
+  // Default false; inverters that implement the flip override this to true.
+  virtual bool SupportsReverseMotor() { return false; }
   virtual void DeInit() {
   } // called when switching to another inverter, similar to a destructor
   virtual void SetCanInterface(CanHardware *c) { can = c; }

@@ -58,9 +58,16 @@ void Preheater::Task200Ms(int opmode, unsigned hours, unsigned minutes) {
           (PreHeatDur_tmp != 0)) {
         RunPreHeat = true; // if we arrive at set preheat time and duration is
                            // non zero then initiate preheat
-      } else {
+      } else if (!Param::GetBool(Param::PreHeatNow)) {
         RunPreHeat = false;
       }
+
+      // On-demand preheat: check if PreHeatNow button was pressed
+      if (Param::GetBool(Param::PreHeatNow)) {
+        RunPreHeat = true;
+        Param::SetInt(Param::PreHeatNow, 0); // Reset the button
+      }
+
       IOMatrix::GetPin(IOMatrix::PREHEATOUT)->Clear();
     }
 
@@ -97,4 +104,8 @@ void Preheater::ParamsChange() {
       (GetInt(Param::Pre_Dur) *
        300); // number of 200ms ticks that equates to preheat timer in minutes
   PreHeatDur_tmp = GetInt(Param::Pre_Dur);
+}
+void Preheater::CancelPreHeater() {
+  PreHeatDur_tmp = 0;
+  PreheatTicks = 0;
 }

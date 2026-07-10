@@ -1,8 +1,8 @@
+
 /*
  * This file is part of the ZombieVerter project.
  *
- * Copyright (C) 2021-2022  Jamie Jones <jamie@jamie-jones.co.uk>
- * 	                        Damien Maguire <info@evbmw.com>
+ * Copyright (C) 2026 Jamie Jones <jamie@jamie-jones.co.uk>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,33 +17,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef PREHEATER_H
-#define PREHEATER_H
+#ifndef MAINTAINER12V_H
+#define MAINTAINER12V_H
 #include "params.h"
 #include <stdint.h>
 
-class Preheater {
+class Maintainer12V {
 public:
-  Preheater();
-  void Task200Ms(int opmode, unsigned hours, unsigned minutes);
+  Maintainer12V();
+  void Task200Ms(int opmode);
   void Ms10Task();
   void ParamsChange();
-  void SetInitByPreHeat(bool initbyPH);
-  void CancelPreHeater();
+  void SetInitByMaintainer(bool initbyM);
+  void CancelMaintainer();
 
-  bool GetRunPreHeat();
-  bool GetInitByPreHeat();
+  bool GetRunMaintainer();
+  bool GetInitByMaintainer();
 
 private:
-  // Preheat matching the charger timer
-  uint8_t PreHeatSet;
-  bool RunPreHeat;
-  uint32_t PreheatTicks;
-  uint32_t PreheatTicks_1Min;
-  uint8_t PreHeatHrs_tmp;
-  uint8_t PreHeatMins_tmp;
-  uint16_t PreHeatDur_tmp;
-  bool initbyPreHeat;
+  uint8_t minsUntilAllowedAgain;
+  uint16_t minsUntilAllowedAgainTicks;
+  uint8_t preHeatSet;
+  bool runMaintainer;
+  uint32_t maintainTicks;
+  uint32_t maintainTicks_1Min;
+  uint16_t maintainDur_tmp;
+  bool initbyMaintain;
 };
 
-#endif // PREHEATER_H
+#endif // MAINTAINER12V_H

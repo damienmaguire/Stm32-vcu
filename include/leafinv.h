@@ -38,6 +38,7 @@ public:
   float GetInverterVoltage() { return voltage; }
   float GetMotorSpeed() { return speed; }
   int GetInverterState() { return error; }
+  bool SupportsReverseMotor() override { return true; }
   void SetCanInterface(CanHardware *c);
 
 private:

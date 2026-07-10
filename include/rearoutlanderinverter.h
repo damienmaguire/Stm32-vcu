@@ -36,6 +36,7 @@ public:
   float GetInverterVoltage() { return voltage; }
   float GetMotorSpeed() { return speed; }
   int GetInverterState() { return error; }
+  bool SupportsReverseMotor() override { return true; }
 
 private:
   uint8_t run10ms;
