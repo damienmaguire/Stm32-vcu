@@ -45,6 +45,7 @@
 #include "OutlanderCanHeater.h"
 #include "OutlanderCompressor.h"
 #include "OutlanderHeartBeat.h"
+#include "PKP2300_Lever.h"
 #include "PWMHeater.h"
 #include "TeslaDCDC.h"
 #include "VWAirHeater.h"
@@ -182,6 +183,7 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
+static PKP2300_Lever PKP2300GearPanel;
 static vwCoolantHeater heaterCoolantVW;
 static mgCoolantHeater heaterCoolantMG;
 static vwAirHeater heaterAirVW;
@@ -1206,6 +1208,10 @@ static void UpdateShifter() {
 
   case ShifterModes::BMWE65:
     selectedShifter = &E65GearLever;
+    break;
+
+  case ShifterModes::PKP2300:
+    selectedShifter = &PKP2300GearPanel;
     break;
 
   default:

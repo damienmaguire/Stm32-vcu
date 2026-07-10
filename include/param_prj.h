@@ -308,7 +308,7 @@
   "20=PwmTim3, 21=CpSpoof, 22=GS450pump, 23=PwmTempGauge, 24=PwmSocGauge,"     \
   "25=PwmHeater"
 #define APINFUNCS "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
-#define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
+#define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65, 5=PKP2300"
 #define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
 #define DMODES "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES "0=SingleChannel, 1=DualChannel"
@@ -484,7 +484,8 @@ enum ShifterModes {
   BMWF30 = 1,
   JLRG1 = 2,
   JLRG2 = 3,
-  BMWE65 = 4
+  BMWE65 = 4,
+  PKP2300 = 5
 
 };
 
