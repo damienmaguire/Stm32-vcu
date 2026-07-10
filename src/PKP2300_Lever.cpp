@@ -140,7 +140,7 @@ void PKP2300_Lever::SendLEDs() {
   for (int i = 0; i < 6; i++) {
     if (i == blinkLed) {
       // The LED just above current SoC blinks orange in charge mode
-      ledBytes[i] = blinkState ? LED_ORANGE : LED_CYAN;
+      ledBytes[i] = blinkState ? LED_ORANGE : LED_OFF;
     } else if (soc >= socThreshold[i]) {
       // SoC has reached this LED's threshold – show orange
       ledBytes[i] = LED_ORANGE;

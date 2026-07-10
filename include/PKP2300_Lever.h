@@ -43,7 +43,6 @@ public:
   void SetCanInterface(CanHardware *c);
 
 private:
-  void UpdateLEDs();
   void SendLEDs();
 
   Shifter::Sgear gear = NEUTRAL;
