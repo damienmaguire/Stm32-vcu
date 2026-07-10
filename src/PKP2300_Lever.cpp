@@ -115,10 +115,6 @@ void PKP2300_Lever::Task100Ms() {
   SendLEDs();
 }
 
-void PKP2300_Lever::UpdateLEDs() {
-  // Intentionally empty – logic handled inline in SendLEDs()
-}
-
 void PKP2300_Lever::SendLEDs() {
   float soc = Param::GetFloat(Param::SOC);
   int opmode = Param::GetInt(Param::opmode);
