@@ -26,7 +26,7 @@
 
 #define ACP_DRIVE_ENABLE 0x2
 #define ACP_CONT_CLOSED 0x4
-#define ACP_MODE_TORQUE 0x8
+#define ACP_MODE_TORQUE 0x0
 #define ACP_STATE_DRIVE 0x3
 
 void InverterACP::SetCanInterface(CanHardware *c) {
@@ -62,12 +62,16 @@ void InverterACP::SetTorque(float torquePercent) {
   uint16_t udc = Param::GetInt(Param::udc);
 
   data[0] = toggleBit;
-  data[6] = udc >> 8;
-  data[7] = udc & 0xFF;
+  data[1] = 0;
+  data[2] = 0;
+  data[3] = data[4] = 0; //speed request 0
+  data[5] = udc >> 8;
+  data[6] = udc & 0xFF;
+  data[7] = 0;
   toggleBit = !toggleBit;
 
   if (opmode == MOD_RUN) {
-    int16_t torque = (int16_t)(10 * torquePercent);
+    int16_t torque = (int16_t)(345 * torquePercent);
     data[0] |= ACP_DRIVE_ENABLE | ACP_CONT_CLOSED | ACP_MODE_TORQUE;
     data[1] = torque >> 8;
     data[2] = torque & 0xFF; // Big endian
