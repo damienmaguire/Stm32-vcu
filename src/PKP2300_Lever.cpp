@@ -32,21 +32,21 @@
 #include "throttle.h"
 
 // CANOpen IDs for node 1
-#define PKP_TPDO1 0x181 // button states from panel
-#define PKP_RPDO1 0x201 // LED control to panel
+#define PKP_TPDO1 0x195 // button states from panel
+#define PKP_RPDO1 0x215 // LED control to panel
 
-// LED color codes
-#define LED_OFF    0
-#define LED_CYAN   4
-#define LED_ORANGE 6
+// LED bytes
+#define LED_RED    0
+#define LED_GREEN  1
+#define LED_BLUE   2
 
-// Button bit positions in TPDO1 byte 0
-#define BTN_K1 (1 << 0)
-#define BTN_K2 (1 << 1)
-#define BTN_K3 (1 << 2)
-#define BTN_K4 (1 << 3)
-#define BTN_K5 (1 << 4)
-#define BTN_K6 (1 << 5)
+// Button (and LED) bit positions in TPDO1 byte 0
+#define BTN_DRIVE   (1 << 0)
+#define BTN_NEUTRAL (1 << 1)
+#define BTN_REVERSE (1 << 2)
+#define BTN_PARK    (1 << 3)
+#define BTN_REGEN   (1 << 4)
+#define BTN_HEAT    (1 << 5)
 
 // SoC threshold (%) for each LED (K1=16.7%, K2=33.3%, ..., K6=100%)
 static const float socThreshold[6] = {
@@ -69,34 +69,36 @@ void PKP2300_Lever::DecodeCAN(int id, uint32_t *data) {
 
   uint8_t *bytes = (uint8_t *)data;
   uint8_t buttons = bytes[0];
+  //Only allow changing away from PARK if brake pedal is pressed
+  bool allowGearChange = gear != PARK || Param::GetBool(Param::din_brake);
 
   // Detect rising edges (button just pressed) for toggles and gear commands
   uint8_t pressed = buttons & ~prevButtonState;
 
   // K3 = Forward/Drive
-  if (pressed & BTN_K3)
+  if ((pressed & BTN_DRIVE) && allowGearChange)
     gear = DRIVE;
 
   // K6 = Reverse
-  if (pressed & BTN_K6)
+  if ((pressed & BTN_REVERSE) && allowGearChange)
     gear = REVERSE;
 
   // K2 = Neutral
-  if (pressed & BTN_K2)
+  if ((pressed & BTN_NEUTRAL) && allowGearChange)
     gear = NEUTRAL;
 
   // K5 = Park
-  if (pressed & BTN_K5)
+  if (pressed & BTN_PARK)
     gear = PARK;
 
   // K1 = toggle regen disable
-  if (pressed & BTN_K1) {
+  if (pressed & BTN_REGEN) {
     regenDisabled = !regenDisabled;
     Throttle::noregenreq = regenDisabled;
   }
 
   // K4 = toggle heater
-  if (pressed & BTN_K4) {
+  if (pressed & BTN_HEAT) {
     heaterOn = !heaterOn;
     Param::SetInt(Param::HeatReq, heaterOn ? 1 : 0);
   }
@@ -119,31 +121,74 @@ void PKP2300_Lever::SendLEDs() {
   float soc = Param::GetFloat(Param::SOC);
   int opmode = Param::GetInt(Param::opmode);
   bool charging = (opmode == MOD_CHARGE);
+  uint8_t ledBytes[8] = {0};
 
-  // Find the LED index that is just above the current SoC level.
-  // This LED blinks orange in charge mode.
-  int blinkLed = -1; // no blink LED
-  if (charging) {
-    for (int i = 0; i < 6; i++) {
-      if (soc < socThreshold[i]) {
-        blinkLed = i;
-        break;
-      }
+  if (soc > 16.6f)
+    ledBytes[LED_RED] = ledBytes[LED_GREEN] = BTN_HEAT;
+  if (soc > 32.2f)
+    ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_REVERSE;
+  if (soc > 49.8f)
+    ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_REGEN;
+  if (soc > 66.4f)
+    ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_NEUTRAL;
+  if (soc > 83.0f)
+    ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_PARK;
+  if (soc > 99.0f)
+    ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_DRIVE;
+
+  if (charging && blinkState) { //turn on one above current SoC if blinkstate is on
+    if (soc < 16.6f)
+      ledBytes[LED_RED] = ledBytes[LED_GREEN] = BTN_HEAT;
+    else if (soc < 32.2f)
+      ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_REVERSE;
+    else if (soc < 49.8f)
+      ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_REGEN;
+    else if (soc < 66.4f)
+      ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_NEUTRAL;
+    else if (soc < 83.0f)
+      ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_PARK;
+    else if (soc < 99.0f)
+      ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_DRIVE;
+
+  }
+
+  //Drive mode always takes precedence over SoC display
+  if (opmode == MOD_RUN) {
+    switch (gear)
+    {
+    case DRIVE:
+      ledBytes[LED_BLUE] = BTN_DRIVE;
+      ledBytes[LED_RED] &= ~BTN_DRIVE;
+      ledBytes[LED_GREEN] &= ~BTN_DRIVE;
+      break;
+    case REVERSE:
+      ledBytes[LED_BLUE] = BTN_REVERSE;
+      ledBytes[LED_RED] &= ~BTN_REVERSE;
+      ledBytes[LED_GREEN] &= ~BTN_REVERSE;
+      break;
+    case NEUTRAL:
+      ledBytes[LED_BLUE] = BTN_NEUTRAL;
+      ledBytes[LED_RED] &= ~BTN_NEUTRAL;
+      ledBytes[LED_GREEN] &= ~BTN_NEUTRAL;
+      break;
+    case PARK:
+      ledBytes[LED_BLUE] = BTN_PARK;
+      ledBytes[LED_RED] &= ~BTN_PARK;
+      ledBytes[LED_GREEN] &= ~BTN_PARK;
+      break;
+    }
+
+    if (regenDisabled) {
+      ledBytes[LED_BLUE] = BTN_REGEN;
+      ledBytes[LED_RED] &= ~BTN_REGEN;
+      ledBytes[LED_GREEN] &= ~BTN_REGEN;
     }
   }
 
-  uint8_t ledBytes[8] = {0};
-  for (int i = 0; i < 6; i++) {
-    if (i == blinkLed) {
-      // The LED just above current SoC blinks orange in charge mode
-      ledBytes[i] = blinkState ? LED_ORANGE : LED_OFF;
-    } else if (soc >= socThreshold[i]) {
-      // SoC has reached this LED's threshold – show orange
-      ledBytes[i] = LED_ORANGE;
-    } else {
-      // Below threshold – show default cyan background
-      ledBytes[i] = LED_CYAN;
-    }
+  if (heaterOn) {
+    ledBytes[LED_BLUE] = BTN_HEAT;
+    ledBytes[LED_RED] &= ~BTN_HEAT;
+    ledBytes[LED_GREEN] &= ~BTN_HEAT;
   }
 
   can->Send(PKP_RPDO1, (uint32_t *)ledBytes, 8);

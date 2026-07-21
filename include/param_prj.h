@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.40.0TA
+#define VER 2.41.0TA
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -32,7 +32,7 @@
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 9, 0, 5)                       \
   PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 8, 0, 6)                        \
-  PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 4, 0, 108)                      \
+  PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 5, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
   PARAM_ENTRY(CAT_SETUP, chargemodes, CHGMODS, 0, 7, 0, 37)                    \
