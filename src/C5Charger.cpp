@@ -33,7 +33,7 @@ void C5Charger::SetCanInterface(CanHardware *c) {
   can = c;
   can->RegisterUserMessage(0x101);
   can->RegisterUserMessage(0x102);
-  can->RegisterUserMessage(0x103);
+  //can->RegisterUserMessage(0x103);
   can->RegisterUserMessage(0x104);
   can->RegisterUserMessage(0x310);
   can->RegisterUserMessage(0x311);
@@ -55,8 +55,8 @@ void C5Charger::DeInit() {
 }
 
 bool C5Charger::ControlCharge(bool RunCh, bool ACReq) {
-  chargeCommand = RunCh && ACReq;
-  return ACReq && obcStatus != 0xA && obcFaultLevel < 4 && !obcFaultPresent;
+  chargeCommand = Param::GetInt(Param::opmode) == MOD_CHARGE; //  RunCh && ACReq;
+  return ACReq && obcStatus != 0xA; // && obcFaultLevel < 4 && !obcFaultPresent;
 }
 
 float C5Charger::MaxChargePowerWatts() const {
@@ -258,7 +258,7 @@ void C5Charger::DecodeCAN(int id, uint32_t data[2]) {
                     std::max(acVoltageL1, std::max(acVoltageL2, acVoltageL3)));
     break;
   }
-  case 0x103: {
+/*  case 0x103: {
     const float hvVolts = C5PTECAN::UnpackMotorolaLsb(bytes, 24, 14) * 0.1f;
     const float hvCurrent =
         C5PTECAN::UnpackMotorolaLsb(bytes, 50, 11) * 0.1f +
@@ -272,7 +272,7 @@ void C5Charger::DecodeCAN(int id, uint32_t data[2]) {
       Param::SetFloat(Param::idc, std::max(0.0f, hvCurrent));
     }
     break;
-  }
+  }*/
   case 0x310: {
     const float wtrInlet = C5PTECAN::UnpackMotorolaLsb(bytes, 48, 8) - 40.0f;
     maxChargeTemp = wtrInlet;

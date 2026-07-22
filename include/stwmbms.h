@@ -35,6 +35,7 @@ private:
   bool BMSDataValid();
   int messageCounter = 0;
   int timeoutCounter = 0;
+  int offTimeoutCounter = 0;
   uint16_t maxChargeAllowed = 0;
   uint16_t maxInput = 0;
   uint16_t maxOutput = 0;
