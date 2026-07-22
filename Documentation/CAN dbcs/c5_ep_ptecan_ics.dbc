@@ -1,0 +1,405 @@
+VERSION ""
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	BA_DEF_DEF_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: ICS BMS GW MCU SCU Tester VCU Vector__XXX
+
+BO_ 156 BMS_FrP01_9C: 8 BMS
+ SG_ BMS_PackVol : 31|13@0+ (0.1,0) [0|819.1] "" Vector__XXX
+ SG_ BMS_HVConnectSt : 57|2@0+ (1,0) [0|3] "" Vector__XXX
+
+BO_ 173 VCU_FrP06_AD: 8 VCU
+ SG_ VCU_ChrgLoadPwr : 23|8@0+ (0.1,0) [0|25.5] "" Vector__XXX
+ SG_ VCU_BMSPreThermPrmt : 25|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ VCU_OBCDchrgPrmtPwr : 39|8@0+ (0.1,0) [0|25.5] "" Vector__XXX
+
+BO_ 257 OBC_FrP01_101: 8 ICS
+ SG_ OBC_FrP01_101_CRC : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ OBC_FrP01_101_RC : 15|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ OBC_EnblOutpSts : 16|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_CtrlPltCircConnectSts : 19|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ OBC_ChrggunConnectCfmSts : 23|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ OBC_S2SwSts : 24|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_ElecLockSts : 25|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_WMd : 28|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ OBC_ProdMdl : 31|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ OBC_FltLvl : 35|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ OBC_Sts : 39|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ OBC_ChrgGNIndcSts : 43|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_ChrgWHIndcSts : 45|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_ChrgRDIndcSts : 47|2@0+ (1,0) [0|3] "" Vector__XXX
+
+BO_ 258 OBC_FrP02_102: 8 ICS
+ SG_ OBC_ACInpCrnt_L1 : 7|9@0+ (0.1,0) [0|51.1] "" Vector__XXX
+ SG_ OBC_ACInpCrnt_L2 : 14|9@0+ (0.1,0) [0|51.1] "" Vector__XXX
+ SG_ OBC_ACInpCrnt_L3 : 21|9@0+ (0.1,0) [0|51.1] "" Vector__XXX
+ SG_ OBC_ACInpVol_L1 : 28|9@0+ (1,0) [0|511] "" Vector__XXX
+ SG_ OBC_ACInpVol_L2 : 35|9@0+ (1,0) [0|511] "" Vector__XXX
+ SG_ OBC_ACMaxDchrgPwr : 42|10@0+ (10,0) [0|10230] "" Vector__XXX
+ SG_ OBC_ACInpVol_L3 : 48|9@0+ (1,0) [0|511] "" Vector__XXX
+
+BO_ 259 OBC_FrP03_103: 8 ICS
+ SG_ OBC_OutpMaxCrnt : 15|10@0+ (0.1,0) [0|102.3] "" Vector__XXX
+ SG_ OBC_OutpVol : 21|14@0+ (0.1,0) [0|1638.3] "" Vector__XXX
+ SG_ OBC_OutpMaxPwr : 39|11@0+ (10,0) [0|20470] "" Vector__XXX
+ SG_ OBC_OutpCrnt : 44|11@0+ (0.1,-70) [-70|134.7] "" Vector__XXX
+ SG_ OBC_OutpMaxVol : 49|10@0+ (1,0) [0|1023] "" Vector__XXX
+
+BO_ 260 OBC_FrP04_104: 8 ICS
+ SG_ OBC_CCRVal : 11|12@0+ (1,0) [0|4095] "" Vector__XXX
+ SG_ OBC_CPPWMDuty : 31|10@0+ (0.1,0) [0|102.3] "" Vector__XXX
+ SG_ OBC_CPVolAmp : 37|11@0+ (10,0) [0|20470] "" Vector__XXX
+ SG_ OBC_CPVolFrq : 42|11@0+ (1,0) [0|2047] "" Vector__XXX
+
+BO_ 261 DCDC_FrP01_105: 8 ICS
+ SG_ DCDC_FrP01_105_CRC : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ DCDC_Sts : 11|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ DCDC_FrP01_105_RC : 15|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ DCDC_OutpVol : 31|8@0+ (0.125,0) [0|31.875] "" Vector__XXX
+ SG_ DCDC_InpCrnt : 39|8@0+ (0.1,0) [0|25.5] "" Vector__XXX
+ SG_ DCDC_WMd : 50|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ DCDC_FltLvl : 53|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ DCDC_InpVol : 47|10@0+ (1,0) [0|1023] "" Vector__XXX
+ SG_ DCDC_OutpCrnt : 48|9@0+ (1,0) [0|511] "" Vector__XXX
+
+BO_ 282 VCU_FrP04_11A: 8 VCU
+ SG_ VCU_FrP04_11A_CRC : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ VCU_DCDCMdStReq : 11|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ VCU_FrP04_11A_RC : 15|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ VCU_DCDCHVCrntMaxSp : 23|11@0+ (0.0625,-64) [-64|63.9375] "" Vector__XXX
+ SG_ VCU_DCDCLVCrntMaxSp : 27|11@0+ (1,-1023) [-1023|1024] "" Vector__XXX
+ SG_ VCU_DCDCLVVolSp : 32|9@0+ (0.125,0) [0|63.875] "" Vector__XXX
+
+BO_ 772 BMS_FrP04_304: 8 BMS
+ SG_ BMS_FrP04_304_CRC : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ BMS_FrP04_304_RC : 15|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ BMS_ActChrgPwr : 11|10@0+ (0.1,0) [0|102.3] "" Vector__XXX
+ SG_ BMS_ChrgVol : 17|13@0+ (0.1,0) [0|819.1] "" Vector__XXX
+ SG_ BMS_ChrgCrntReq : 36|13@0+ (0.1,-700) [-700|119.1] "" Vector__XXX
+ SG_ BMS_OnChrgCmd : 56|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ BMS_OnDchrgCmd : 57|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ BMS_ObcRdyReq : 58|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ BMS_MaxChrgVol : 55|13@0+ (0.1,0) [0|819.1] "" Vector__XXX
+
+BO_ 773 BMS_FrP05_305: 8 BMS
+ SG_ BMS_Sts : 36|4@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 774 BMS_FrP06_306: 8 BMS
+ SG_ BMS_EleclockReq : 41|2@0+ (1,0) [0|3] "" Vector__XXX
+
+BO_ 776 BMS_FrP08_308: 8 BMS
+ SG_ BMS_SOC_Full : 26|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ BMS_DCChrgConnectSts : 49|2@0+ (1,0) [0|3] "" Vector__XXX
+
+BO_ 784 OBC_FrP05_310: 8 ICS
+ SG_ OBC_NTCTem_L1 : 23|8@0+ (1,-40) [-40|215] "" Vector__XXX
+ SG_ OBC_NTCTem_L2 : 31|8@0+ (1,-40) [-40|215] "" Vector__XXX
+ SG_ OBC_NTCTem_L3 : 39|8@0+ (1,-40) [-40|215] "" Vector__XXX
+ SG_ OBC_NTCTem_N : 47|8@0+ (1,-40) [-40|215] "" Vector__XXX
+ SG_ OBC_WtrInletTem : 55|8@0+ (1,-40) [-40|215] "" Vector__XXX
+
+BO_ 785 OBC_FrP06_311: 8 ICS
+ SG_ OBC_IntAmbTem : 7|8@0+ (1,-40) [-40|215] "" Vector__XXX
+ SG_ OBC_M1PwrBdTem : 15|8@0+ (1,-40) [-40|215] "" Vector__XXX
+ SG_ OBC_PFCTem : 23|8@0+ (1,-40) [-40|215] "" Vector__XXX
+ SG_ OBC_LLCTem : 31|8@0+ (1,-40) [-40|215] "" Vector__XXX
+
+BO_ 786 OBC_FrP07_312: 8 ICS
+ SG_ OBC_NTCWiDiscFlt_L1 : 0|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_NTCWiDiscFlt_L2 : 1|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_NTCWiDiscFlt_L3 : 2|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_NTCWiDiscFlt_N : 3|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_CANBusoffFlt : 4|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_SCIComFlt : 5|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_BMSComFlt : 6|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_BMSCRCFlt : 7|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_NTCOverTemFlt_L1 : 9|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_NTCOverTemFlt_L2 : 11|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_NTCOverTemFlt_L3 : 13|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_NTCOverTemFlt_N : 15|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_IntAmbOverTemFlt : 17|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_M1OverTemFlt : 19|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_PFCOverTemFlt : 21|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_LLCOverTemFlt : 23|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_WtrInletOverTemFlt : 25|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ OBC_IntAmbUnderTemFlt : 26|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_KL30UnderVolFlt : 27|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_KL30OverVolFlt : 28|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_EleclockLockFlt : 29|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_EleclockUnLockFlt : 30|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_TemInsdSenFlt : 31|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_ACShoCrntFlt : 32|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_ACUnderVolFlt : 33|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_ACOverVolFlt : 34|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_ACOverCrntFlt : 35|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_HVDCUnderVolFlt : 36|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_HVDCShoCircFlt : 37|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_HVDCOverVolFlt : 38|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_HVDCOverCrntFlt : 39|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_PFCUnderVolFlt : 40|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_PFCOverVolFlt : 41|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_SecSideSwOverCrntFlt : 42|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_PrySideHwOverCrntFlt : 43|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_SecSideHwOverCrntFlt : 44|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_ACInpVolConnectTimeOutFlt : 45|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_ChrgEnblTimeOutFlt : 46|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_V2XDChrgEnblTimeOutFlt : 47|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_V2VChrgConnectTimeOutFlt : 48|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_V2VDChrgS2TimeOutFlt : 49|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_V2VCPStsFlt : 50|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OBC_V2XACOutTimeOutFlt : 51|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 788 DCDC_FrP02_314: 8 ICS
+ SG_ DCDC_FrP02_314_CRC : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ DCDC_FrP02_314_RC : 15|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ DCDC_M1PwrBdTem : 23|8@0+ (1,-40) [-40|215] "25" Vector__XXX
+ SG_ DCDC_WtrInletTem : 31|8@0+ (1,-40) [-40|215] "25" Vector__XXX
+ SG_ DCDC_PrySideMosTem : 39|8@0+ (1,-40) [-40|215] "25" Vector__XXX
+ SG_ DCDC_SecSideMosTem : 47|8@0+ (1,-40) [-40|215] "25" Vector__XXX
+ SG_ DCDC_IntAmbTem : 55|8@0+ (1,-40) [-40|215] "25" Vector__XXX
+
+BO_ 789 DCDC_FrP03_315: 8 ICS
+ SG_ DCDC_InpOverVolFlt : 0|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_PFCOverVolFlt : 1|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_TemInsdSenErr : 2|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_CanBusoffFlt : 3|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_IntUART2ComFlt : 4|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_IntUART1ComFlt : 5|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_VCUComFlt : 6|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_VCUChksFlt : 7|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_M1OverTemFlt : 9|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ DCDC_WtrInletOverTemFlt : 11|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ DCDC_PrySideMosOverTemFlt : 13|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ DCDC_SecSideMosOverTemFlt : 15|2@0+ (2,0) [0|6] "" Vector__XXX
+ SG_ DCDC_IntAmbOverTemFlt : 17|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ DCDC_OutpOverCrntFlt : 18|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_OutpShoCircFlt : 19|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_OutpOpenCircFlt : 20|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_OutpOverVolFlt : 21|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_OutpUnderVolFlt : 22|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_InpUnderVolFlt : 23|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_LVCrntFbFlt : 28|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_LVVolFbFlt : 29|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_VCUSetPtFlt : 30|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DCDC_LVDiffOverHiFlt : 31|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 801 VCU_FrP07_321: 8 VCU
+ SG_ VCU_ElecMdFlg : 63|4@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 802 VCU_FrP08_322: 8 VCU
+ SG_ VCU_VehFltLvl : 11|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ VCU_AGSActPosn : 47|8@0+ (1,0) [0|255] "%" Vector__XXX
+ SG_ VCU_ElecDrvPmpDutyCyc : 63|7@0+ (1,0) [0|127] "%" Vector__XXX
+
+BO_ 805 ESC_FrP08_325: 8 GW
+ SG_ ESC_VehSpd : 23|13@0+ (0.05625,0) [0|460.744] "km/h" Vector__XXX
+ SG_ ESC_VehSpdV : 34|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 834 ICM_FrP02_342: 8 GW
+ SG_ ICM_TotOdoV : 31|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICM_TotOdo : 47|24@0+ (0.1,0) [0|1.67772e+06] "" Vector__XXX
+
+BO_ 848 BCM_FrP02_350: 8 GW
+ SG_ BCM_VehWMd : 35|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ BCM_VehUsgMd : 42|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ BCM_VehPwrMd : 47|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ BCM_VehSysVol : 55|8@0+ (0.1,3) [3|28.5] "V" Vector__XXX
+
+BO_ 851 BCM_FrP05_353: 8 GW
+ SG_ BCM_ChrggunLockReq : 37|2@0+ (1,0) [0|3] "" Vector__XXX
+
+BO_ 1152 GW_NM_480: 8 GW
+ SG_ GW_SrceNodID : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ GW_RptMsgReq : 8|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ GW_ActvWkUp : 12|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ GW_NormOperSt : 22|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ GW_RptMsgSt : 23|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1157 VCU_NM_485: 8 VCU
+ SG_ VCU_SrceNodID : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ VCU_RptMsgReq : 8|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ VCU_ActvWkUp : 12|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ VCU_NormOperSt : 22|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ VCU_RptMsgSt : 23|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1159 ICS_NM_487: 8 ICS
+ SG_ ICS_SrceNodID : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ ICS_RptMsgReq : 8|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_ActvWkUp : 12|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_RptFromSleep : 16|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_RptFromPrep : 17|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_NormFromRpt : 18|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_NormFromRdySleep : 19|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_RptFromRdySleep : 20|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_RptFromNormal : 21|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_NormOperSt : 22|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ICS_RptMsgSt : 23|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1160 MCU_NM_488: 8 MCU
+ SG_ MCU_SrceNodID : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ MCU_RptMsgReq : 8|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ MCU_ActvWkUp : 12|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ MCU_NormOperSt : 22|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ MCU_RptMsgSt : 23|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1161 SCU_NM_489: 8 SCU
+ SG_ SCU_SrceNodID : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ SCU_RptMsgReq : 8|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ SCU_ActvWkUp : 12|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ SCU_NormOperSt : 22|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ SCU_RptMsgSt : 23|1@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1386 ICM_FrP08_56A: 8 GW
+ SG_ ICM_ElockOpenReq : 30|2@0+ (1,0) [0|3] "" Vector__XXX
+
+BO_ 1472 TBox_FrP02_5C0: 8 GW
+ SG_ TBox_VehTimeTyp : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ TBox_VehTimeYear : 31|8@0+ (1,2000) [2000|2255] "Year" Vector__XXX
+ SG_ TBox_VehTimeMonth : 39|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ TBox_VehTimeHour : 46|5@0+ (1,0) [0|31] "h" Vector__XXX
+ SG_ TBox_VehTimeDay : 35|5@0+ (1,0) [0|31] "日" Vector__XXX
+ SG_ TBox_VehTimeMinute : 55|6@0+ (1,0) [0|63] "Min" Vector__XXX
+ SG_ TBox_VehTimeV : 57|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ TBox_VehTimeSec : 63|6@0+ (1,0) [0|63] "S" Vector__XXX
+
+BO_ 1770 Diag_DTCInfo_ICS: 8 ICS
+ SG_ Diag_DTCInfo_ICS : 7|64@0+ (1,0) [0|1.84467e+19] "" Vector__XXX
+
+BO_ 1922 Diag_PhyReq_ICS: 8 GW
+ SG_ Diag_PhyReq_ICS : 7|64@0+ (1,0) [0|1.84467e+19] "" Vector__XXX
+
+BO_ 1930 Diag_PhyResp_ICS: 8 ICS
+ SG_ Diag_PhyResp_ICS : 7|64@0+ (1,0) [0|1.84467e+19] "" Vector__XXX
+
+BO_ 2015 Diag_FuncReq_7DF: 8 GW
+ SG_ Diag_FuncReq_7DF : 7|64@0+ (1,0) [0|1.84467e+19] "" Vector__XXX
+
+VAL_ 156 BMS_HVConnectSt 0 "Disconnect" 1 "Connecting" 2 "Connect" 3 "Unknown" ;
+VAL_ 173 VCU_BMSPreThermPrmt 0 "Default" 1 "HoldtempPermit" 2 "PreHeatPermit" ;
+VAL_ 257 OBC_EnblOutpSts 0 "False" 1 "True" ;
+VAL_ 257 OBC_CtrlPltCircConnectSts 0 "CP" 1 "CP" 2 "CP" 3 "CP" 4 "CP" 5 "CP" 6 "CP" 7 "CP" ;
+VAL_ 257 OBC_ChrggunConnectCfmSts 0 "Disconnect" 1 "HalfConnect" 2 "ChgConnect_10A(1.5kΩ)" 3 "ChgConnect_16A(680Ω）" 4 "ChgConnect_32A（220Ω）" 5 "ChgConnect_63A（100Ω）" 6 "DisChgConnect_10A(2.7kΩ)" 7 "DisChgConnect_16A(2kΩ)" 8 "DisChgConnect_32A(1kΩ)" 9 "DisChgConnect_63A(470Ω)" 10 "CC" ;
+VAL_ 257 OBC_S2SwSts 0 "False" 1 "True" ;
+VAL_ 257 OBC_ElecLockSts 0 "False" 1 "True" ;
+VAL_ 257 OBC_WMd 0 "Not" 1 "Single" 2 "Three" 3 "DisCharging" 4 "Reserved" ;
+VAL_ 257 OBC_ProdMdl 0 "3.3kW" 1 "6.6kW" 2 "11kW" 3 "22kW" 4 "Reserved" ;
+VAL_ 257 OBC_FltLvl 0 "Normal" 1 "Fault" 2 "Fault" 3 "Fault" 4 "Fault" ;
+VAL_ 257 OBC_Sts 0 "Initial" 1 "ready" 2 "Charging" 3 "V2L" 4 "Hold" 5 "V2V" 6 "Drating" 7 "Stop" 8 "Pre-Heating" 9 "Power" 10 "Fault" ;
+VAL_ 257 OBC_ChrgGNIndcSts 0 "Extinct" 1 "Always" 2 "Twinkle" 3 "Reserved" ;
+VAL_ 257 OBC_ChrgWHIndcSts 0 "Extinct" 1 "Always" 2 "Twinkle" 3 "Reserved" ;
+VAL_ 257 OBC_ChrgRDIndcSts 0 "Extinct" 1 "Always" 2 "Twinkle" 3 "Reserved" ;
+VAL_ 261 DCDC_Sts 0 "Standby" 1 "Buck" 2 "Derating" 3 "UdcLnkDischarge" 4 "Fault" ;
+VAL_ 261 DCDC_WMd 0 "Not" 1 "ACLV(charging）" 2 "HVLV（driving）" 3 "HVLV(V2X)" ;
+VAL_ 261 DCDC_FltLvl 0 "Normal" 1 "Fault" 2 "Fault" 3 "Fault" 4 "Fault" ;
+VAL_ 282 VCU_DCDCMdStReq 0 "Standby" 1 "Buck" 2 "Discharge" ;
+VAL_ 772 BMS_OnChrgCmd 0 "Charge_NoReq" 1 "Charge_Req" ;
+VAL_ 772 BMS_OnDchrgCmd 0 "DisCharge_NoReq" 1 "DisCharge_Req" ;
+VAL_ 772 BMS_ObcRdyReq 0 "无ready请求" 1 "有ready请求" ;
+VAL_ 773 BMS_Sts 0 "Default" 1 "Init" 2 "Standby" 3 "Precharge" 4 "HVOn" 5 "DC" 6 "AC" 7 "Power" 8 "Fault" 9 "HVOff" 10 "AfterRun" 11 "PreHeat" 12 "EOL" 13 "Service" 14 "V2X" ;
+VAL_ 774 BMS_EleclockReq 0 "No" 1 "ELock" 2 "ELock" 3 "reserved" ;
+VAL_ 776 BMS_SOC_Full 0 "Not" 1 "Full" ;
+VAL_ 776 BMS_DCChrgConnectSts 0 "Disconnect" 1 "Connect" 2 "Fault" ;
+VAL_ 786 OBC_NTCWiDiscFlt_L1 0 "False" 1 "True" ;
+VAL_ 786 OBC_NTCWiDiscFlt_L2 0 "False" 1 "True" ;
+VAL_ 786 OBC_NTCWiDiscFlt_L3 0 "False" 1 "True" ;
+VAL_ 786 OBC_NTCWiDiscFlt_N 0 "False" 1 "True" ;
+VAL_ 786 OBC_CANBusoffFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_SCIComFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_BMSComFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_BMSCRCFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_NTCOverTemFlt_L1 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_NTCOverTemFlt_L2 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_NTCOverTemFlt_L3 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_NTCOverTemFlt_N 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_IntAmbOverTemFlt 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_M1OverTemFlt 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_PFCOverTemFlt 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_LLCOverTemFlt 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_WtrInletOverTemFlt 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 786 OBC_IntAmbUnderTemFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_KL30UnderVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_KL30OverVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_EleclockLockFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_EleclockUnLockFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_TemInsdSenFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_ACShoCrntFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_ACUnderVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_ACOverVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_ACOverCrntFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_HVDCUnderVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_HVDCShoCircFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_HVDCOverVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_HVDCOverCrntFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_PFCUnderVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_PFCOverVolFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_SecSideSwOverCrntFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_PrySideHwOverCrntFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_SecSideHwOverCrntFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_ACInpVolConnectTimeOutFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_ChrgEnblTimeOutFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_V2XDChrgEnblTimeOutFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_V2VChrgConnectTimeOutFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_V2VDChrgS2TimeOutFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_V2VCPStsFlt 0 "False" 1 "True" ;
+VAL_ 786 OBC_V2XACOutTimeOutFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_InpOverVolFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_PFCOverVolFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_TemInsdSenErr 0 "False" 1 "True" ;
+VAL_ 789 DCDC_CanBusoffFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_IntUART2ComFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_IntUART1ComFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_VCUComFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_VCUChksFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_M1OverTemFlt 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 789 DCDC_WtrInletOverTemFlt 0 "Normal" 1 "Over" 2 "Over" 3 "Reserved" ;
+VAL_ 789 DCDC_PrySideMosOverTemFlt 0 "Normal" 1 "Over" 2 "Over" 3 "Reserved" ;
+VAL_ 789 DCDC_SecSideMosOverTemFlt 0 "Normal" 1 "Over" 2 "Over" 3 "Reserved" ;
+VAL_ 789 DCDC_IntAmbOverTemFlt 0 "Normal" 2 "Over" 3 "Reserved" ;
+VAL_ 789 DCDC_OutpOverCrntFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_OutpShoCircFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_OutpOpenCircFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_OutpOverVolFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_OutpUnderVolFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_InpUnderVolFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_LVCrntFbFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_LVVolFbFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_VCUSetPtFlt 0 "False" 1 "True" ;
+VAL_ 789 DCDC_LVDiffOverHiFlt 0 "False" 1 "True" ;
+VAL_ 801 VCU_ElecMdFlg 0 "init" 1 "LV" 2 "IGN" 3 "Vehicle" 4 "Slow" 5 "Fast" 6 "Afterrun" 7 "Intelligent" 8 "V2X" 9 "PreHeat" 10 "Hold" ;
+VAL_ 802 VCU_VehFltLvl 0 "ErrLevel0" 1 "ErrLevel1" 2 "ErrLevel2" 3 "ErrLevel3" 4 "ErrLevel4" ;
+VAL_ 805 ESC_VehSpdV 0 "Valid" 1 "Invalid" ;
+VAL_ 834 ICM_TotOdoV 0 "Invalid" 1 "Valid" ;
+VAL_ 848 BCM_VehWMd 4 "Showroom" 5 "Normal" ;
+VAL_ 848 BCM_VehUsgMd 0 "Slee(Reservrved)" 1 "OFF" 2 "ON" 4 "Normal" 5 "Automated" 6 "Reserve" 7 "Reserve" ;
+VAL_ 848 BCM_VehPwrMd 0 "OFF" 2 "Run" 3 "Crank" ;
+VAL_ 851 BCM_ChrggunLockReq 0 "No" 1 "Unlock" 2 "Lock" 3 "Reserved" ;
+VAL_ 1386 ICM_ElockOpenReq 0 "No" 1 "ELock" 2 "ELock" 3 "reserved" ;
+VAL_ 1472 TBox_VehTimeTyp 0 "UTC" 1 "Beijing" ;
+VAL_ 1472 TBox_VehTimeV 0 "Valid" 1 "Invalid" ;

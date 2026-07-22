@@ -35,7 +35,7 @@
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 5, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
-  PARAM_ENTRY(CAT_SETUP, chargemodes, CHGMODS, 0, 7, 0, 37)                    \
+  PARAM_ENTRY(CAT_SETUP, chargemodes, CHGMODS, 0, 8, 0, 37)                    \
   PARAM_ENTRY(CAT_SETUP, BMS_Mode, BMSMODES, 0, 7, 0, 90)                      \
   PARAM_ENTRY(CAT_SETUP, ShuntType, SHNTYPE, 0, 4, 0, 88)                      \
   PARAM_ENTRY(CAT_SETUP, InverterCan, CAN_DEV, 0, 1, 0, 70)                    \
@@ -104,7 +104,7 @@
   PARAM_ENTRY(CAT_CHARGER, ChgAcVolt, "Vac", 0, 250, 240, 120)                 \
   PARAM_ENTRY(CAT_CHARGER, ChgEff, "%", 0, 100, 90, 121)                       \
   PARAM_ENTRY(CAT_CHARGER, ConfigFoccci, ONOFF, 0, 1, 0, 133)                  \
-  PARAM_ENTRY(CAT_DCDC, DCdc_Type, DCDCTYPES, 0, 2, 0, 105)                    \
+  PARAM_ENTRY(CAT_DCDC, DCdc_Type, DCDCTYPES, 0, 3, 0, 105)                    \
   PARAM_ENTRY(CAT_DCDC, DCSetPnt, "V", 9, 15, 14, 106)                         \
   PARAM_ENTRY(CAT_BMS, BMS_Timeout, "sec", 1, 120, 10, 91)                     \
   PARAM_ENTRY(CAT_BMS, BMS_VminLimit, "V", 0, 10, 3.0, 92)                     \
@@ -330,7 +330,7 @@
   "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge, 5=12VMaintain, 6=Preheat"
 #define DOW "0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat"
 #define CHGTYPS "0=Off, 1=AC, 2=DCFC"
-#define DCDCTYPES "0=NoDCDC, 1=TeslaG2, 2=DCDCElcon"
+#define DCDCTYPES "0=NoDCDC, 1=TeslaG2, 2=DCDCElcon, 3=DCDCC5"
 #define STATUS                                                                 \
   "0=None, 1=UdcLow, 2=UdcHigh, 4=UdcBelowUdcSw, 8=UdcLim, 16=EmcyStop, "      \
   "32=MProt, 64=PotPressed, 128=TmpHs, 256=WaitStart"
@@ -357,7 +357,7 @@
 #define HTCTRL "0=Disable, 1=Enable, 2=Timer"
 #define CHGMODS                                                                \
   "0=Off, 1=EXT_DIGI, 2=Volt_Ampera, 3=Leaf_PDM, 4=TeslaOI, 5=Out_lander, "    \
-  "6=Elcon, 7=MGgen2"
+  "6=Elcon, 7=MGgen2, 8=C5_PTECAN"
 #define CHGCTRL "0=Enable, 1=Disable, 2=Timer"
 #define CHGINT "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Foccci"
 #define CAN3SPD "0=k33.3, 1=k500, 2=k100"
@@ -438,7 +438,8 @@ enum ChargeModes {
   TeslaOI = 4,
   Out_lander = 5,
   Elcon = 6,
-  MGgen2 = 7
+  MGgen2 = 7,
+  C5_PTECAN = 8
 };
 
 enum ChargeInterfaces {
@@ -475,7 +476,8 @@ enum BMSModes {
 enum DCDCModes {
   NoDCDC = 0,
   TeslaG2 = 1,
-  DCDCElcon = 2
+  DCDCElcon = 2,
+  DCDCC5 = 3
 
 };
 
