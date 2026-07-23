@@ -24,6 +24,8 @@
 #include "BMW_E31.h"
 #include "BMW_E39.h"
 #include "BMW_E65.h"
+#include "C5Charger.h"
+#include "C5DCDC.h"
 #include "CANSPI.h"
 #include "CPC.h"
 #include "Can_OBD2.h"
@@ -45,6 +47,7 @@
 #include "OutlanderCanHeater.h"
 #include "OutlanderCompressor.h"
 #include "OutlanderHeartBeat.h"
+#include "PKP2300_Lever.h"
 #include "PWMHeater.h"
 #include "TeslaDCDC.h"
 #include "VWAirHeater.h"
@@ -168,6 +171,7 @@ static extCharger chgdigi;
 static amperaCharger ampChg;
 static outlanderCharger outChg;
 static MGgen2V2Lcharger MGgen2v2l;
+static C5Charger c5Chg;
 static FCChademo chademoFC;
 static i3LIMClass LIMFC;
 static CPCClass CPCcan;
@@ -182,6 +186,7 @@ static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
+static PKP2300_Lever PKP2300GearPanel;
 static vwCoolantHeater heaterCoolantVW;
 static mgCoolantHeater heaterCoolantMG;
 static vwAirHeater heaterAirVW;
@@ -201,6 +206,7 @@ static STWmBMS stwBms;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
 static ElconDCDC ElconDC;
+static C5DCDC C5DC;
 static BMS *selectedBMS = &UnUsed;
 static DCDC *selectedDCDC = &DCDCnone;
 static Can_OBD2 canOBD2;
@@ -1039,6 +1045,9 @@ static void UpdateCharger() {
   case ChargeModes::MGgen2:
     selectedCharger = &MGgen2v2l;
     break;
+  case ChargeModes::C5_PTECAN:
+    selectedCharger = &c5Chg;
+    break;
   }
   // This will call SetCanFilters() via the Clear Callback
   canInterface[0]->ClearUserMessages();
@@ -1159,6 +1168,10 @@ static void UpdateDCDC() {
     selectedDCDC = &ElconDC;
     break;
 
+  case DCDCModes::DCDCC5:
+    selectedDCDC = &C5DC;
+    break;
+
   default:
     // Default to no DCDC
     selectedDCDC = &DCDCnone;
@@ -1206,6 +1219,10 @@ static void UpdateShifter() {
 
   case ShifterModes::BMWE65:
     selectedShifter = &E65GearLever;
+    break;
+
+  case ShifterModes::PKP2300:
+    selectedShifter = &PKP2300GearPanel;
     break;
 
   default:

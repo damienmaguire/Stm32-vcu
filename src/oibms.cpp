@@ -42,13 +42,11 @@ bool OIBMS::BMSDataValid() {
 }
 
 // Return the maximum charge current allowed by the BMS.
-float OIBMS::MaxChargeCurrent() {
-  return chargeCurrentLimit;
-}
+float OIBMS::MaxChargeCurrent() { return chargeCurrentLimit; }
 
 // Process voltage and temperature message from SimpBMS.
 void OIBMS::DecodeCAN(int id, uint8_t *data) {
-  uint32_t* wData = (uint32_t*)data;
+  uint32_t *wData = (uint32_t *)data;
 
   if (id == 0x1F4) {
     int newMessageCounter = data[7] >> 6;
@@ -61,7 +59,7 @@ void OIBMS::DecodeCAN(int id, uint8_t *data) {
 
     stateOfCharge = (float)(wData[0] >> 22) / 10.0f;
 
-    int16_t rawCurrent = wData[1] & 0xFFFF; //signed
+    int16_t rawCurrent = wData[1] & 0xFFFF; // signed
     current = (float)(rawCurrent * 0.1);
 
     batteryVoltage = (float)((wData[1] >> 16) & 0x3FF);
@@ -75,7 +73,6 @@ void OIBMS::DecodeCAN(int id, uint8_t *data) {
     maxTempC = (int8_t)(data[7]);
     minCellV = wData[0] & 0x1FFF;
     maxCellV = (wData[0] >> 16) & 0x1FFF;
-
   }
 }
 
@@ -90,7 +87,7 @@ void OIBMS::Task100Ms() {
   Param::SetFloat(Param::BMS_Tmax, maxTempC);
   Param::SetFloat(Param::SOC, stateOfCharge);
   Param::SetFloat(Param::udc2, batteryVoltage);
-  //Param::SetInt(Param::BMS_MaxCharge, maxChargeAllowed);
+  // Param::SetInt(Param::BMS_MaxCharge, maxChargeAllowed);
 
   // On the OI BMS charging is positive current, discharge is negative
   if (BMSDataValid()) {

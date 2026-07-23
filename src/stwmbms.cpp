@@ -76,13 +76,20 @@ void STWmBMS::DecodeCAN(int id, uint8_t *data) {
 
   } else if (id == 0x114) {
     isolationResistance = (data[3] << 8) + data[2];
+    busVoltage = 0.1f * ((data[1] << 8) + data[0]);
   }
 }
 
 void STWmBMS::Task100Ms() {
+  int opmode = Param::GetInt(Param::opmode);
   // Decrement timeout counter.
   if (timeoutCounter > 0)
     timeoutCounter--;
+
+  if (opmode != MOD_OFF)
+    offTimeoutCounter = 50;
+  else if (offTimeoutCounter > 0)
+    offTimeoutCounter--;
 
   Param::SetFloat(Param::BMS_Vmin, minCellV);
   Param::SetFloat(Param::BMS_Vmax, maxCellV);
@@ -96,6 +103,15 @@ void STWmBMS::Task100Ms() {
   Param::SetInt(Param::BMS_MaxOutput, maxOutput);
   Param::SetInt(Param::BMS_Isolation, isolationResistance);
   Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
+
+  if (Param::GetInt(Param::ShuntType) == 0)
+    Param::SetFloat(Param::udc, busVoltage);
+
+  // uint32_t stayAlive[2] = { 1 << 1, 0 };
+  // can->Send(0x101, stayAlive);
+  uint32_t data[2] = {(1 << 16), 0};
+  data[0] |= offTimeoutCounter > 0; // 0th bit turns on contactor
+  can->Send(0x7ff, data);
 
   // On the Kangoo charging is positive current, discharge is negative
   if (BMSDataValid()) {

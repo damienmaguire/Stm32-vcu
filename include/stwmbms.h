@@ -35,6 +35,7 @@ private:
   bool BMSDataValid();
   int messageCounter = 0;
   int timeoutCounter = 0;
+  int offTimeoutCounter = 0;
   uint16_t maxChargeAllowed = 0;
   uint16_t maxInput = 0;
   uint16_t maxOutput = 0;
@@ -47,6 +48,7 @@ private:
   float stateOfCharge = 0;
   float current = 0;
   float remainingKHW = 0;
+  float busVoltage = 0;
   float batteryVoltage = 500; // higher than possible so cannot complete
                               // precharge until BMS reports battery voltage
 };

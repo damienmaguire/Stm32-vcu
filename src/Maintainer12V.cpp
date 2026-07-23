@@ -25,24 +25,16 @@
 
 #define WAKEUP_BLOCK_MINS 90
 
-Maintainer12V::Maintainer12V() :
-  minsUntilAllowedAgain(WAKEUP_BLOCK_MINS),
-  minsUntilAllowedAgainTicks(0),
-  runMaintainer(false),
-  maintainTicks(0),
-  maintainTicks_1Min(0),
-  maintainDur_tmp(0),
-  initbyMaintain(false)
-{
-}
+Maintainer12V::Maintainer12V()
+    : minsUntilAllowedAgain(WAKEUP_BLOCK_MINS), minsUntilAllowedAgainTicks(0),
+      runMaintainer(false), maintainTicks(0), maintainTicks_1Min(0),
+      maintainDur_tmp(0), initbyMaintain(false) {}
 
 void Maintainer12V::SetInitByMaintainer(bool initbyM) {
   initbyMaintain = initbyM;
 }
 
-bool Maintainer12V::GetInitByMaintainer() {
-  return initbyMaintain;
-}
+bool Maintainer12V::GetInitByMaintainer() { return initbyMaintain; }
 
 bool Maintainer12V::GetRunMaintainer() { return runMaintainer; }
 

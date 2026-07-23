@@ -28,7 +28,9 @@ public:
   enum SubType { HVH50, HVH100 };
 
   void SetTargetTemperature(float temp) { tempSpnt = temp; }
-  void SetPower(uint16_t power, bool HeatReq) { powerSpnt = HeatReq ? power : 0; }
+  void SetPower(uint16_t power, bool HeatReq) {
+    powerSpnt = HeatReq ? power : 0;
+  }
   void Task100Ms() override;
   void SetLinInterface(LinBus *l);
   void SetSubtype(SubType t) { heaterType = t; }
