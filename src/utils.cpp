@@ -338,7 +338,8 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
 float ProcessUdc(int motorSpeed) {
   float udc = Param::GetFloat(Param::udc);
 
-  if (Param::GetInt(Param::ShuntType) == 0 && Param::GetInt(Param::BMS_Mode) != BMSSTW) {
+  if (Param::GetInt(Param::ShuntType) == 0 &&
+      Param::GetInt(Param::BMS_Mode) != BMSSTW) {
     // This way we can have ShuntType 0 and still pull latests info
     if (Param::GetInt(Param::opmode) == MOD_OFF) {
       udc = 0; // ensure we reset udc during off state to keep precharge working

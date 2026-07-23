@@ -107,10 +107,10 @@ void STWmBMS::Task100Ms() {
   if (Param::GetInt(Param::ShuntType) == 0)
     Param::SetFloat(Param::udc, busVoltage);
 
-  //uint32_t stayAlive[2] = { 1 << 1, 0 };
-  //can->Send(0x101, stayAlive);
-  uint32_t data[2] = { (1 << 16), 0 };
-  data[0] |= offTimeoutCounter > 0; //0th bit turns on contactor
+  // uint32_t stayAlive[2] = { 1 << 1, 0 };
+  // can->Send(0x101, stayAlive);
+  uint32_t data[2] = {(1 << 16), 0};
+  data[0] |= offTimeoutCounter > 0; // 0th bit turns on contactor
   can->Send(0x7ff, data);
 
   // On the Kangoo charging is positive current, discharge is negative

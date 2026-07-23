@@ -52,8 +52,9 @@ void C5DCDC::Send0x11A() {
   C5PTECAN::PackMotorolaLsb(bytes, 33, 11, 0x6FF);
   C5PTECAN::PackMotorolaLsb(
       bytes, 40, 9,
-      std::min(0x1FF, std::max(0, (int)(Param::GetFloat(Param::DCSetPnt) * 8.0f +
-                                        0.5f))));
+      std::min(
+          0x1FF,
+          std::max(0, (int)(Param::GetFloat(Param::DCSetPnt) * 8.0f + 0.5f))));
   C5PTECAN::FinalizeE2EFrame(bytes, counter++, 12);
   can->Send(0x11A, bytes, 8);
 }
@@ -74,8 +75,9 @@ void C5DCDC::DecodeCAN(int id, uint8_t *data) {
         C5PTECAN::UnpackMotorolaLsb(data, 40, 8) - 40.0f;
     const float ambientTemp = C5PTECAN::UnpackMotorolaLsb(data, 48, 8) - 40.0f;
 
-    maxDcdcTemp = std::max(std::max(m1Temp, waterTemp),
-                           std::max(std::max(primaryTemp, secondaryTemp), ambientTemp));
+    maxDcdcTemp =
+        std::max(std::max(m1Temp, waterTemp),
+                 std::max(std::max(primaryTemp, secondaryTemp), ambientTemp));
     Param::SetFloat(Param::ChgTemp, maxDcdcTemp);
     break;
   }

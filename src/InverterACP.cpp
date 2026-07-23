@@ -64,7 +64,7 @@ void InverterACP::SetTorque(float torquePercent) {
   data[0] = toggleBit;
   data[1] = 0;
   data[2] = 0;
-  data[3] = data[4] = 0; //speed request 0
+  data[3] = data[4] = 0; // speed request 0
   data[5] = udc >> 8;
   data[6] = udc & 0xFF;
   data[7] = 0;

@@ -33,7 +33,7 @@ void C5Charger::SetCanInterface(CanHardware *c) {
   can = c;
   can->RegisterUserMessage(0x101);
   can->RegisterUserMessage(0x102);
-  //can->RegisterUserMessage(0x103);
+  // can->RegisterUserMessage(0x103);
   can->RegisterUserMessage(0x104);
   can->RegisterUserMessage(0x310);
   can->RegisterUserMessage(0x311);
@@ -55,7 +55,8 @@ void C5Charger::DeInit() {
 }
 
 bool C5Charger::ControlCharge(bool RunCh, bool ACReq) {
-  chargeCommand = Param::GetInt(Param::opmode) == MOD_CHARGE; //  RunCh && ACReq;
+  chargeCommand =
+      Param::GetInt(Param::opmode) == MOD_CHARGE; //  RunCh && ACReq;
   return ACReq && obcStatus != 0xA; // && obcFaultLevel < 4 && !obcFaultPresent;
 }
 
@@ -95,9 +96,7 @@ bool C5Charger::HvConnected() const {
          opmode == MOD_PREHEAT;
 }
 
-void C5Charger::Task10Ms() {
-  Send0x0AD();
-}
+void C5Charger::Task10Ms() { Send0x0AD(); }
 
 void C5Charger::Task100Ms() {
   Send0x09C();
@@ -144,11 +143,11 @@ void C5Charger::Send0x304() {
   const uint32_t actualChargePowerRaw =
       std::min(0x3FF, std::max(0, (int)(actualChargePower / 100.0f + 0.5f)));
   const uint32_t chargeVoltageRaw = std::min(
-      0x1FFF, std::max(0, (int)(Param::GetFloat(Param::Voltspnt) * 10.0f + 0.5f)));
-  const uint32_t chargeCurrentReqRaw = std::min(
       0x1FFF,
-      std::max(0, (int)((MaxChargeCurrentAmps() + 700.0f) * 10.0f +
-                        0.5f))); // protocol offset is -700 A
+      std::max(0, (int)(Param::GetFloat(Param::Voltspnt) * 10.0f + 0.5f)));
+  const uint32_t chargeCurrentReqRaw = std::min(
+      0x1FFF, std::max(0, (int)((MaxChargeCurrentAmps() + 700.0f) * 10.0f +
+                                0.5f))); // protocol offset is -700 A
 
   C5PTECAN::PackMotorolaLsb(bytes, 18, 10, actualChargePowerRaw);
   C5PTECAN::PackMotorolaLsb(bytes, 37, 13, chargeVoltageRaw);
@@ -242,12 +241,9 @@ void C5Charger::DecodeCAN(int id, uint32_t data[2]) {
     obcFaultPresent = obcStatus == 0xA || obcFaultLevel >= 4;
     break;
   case 0x102: {
-    const float acCurrentL1 =
-        C5PTECAN::UnpackMotorolaLsb(bytes, 15, 9) * 0.1f;
-    const float acCurrentL2 =
-        C5PTECAN::UnpackMotorolaLsb(bytes, 22, 9) * 0.1f;
-    const float acCurrentL3 =
-        C5PTECAN::UnpackMotorolaLsb(bytes, 29, 9) * 0.1f;
+    const float acCurrentL1 = C5PTECAN::UnpackMotorolaLsb(bytes, 15, 9) * 0.1f;
+    const float acCurrentL2 = C5PTECAN::UnpackMotorolaLsb(bytes, 22, 9) * 0.1f;
+    const float acCurrentL3 = C5PTECAN::UnpackMotorolaLsb(bytes, 29, 9) * 0.1f;
     const float acVoltageL1 = C5PTECAN::UnpackMotorolaLsb(bytes, 36, 9);
     const float acVoltageL2 = C5PTECAN::UnpackMotorolaLsb(bytes, 43, 9);
     const float acVoltageL3 = C5PTECAN::UnpackMotorolaLsb(bytes, 56, 9);
@@ -258,7 +254,8 @@ void C5Charger::DecodeCAN(int id, uint32_t data[2]) {
                     std::max(acVoltageL1, std::max(acVoltageL2, acVoltageL3)));
     break;
   }
-/*  case 0x103: {
+#if 0
+  case 0x103: {
     const float hvVolts = C5PTECAN::UnpackMotorolaLsb(bytes, 24, 14) * 0.1f;
     const float hvCurrent =
         C5PTECAN::UnpackMotorolaLsb(bytes, 50, 11) * 0.1f +
@@ -272,7 +269,8 @@ void C5Charger::DecodeCAN(int id, uint32_t data[2]) {
       Param::SetFloat(Param::idc, std::max(0.0f, hvCurrent));
     }
     break;
-  }*/
+  }
+#endif
   case 0x310: {
     const float wtrInlet = C5PTECAN::UnpackMotorolaLsb(bytes, 48, 8) - 40.0f;
     maxChargeTemp = wtrInlet;
@@ -285,8 +283,8 @@ void C5Charger::DecodeCAN(int id, uint32_t data[2]) {
     const float pfc = C5PTECAN::UnpackMotorolaLsb(bytes, 32, 8) - 40.0f;
     const float llc = C5PTECAN::UnpackMotorolaLsb(bytes, 48, 8) - 40.0f;
 
-    maxChargeTemp =
-        std::max(std::max(intAmb, m1Pwr), std::max(std::max(pfc, llc), maxChargeTemp));
+    maxChargeTemp = std::max(std::max(intAmb, m1Pwr),
+                             std::max(std::max(pfc, llc), maxChargeTemp));
     Param::SetFloat(Param::ChgTemp, maxChargeTemp);
     break;
   }

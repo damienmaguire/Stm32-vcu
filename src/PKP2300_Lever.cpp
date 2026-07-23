@@ -36,26 +36,22 @@
 #define PKP_RPDO1 0x215 // LED control to panel
 
 // LED bytes
-#define LED_RED    0
-#define LED_GREEN  1
-#define LED_BLUE   2
+#define LED_RED 0
+#define LED_GREEN 1
+#define LED_BLUE 2
 
 // Button (and LED) bit positions in TPDO1 byte 0
-#define BTN_DRIVE   (1 << 0)
+#define BTN_DRIVE (1 << 0)
 #define BTN_NEUTRAL (1 << 1)
 #define BTN_REVERSE (1 << 2)
-#define BTN_PARK    (1 << 3)
-#define BTN_REGEN   (1 << 4)
-#define BTN_HEAT    (1 << 5)
+#define BTN_PARK (1 << 3)
+#define BTN_REGEN (1 << 4)
+#define BTN_HEAT (1 << 5)
 
 // SoC threshold (%) for each LED (K1=16.7%, K2=33.3%, ..., K6=100%)
 static const float socThreshold[6] = {
-    100.0f / 6.0f * 1,
-    100.0f / 6.0f * 2,
-    100.0f / 6.0f * 3,
-    100.0f / 6.0f * 4,
-    100.0f / 6.0f * 5,
-    100.0f / 6.0f * 6,
+    100.0f / 6.0f * 1, 100.0f / 6.0f * 2, 100.0f / 6.0f * 3,
+    100.0f / 6.0f * 4, 100.0f / 6.0f * 5, 100.0f / 6.0f * 6,
 };
 
 void PKP2300_Lever::SetCanInterface(CanHardware *c) {
@@ -69,7 +65,7 @@ void PKP2300_Lever::DecodeCAN(int id, uint32_t *data) {
 
   uint8_t *bytes = (uint8_t *)data;
   uint8_t buttons = bytes[0];
-  //Only allow changing away from PARK if brake pedal is pressed
+  // Only allow changing away from PARK if brake pedal is pressed
   bool allowGearChange = gear != PARK || Param::GetBool(Param::din_brake);
 
   // Detect rising edges (button just pressed) for toggles and gear commands
@@ -136,7 +132,8 @@ void PKP2300_Lever::SendLEDs() {
   if (soc > 99.0f)
     ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_DRIVE;
 
-  if (charging && blinkState) { //turn on one above current SoC if blinkstate is on
+  if (charging &&
+      blinkState) { // turn on one above current SoC if blinkstate is on
     if (soc < 16.6f)
       ledBytes[LED_RED] = ledBytes[LED_GREEN] = BTN_HEAT;
     else if (soc < 32.2f)
@@ -149,13 +146,11 @@ void PKP2300_Lever::SendLEDs() {
       ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_PARK;
     else if (soc < 99.0f)
       ledBytes[LED_RED] = ledBytes[LED_GREEN] |= BTN_DRIVE;
-
   }
 
-  //Drive mode always takes precedence over SoC display
+  // Drive mode always takes precedence over SoC display
   if (opmode == MOD_RUN) {
-    switch (gear)
-    {
+    switch (gear) {
     case DRIVE:
       ledBytes[LED_BLUE] = BTN_DRIVE;
       ledBytes[LED_RED] &= ~BTN_DRIVE;
