@@ -208,10 +208,9 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal) {
   }
 
   // Do clever bits for regen and such.
-
-  if (speed < 100 ||
-      speed < regenendRpm) // No regen under 100 rpm or speed under regenendRpm
-  {
+  // No regen under 100 rpm or speed under regenendRpm or regen explicitly
+  // disabled
+  if (speed < 100 || speed < regenendRpm || noregenreq) {
     regenlim = 0;
   } else if (speed < regenRpm) {
     regenlim = utils::changeFloat(speed, regenendRpm, regenRpm, 0,

@@ -34,6 +34,8 @@
 // CANOpen IDs for node 1
 #define PKP_TPDO1 0x195 // button states from panel
 #define PKP_RPDO1 0x215 // LED control to panel
+#define PKP_NODE_ID 0x15
+#define BUTTON_MSG_TIMEOUT_CYCLES 3 // 300 ms with Task100Ms period
 
 // LED bytes
 #define LED_RED 0
@@ -54,6 +56,44 @@ static const float socThreshold[6] = {
     100.0f / 6.0f * 4, 100.0f / 6.0f * 5, 100.0f / 6.0f * 6,
 };
 
+static int8_t GearToParamDir(Shifter::Sgear gear) {
+  switch (gear) {
+  case Shifter::PARK:
+    return 2;
+  case Shifter::REVERSE:
+    return -1;
+  case Shifter::NEUTRAL:
+    return 0;
+  case Shifter::DRIVE:
+  default:
+    return 1;
+  }
+}
+
+static Shifter::Sgear ParamDirToGear(int dir) {
+  if (dir < 0)
+    return Shifter::REVERSE;
+  if (dir > 1)
+    return Shifter::PARK;
+  if (dir > 0)
+    return Shifter::DRIVE;
+  return Shifter::NEUTRAL;
+}
+
+static uint8_t GearToButtonMask(Shifter::Sgear gear) {
+  switch (gear) {
+  case Shifter::PARK:
+    return BTN_PARK;
+  case Shifter::REVERSE:
+    return BTN_REVERSE;
+  case Shifter::NEUTRAL:
+    return BTN_NEUTRAL;
+  case Shifter::DRIVE:
+  default:
+    return BTN_DRIVE;
+  }
+}
+
 void PKP2300_Lever::SetCanInterface(CanHardware *c) {
   can = c;
   can->RegisterUserMessage(PKP_TPDO1);
@@ -65,6 +105,7 @@ void PKP2300_Lever::DecodeCAN(int id, uint32_t *data) {
 
   uint8_t *bytes = (uint8_t *)data;
   uint8_t buttons = bytes[0];
+  buttonMsgTimeout = BUTTON_MSG_TIMEOUT_CYCLES;
   // Only allow changing away from PARK if brake pedal is pressed
   bool allowGearChange = gear != PARK || Param::GetBool(Param::din_brake);
 
@@ -105,18 +146,45 @@ void PKP2300_Lever::DecodeCAN(int id, uint32_t *data) {
 void PKP2300_Lever::Task100Ms() {
   int opmode = Param::GetInt(Param::opmode);
   if (opmode == MOD_OFF)
-    gear = NEUTRAL;
+    gear = PARK;
 
-  // Alternate blink state every 100 ms call
-  blinkState = !blinkState;
+  if (blinkDivider == 0) {
+    blinkState = !blinkState;
+    // Task100Ms runs at 10 Hz; divider=4 means 500 ms per half-cycle
+    // (1 Hz blink).
+    blinkDivider = 4;
+  } else {
+    blinkDivider--;
+  }
+
+  if (buttonMsgTimeout > 0) {
+    buttonMsgTimeout--;
+  } else {
+    // Sent continuously while TPDO1 is missing to recover panel state after
+    // loss. CANopen NMT Start Remote Node: byte0=0x01 (start), byte1=node ID.
+    uint8_t nmtStart[8] = {1, PKP_NODE_ID, 0, 0, 0, 0, 0, 0};
+    can->Send(0x000, (uint32_t *)nmtStart, 8);
+  }
+
+  int selectedDir = Param::GetInt(Param::dir);
+  if (opmode == MOD_RUN && GearToParamDir(gear) != selectedDir) {
+    // Show one 100 ms red flash for a rejected user request, then resync to
+    // Param::dir for the next SelectDirection cycle.
+    Shifter::Sgear requestedGear = gear;
+    flashRejectedDirection = true;
+    gear = ParamDirToGear(selectedDir);
+    rejectedDirection = requestedGear;
+  }
 
   SendLEDs();
+  flashRejectedDirection = false;
 }
 
 void PKP2300_Lever::SendLEDs() {
   float soc = Param::GetFloat(Param::SOC);
   int opmode = Param::GetInt(Param::opmode);
   bool charging = (opmode == MOD_CHARGE);
+  bool heaterPowerActive = Param::GetFloat(Param::powerheater) > 0.0f;
   uint8_t ledBytes[8] = {0};
 
   if (soc > 16.6f)
@@ -152,38 +220,45 @@ void PKP2300_Lever::SendLEDs() {
   if (opmode == MOD_RUN) {
     switch (gear) {
     case DRIVE:
-      ledBytes[LED_BLUE] = BTN_DRIVE;
+      ledBytes[LED_BLUE] |= BTN_DRIVE;
       ledBytes[LED_RED] &= ~BTN_DRIVE;
       ledBytes[LED_GREEN] &= ~BTN_DRIVE;
       break;
     case REVERSE:
-      ledBytes[LED_BLUE] = BTN_REVERSE;
+      ledBytes[LED_BLUE] |= BTN_REVERSE;
       ledBytes[LED_RED] &= ~BTN_REVERSE;
       ledBytes[LED_GREEN] &= ~BTN_REVERSE;
       break;
     case NEUTRAL:
-      ledBytes[LED_BLUE] = BTN_NEUTRAL;
+      ledBytes[LED_BLUE] |= BTN_NEUTRAL;
       ledBytes[LED_RED] &= ~BTN_NEUTRAL;
       ledBytes[LED_GREEN] &= ~BTN_NEUTRAL;
       break;
     case PARK:
-      ledBytes[LED_BLUE] = BTN_PARK;
+      ledBytes[LED_BLUE] |= BTN_PARK;
       ledBytes[LED_RED] &= ~BTN_PARK;
       ledBytes[LED_GREEN] &= ~BTN_PARK;
       break;
     }
 
     if (regenDisabled) {
-      ledBytes[LED_BLUE] = BTN_REGEN;
+      ledBytes[LED_BLUE] |= BTN_REGEN;
       ledBytes[LED_RED] &= ~BTN_REGEN;
       ledBytes[LED_GREEN] &= ~BTN_REGEN;
     }
   }
 
-  if (heaterOn) {
-    ledBytes[LED_BLUE] = BTN_HEAT;
+  if (heaterOn && heaterPowerActive) {
+    ledBytes[LED_BLUE] |= BTN_HEAT;
     ledBytes[LED_RED] &= ~BTN_HEAT;
     ledBytes[LED_GREEN] &= ~BTN_HEAT;
+  }
+
+  if (flashRejectedDirection) {
+    uint8_t rejectedMask = GearToButtonMask(rejectedDirection);
+    ledBytes[LED_RED] |= rejectedMask;
+    ledBytes[LED_GREEN] &= ~rejectedMask;
+    ledBytes[LED_BLUE] &= ~rejectedMask;
   }
 
   can->Send(PKP_RPDO1, (uint32_t *)ledBytes, 8);

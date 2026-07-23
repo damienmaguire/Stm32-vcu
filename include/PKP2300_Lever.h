@@ -45,7 +45,7 @@ public:
 private:
   void SendLEDs();
 
-  Shifter::Sgear gear = NEUTRAL;
+  Shifter::Sgear gear = PARK;
 
   // Previous button state for edge detection
   uint8_t prevButtonState = 0;
@@ -56,6 +56,14 @@ private:
 
   // Blink state for charge mode LED
   bool blinkState = false;
+  uint8_t blinkDivider = 0;
+
+  // Panel message supervision
+  uint8_t buttonMsgTimeout = 0;
+
+  // One-cycle rejected selection indicator
+  bool flashRejectedDirection = false;
+  Shifter::Sgear rejectedDirection = NEUTRAL;
 };
 
 #endif // PKP2300_LEVER_H
