@@ -1,7 +1,7 @@
 #ifndef COMPRESSOR_H
 #define COMPRESSOR_H
 
-#include "can/CANSPI.h"
+#include "CANSPI.h"
 #include "digio.h"
 #include "my_fp.h"
 #include "my_math.h"

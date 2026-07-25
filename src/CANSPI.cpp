@@ -21,8 +21,8 @@
 */
 
 // #include "can_spi.h"    /* Modified manually, Mysil */
-#include "can/CANSPI.h"
-#include "can/MCP2515.h"
+#include "CANSPI.h"
+#include "MCP2515.h"
 #include "params.h"
 
 /**

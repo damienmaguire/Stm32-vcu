@@ -24,7 +24,7 @@
 // #include "spi1.h"
 // #include "spi1_master.h"
 // #include "spi1_types.h"
-#include "can/MCP2515.h"
+#include "MCP2515.h"
 // #include "pin_manager.h"
 
 // Defines for chip select

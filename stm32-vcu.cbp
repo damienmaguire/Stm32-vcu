@@ -55,9 +55,9 @@
 		<Unit filename="include/chargers/C5Charger.h" />
 		<Unit filename="include/dcdc/C5DCDC.h" />
 		<Unit filename="include/chargers/C5PTECAN.h" />
-		<Unit filename="include/can/CANSPI.h" />
+		<Unit filename="include/CANSPI.h" />
 		<Unit filename="include/chargers/CPC.h" />
-		<Unit filename="include/can/Can_OBD2.h" />
+		<Unit filename="include/Can_OBD2.h" />
 		<Unit filename="include/inverters/Can_OI.h" />
 		<Unit filename="include/vehicles/Can_VAG.h" />
 		<Unit filename="include/shifters/E65_Lever.h" />
@@ -69,7 +69,7 @@
 		<Unit filename="include/inverters/InverterACP.h" />
 		<Unit filename="include/vehicles/JLR_G1.h" />
 		<Unit filename="include/vehicles/JLR_G2.h" />
-		<Unit filename="include/can/MCP2515.h" />
+		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/HVAC/MGCoolantHeater.h" />
 		<Unit filename="include/chargers/MGgen2V2Lcharger.h" />
 		<Unit filename="include/dcdc/Maintainer12V.h" />
@@ -176,9 +176,9 @@
 		<Unit filename="src/vehicles/BMW_E65.cpp" />
 		<Unit filename="src/chargers/C5Charger.cpp" />
 		<Unit filename="src/dcdc/C5DCDC.cpp" />
-		<Unit filename="src/can/CANSPI.cpp" />
+		<Unit filename="src/CANSPI.cpp" />
 		<Unit filename="src/chargers/CPC.cpp" />
-		<Unit filename="src/can/Can_OBD2.cpp" />
+		<Unit filename="src/Can_OBD2.cpp" />
 		<Unit filename="src/inverters/Can_OI.cpp" />
 		<Unit filename="src/vehicles/Can_VAG.cpp" />
 		<Unit filename="src/shifters/E65_Lever.cpp" />
@@ -190,7 +190,7 @@
 		<Unit filename="src/inverters/InverterACP.cpp" />
 		<Unit filename="src/vehicles/JLR_G1.cpp" />
 		<Unit filename="src/vehicles/JLR_G2.cpp" />
-		<Unit filename="src/can/MCP2515.cpp" />
+		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/HVAC/MGCoolantHeater.cpp" />
 		<Unit filename="src/chargers/MGgen2V2Lcharger.cpp" />
 		<Unit filename="src/dcdc/Maintainer12V.cpp" />

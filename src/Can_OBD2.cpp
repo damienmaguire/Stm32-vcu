@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "can/Can_OBD2.h"
+#include "Can_OBD2.h"
 #include "params.h"
 #include "stm32_can.h"
 

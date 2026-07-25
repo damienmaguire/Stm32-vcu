@@ -19,7 +19,7 @@
 
 #ifndef CHADEMO_H
 #define CHADEMO_H
-#include "can/CANSPI.h"
+#include "CANSPI.h"
 #include "chargers/chargerint.h"
 #include "iomatrix.h"
 #include "my_fp.h"

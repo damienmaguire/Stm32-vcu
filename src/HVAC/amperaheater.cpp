@@ -88,7 +88,7 @@ return tmp;
 */
 
 #include "HVAC/amperaheater.h"
-#include "can/CANSPI.h"
+#include "CANSPI.h"
 #include "digio.h"
 #include "utils.h"
 
