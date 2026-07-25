@@ -51,8 +51,8 @@ OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.
 
 
 OBJS     = $(patsubst %.o,$(OUT_DIR)/%.o, $(OBJSL))
-vpath %.c src/ libopeninv/src/
-vpath %.cpp src/ libopeninv/src/
+vpath %.c src/ src/HVAC/ src/bms/ src/can/ src/chargers/ src/dcdc/ src/inverters/ src/shifters/ src/vehicles/ libopeninv/src/
+vpath %.cpp src/ src/HVAC/ src/bms/ src/can/ src/chargers/ src/dcdc/ src/inverters/ src/shifters/ src/vehicles/ libopeninv/src/
 
 OPENOCD_BASE	= /usr
 OPENOCD		= $(OPENOCD_BASE)/bin/openocd
