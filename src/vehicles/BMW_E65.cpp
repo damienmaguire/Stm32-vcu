@@ -19,10 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "vehicles/BMW_E65.h"
 #include "params.h"
 #include "stm32_can.h"
 #include "utils.h"
-#include "vehicles/BMW_E65.h"
 
 uint8_t Gcount; // gear display counter byte
 uint8_t shiftPos =

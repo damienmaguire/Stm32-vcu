@@ -21,12 +21,12 @@
  */
 
 #include "chargers/NissanPDM.h"
-#include "vehicles/NissLeafMng.h"
 #include "my_fp.h"
 #include "my_math.h"
 #include "params.h"
 #include "stm32_can.h"
 #include "utils.h"
+#include "vehicles/NissLeafMng.h"
 
 static bool PPStat = false;
 static uint8_t OBCVoltStat = 0;

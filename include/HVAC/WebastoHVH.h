@@ -20,8 +20,8 @@
  */
 #ifndef WEBASTOHVH_H
 #define WEBASTOHVH_H
-#include "linbus.h"
 #include "HVAC/heater.h"
+#include "linbus.h"
 
 class WebastoHVH : public Heater {
 public:

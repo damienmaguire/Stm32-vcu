@@ -22,8 +22,8 @@
 #define VWCOOLANTHEATER_H
 #include <cstdint>
 // #include <libopencm3/stm32/usart.h>
-#include "linbus.h"
 #include "HVAC/heater.h"
+#include "linbus.h"
 
 class vwCoolantHeater : public Heater {
 public:

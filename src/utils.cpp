@@ -21,12 +21,12 @@
 
 #include "utils.h"
 
-#include "vehicles/bmw_sbox.h"
 #include "hwinit.h"
 #include "iomatrix.h"
 #include "isa_shunt.h"
 #include "my_math.h"
 #include "throttle.h"
+#include "vehicles/bmw_sbox.h"
 #include "vehicles/vag_sbox.h"
 #include <libopencm3/stm32/rtc.h>
 #include <libopencm3/stm32/timer.h>

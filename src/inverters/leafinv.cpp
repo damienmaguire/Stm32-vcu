@@ -21,12 +21,12 @@
  */
 
 #include "inverters/leafinv.h"
-#include "vehicles/NissLeafMng.h"
 #include "my_fp.h"
 #include "my_math.h"
 #include "params.h"
 #include "stm32_can.h"
 #include "utils.h"
+#include "vehicles/NissLeafMng.h"
 
 /*Info on running Leaf Gen 2 PDM
 IDs required :
