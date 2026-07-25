@@ -19,7 +19,7 @@
  */
 
 #include "inverters/rearoutlanderinverter.h"
-#include "can/OutlanderHeartBeat.h"
+#include "chargers/OutlanderHeartBeat.h"
 #include "my_math.h"
 #include "params.h"
 

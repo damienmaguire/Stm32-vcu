@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "can/OutlanderHeartBeat.h"
+#include "chargers/OutlanderHeartBeat.h"
 #include "chargers/outlanderCharger.h"
 
 /* Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC

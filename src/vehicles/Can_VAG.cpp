@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "can/Can_VAG.h"
+#include "vehicles/Can_VAG.h"
 #include "params.h"
 
 void Can_VAG::Task100Ms() {

@@ -58,8 +58,8 @@
 		<Unit filename="include/can/CANSPI.h" />
 		<Unit filename="include/chargers/CPC.h" />
 		<Unit filename="include/can/Can_OBD2.h" />
-		<Unit filename="include/can/Can_OI.h" />
-		<Unit filename="include/can/Can_VAG.h" />
+		<Unit filename="include/inverters/Can_OI.h" />
+		<Unit filename="include/vehicles/Can_VAG.h" />
 		<Unit filename="include/shifters/E65_Lever.h" />
 		<Unit filename="include/chargers/ElconCharger.h" />
 		<Unit filename="include/dcdc/ElconDCDC.h" />
@@ -77,7 +77,7 @@
 		<Unit filename="include/chargers/NissanPDM.h" />
 		<Unit filename="include/HVAC/OutlanderCanHeater.h" />
 		<Unit filename="include/HVAC/OutlanderCompressor.h" />
-		<Unit filename="include/can/OutlanderHeartBeat.h" />
+		<Unit filename="include/chargers/OutlanderHeartBeat.h" />
 		<Unit filename="include/shifters/PKP2300_Lever.h" />
 		<Unit filename="include/HVAC/PWMHeater.h" />
 		<Unit filename="include/dcdc/TeslaDCDC.h" />
@@ -179,8 +179,8 @@
 		<Unit filename="src/can/CANSPI.cpp" />
 		<Unit filename="src/chargers/CPC.cpp" />
 		<Unit filename="src/can/Can_OBD2.cpp" />
-		<Unit filename="src/can/Can_OI.cpp" />
-		<Unit filename="src/can/Can_VAG.cpp" />
+		<Unit filename="src/inverters/Can_OI.cpp" />
+		<Unit filename="src/vehicles/Can_VAG.cpp" />
 		<Unit filename="src/shifters/E65_Lever.cpp" />
 		<Unit filename="src/chargers/ElconCharger.cpp" />
 		<Unit filename="src/dcdc/ElconDCDC.cpp" />
@@ -198,7 +198,7 @@
 		<Unit filename="src/chargers/NissanPDM.cpp" />
 		<Unit filename="src/HVAC/OutlanderCanHeater.cpp" />
 		<Unit filename="src/HVAC/OutlanderCompressor.cpp" />
-		<Unit filename="src/can/OutlanderHeartBeat.cpp" />
+		<Unit filename="src/chargers/OutlanderHeartBeat.cpp" />
 		<Unit filename="src/shifters/PKP2300_Lever.cpp" />
 		<Unit filename="src/HVAC/PWMHeater.cpp" />
 		<Unit filename="src/inverters/RearOutlanderinverter.cpp" />

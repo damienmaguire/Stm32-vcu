@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "can/OutlanderHeartBeat.h"
+#include "chargers/OutlanderHeartBeat.h"
 #include "HVAC/OutlanderCanHeater.h"
 
 void OutlanderCanHeater::SetPower(uint16_t power, bool HeatReq) {

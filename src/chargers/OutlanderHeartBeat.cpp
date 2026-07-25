@@ -19,7 +19,7 @@
  *
  */
 
-#include "can/OutlanderHeartBeat.h"
+#include "chargers/OutlanderHeartBeat.h"
 
 /* Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC
  * Converter. */

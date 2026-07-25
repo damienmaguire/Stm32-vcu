@@ -18,7 +18,7 @@
  */
 
 #include "HVAC/OutlanderCompressor.h"
-#include "can/OutlanderHeartBeat.h"
+#include "chargers/OutlanderHeartBeat.h"
 
 uint16_t rpm;
 

@@ -20,7 +20,7 @@
  *https://openinverter.org/wiki/CAN_communication
  */
 
-#include "can/Can_OI.h"
+#include "inverters/Can_OI.h"
 #include "params.h"
 #include <libopencm3/stm32/crc.h>
 
