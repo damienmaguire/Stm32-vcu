@@ -24,7 +24,7 @@
 
 /*  Dummy library for unused devices. */
 
-#include "chargerint.h"
+#include "chargers/chargerint.h"
 #include <stdint.h>
 
 class notused : public Chargerint,

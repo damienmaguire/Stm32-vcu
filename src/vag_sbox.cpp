@@ -24,7 +24,7 @@
  *See : https://github.com/jamiejones85/VW-GTE-ContactorBox/tree/main
 */
 
-#include <vag_sbox.h>
+#include "vag_sbox.h"
 
 int16_t VWBOX::Amperes;
 int32_t VWBOX::Ah;
