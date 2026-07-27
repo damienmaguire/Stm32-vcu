@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "vehicles/JLR_G1.h"
+#include "shifters/JLR_G1.h"
 
 #define JLR_Park 0
 #define JLR_Reverse 1

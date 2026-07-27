@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "vehicles/JLR_G2.h"
+#include "shifters/JLR_G2.h"
 
 uint8_t DirJLRG2 = 0;
 
