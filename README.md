@@ -28,6 +28,7 @@ Chargers/DCDC converters:
 - CCS DC fast charge via BMW i3 LIM
 - CCS DC fast charging via FOCCCI https://github.com/uhi22/ccs32clara
 - Chademo DC fast charge
+- tesla OBC with OI replacment (gen 2/3, pcs) 
 
 BMS:
 - Modular BMS / SimpBMS Support
