@@ -28,11 +28,16 @@ Chargers/DCDC converters:
 - CCS DC fast charge via BMW i3 LIM
 - CCS DC fast charging via FOCCCI https://github.com/uhi22/ccs32clara
 - Chademo DC fast charge
+- MG gen2 V2l charger
 - tesla OBC with OI replacment (gen 2/3, pcs) 
 
 BMS:
 - Modular BMS / SimpBMS Support
 - ISA Shunt / BMW SBOX / VW EBOX supported via CAN
+- Open Inverter bms
+- leaf bms
+- kangoo bms
+- Ti daisychain bms
 - can mappable
 
 Vehicles: 
@@ -44,10 +49,14 @@ Vehicles:
 - Subaru vehicle support
 - classic
 
- Heaters:
+ Heaters/ac compressors:
 - Opel Ampera / Chevy Volt 6.5kw cabin heater
 - VW LIN based 6.5kw cabin heater
-
+- vw coolant heater
+- outlander heater
+- mg coolant heater
+- outlander compressor
+ 
 CAN interface:
 - OBD2 Can support
 - OpenInverter CAN Support
