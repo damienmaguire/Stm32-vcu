@@ -76,6 +76,7 @@
 		<Unit filename="include/OutlanderCanHeater.h" />
 		<Unit filename="include/OutlanderCompressor.h" />
 		<Unit filename="include/OutlanderHeartBeat.h" />
+		<Unit filename="include/Prius_Lever.h" />
 		<Unit filename="include/TeslaDCDC.h" />
 		<Unit filename="include/VWAirHeater.h" />
 		<Unit filename="include/VWCoolantHeater.h" />
@@ -183,6 +184,7 @@
 		<Unit filename="src/OutlanderCanHeater.cpp" />
 		<Unit filename="src/OutlanderCompressor.cpp" />
 		<Unit filename="src/OutlanderHeartBeat.cpp" />
+		<Unit filename="src/Prius_Lever.cpp" />
 		<Unit filename="src/RearOutlanderinverter.cpp" />
 		<Unit filename="src/TeslaDCDC.cpp" />
 		<Unit filename="src/VWAirHeater.cpp" />

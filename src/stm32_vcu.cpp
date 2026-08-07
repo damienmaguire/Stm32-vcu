@@ -115,6 +115,7 @@
 #include "OutlanderCompressor.h"
 #include "VolvoP1.h"
 #include "NissanAC.h"
+#include "Prius_Lever.h"
 
 #define PRECHARGE_TIMEOUT 5  //5s
 
@@ -187,6 +188,7 @@ static OutlanderCanHeater outlanderCanHeater;
 static no_Lever NoGearLever;
 static F30_Lever F30GearLever;
 static E65_Lever E65GearLever;
+static Prius_Lever PriusGearLever;
 static JLR_G1 JLRG1shift;
 static JLR_G2 JLRG2shift;
 static JLR_iP iPaceshift;
@@ -1167,6 +1169,10 @@ static void UpdateShifter()
 
     case ShifterModes::JLRiP:
         selectedShifter = &iPaceshift;
+        break;
+
+    case ShifterModes::Prius3:
+        selectedShifter = &PriusGearLever;
         break;
 
     default:
