@@ -54,6 +54,7 @@ static float tempGauge = 0;
 static float vehSpeed = 0;
 static uint8_t fan_pwm_counter = 0;
 static uint8_t fan_duty = 50;        // 0–100 %
+static bool airConCtrl = 0;
 
 void Volvo_P1::SetCanInterface(CanHardware* c)
 {
@@ -137,7 +138,7 @@ int Volvo_P1::GetThrotl()
 
 void Volvo_P1::Task1Ms()
 {
-        if (Param::GetInt(Param::opmode) == MOD_RUN)
+        if (Param::GetInt(Param::opmode) == MOD_RUN && airConCtrl)
         {
         fan_pwm_counter++;
         if (fan_pwm_counter >= 10)          // 10 ticks = 10 ms = 100 Hz
@@ -258,5 +259,7 @@ void Volvo_P1::Task100Ms()
         {
             ECM_CANon=false;
         }
+
+        airConCtrl = Param::GetInt(Param::AirConReq);
 
 }
