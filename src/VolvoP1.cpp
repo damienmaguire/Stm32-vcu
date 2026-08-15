@@ -123,6 +123,13 @@ void Volvo_P1::handle82c(uint32_t data[2])//BCM
 {
     uint8_t* bytes = (uint8_t*)data;
     Param::SetInt(Param::AirConReq, (bytes[4] >> 3) & 0x01); //AC button in car
+    //Byte 5 of this msg seems to have evap temp.
+    //temp_C ≈ (signed_byte5 / 7.5) + 14
+    // 0x0100082C, byte 5
+    //int8_t raw = (int8_t)bytes[5];          // treat as signed
+    // Convert to °C (integer)
+    //int16_t evapTempC = (raw * 2 + 210) / 15;
+    //int16_t evapTemp_x10 = (raw * 20 + 2100) / 15;   // °C × 10
 }
 
 int Volvo_P1::GetThrotl()
@@ -261,5 +268,9 @@ void Volvo_P1::Task100Ms()
         }
 
         airConCtrl = Param::GetInt(Param::AirConReq);
+
+        int ACPressRaw = IOMatrix::GetAnaloguePin(IOMatrix::ACPRESS)->Get();
+        int16_t HIpsi = ((int32_t)ACPressRaw * 3300 * 2 / 4095 - 405) * 120 / 1000;
+        Param::SetInt(Param::ACHIPRES, HIpsi);
 
 }
