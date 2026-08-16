@@ -53,11 +53,12 @@ static float ThrotPedal = 0;
 static float tempGauge = 0;
 static float vehSpeed = 0;
 static uint8_t fan_pwm_counter = 0;
-static uint8_t fan_duty = 50;        // 0–100 %
 static bool airConCtrl = 0;
 static int8_t EVAPraw = 0;
 static int16_t evapTempC = 0;
 static int16_t acPowerCmd = 0;
+static uint8_t  fan_duty = 0;           // 0–100 %
+static uint16_t fan_runon_timer = 0;    // counts in 100 ms ticks
 
 void Volvo_P1::SetCanInterface(CanHardware* c)
 {
@@ -278,48 +279,97 @@ void Volvo_P1::Task100Ms()
     int16_t HIpsi = ((int32_t)ACPressRaw * 3300 * 2 / 4095 - 405) * 120 / 1000;
     Param::SetInt(Param::ACHIPRES, HIpsi);
 
-    //-------------------------------------------------
-    // Evaporator temperature based compressor control
-    //-------------------------------------------------
-    if (Param::GetInt(Param::opmode) == MOD_RUN && Param::GetBool(Param::AirConReq))
+//-------------------------------------------------
+// Evaporator temperature based compressor control
+// Continuous + error-dependent max power
+//-------------------------------------------------
+if (Param::GetInt(Param::opmode) == MOD_RUN && Param::GetBool(Param::AirConReq))
+{
+    int16_t target = Param::GetInt(Param::EvapTarget);   // °C
+
+    // Convert target °C back to raw scale
+    // raw ≈ (temp - 14) * 7.5
+    int16_t targetRaw = (target - 14) * 15 / 2;
+
+    int16_t errorRaw = EVAPraw - targetRaw;              // finer error
+
+    // Proportional term
+    int16_t desiredKw_x10 = (errorRaw * Param::GetInt(Param::EvapP)) / 4;
+
+    // Base max power from parameter (0.1 kW units)
+    int16_t maxKw_x10 = Param::GetInt(Param::ACMaxPwr) * 10;
+
+    // Reduce max power when close to target to avoid overshoot
+    if (errorRaw < 30)       // roughly < 4 °C above target
     {
-        int16_t target = Param::GetInt(Param::EvapTarget);   // default 7 °C
-        int16_t error  = target - evapTempC;                 // positive = need more cooling
-
-        // Proportional term
-        int16_t pTerm = error * Param::GetInt(Param::EvapP) / 10;
-
-        // Desired power in kW (0–3)
-        int16_t desiredKw = pTerm;
-        if (desiredKw < 0) desiredKw = 0;
-        if (desiredKw > Param::GetInt(Param::ACMaxPwr))
-            desiredKw = Param::GetInt(Param::ACMaxPwr);
-
-        // High-side pressure protection
-        int16_t hiLim = Param::GetInt(Param::HiPressLim);    // default 240 psi
-        if (HIpsi > hiLim)
-        {
-            desiredKw = 0;
-        }
-        else if (HIpsi > (hiLim - 30))
-        {
-            // Soft cut-back in the last 30 psi
-            desiredKw = desiredKw * (hiLim - HIpsi) / 30;
-            if (desiredKw < 0) desiredKw = 0;
-        }
-
-        // Map kW → Leaf compressor command byte
-        if      (desiredKw >= 3) acPowerCmd = 0x16;   // 3 kW
-        else if (desiredKw >= 2) acPowerCmd = 0x12;   // 2 kW
-        else if (desiredKw >= 1) acPowerCmd = 0x05;   // 1 kW
-        else                     acPowerCmd = 0x00;
+        // At errorRaw = 0  → ~40 % of full power
+        // At errorRaw = 30 → full power
+        maxKw_x10 = maxKw_x10 * (40 + errorRaw * 2) / 100;
     }
+
+    if (desiredKw_x10 < 0)         desiredKw_x10 = 0;
+    if (desiredKw_x10 > maxKw_x10) desiredKw_x10 = maxKw_x10;
+
+    // High-side pressure protection
+    int16_t hiLim = Param::GetInt(Param::HiPressLim);
+    if (HIpsi > hiLim)
+    {
+        desiredKw_x10 = 0;
+    }
+    else if (HIpsi > (hiLim - 25))
+    {
+        desiredKw_x10 = desiredKw_x10 * (hiLim - HIpsi) / 25;
+        if (desiredKw_x10 < 0) desiredKw_x10 = 0;
+    }
+
+    // Continuous mapping 0.0–3.0 kW → 0x00–0x16
+    uint8_t cmd = 0;
+    if (desiredKw_x10 > 0)
+    {
+        cmd = (uint8_t)((desiredKw_x10 * 22 + 15) / 30);
+        if (cmd < 0x01) cmd = 0x01;
+        if (cmd > 0x16) cmd = 0x16;
+    }
+
+    acPowerCmd = cmd;
+}
+else
+{
+    acPowerCmd = 0;
+}
+
+//-------------------------------------------------
+// Condenser fan control
+// - Speed follows compressor power
+// - Runs on for 60 s after compressor stops
+//-------------------------------------------------
+if (acPowerCmd > 0)
+{
+    // Safe mapping: 0x01–0x16 → 30–90 %
+    // Avoids underflow and keeps PWM in a sensible range
+    if (acPowerCmd <= 3)
+        fan_duty = 30;
     else
-    {
-        acPowerCmd = 0;
-    }
+        fan_duty = 30 + ((acPowerCmd - 3) * 60) / 19;   // 30 → 90 %
 
-    // Hand over to NissanAC
+    if (fan_duty > 90) fan_duty = 90;     // hard limit
+    if (fan_duty < 30) fan_duty = 30;
+
+    fan_runon_timer = 600;                // 60 seconds
+}
+else if (fan_runon_timer > 0)
+{
+    fan_runon_timer--;
+    fan_duty = 40;                        // gentle run-on
+}
+else
+{
+    fan_duty = 0;
+}
+
+    // Hand over to NissanAC + keep PWM alive during run-on
     Param::SetInt(Param::AirConPwr,  acPowerCmd);
     Param::SetInt(Param::AirConCtrl, acPowerCmd > 0 ? 1 : 0);
+    airConCtrl = (fan_duty > 0);
 }
+
