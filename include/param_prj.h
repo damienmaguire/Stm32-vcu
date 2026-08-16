@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.40A
+#define VER 2.41A
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
