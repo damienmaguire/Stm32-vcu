@@ -55,6 +55,8 @@ static float vehSpeed = 0;
 static uint8_t fan_pwm_counter = 0;
 static uint8_t fan_duty = 50;        // 0–100 %
 static bool airConCtrl = 0;
+static int8_t EVAPraw = 0;
+static int16_t evapTempC = 0;
 
 void Volvo_P1::SetCanInterface(CanHardware* c)
 {
@@ -125,10 +127,9 @@ void Volvo_P1::handle82c(uint32_t data[2])//BCM
     Param::SetInt(Param::AirConReq, (bytes[4] >> 3) & 0x01); //AC button in car
     //Byte 5 of this msg seems to have evap temp.
     //temp_C ≈ (signed_byte5 / 7.5) + 14
-    // 0x0100082C, byte 5
-    //int8_t raw = (int8_t)bytes[5];          // treat as signed
+    EVAPraw = (int8_t)bytes[5];          // treat as signed
     // Convert to °C (integer)
-    //int16_t evapTempC = (raw * 2 + 210) / 15;
+    evapTempC = (EVAPraw * 2 + 210) / 15;//Evap temp in DegC
     //int16_t evapTemp_x10 = (raw * 20 + 2100) / 15;   // °C × 10
 }
 
