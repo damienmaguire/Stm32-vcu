@@ -57,6 +57,7 @@ static uint8_t fan_duty = 50;        // 0–100 %
 static bool airConCtrl = 0;
 static int8_t EVAPraw = 0;
 static int16_t evapTempC = 0;
+static int16_t acPowerCmd = 0;
 
 void Volvo_P1::SetCanInterface(CanHardware* c)
 {
@@ -124,13 +125,15 @@ void Volvo_P1::handle136(uint32_t data[2])//BCM
 void Volvo_P1::handle82c(uint32_t data[2])//BCM
 {
     uint8_t* bytes = (uint8_t*)data;
-    Param::SetInt(Param::AirConReq, (bytes[4] >> 3) & 0x01); //AC button in car
-    //Byte 5 of this msg seems to have evap temp.
-    //temp_C ≈ (signed_byte5 / 7.5) + 14
-    EVAPraw = (int8_t)bytes[5];          // treat as signed
-    // Convert to °C (integer)
-    evapTempC = (EVAPraw * 2 + 210) / 15;//Evap temp in DegC
-    //int16_t evapTemp_x10 = (raw * 20 + 2100) / 15;   // °C × 10
+
+    // AC request bit from CCM
+    Param::SetInt(Param::AirConReq, (bytes[4] >> 3) & 0x01);
+
+    // Evaporator temperature (signed byte 5)
+    // temp_C ≈ (signed_byte5 / 7.5) + 14
+    EVAPraw = (int8_t)bytes[5];
+    evapTempC = (EVAPraw * 2 + 210) / 15;          // °C integer
+    Param::SetInt(Param::EvapTemp, evapTempC);
 }
 
 int Volvo_P1::GetThrotl()
@@ -228,50 +231,95 @@ void Volvo_P1::Task100Ms()
 {
     uint8_t bytes[8];
 
-        bytes[0]=0x00;
-        //byte 2 contains engine status : 1= off , 2=cranking , 3=running.
-        if (Param::GetInt(Param::opmode) == MOD_OFF)        bytes[2]=0x10 | immo_bit<<7; //immo bit and engine status in here
-        if (Param::GetInt(Param::opmode) == MOD_PRECHARGE)  bytes[2]=0x20 | immo_bit<<7; //immo bit and engine status in here
-        if (Param::GetInt(Param::opmode) == MOD_RUN)        bytes[2]=0x30 | immo_bit<<7; //immo bit and engine status in here
-        bytes[1]=0x00;
-        bytes[3]=0x00;
-        bytes[5]=0x00;
-        bytes[6]=0x00;
-        bytes[7]=0x00;
+    bytes[0] = 0x00;
+    // byte 2 contains engine status : 1= off , 2=cranking , 3=running.
+    if (Param::GetInt(Param::opmode) == MOD_OFF)        bytes[2] = 0x10 | immo_bit << 7;
+    if (Param::GetInt(Param::opmode) == MOD_PRECHARGE)  bytes[2] = 0x20 | immo_bit << 7;
+    if (Param::GetInt(Param::opmode) == MOD_RUN)        bytes[2] = 0x30 | immo_bit << 7;
+    bytes[1] = 0x00;
+    bytes[3] = 0x00;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
 
-        if(keyPos>=3)//ign on
-        {
-         ECM_CANon=true;
-         terminal15On = true;
-         fiveSec=50;
-        }
-        else
-        {
+    if (keyPos >= 3) // ign on
+    {
+        ECM_CANon = true;
+        terminal15On = true;
+        fiveSec = 50;
+    }
+    else
+    {
         terminal15On = false;
-        }
+    }
 
-        if(keyPos==4)//start position
-        {
+    if (keyPos == 4) // start position
+    {
         terminal50On = true;
-        }
-        else
-        {
+    }
+    else
+    {
         terminal50On = false;
-        }
+    }
 
-        immo_bit=!immo_bit;//flip immo bit in each msg to emulate oem behaviour.
+    immo_bit = !immo_bit; // flip immo bit in each msg to emulate oem behaviour.
 
-        if(ECM_CANon) can->Send(0x0300410E, (uint32_t*)bytes,8);
-        if(fiveSec!=0) fiveSec--;
-        if(fiveSec==0)
+    if (ECM_CANon) can->Send(0x0300410E, (uint32_t*)bytes, 8);
+    if (fiveSec != 0) fiveSec--;
+    if (fiveSec == 0)
+    {
+        ECM_CANon = false;
+    }
+
+    //-------------------------------------------------
+    // High side pressure sensor
+    //-------------------------------------------------
+    int ACPressRaw = IOMatrix::GetAnaloguePin(IOMatrix::ACPRESS)->Get();
+    int16_t HIpsi = ((int32_t)ACPressRaw * 3300 * 2 / 4095 - 405) * 120 / 1000;
+    Param::SetInt(Param::ACHIPRES, HIpsi);
+
+    //-------------------------------------------------
+    // Evaporator temperature based compressor control
+    //-------------------------------------------------
+    if (Param::GetInt(Param::opmode) == MOD_RUN && Param::GetBool(Param::AirConReq))
+    {
+        int16_t target = Param::GetInt(Param::EvapTarget);   // default 7 °C
+        int16_t error  = target - evapTempC;                 // positive = need more cooling
+
+        // Proportional term
+        int16_t pTerm = error * Param::GetInt(Param::EvapP) / 10;
+
+        // Desired power in kW (0–3)
+        int16_t desiredKw = pTerm;
+        if (desiredKw < 0) desiredKw = 0;
+        if (desiredKw > Param::GetInt(Param::ACMaxPwr))
+            desiredKw = Param::GetInt(Param::ACMaxPwr);
+
+        // High-side pressure protection
+        int16_t hiLim = Param::GetInt(Param::HiPressLim);    // default 240 psi
+        if (HIpsi > hiLim)
         {
-            ECM_CANon=false;
+            desiredKw = 0;
+        }
+        else if (HIpsi > (hiLim - 30))
+        {
+            // Soft cut-back in the last 30 psi
+            desiredKw = desiredKw * (hiLim - HIpsi) / 30;
+            if (desiredKw < 0) desiredKw = 0;
         }
 
-        airConCtrl = Param::GetInt(Param::AirConReq);
+        // Map kW → Leaf compressor command byte
+        if      (desiredKw >= 3) acPowerCmd = 0x16;   // 3 kW
+        else if (desiredKw >= 2) acPowerCmd = 0x12;   // 2 kW
+        else if (desiredKw >= 1) acPowerCmd = 0x05;   // 1 kW
+        else                     acPowerCmd = 0x00;
+    }
+    else
+    {
+        acPowerCmd = 0;
+    }
 
-        int ACPressRaw = IOMatrix::GetAnaloguePin(IOMatrix::ACPRESS)->Get();
-        int16_t HIpsi = ((int32_t)ACPressRaw * 3300 * 2 / 4095 - 405) * 120 / 1000;
-        Param::SetInt(Param::ACHIPRES, HIpsi);
-
+    // Hand over to NissanAC
+    Param::SetInt(Param::AirConPwr,  acPowerCmd);
+    Param::SetInt(Param::AirConCtrl, acPowerCmd > 0 ? 1 : 0);
 }

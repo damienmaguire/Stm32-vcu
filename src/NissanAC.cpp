@@ -60,21 +60,18 @@ static uint16_t airconPwr = 0;
  }
 
 
- void LeafCompressor::Task10Ms()
- {
-
-   static bool read = true;
+void LeafCompressor::Task10Ms()
+{
    static int state = 0;
-   uint8_t lindata[8];//Send control command 0x3B here.
+   uint8_t lindata[8];
 
-   if (lin->HasReceived(33, 8))//0x21 hex address
+   if (lin->HasReceived(33, 8)) // 0x21
    {
       uint8_t* data = lin->GetReceivedBytes();
-
       Param::SetInt(Param::udcompressor, data[7] * 2);
    }
 
-      switch (state)
+   switch (state)
    {
    case 0:
       lin->Request(17, 0, 0);
@@ -94,10 +91,12 @@ static uint16_t airconPwr = 0;
       lin->Request(32, lindata, 8);
       break;
    case 5:
-     if(!airConCtrl) lindata[0] = 0xb2;//Deactivate compressor
-     if(airConCtrl) lindata[0] = 0xb3;//Activate compressor
-      if(Param::GetBool(Param::AirConReq))  lindata[1] = 0x05;//1kw, 0x12 = 2kw , 0x16 = 3kw.
-      else lindata[1] = 0x00;
+      if (!airConCtrl)
+         lindata[0] = 0xb2;          // deactivate
+      else
+         lindata[0] = 0xb3;          // activate
+
+      lindata[1] = airconPwr;        // commanded power from VolvoP1 (0x00/0x05/0x12/0x16)
 
       lindata[2] = 0x00;
       lindata[3] = 0x90;
@@ -109,8 +108,6 @@ static uint16_t airconPwr = 0;
       break;
    }
 
-      state = (state + 1) % 6;
-
-
-   }
+   state = (state + 1) % 6;
+}
 

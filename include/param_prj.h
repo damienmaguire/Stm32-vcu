@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.43.VL
+#define VER 2.44.VL
 
 
 /* Entries must be ordered as follows:
@@ -27,7 +27,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-//Next param id (increase when adding new parameter!): 156
+//Next param id (increase when adding new parameter!): 160
 /*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_SETUP,     Inverter,     INVMODES, 0,      8,      0,      5  ) \
@@ -118,6 +118,11 @@
     PARAM_ENTRY(CAT_AIRCON,    Compressor, COMPRESSMODES,   0, 2,      0,      153  ) \
     PARAM_ENTRY(CAT_AIRCON,    AirConCtrl,  ONOFF,     0,      1,      0,      154) \
     PARAM_ENTRY(CAT_AIRCON,    AirConPwr,   "W",       0,      3000,   0,      155) \
+    PARAM_ENTRY(CAT_AIRCON,    EvapTarget, "°C",       0,      15,     7,      156) \
+    PARAM_ENTRY(CAT_AIRCON,    EvapP,      "",         0,      50,     8,      157 ) \
+    PARAM_ENTRY(CAT_AIRCON,    ACMaxPwr,   "kW",       1,      3,      2,      158 ) \
+    PARAM_ENTRY(CAT_AIRCON,    HiPressLim, "psi",      150,   300,     200,    159 ) \
+    PARAM_ENTRY(CAT_AIRCON,    EvapTemp,   "°C",      -40,    40,      0,      0 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Day,     DOW,       0,      6,      0,      46 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Hour,    "Hours",   0,      23,     0,      47 ) \
     PARAM_ENTRY(CAT_CLOCK,     Set_Min,     "Mins",    0,      59,     0,      48 ) \
