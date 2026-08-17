@@ -193,7 +193,7 @@ void FCChademo::Task200Ms() {
   if ((rtc_get_counter_val() - chademoStartTime) > 4 &&
       (rtc_get_counter_val() - chademoStartTime) < 8) {
     FCChademo::SetEnabled(true);
-    IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set(); // never gets here ...
+    IOMatrix::GetPinOut(IOMatrix::CHADEMOALLOW)->Set(); // never gets here ...
   }
 
   if (Param::GetInt(Param::opmode) == MOD_CHARGE &&
@@ -232,7 +232,7 @@ void FCChademo::Task200Ms() {
   if (Param::GetInt(Param::CCS_ILim) == 0) {
     FCChademo::SetChargeCurrent(0);
     FCChademo::SetEnabled(false);
-    IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)
+    IOMatrix::GetPinOut(IOMatrix::CHADEMOALLOW)
         ->Clear(); // FCChademo charge allow off
     chargeMode = false;
   }
@@ -245,7 +245,7 @@ void FCChademo::Task200Ms() {
 }
 
 bool FCChademo::DCFCRequest(bool RunCh) {
-  bool request = IOMatrix::GetPin(IOMatrix::DCFCREQUEST)->Get();
+  bool request = IOMatrix::GetPinIn(IOMatrix::DCFCREQUEST)->Get();
 
   // A real high is always required to start a new CHAdeMO session.
   if (RunCh && request) {
@@ -272,7 +272,7 @@ bool FCChademo::DCFCRequest(bool RunCh) {
     dcfcDropoutTicks = 0;
     FCChademo::SetChargeCurrent(0);
     FCChademo::SetEnabled(false);
-    IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)
+    IOMatrix::GetPinOut(IOMatrix::CHADEMOALLOW)
         ->Clear(); // FCChademo charge allow off
     chademoStartTime = 0;
   }
