@@ -52,6 +52,11 @@ public:
   void SetE90(bool e90) { isE90 = e90; }
   void Engine_Data();
   void SetFuelGauge(float level);
+  void DMEStatus();
+  void BattVoltage3B3();
+  void Heatflow();
+  void DMEAlive();
+  void CruiseStatus();
 
 private:
   void SendAbsDscMessages(bool Brake_In);
@@ -66,6 +71,7 @@ private:
   bool CANWake;
   bool StartButt;
   bool isE90;
+  bool ac_request_active = false;
 };
 
 #endif /* BMW_E65_h */
