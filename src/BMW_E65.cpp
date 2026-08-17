@@ -163,6 +163,11 @@ void BMW_E65::Task100Ms() {
     }
 
     BMW_E65::Engine_Data();
+    BMW_E65::DMEStatus();
+    BMW_E65::BattVoltage3B3();
+    BMW_E65::Heatflow();
+    BMW_E65::DMEAlive();
+    BMW_E65::CruiseStatus();
   }
 }
 
@@ -336,6 +341,88 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In) {
     BA5 = 0x4d; // 0x0BA first counter byte(byte 5)
     BA6 = 0x80; // 0x0BA second counter byte(byte 6)
   }
+}
+
+void BMW_E65::BattVoltage3B3() {
+  uint8_t bytes[8];
+  bytes[0] = 0xF1;
+  bytes[1] = 0xC8;
+  if (Ready()) {
+    bytes[2] = 0x00;
+    bytes[3] = 0x00;
+    bytes[4] = 0x00;
+    bytes[5] = 0xF0;
+  } else {
+    bytes[2] = 0xFF;
+    bytes[3] = 0x7F;
+    bytes[4] = 0x00;
+    bytes[5] = 0xF1;
+  }
+  can->Send(0x3B3, bytes, 6); // Send on CAN2
+}
+
+void BMW_E65::Heatflow() {
+  uint8_t bytes[8];
+  bytes[0] = 0xFF;
+  bytes[1] = 0xFF;
+  bytes[2] = 0x3C;
+  if (Ready()) {
+    bytes[3] = 0x02;
+    bytes[4] = 0x96;
+    bytes[5] = 0xF0;
+    bytes[6] = 0x26;
+  } else {
+    bytes[3] = 0x00;
+    bytes[4] = 0x00;
+    bytes[5] = 0xFC;
+    bytes[6] = 0x0F;
+  }
+  can->Send(0x1B6, bytes, 7); // Send on CAN2
+}
+
+void BMW_E65::DMEStatus() {
+  uint8_t bytes[8];
+  bytes[0] = 0xF3;
+  bytes[1] = (ac_request_active && Param::GetInt(Param::opmode) == MOD_RUN)
+                 ? 0x09
+                 : 0x00;
+  bytes[2] = 0xFC;
+  bytes[3] = 0xFF;
+  bytes[4] = 0xFF;
+  bytes[5] = 0xFF;
+  bytes[6] = 0xFF;
+  bytes[7] = 0x00;
+  can->Send(0x3B4, bytes, 8);
+}
+
+void BMW_E65::DMEAlive() {
+  uint8_t bytes[8];
+  bytes[0] = 0x17;
+  bytes[1] = 0x42;
+  bytes[2] = 0xFF;
+  bytes[3] = 0xFF;
+  bytes[4] = 0xFF;
+  bytes[5] = 0xFF;
+  bytes[6] = 0xFF;
+  bytes[7] = 0xFF;
+  can->Send(0x492, bytes, 8);
+}
+
+void BMW_E65::CruiseStatus() {
+  uint8_t bytes[8];
+  bytes[0] = 0x42;
+  bytes[1] = 0x81;
+  bytes[2] = 0xC0;
+  bytes[3] = 0x00;
+  bytes[4] = 0x00;
+  bytes[5] = 0x00;
+  bytes[6] = 0x00;
+  bytes[7] = 0x00;
+  can->Send(0x200, bytes, 8); // Send on CAN2
+
+  bytes[0] = 0xFD;
+  bytes[1] = 0xFF;
+  can->Send(0x31A, bytes, 2); // Send on CAN2
 }
 
 void BMW_E65::Engine_Data() {
