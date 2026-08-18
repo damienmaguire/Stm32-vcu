@@ -31,7 +31,7 @@ static uint16_t calcBMSpwr = 0;
 
 void teslaCharger::SetCanInterface(CanHardware *c) {
   can = c;
-  can->RegisterUserMessage(0x108);
+  can->RegisterUserMessage(0x109);
 }
 
 void teslaCharger::DecodeCAN(int id, uint32_t data[2]) {
