@@ -4,53 +4,63 @@
 
 Project based on the OpenInverter System by Johannes Huebner to provide a universal VCU (Vehicle Control Unit) for electric vehicle conversion projects. 
 
-Please visit the development thread on the Openinverter Forum for more information : https://openinverter.org/forum/viewtopic.php?f=3&t=1277
-<img width="1723" height="960" alt="Zom_V1_3" src="https://github.com/user-attachments/assets/9656c54d-8c9a-453b-ab94-809dc201deae" />
-
-
-V1.3 Hardware now released. PDFs and Gerber here on Github, full Kicad 9 design is on Patreon at the 10Eur level.
+wiki page: https://openinverter.org/wiki/ZombieVerter_VCU
+![Screenshot from 2025-01-28 14-17-28](https://github.com/user-attachments/assets/ff066c9e-8c79-470d-aa04-bc3b34198900)
 
 ## Videos on progress
 
 Project introduction : https://vimeo.com/506480876
 
-V1.11a On dyno with GS450h / BMW E39 : https://vimeo.com/802405172
-
-V2.00a now available : https://vimeo.com/824494783?share=copy
-
-V2.15a now available : https://www.youtube.com/watch?v=iwB3wxCEFo0
-
-V2.20A now available : https://www.youtube.com/watch?v=wjlucUWX_lc
-
-V2.40A now available : https://vimeo.com/1201141543?fl=ip&fe=ec
-
 # Supported components
-
+Drive trains:
 - Nissan Leaf Gen1/2/3 inverter via CAN
-- Nissan Leaf Gen1/2/3 PDM (Charger and DCDC)
-- Nissan LEAF Battery (all variants)
-- Mitsubishi Outlander Support
 - Mitsubishi Outlander drivetrain (front and rear motors/inverters) Support
-- Modular BMS / SimpBMS Support
-- OpenInverter CAN Support
-- CCS DC fast charge via BMW i3 LIM
-- CCS DC fast charging via FOCCCI https://github.com/uhi22/ccs32clara
-- Chademo DC fast charge
-- ISA Shunt / BMW SBOX / VW EBOX supported via CAN
 - Lexus GS450H inverter / gearbox via sync serial
 - Lexus GS300H inverter / gearbox via sync serial
 - Toyota Prius/Yaris/Auris Gen 3 inverters via sync serial
+
+Chargers/DCDC converters:
+- Nissan Leaf Gen1/2/3 PDM (Charger and DCDC)
+- Nissan LEAF Battery (all variants)
+- Mitsubishi Outlander OBC
+- TESLA Gen 2 DCDC Converter Can support
+- Elcon charger Support
+- CCS DC fast charge via BMW i3 LIM
+- CCS DC fast charging via FOCCCI https://github.com/uhi22/ccs32clara
+- Chademo DC fast charge
+- MG gen2 V2l charger
+- tesla OBC with OI replacment (gen 2/3, pcs) 
+
+BMS:
+- Modular BMS / SimpBMS Support
+- ISA Shunt / BMW SBOX / VW EBOX supported via CAN
+- Open Inverter bms
+- leaf bms
+- kangoo bms
+- Ti daisychain bms
+- can mappable
+
+Vehicles: 
 - BMW E46 CAN support
 - BMW E39 CAN support
 - BMW E65 CAN Support
 - BMW E31 CAN Support
 - Mid 2000s VAG Can support
 - Subaru vehicle support
+- classic
+
+ Heaters/ac compressors:
 - Opel Ampera / Chevy Volt 6.5kw cabin heater
 - VW LIN based 6.5kw cabin heater
-- Elcon charger Support
+- vw coolant heater
+- outlander heater
+- mg coolant heater
+- outlander compressor
+ 
+CAN interface:
 - OBD2 Can support
-- TESLA Gen 2 DCDC Converter Can support
+- OpenInverter CAN Support
+
 
 
 # Contributing
