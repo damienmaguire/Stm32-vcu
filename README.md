@@ -10,6 +10,12 @@ Please visit the development thread on the Openinverter Forum for more informati
 
 V1.3 Hardware now released. PDFs and Gerber here on Github, full Kicad 9 design is on Patreon at the 10Eur level.
 
+## Required Bootloader
+
+STM32-Serial https://github.com/jsphuebner/tumanako-inverter-fw-bootloader/releases/tag/v5.2
+
+STM32-CAN https://github.com/jsphuebner/stm32-CANBootloader
+
 ## Videos on progress
 
 Project introduction : https://vimeo.com/506480876
