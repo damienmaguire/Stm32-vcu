@@ -185,11 +185,11 @@ void JLR_G2::Task100Ms() {
 
   if (Param::GetInt(Param::opmode) == MOD_OFF)
     this->gear = NEUTRAL;
-  if (Param::GetInt(Param::opmode) == !MOD_RUN) {
+  if (Param::GetInt(Param::opmode) == MOD_RUN) {
+    ShtdwnCnt2 = 0;
+  } else {
     if (ShtdwnCnt2 < 20)
       ShtdwnCnt2++;
-  } else {
-    ShtdwnCnt2 = 0;
   }
 }
 
