@@ -36,6 +36,8 @@ static void PrintList(Terminal *t, char *arg);
 static void PrintAtr(Terminal *t, char *arg);
 static void PrintSerial(Terminal *t, char *arg);
 static void PrintErrors(Terminal *t, char *arg);
+// Leaf resolver-offset read/write (defined in stm32_vcu.cpp).
+extern void LeafResolverCommand(Terminal *t, char *arg);
 
 extern const TERM_CMD TermCmds[] = {{"set", TerminalCommands::ParamSet},
                                     {"get", TerminalCommands::ParamGet},
@@ -52,6 +54,7 @@ extern const TERM_CMD TermCmds[] = {{"set", TerminalCommands::ParamSet},
                                     {"serial", PrintSerial},
                                     {"errors", PrintErrors},
                                     {"reset", TerminalCommands::Reset},
+                                    {"leafres", LeafResolverCommand},
                                     {NULL, NULL}};
 
 static void PrintList(Terminal *t, char *arg) {
