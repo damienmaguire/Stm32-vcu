@@ -51,6 +51,10 @@ void InverterVESC::SetTorque(float torquePercent) {
   uint8_t data[8];
   int opmode = Param::GetInt(Param::opmode);
 
+  if (Param::GetInt(reverseParam) == 1) {
+    torquePercent *= -1;
+  }
+
   if (opmode == MOD_RUN) {
     int32_t torque = torquePercent * 1000;
     data[0] = (torque >> 24) & 0xFF;

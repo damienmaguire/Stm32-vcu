@@ -26,12 +26,13 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 165
+// Next param id (increase when adding new parameter!): 168
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 10, 0, 5)                      \
   PARAM_ENTRY(CAT_SETUP, Inverter2, INVMODES2, 0, 10, 0, 162)                  \
+  PARAM_ENTRY(CAT_SETUP, Inverter2UseCase, INV2USECASE, 0, 2, 0, 165)          \
   PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 8, 0, 6)                        \
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 4, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
@@ -70,6 +71,8 @@
   PARAM_ENTRY(CAT_THROTTLE, DirChangeRpm, "rpm", 0, 20000, 500, 139)           \
   PARAM_ENTRY(CAT_THROTTLE, reversemotor, ONOFF, 0, 1, 0, 127)                 \
   PARAM_ENTRY(CAT_THROTTLE, reversemotor2, ONOFF, 0, 1, 0, 164)                \
+  PARAM_ENTRY(CAT_THROTTLE, PTOTorque, "%", -100, 100, 0, 166)                 \
+  PARAM_ENTRY(CAT_THROTTLE, Inverter2TorqueRatio, "%", 0, 100, 100, 167)       \
   PARAM_ENTRY(CAT_THROTTLE, throtramp, "%/10ms", 1, 100, 10, 13)               \
   PARAM_ENTRY(CAT_THROTTLE, throtramprpm, "rpm", 0, 20000, 20000, 14)          \
   PARAM_ENTRY(CAT_THROTTLE, rpmlim, "rpm", 0, 200000, 6000, 15)                \
@@ -143,11 +146,11 @@
   PARAM_ENTRY(CAT_IOPINS, PWM1Func, PINFUNCS, 0, 25, 0, 85)                    \
   PARAM_ENTRY(CAT_IOPINS, PWM2Func, PINFUNCS, 0, 25, 4, 86)                    \
   PARAM_ENTRY(CAT_IOPINS, PWM3Func, PINFUNCS, 0, 25, 2, 87)                    \
-  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 19, 12, 98)                \
-  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 19, 12, 99)                  \
-  PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PINFUNCS, 0, 19, 12, 140)                 \
-  PARAM_ENTRY(CAT_IOPINS, PB2InFunc, PINFUNCS, 0, 19, 12, 141)                 \
-  PARAM_ENTRY(CAT_IOPINS, PB3InFunc, PINFUNCS, 0, 19, 12, 142)                 \
+  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, PINFUNCS, 0, 26, 12, 98)                \
+  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, PINFUNCS, 0, 26, 12, 99)                  \
+  PARAM_ENTRY(CAT_IOPINS, PB1InFunc, PINFUNCS, 0, 26, 12, 140)                 \
+  PARAM_ENTRY(CAT_IOPINS, PB2InFunc, PINFUNCS, 0, 26, 12, 141)                 \
+  PARAM_ENTRY(CAT_IOPINS, PB3InFunc, PINFUNCS, 0, 26, 12, 142)                 \
   PARAM_ENTRY(CAT_IOPINS, GPA1Func, APINFUNCS, 0, 3, 0, 110)                   \
   PARAM_ENTRY(CAT_IOPINS, GPA2Func, APINFUNCS, 0, 3, 0, 111)                   \
   PARAM_ENTRY(CAT_IOPINS, ppthresh, "dig", 0, 4095, 2500, 114)                 \
@@ -315,7 +318,7 @@
   "12=DCFCRequest, 13=BrakeVacPump, 14=CoolingFan, 15=HvActive, "              \
   "16=ShiftLockNO, 17=PreHeatOut, 18=Switch_NoRegen, 19=HVIL,"                 \
   "20=PwmTim3, 21=CpSpoof, 22=GS450pump, 23=PwmTempGauge, 24=PwmSocGauge,"     \
-  "25=PwmHeater"
+  "25=PwmHeater, 26=PTOEnable"
 #define APINFUNCS "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
 #define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65"
 #define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
@@ -336,6 +339,7 @@
 #define INVMODES2                                                              \
   "0=None, 1=Leaf_Gen1, 4=OpenI, 6=Outlander, 8=RearOutlander, "               \
   "9=ACPropulsion, 10=VescController"
+#define INV2USECASE "0=NotUsed, 1=SecondDriveMotor, 2=PTOMotor"
 #define PLTMODES                                                               \
   "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES                                                               \
@@ -448,6 +452,8 @@ enum InvModes {
   ACPropulsion = 9,
   VescController = 10
 };
+
+enum Inv2UseCase { NotUsed = 0, SecondDriveMotor = 1, PTOMotor = 2 };
 
 enum ChargeModes {
   Off = 0,

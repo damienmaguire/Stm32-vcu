@@ -89,6 +89,7 @@
 #include "params.h"
 #include "preheater.h"
 #include "printf.h"
+#include "ptocontrol.h"
 #include "rearoutlanderinverter.h"
 #include "sdocommands.h"
 #include "shifter.h"
@@ -223,6 +224,7 @@ static OutlanderCompressor outlanderCompressor;
 static Compressor *selectedCompressor = &UnUsed;
 static PWMHeater pwmHeater;
 static Maintainer12V maintainer12V;
+static PTOControl ptoControl;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void) {
@@ -675,7 +677,20 @@ static void Ms10Task(void) {
   }
 
   selectedInverter->SetTorque(torquePercent);
-  selectedInverter2->SetTorque(torquePercent); // mirrored torque command
+
+  switch (Param::GetInt(Param::Inverter2UseCase)) {
+  case Inv2UseCase::SecondDriveMotor:
+    selectedInverter2->SetTorque(
+        torquePercent * Param::GetFloat(Param::Inverter2TorqueRatio) / 100);
+    break;
+  case Inv2UseCase::PTOMotor:
+    selectedInverter2->SetTorque(ptoControl.GetTorque(opmode));
+    break;
+  case Inv2UseCase::NotUsed:
+  default:
+    selectedInverter2->SetTorque(0);
+    break;
+  }
 
   if (Param::GetInt(Param::potnom) < Param::GetInt(Param::RegenBrakeLight)) {
     // enable Brake Light Ouput
