@@ -69,7 +69,7 @@
   PARAM_ENTRY(CAT_THROTTLE, DirChange, DIRLIM, 0, 2, 0, 147)                   \
   PARAM_ENTRY(CAT_THROTTLE, DirChangeRpm, "rpm", 0, 20000, 500, 139)           \
   PARAM_ENTRY(CAT_THROTTLE, reversemotor, ONOFF, 0, 1, 0, 127)                 \
-  PARAM_ENTRY(CAT_THROTTLE, reversemotor2, ONOFF, 0, 1, 0, 164)               \
+  PARAM_ENTRY(CAT_THROTTLE, reversemotor2, ONOFF, 0, 1, 0, 164)                \
   PARAM_ENTRY(CAT_THROTTLE, throtramp, "%/10ms", 1, 100, 10, 13)               \
   PARAM_ENTRY(CAT_THROTTLE, throtramprpm, "rpm", 0, 20000, 20000, 14)          \
   PARAM_ENTRY(CAT_THROTTLE, rpmlim, "rpm", 0, 200000, 6000, 15)                \
@@ -333,8 +333,8 @@
 // share the OutlanderHeartBeat singleton with slot 1, which is dual-CAN
 // aware (see OutlanderHeartBeat::SetCanInterface) so it is safe to use
 // either/both here.
-#define INVMODES2                                                             \
-  "0=None, 1=Leaf_Gen1, 4=OpenI, 6=Outlander, 8=RearOutlander, "              \
+#define INVMODES2                                                              \
+  "0=None, 1=Leaf_Gen1, 4=OpenI, 6=Outlander, 8=RearOutlander, "               \
   "9=ACPropulsion, 10=VescController"
 #define PLTMODES                                                               \
   "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
@@ -446,7 +446,7 @@ enum InvModes {
   GS300H = 7,
   RearOutlander = 8,
   ACPropulsion = 9,
-  VescController =10
+  VescController = 10
 };
 
 enum ChargeModes {

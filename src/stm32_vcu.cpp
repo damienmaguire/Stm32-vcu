@@ -459,8 +459,7 @@ static void Ms100Task(void) {
       selectedInverter->GetInverterVoltage()); // display inverter derived dc
                                                // link voltage on web interface
 
-  Param::SetFloat(Param::tmphs2,
-                   selectedInverter2->GetInverterTemperature());
+  Param::SetFloat(Param::tmphs2, selectedInverter2->GetInverterTemperature());
   Param::SetFloat(Param::tmpm2, selectedInverter2->GetMotorTemperature());
   Param::SetFloat(Param::InvStat2, selectedInverter2->GetInverterState());
   Param::SetFloat(Param::INVudc2, selectedInverter2->GetInverterVoltage());
@@ -1287,8 +1286,7 @@ static void UpdateInv2() {
 // CAN interface of a device, this will be called by the CanHardware module
 static void SetCanFilters() {
   CanHardware *inverter_can = canInterface[Param::GetInt(Param::InverterCan)];
-  CanHardware *inverter2_can =
-      canInterface[Param::GetInt(Param::Inverter2Can)];
+  CanHardware *inverter2_can = canInterface[Param::GetInt(Param::Inverter2Can)];
   CanHardware *vehicle_can = canInterface[Param::GetInt(Param::VehicleCan)];
   CanHardware *shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
   CanHardware *lim_can = canInterface[Param::GetInt(Param::LimCan)];
@@ -1457,9 +1455,9 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   preheater.ParamsChange();
 }
 
-static bool CanCallback(
-    uint32_t id, uint32_t data[2], uint8_t dlc,
-    CanHardware *bus) // This is where we go when a defined CAN message is received.
+static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc,
+                        CanHardware *bus) // This is where we go when a defined
+                                          // CAN message is received.
 {
   dlc = dlc;
   switch (id) {
