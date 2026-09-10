@@ -676,18 +676,32 @@ static void Ms10Task(void) {
                               // to allow throttle cal
   }
 
-  selectedInverter->SetTorque(torquePercent);
-
   switch (Param::GetInt(Param::Inverter2UseCase)) {
-  case Inv2UseCase::SecondDriveMotor:
-    selectedInverter2->SetTorque(
-        torquePercent * Param::GetFloat(Param::Inverter2TorqueRatio) / 100);
+  case Inv2UseCase::SecondDriveMotor: {
+    // Torque split/bias between the two drive motors: 100=all motor1,
+    // 0=all motor2, 50=neutral. Whichever motor has the higher share
+    // always gets the full torquePercent unreduced - only the other one
+    // is scaled down, so biasing away from center never reduces the
+    // combined tractive effort below what either motor could deliver
+    // alone.
+    float split = Param::GetFloat(Param::Inverter2TorqueRatio);
+    float t1 = torquePercent, t2 = torquePercent;
+    if (split >= 50 && split > 0) {
+      t2 = torquePercent * (100 - split) / split;
+    } else if (split < 50) {
+      t1 = torquePercent * split / (100 - split);
+    }
+    selectedInverter->SetTorque(t1);
+    selectedInverter2->SetTorque(t2);
     break;
+  }
   case Inv2UseCase::PTOMotor:
+    selectedInverter->SetTorque(torquePercent);
     selectedInverter2->SetTorque(ptoControl.GetTorque(opmode));
     break;
   case Inv2UseCase::NotUsed:
   default:
+    selectedInverter->SetTorque(torquePercent);
     selectedInverter2->SetTorque(0);
     break;
   }

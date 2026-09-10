@@ -72,7 +72,7 @@
   PARAM_ENTRY(CAT_THROTTLE, reversemotor, ONOFF, 0, 1, 0, 127)                 \
   PARAM_ENTRY(CAT_THROTTLE, reversemotor2, ONOFF, 0, 1, 0, 164)                \
   PARAM_ENTRY(CAT_THROTTLE, PTOTorque, "%", -100, 100, 0, 166)                 \
-  PARAM_ENTRY(CAT_THROTTLE, Inverter2TorqueRatio, "%", 0, 100, 100, 167)       \
+  PARAM_ENTRY(CAT_THROTTLE, Inverter2TorqueRatio, "%", 0, 100, 50, 167)        \
   PARAM_ENTRY(CAT_THROTTLE, throtramp, "%/10ms", 1, 100, 10, 13)               \
   PARAM_ENTRY(CAT_THROTTLE, throtramprpm, "rpm", 0, 20000, 20000, 14)          \
   PARAM_ENTRY(CAT_THROTTLE, rpmlim, "rpm", 0, 200000, 6000, 15)                \
