@@ -41,8 +41,7 @@ void WebastoHVH::SetLinInterface(LinBus *l) {
 void WebastoHVH::Task100Ms() {
   static bool read = true;
 
-  if (lin->HasReceived(24, 8))
-  {
+  if (lin->HasReceived(24, 8)) {
     uint8_t *data = lin->GetReceivedBytes();
     uint16_t vtg = data[4] + ((data[5] & 3) << 8);
 
@@ -50,10 +49,11 @@ void WebastoHVH::Task100Ms() {
     Param::SetFloat(Param::udcheater, vtg);
 
     if (heaterType == HVH50)
-      Param::SetFloat(Param::powerheater, ((data[5] >> 2) + (data[6] & 0xF)) * 20); //power can be read directly
-    else //HVH100
-      Param::SetFloat(Param::powerheater, data[3] * 0.25f * vtg ); //voltage and current separately
-
+      Param::SetFloat(Param::powerheater, ((data[5] >> 2) + (data[6] & 0xF)) *
+                                              20); // power can be read directly
+    else                                           // HVH100
+      Param::SetFloat(Param::powerheater,
+                      data[3] * 0.25f * vtg); // voltage and current separately
   }
 
   if (read) {
