@@ -26,11 +26,12 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 157
+// Next param id (increase when adding new parameter!): 165
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 10, 0, 5)                      \
+  PARAM_ENTRY(CAT_SETUP, Inverter2, INVMODES2, 0, 10, 0, 162)                  \
   PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 8, 0, 6)                        \
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 4, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
@@ -39,6 +40,7 @@
   PARAM_ENTRY(CAT_SETUP, BMS_Mode, BMSMODES, 0, 7, 0, 90)                      \
   PARAM_ENTRY(CAT_SETUP, ShuntType, SHNTYPE, 0, 4, 0, 88)                      \
   PARAM_ENTRY(CAT_SETUP, InverterCan, CAN_DEV, 0, 1, 0, 70)                    \
+  PARAM_ENTRY(CAT_SETUP, Inverter2Can, CAN_DEV, 0, 1, 1, 163)                  \
   PARAM_ENTRY(CAT_SETUP, VehicleCan, CAN_DEV, 0, 1, 1, 71)                     \
   PARAM_ENTRY(CAT_SETUP, ShuntCan, CAN_DEV, 0, 1, 0, 72)                       \
   PARAM_ENTRY(CAT_SETUP, LimCan, CAN_DEV, 0, 1, 0, 73)                         \
@@ -67,6 +69,7 @@
   PARAM_ENTRY(CAT_THROTTLE, DirChange, DIRLIM, 0, 2, 0, 147)                   \
   PARAM_ENTRY(CAT_THROTTLE, DirChangeRpm, "rpm", 0, 20000, 500, 139)           \
   PARAM_ENTRY(CAT_THROTTLE, reversemotor, ONOFF, 0, 1, 0, 127)                 \
+  PARAM_ENTRY(CAT_THROTTLE, reversemotor2, ONOFF, 0, 1, 0, 164)               \
   PARAM_ENTRY(CAT_THROTTLE, throtramp, "%/10ms", 1, 100, 10, 13)               \
   PARAM_ENTRY(CAT_THROTTLE, throtramprpm, "rpm", 0, 20000, 20000, 14)          \
   PARAM_ENTRY(CAT_THROTTLE, rpmlim, "rpm", 0, 200000, 6000, 15)                \
@@ -181,6 +184,7 @@
   VALUE_ENTRY(udc3, "V", 2008)                                                 \
   VALUE_ENTRY(deltaV, "V", 2009)                                               \
   VALUE_ENTRY(INVudc, "V", 2010)                                               \
+  VALUE_ENTRY(INVudc2, "V", 2130)                                              \
   VALUE_ENTRY(power, "kW", 2011)                                               \
   VALUE_ENTRY(idc, "A", 2012)                                                  \
   VALUE_ENTRY(KWh, "kwh", 2013)                                                \
@@ -198,8 +202,10 @@
   VALUE_ENTRY(BMS_Isolation, "Ohm", 2104)                                      \
   VALUE_ENTRY(BMS_IsoMeas, "mV", 2099)                                         \
   VALUE_ENTRY(speed, "rpm", 2016)                                              \
+  VALUE_ENTRY(speed2, "rpm", 2131)                                             \
   VALUE_ENTRY(Veh_Speed, "kph", 2017)                                          \
   VALUE_ENTRY(torque, "dig", 2018)                                             \
+  VALUE_ENTRY(torque2, "dig", 2126)                                            \
   VALUE_ENTRY(pot, "dig", 2019)                                                \
   VALUE_ENTRY(pot2, "dig", 2020)                                               \
   VALUE_ENTRY(potbrake, "dig", 2021)                                           \
@@ -208,6 +214,8 @@
   VALUE_ENTRY(dir, DIRS, 2024)                                                 \
   VALUE_ENTRY(tmphs, "°C", 2028)                                               \
   VALUE_ENTRY(tmpm, "°C", 2029)                                                \
+  VALUE_ENTRY(tmphs2, "°C", 2127)                                              \
+  VALUE_ENTRY(tmpm2, "°C", 2128)                                               \
   VALUE_ENTRY(tmpaux, "°C", 2030)                                              \
   VALUE_ENTRY(uaux, "V", 2031)                                                 \
   VALUE_ENTRY(canio, CANIOS, 2032)                                             \
@@ -228,6 +236,7 @@
   VALUE_ENTRY(Gear3, ONOFF, 2044)                                              \
   VALUE_ENTRY(T15Stat, ONOFF, 2045)                                            \
   VALUE_ENTRY(InvStat, ONOFF, 2046)                                            \
+  VALUE_ENTRY(InvStat2, ONOFF, 2129)                                           \
   VALUE_ENTRY(GearFB, LOWHIGH, 2047)                                           \
   VALUE_ENTRY(CableLim, "A", 2048)                                             \
   VALUE_ENTRY(PilotLim, "A", 2049)                                             \
@@ -318,6 +327,15 @@
 #define INVMODES                                                               \
   "0=None, 1=Leaf_Gen1, 2=GS450H, 3=UserCAN, 4=OpenI, 5=Prius_Gen3, "          \
   "6=Outlander, 7=GS300H, 8=RearOutlander, 9=ACPropulsion, 10=VescController"
+// Second inverter slot: CAN-based drivers only (excludes UART-based GS450H
+// family). Value 3 (UserCAN) is intentionally omitted - it is also
+// unused/unhandled for the primary Inverter param. Outlander/RearOutlander
+// share the OutlanderHeartBeat singleton with slot 1, which is dual-CAN
+// aware (see OutlanderHeartBeat::SetCanInterface) so it is safe to use
+// either/both here.
+#define INVMODES2                                                             \
+  "0=None, 1=Leaf_Gen1, 4=OpenI, 6=Outlander, 8=RearOutlander, "              \
+  "9=ACPropulsion, 10=VescController"
 #define PLTMODES                                                               \
   "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES                                                               \

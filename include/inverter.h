@@ -21,6 +21,7 @@
 #define INVERTER_H_INCLUDED
 
 #include "canhardware.h"
+#include "params.h"
 
 class Inverter {
 public:
@@ -37,9 +38,22 @@ public:
   virtual void DeInit() {
   } // called when switching to another inverter, similar to a destructor
   virtual void SetCanInterface(CanHardware *c) { can = c; }
+  // Which Param the "post processed final torque request" telemetry value is
+  // published to. Defaults to Param::torque; a second, simultaneously active
+  // inverter instance is pointed at Param::torque2 instead so the two don't
+  // overwrite each other's display value.
+  virtual void SetTorqueParam(Param::PARAM_NUM p) { torqueParam = p; }
+  // Which Param drivers that support a reverse-wired motor (e.g.
+  // RearOutlanderInverter, LeafINV) read to flip torque sign. Defaults to
+  // Param::reversemotor; a second, simultaneously active inverter instance
+  // is pointed at Param::reversemotor2 so the two can be wired oppositely
+  // without fighting over one flag.
+  virtual void SetReverseParam(Param::PARAM_NUM p) { reverseParam = p; }
 
 protected:
   CanHardware *can;
+  Param::PARAM_NUM torqueParam = Param::torque;
+  Param::PARAM_NUM reverseParam = Param::reversemotor;
 };
 
 #endif // INVERTER_H_INCLUDED

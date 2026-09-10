@@ -178,6 +178,13 @@ static Can_OI openInv;
 static InverterACP inverterAcp;
 static InverterVESC inverterVESC;
 static OutlanderInverter outlanderInv;
+// Second inverter slot (CAN-based drivers only, see UpdateInv2())
+static Can_OI openInv2;
+static InverterACP inverterAcp2;
+static InverterVESC inverterVESC2;
+static LeafINV leafInv2;
+static OutlanderInverter outlanderInv2;
+static RearOutlanderInverter rearoutlanderInv2;
 static AmperaHeater amperaHeater;
 static WebastoHVH webastoHeater;
 static OutlanderCanHeater outlanderCanHeater;
@@ -190,6 +197,7 @@ static mgCoolantHeater heaterCoolantMG;
 static vwAirHeater heaterAirVW;
 static V_Classic classVehicle;
 static Inverter *selectedInverter = &UnUsed;
+static Inverter *selectedInverter2 = &UnUsed;
 static Vehicle *selectedVehicle = &UnUsed;
 static Heater *selectedHeater = &UnUsed;
 static Chargerhw *selectedCharger = &chargerPDM;
@@ -400,6 +408,7 @@ static void Ms100Task(void) {
   utils::ProcessCruiseControlButtons();
 
   selectedInverter->Task100Ms();
+  selectedInverter2->Task100Ms();
   selectedVehicle->Task100Ms();
   selectedCharger->Task100Ms();
   selectedBMS->Task100Ms();
@@ -449,6 +458,12 @@ static void Ms100Task(void) {
       Param::INVudc,
       selectedInverter->GetInverterVoltage()); // display inverter derived dc
                                                // link voltage on web interface
+
+  Param::SetFloat(Param::tmphs2,
+                   selectedInverter2->GetInverterTemperature());
+  Param::SetFloat(Param::tmpm2, selectedInverter2->GetMotorTemperature());
+  Param::SetFloat(Param::InvStat2, selectedInverter2->GetInverterState());
+  Param::SetFloat(Param::INVudc2, selectedInverter2->GetInverterVoltage());
 
   Param::SetInt(Param::T15Stat, selectedVehicle->Ready());
 
@@ -653,6 +668,7 @@ static void Ms10Task(void) {
                                          // direction is selected
 
     selectedInverter->Task10Ms();
+    selectedInverter2->Task10Ms();
   } else {
     torquePercent = 0;
     utils::displayThrottle(); // just displays pot and pot2 when not in run mode
@@ -660,6 +676,7 @@ static void Ms10Task(void) {
   }
 
   selectedInverter->SetTorque(torquePercent);
+  selectedInverter2->SetTorque(torquePercent); // mirrored torque command
 
   if (Param::GetInt(Param::potnom) < Param::GetInt(Param::RegenBrakeLight)) {
     // enable Brake Light Ouput
@@ -673,6 +690,9 @@ static void Ms10Task(void) {
   speed = selectedInverter->GetMotorSpeed(); // set motor rpm on interface
 
   Param::SetInt(Param::speed, speed);
+  // Telemetry only - not fed into rev counter/throttle/regen/cruise control,
+  // which stay keyed to inverter1's speed until those get dual-motor support.
+  Param::SetInt(Param::speed2, selectedInverter2->GetMotorSpeed());
   utils::GetDigInputs(canInterface[Param::GetInt(Param::InverterCan)]);
 
   if (opmode == MOD_RUN ||
@@ -930,6 +950,7 @@ static void Ms10Task(void) {
 
 static void Ms1Task(void) {
   selectedInverter->Task1Ms();
+  selectedInverter2->Task1Ms();
   selectedVehicle->Task1Ms();
   selectedCharger->Task1Ms();
   selectedChargeInt->Task1Ms();
@@ -1224,10 +1245,50 @@ static void UpdateShifter() {
   canInterface[1]->ClearUserMessages();
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+static void UpdateInv2() {
+  selectedInverter2->DeInit();
+  switch (Param::GetInt(Param::Inverter2)) {
+  case InvModes::NoInv:
+    selectedInverter2 = &UnUsed;
+    break;
+  case InvModes::Leaf_Gen1:
+    selectedInverter2 = &leafInv2;
+    break;
+  case InvModes::OpenI:
+    selectedInverter2 = &openInv2;
+    break;
+  case InvModes::Outlander:
+    selectedInverter2 = &outlanderInv2;
+    OutlanderCAN = true;
+    break;
+  case InvModes::RearOutlander:
+    selectedInverter2 = &rearoutlanderInv2;
+    OutlanderCAN = true;
+    break;
+  case InvModes::ACPropulsion:
+    selectedInverter2 = &inverterAcp2;
+    break;
+  case InvModes::VescController:
+    selectedInverter2 = &inverterVESC2;
+    break;
+  default:
+    selectedInverter2 = &UnUsed;
+    break;
+  }
+  selectedInverter2->SetTorqueParam(Param::torque2);
+  selectedInverter2->SetReverseParam(Param::reversemotor2);
+  // This will call SetCanFilters() via the Clear Callback
+  canInterface[0]->ClearUserMessages();
+  canInterface[1]->ClearUserMessages();
+}
+
 // Whenever the user clears mapped can messages or changes the
 // CAN interface of a device, this will be called by the CanHardware module
 static void SetCanFilters() {
   CanHardware *inverter_can = canInterface[Param::GetInt(Param::InverterCan)];
+  CanHardware *inverter2_can =
+      canInterface[Param::GetInt(Param::Inverter2Can)];
   CanHardware *vehicle_can = canInterface[Param::GetInt(Param::VehicleCan)];
   CanHardware *shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
   CanHardware *lim_can = canInterface[Param::GetInt(Param::LimCan)];
@@ -1240,6 +1301,7 @@ static void SetCanFilters() {
       canInterface[Param::GetInt(Param::CompressorCan)];
 
   selectedInverter->SetCanInterface(inverter_can);
+  selectedInverter2->SetCanInterface(inverter2_can);
   selectedVehicle->SetCanInterface(vehicle_can);
   selectedCharger->SetCanInterface(charger_can);
   selectedChargeInt->SetCanInterface(lim_can);
@@ -1268,6 +1330,9 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   case Param::Inverter:
     UpdateInv();
     break;
+  case Param::Inverter2:
+    UpdateInv2();
+    break;
   case Param::Vehicle:
     UpdateVehicle();
     break;
@@ -1293,6 +1358,7 @@ void Param::Change(Param::PARAM_NUM paramNum) {
     UpdateShifter();
     break;
   case Param::InverterCan:
+  case Param::Inverter2Can:
   case Param::VehicleCan:
   case Param::ShuntCan:
   case Param::LimCan:
@@ -1328,6 +1394,14 @@ void Param::Change(Param::PARAM_NUM paramNum) {
 
     } else {
       Param::SetInt(Param::reversemotor, 0);
+    }
+  }
+
+  if (Param::GetInt(Param::reversemotor2) != 0) {
+    if (Param::GetInt(Param::Inverter2) == InvModes::RearOutlander) {
+
+    } else {
+      Param::SetInt(Param::reversemotor2, 0);
     }
   }
 
@@ -1384,8 +1458,8 @@ void Param::Change(Param::PARAM_NUM paramNum) {
 }
 
 static bool CanCallback(
-    uint32_t id, uint32_t data[2],
-    uint8_t dlc) // This is where we go when a defined CAN message is received.
+    uint32_t id, uint32_t data[2], uint8_t dlc,
+    CanHardware *bus) // This is where we go when a defined CAN message is received.
 {
   dlc = dlc;
   switch (id) {
@@ -1401,7 +1475,15 @@ static bool CanCallback(
       SBOX::DecodeCAN(id, data);
     if (Param::GetInt(Param::ShuntType) == 3)
       VWBOX::DecodeCAN(id, data);
-    selectedInverter->DecodeCAN(id, data);
+    // Inverter dispatch is bus-scoped: two simultaneously active inverter
+    // instances of the same model use identical CAN IDs, so only the
+    // instance actually configured for the bus this frame arrived on may
+    // decode it - otherwise both instances would blindly accept both
+    // buses' traffic.
+    if (bus == canInterface[Param::GetInt(Param::InverterCan)])
+      selectedInverter->DecodeCAN(id, data);
+    if (bus == canInterface[Param::GetInt(Param::Inverter2Can)])
+      selectedInverter2->DecodeCAN(id, data);
     selectedVehicle->DecodeCAN(id, data);
     selectedCharger->DecodeCAN(id, data);
     selectedChargeInt->DecodeCAN(id, data);
@@ -1413,6 +1495,14 @@ static bool CanCallback(
     break;
   }
   return false;
+}
+
+static bool CanCallback1(uint32_t id, uint32_t data[2], uint8_t dlc) {
+  return CanCallback(id, data, dlc, canInterface[0]);
+}
+
+static bool CanCallback2(uint32_t id, uint32_t data[2], uint8_t dlc) {
+  return CanCallback(id, data, dlc, canInterface[1]);
 }
 
 static void ConfigureVariantIO() {
@@ -1482,7 +1572,8 @@ int main(void) {
   //   FunctionPointerCallback canCb(CanCallback, SetCanFilters);
   Stm32Can c(CAN1, CanHardware::Baud500);
   Stm32Can c2(CAN2, CanHardware::Baud500, true);
-  FunctionPointerCallback cb(CanCallback, SetCanFilters);
+  FunctionPointerCallback cb1(CanCallback1, SetCanFilters);
+  FunctionPointerCallback cb2(CanCallback2, SetCanFilters);
   Stm32Can *CanMapDev = &c;
   if (Param::GetInt(Param::CanMapCan) == 0) {
     CanMapDev = &c;
@@ -1497,8 +1588,8 @@ int main(void) {
   //  c2.AddReceiveCallback(&canCb);
   canInterface[0] = &c;
   canInterface[1] = &c2;
-  c.AddCallback(&cb);
-  c2.AddCallback(&cb);
+  c.AddCallback(&cb1);
+  c2.AddCallback(&cb2);
   TerminalCommands::SetCanMap(&cm);
   SdoCommands::SetCanMap(&cm);
   canMap = &cm;
@@ -1515,6 +1606,7 @@ int main(void) {
   lin = &l;
 
   UpdateInv();
+  UpdateInv2();
   UpdateVehicle();
   UpdateCharger();
   UpdateChargeInt();
@@ -1541,15 +1633,9 @@ int main(void) {
 
   while (1) {
     char c = 0;
-    CanSdo::SdoFrame *sdoFrame = sdo.GetPendingUserspaceSdo();
     t.Run();
     if (sdo.GetPrintRequest() == PRINT_JSON) {
       TerminalCommands::PrintParamsJson(&sdo, &c);
-    }
-    if (0 != sdoFrame) {
-      SdoCommands::ProcessStandardCommands(sdoFrame);
-
-      sdo.SendSdoReply(sdoFrame);
     }
   }
 

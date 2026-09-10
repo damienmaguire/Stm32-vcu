@@ -19,6 +19,7 @@
  */
 
 #include "outlanderinverter.h"
+#include "OutlanderHeartBeat.h"
 #include "my_math.h"
 #include "params.h"
 
@@ -27,6 +28,8 @@ OutlanderInverter::OutlanderInverter() {
 }
 
 void OutlanderInverter::SetCanInterface(CanHardware *c) {
+  OutlanderHeartBeat::SetCanInterface(c); // set Outlander Heartbeat on same CAN
+
   can = c;
 
   can->RegisterUserMessage(0x289); // Outlander Inv Msg
@@ -52,7 +55,7 @@ void OutlanderInverter::DecodeCAN(int id, uint32_t data[2]) {
 void OutlanderInverter::SetTorque(float torquePercent) {
   final_torque_request = (torquePercent * 2000) / 100.0f + 10000;
 
-  Param::SetInt(Param::torque,
+  Param::SetInt(torqueParam,
                 final_torque_request); // post processed final torque value sent
                                        // to inv to web interface
 }

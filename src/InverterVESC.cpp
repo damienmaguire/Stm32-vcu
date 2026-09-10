@@ -59,7 +59,7 @@ void InverterVESC::SetTorque(float torquePercent) {
     data[2] = (torque >> 8) & 0xFF; // Big endian
     data[3] = torque & 0xFF; // Big endian
 
-    Param::SetInt(Param::torque,torque); // post processed final torque value sent
+    Param::SetInt(torqueParam,torque); // post processed final torque value sent
                                          // to inv to web interface
 
     can->Send(0xA01, data, 4, true); //ID 1
