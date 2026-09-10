@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <bmw_sbox.h>
+#include "bmw_sbox.h"
 
 /*
  * Implements control of the contactors in the BMW PHEV battery box "SBOX" unit.

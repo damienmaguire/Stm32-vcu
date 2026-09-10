@@ -24,8 +24,8 @@
 
 #include "canhardware.h"
 #include "errormessage.h"
-#include "shifter.h"
-#include "vehicle.h"
+#include "shifters/shifter.h"
+#include "vehicles/vehicle.h"
 
 namespace utils {
 inline int32_t change(int32_t x, int32_t in_min, int32_t in_max,
