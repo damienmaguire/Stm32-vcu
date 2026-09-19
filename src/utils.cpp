@@ -192,7 +192,7 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
   Shifter::Sgear gearS;
   int8_t selectedDir = Param::GetInt(Param::dir);
   int8_t userDirSelection = 0;
-  int8_t prevValidDir = 0;
+  static int8_t prevValidDir = 0;
   int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
   uint8_t ChangeLim =
       Param::GetInt(Param::DirChange); //"0=None, 1=Speed Thres, 2=Speed+Brake"
