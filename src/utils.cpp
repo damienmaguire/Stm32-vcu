@@ -280,8 +280,9 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
     {
       selectedDir = userDirSelection; // direct pass through
     } else if (ChangeLim == 1 ||
-               2) // speed limit only when changing F to R or R to F, note
-                  // last selected direction is valid,ignore neautral
+               ChangeLim == 2) // speed limit only when changing F to R or R to
+                               // F, note last selected direction is valid,
+                               // ignore neutral
     {
       if (userDirSelection != 0 &&
           userDirSelection !=
