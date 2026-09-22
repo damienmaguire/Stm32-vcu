@@ -393,6 +393,16 @@ static void Ms200Task(void) {
 static void Ms100Task(void) {
   DigIo::led_out.Toggle();
   iwdg_reset();
+
+  if (Param::GetBool(Param::CANStandby))
+    DigIo::CANSBY.Clear(); // request TJA1043 standby/go-to-sleep (STB_N low)
+  else
+    DigIo::CANSBY.Set(); // normal mode (STB_N high)
+
+  if (Param::GetBool(Param::PSUEnable))
+    DigIo::PSU_EN.Set();
+  else
+    DigIo::PSU_EN.Clear();
   float cpuLoad = scheduler->GetCpuLoad() / 10.0f;
   Param::SetFloat(Param::cpuload, cpuLoad);
   Param::SetInt(Param::lasterr, ErrorMessage::GetLastError());
@@ -1594,6 +1604,9 @@ int main(void) {
   Param::Change(Param::PARAM_LAST);
   DigIo::inv_out.Clear(); // inverter power off during bootup
   DigIo::mcp_sby.Clear(); // enable can3
+
+  DigIo::CANEN.Set();//enable can1 on V1.3 HW
+  DigIo::CANSBY.Set();
 
   Terminal t(USART3, TermCmds, false, true, !Param::GetBool(Param::UseRS232));
   //   FunctionPointerCallback canCb(CanCallback, SetCanFilters);
