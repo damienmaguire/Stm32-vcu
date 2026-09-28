@@ -21,6 +21,7 @@
 
 #include "utils.h"
 
+#include "bmw_i3sbox.h"
 #include "bmw_sbox.h"
 #include "hwinit.h"
 #include "iomatrix.h"
@@ -450,6 +451,16 @@ float ProcessUdc(int motorSpeed) {
         ((float)VWBOX::Amperes) *
         0.1; // get current from sbox sensor and post to parameter database
     Param::SetFloat(Param::idc, idc);
+  } else if (Param::GetInt(Param::ShuntType) == 5) // BMW i3 SBOX
+  {
+    float udc = ((float)I3SBOX::Voltage2) / 1000.0f; // output / vehicle side
+    Param::SetFloat(Param::udc, udc);
+    float udc2 = ((float)I3SBOX::Voltage) / 1000.0f; // pack / battery side
+    Param::SetFloat(Param::udc2, udc2);
+    Param::SetFloat(Param::udc3, 0);
+    float idc = ((float)I3SBOX::Amperes) / 1000.0f;
+    Param::SetFloat(Param::idc, idc);
+    Param::SetFloat(Param::power, (udc * idc) / 1000.0f);
   }
 
   // Calculate "12V" supply voltage from voltage divider on mprot pin

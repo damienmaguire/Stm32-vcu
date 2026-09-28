@@ -24,6 +24,7 @@
 
 /*  BMW PHEV Battery "SBOX" control routines.
     See : https://github.com/damienmaguire/BMW_SBox
+    The i3 pack SBOX is a different unit. Use ShuntType=5 / I3SBOX.
 */
 
 #include "canhardware.h"

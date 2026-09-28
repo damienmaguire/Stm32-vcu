@@ -22,7 +22,7 @@
 /*
  * BMW i3 SBOX Local-CAN at 500 kbit/s.
  * 0x100 pack V    u16le(B0,B1) mV
- * 0x110 output V  u16le(B0,B1) mV   (bench still caps ~17.5 V - confirm)
+ * 0x110 output V  u16le(B0,B1) mV   (bench still caps ~17.5 V — confirm)
  * 0x130 current   i16le(B0,B1) mA, discard if B5 == 0x80
  * B4 high nibble is the 0-F alive counter on the 2 ms frames.
  * No TX. Contactors are GPIO.

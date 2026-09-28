@@ -37,7 +37,7 @@
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
   PARAM_ENTRY(CAT_SETUP, chargemodes, CHGMODS, 0, 8, 0, 37)                    \
   PARAM_ENTRY(CAT_SETUP, BMS_Mode, BMSMODES, 0, 7, 0, 90)                      \
-  PARAM_ENTRY(CAT_SETUP, ShuntType, SHNTYPE, 0, 4, 0, 88)                      \
+  PARAM_ENTRY(CAT_SETUP, ShuntType, SHNTYPE, 0, 5, 0, 88)                      \
   PARAM_ENTRY(CAT_SETUP, InverterCan, CAN_DEV, 0, 1, 0, 70)                    \
   PARAM_ENTRY(CAT_SETUP, VehicleCan, CAN_DEV, 0, 1, 1, 71)                     \
   PARAM_ENTRY(CAT_SETUP, ShuntCan, CAN_DEV, 0, 1, 0, 72)                       \
@@ -316,7 +316,7 @@
   "22=GS450pump, 23=PwmTempGauge, 24=PwmSocGauge, 25=PwmHeater"
 #define APINFUNCS "0=None, 1=ProxPilot, 2=BrakeVacSensor, 3=HeaterPot"
 #define SHIFTERS "0=None, 1=BMW_F30, 2=JLR_G1, 3=JLR_G2, 4=BMW_E65, 5=PKP2300"
-#define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG. 4=ISA_udcsw"
+#define SHNTYPE "0=None, 1=ISA, 2=SBOX, 3=VAG, 4=ISA_udcsw, 5=i3SBOX"
 #define DMODES "0=CLOSED, 1=OPEN, 2=ERROR, 3=INVALID"
 #define POTMODES "0=SingleChannel, 1=DualChannel"
 #define BTNSWITCH "0=Button, 1=Switch, 2=CAN"

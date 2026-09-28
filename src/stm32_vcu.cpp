@@ -42,6 +42,7 @@
 #include "bms/oibms.h"
 #include "bms/simpbms.h"
 #include "bms/stwmbms.h"
+#include "bmw_i3sbox.h"
 #include "bmw_sbox.h"
 #include "canmap.h"
 #include "cansdo.h"
@@ -1268,6 +1269,8 @@ static void SetCanFilters() {
     SBOX::RegisterCanMessages(shunt_can); // select bmw sbox
   if (Param::GetInt(Param::ShuntType) == 3)
     VWBOX::RegisterCanMessages(shunt_can); // select vw sbox
+  if (Param::GetInt(Param::ShuntType) == 5)
+    I3SBOX::RegisterCanMessages(shunt_can); // select i3 pack sbox
 
   canInterface[1]->RegisterUserMessage(0x601); // CanSDO
   canInterface[0]->RegisterUserMessage(0x601); // CanSDO
@@ -1409,6 +1412,8 @@ static bool CanCallback(
       SBOX::DecodeCAN(id, data);
     if (Param::GetInt(Param::ShuntType) == 3)
       VWBOX::DecodeCAN(id, data);
+    if (Param::GetInt(Param::ShuntType) == 5)
+      I3SBOX::DecodeCAN(id, data);
     selectedInverter->DecodeCAN(id, data);
     selectedVehicle->DecodeCAN(id, data);
     selectedCharger->DecodeCAN(id, data);
