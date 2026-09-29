@@ -71,6 +71,7 @@
 		<Unit filename="include/bms/oibms.h" />
 		<Unit filename="include/bms/simpbms.h" />
 		<Unit filename="include/bms/stwmbms.h" />
+		<Unit filename="include/bmw_i3sbox.h" />
 		<Unit filename="include/bmw_sbox.h" />
 		<Unit filename="include/chargers/C5Charger.h" />
 		<Unit filename="include/chargers/C5PTECAN.h" />
@@ -188,6 +189,7 @@
 		<Unit filename="src/bms/oibms.cpp" />
 		<Unit filename="src/bms/simpbms.cpp" />
 		<Unit filename="src/bms/stwmbms.cpp" />
+		<Unit filename="src/bmw_i3sbox.cpp" />
 		<Unit filename="src/bmw_sbox.cpp" />
 		<Unit filename="src/chargers/C5Charger.cpp" />
 		<Unit filename="src/chargers/CPC.cpp" />

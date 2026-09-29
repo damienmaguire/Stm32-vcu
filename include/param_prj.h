@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.41.0TA
+#define VER 2.42.0DA
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
