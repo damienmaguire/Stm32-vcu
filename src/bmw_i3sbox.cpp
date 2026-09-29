@@ -21,9 +21,13 @@
 
 /*
  * BMW i3 SBOX Local-CAN at 500 kbit/s.
- * 0x100 pack V    u16le(B0,B1) mV
- * 0x110 output V  u16le(B0,B1) mV   (bench still caps ~17.5 V — confirm)
+ * 0x100 pack V    i32le(B0-B3) mV, clamp <0 to 0
+ * 0x110 output V  i32le(B0-B3) mV, clamp <0 to 0
  * 0x130 current   i16le(B0,B1) mA, discard if B5 == 0x80
+ * B2 of the voltage frames is the high byte; it ticks at 65.536 V.
+ * Peak seen on bench: 326307 mV (A3 FA 04 00).
+ * Near-zero noise arrives sign-extended (B2 B3 = FF FF) and used to
+ * display as 65.5 V when only B0-B1 were read unsigned.
  * B4 high nibble is the 0-F alive counter on the 2 ms frames.
  * No TX. Contactors are GPIO.
  */
@@ -34,6 +38,15 @@ int32_t I3SBOX::Amperes = 0;
 uint8_t I3SBOX::Alive = 0;
 uint8_t I3SBOX::Flags = 0;
 bool I3SBOX::ValidCurrent = false;
+
+static int32_t MillivoltsLE(const uint8_t *bytes) {
+  uint32_t raw = (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) |
+                 ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
+  int32_t mv = (int32_t)raw;
+  if (mv < 0)
+    mv = 0;
+  return mv;
+}
 
 void I3SBOX::RegisterCanMessages(CanHardware *can) {
   can->RegisterUserMessage(0x100);
@@ -59,13 +72,13 @@ void I3SBOX::DecodeCAN(int id, uint32_t data[2]) {
 
 void I3SBOX::handle100(uint32_t data[2]) {
   uint8_t *bytes = (uint8_t *)data;
-  Voltage = (int32_t)((uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8));
+  Voltage = MillivoltsLE(bytes);
   Alive = (uint8_t)(bytes[4] >> 4);
 }
 
 void I3SBOX::handle110(uint32_t data[2]) {
   uint8_t *bytes = (uint8_t *)data;
-  Voltage2 = (int32_t)((uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8));
+  Voltage2 = MillivoltsLE(bytes);
 }
 
 void I3SBOX::handle130(uint32_t data[2]) {

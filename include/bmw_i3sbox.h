@@ -22,6 +22,7 @@
 
 /* BMW i3 pack-internal SBOX (PN 61278648904) Local-CAN decode.
  * Measurement only. Coils stay on VCU GPIO.
+ * Voltages are i32le millivolts on B0-B3 (B2 ticks at 65.536 V).
  * Not the PHEV SBOX (ShuntType=2, IDs 0x100/0x300 as coil commands).
  * https://github.com/damienmaguire/BMW-i3-SBOX
  */
@@ -37,8 +38,8 @@ public:
   static void RegisterCanMessages(CanHardware *can);
   static void DecodeCAN(int id, uint32_t data[2]);
 
-  static int32_t Voltage;  // pack / battery-side, mV (0x100)
-  static int32_t Voltage2; // vehicle / output-side, mV (0x110)
+  static int32_t Voltage;  // pack / battery-side, mV (0x100 i32le)
+  static int32_t Voltage2; // vehicle / output-side, mV (0x110 i32le)
   static int32_t Amperes;  // pack current, mA (0x130), last valid frame
   static uint8_t Alive;    // 0x100 B4 high nibble
   static uint8_t Flags;    // last 0x130 B5
