@@ -130,6 +130,7 @@ static bool chargeModeDC = false;
 static bool ChgLck = false;
 static CanHardware *canInterface[3];
 static CanMap *canMap;
+static CanHardware *canMapCan; // bus the CanMap was bound to at boot
 static CanSdo *canSdo;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
@@ -677,7 +678,7 @@ static void Ms10Task(void) {
   speed = selectedInverter->GetMotorSpeed(); // set motor rpm on interface
 
   Param::SetInt(Param::speed, speed);
-  utils::GetDigInputs(canInterface[Param::GetInt(Param::InverterCan)]);
+  utils::GetDigInputs(canMapCan); // canio is received via the CanMap
 
   if (opmode == MOD_RUN ||
       opmode == MOD_CHARGE) // only set rev counter when in RUN or CHARGE
@@ -1535,6 +1536,7 @@ int main(void) {
   c2.AddCallback(&cb);
   TerminalCommands::SetCanMap(&cm);
   canMap = &cm;
+  canMapCan = CanMapDev;
   canSdo = &sdo;
 
   CanHardware *shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];

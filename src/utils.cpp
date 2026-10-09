@@ -52,6 +52,9 @@ void GetDigInputs(CanHardware *can) {
 
   canIoActive |= canio != 0;
 
+  // can must be the bus the CanMap receives canio on. Note this is a bus-level
+  // timeout: it detects a silent bus, not a missing canio frame on a bus that
+  // still carries other traffic.
   if ((rtc_get_counter_val() - can->GetLastRxTimestamp()) >= CAN_TIMEOUT &&
       canIoActive) {
     canio = 0;
