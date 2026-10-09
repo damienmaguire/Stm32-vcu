@@ -40,7 +40,7 @@ inline float changeFloat(float x, float in_min, float in_max, float out_min,
 
 float GetUserThrottleCommand(CanHardware *);
 float ProcessThrottle(int);
-float ProcessUdc(int);
+float ProcessUdc();
 void CalcSOC();
 void GetDigInputs(CanHardware *);
 void PostErrorIfRunning(ERROR_MESSAGE_NUM);

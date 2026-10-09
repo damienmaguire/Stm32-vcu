@@ -148,6 +148,7 @@ static bool OutlanderCAN = false;
 static bool ExtHVreq = false;
 static bool CheckHVIL = 0;
 static bool HVILok = 0;
+static bool overvoltageLatch = false; // blocks restart after an overvoltage
 
 static volatile unsigned days = 0, hours = 0, minutes = 0, seconds = 0,
                          alarm = 0; // != 0 when alarm is pending
@@ -703,13 +704,33 @@ static void Ms10Task(void) {
   //////////////////////////////////////////////////
   //            MODE CONTROL SECTION              //
   //////////////////////////////////////////////////
-  float udc = utils::ProcessUdc(speed);
+  float udc = utils::ProcessUdc();
   stt |= Param::GetInt(Param::pot) <= Param::GetInt(Param::potmin)
              ? STAT_NONE
              : STAT_POTPRESSED;
   stt |= udc >= Param::GetFloat(Param::udcsw) ? STAT_NONE : STAT_UDCBELOWUDCSW;
   stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
   Param::SetInt(Param::status, stt);
+
+  // Overvoltage: leave any energised mode and stay off (see MOD_OFF) until
+  // every power-up request (ignition, charge, preheat, maintain) is removed
+  if (stt & STAT_UDCLIM) {
+    // If the motor is stationary the overvoltage comes from outside (e.g.
+    // the charger), so open the DC switch right away. Otherwise give the
+    // inverter 250ms at zero torque before opening it.
+    uint16_t ovDly = ABS(speed) < 50 ? 0 : 25;
+
+    if (opmode != MOD_OFF)
+      rlyDly = ovDly;
+    else
+      rlyDly = MIN(rlyDly, ovDly); // never extend a shutdown already running
+
+    opmode = MOD_OFF;
+    overvoltageLatch = true;
+    selectedCharger->Off();
+    maintainer12V.CancelMaintainer();
+    ErrorMessage::Post(ERR_OVERVOLTAGE);
+  }
 
   switch (opmode) {
   case MOD_OFF:
@@ -741,9 +762,13 @@ static void Ms10Task(void) {
       DigIo::prec_out.Clear();
     }
 
+    if (overvoltageLatch && !selectedVehicle->Ready() && !chargeMode &&
+        !preheater.GetRunPreHeat() && !maintainer12V.GetRunMaintainer())
+      overvoltageLatch = false; // all power-up requests removed, allow restart
+
     if (Param::GetInt(Param::pot) < Param::GetInt(Param::potmin)) {
       if (selectedVehicle->Start() && selectedVehicle->Ready() &&
-          (HVILok > 0)) {
+          (HVILok > 0) && !overvoltageLatch) {
         StartSig = true;
         opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
                                 // pressed , 2)ign on , 3)start signal rx, 4) HV
@@ -753,19 +778,19 @@ static void Ms10Task(void) {
         initbyStart = true;
       }
     }
-    if (chargeMode) {
+    if (chargeMode && !overvoltageLatch) {
       opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
       rlyDly = 25;            // Recharge sequence timer
       vehicleStartTime = rtc_get_counter_val();
       initbyCharge = true;
     }
-    if (preheater.GetRunPreHeat()) {
+    if (preheater.GetRunPreHeat() && !overvoltageLatch) {
       opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
       rlyDly = 25;            // Recharge sequence timer
       vehicleStartTime = rtc_get_counter_val();
       preheater.SetInitByPreHeat(true);
     }
-    if (maintainer12V.GetRunMaintainer()) {
+    if (maintainer12V.GetRunMaintainer() && !overvoltageLatch) {
       opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
       rlyDly = 25;            // Recharge sequence timer
       vehicleStartTime = rtc_get_counter_val();

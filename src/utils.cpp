@@ -344,7 +344,7 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
   Param::SetInt(Param::dir, selectedDir); // final writing of DIR
 }
 
-float ProcessUdc(int motorSpeed) {
+float ProcessUdc() {
   float udc = Param::GetFloat(Param::udc);
 
   if (Param::GetInt(Param::ShuntType) == 0 &&
@@ -463,19 +463,7 @@ float ProcessUdc(int motorSpeed) {
   int uauxGain = 210; //!! hard coded AUX gain
   Param::SetFloat(Param::uaux, ((float)AnaIn::uaux.Get()) / uauxGain);
 
-  float udclim = Param::GetFloat(Param::udclim);
-
-  if (udc > udclim) {
-    if (ABS(motorSpeed) <
-        50) // If motor is stationary, over voltage comes from outside
-    {
-      DigIo::dcsw_out.Clear(); // In this case, open DC switch
-      DigIo::prec_out.Clear(); // and
-    }
-
-    Param::SetInt(Param::opmode, MOD_OFF);
-    ErrorMessage::Post(ERR_OVERVOLTAGE);
-  }
+  // Overvoltage (udc > udclim) is handled by the mode control in Ms10Task
   /*
      if(opmode == MOD_PRECHARGE)
      {
