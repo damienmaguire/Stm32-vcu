@@ -221,6 +221,62 @@ static Compressor *selectedCompressor = &UnUsed;
 static PWMHeater pwmHeater;
 static Maintainer12V maintainer12V;
 
+// Clearing the user messages calls SetCanFilters() via the Clear callback,
+// which re-registers the CAN messages of every selected device
+static void RefreshCanFilters() {
+  canInterface[0]->ClearUserMessages();
+  canInterface[1]->ClearUserMessages();
+}
+
+// Current shunt / contactor box selected by Param::ShuntType
+static void RegisterShuntCanMessages(CanHardware *can) {
+  switch (Param::GetInt(Param::ShuntType)) {
+  case ShuntISA:
+  case ShuntISAudcsw:
+    ISA::RegisterCanMessages(can);
+    break;
+  case ShuntSBOX:
+    SBOX::RegisterCanMessages(can);
+    break;
+  case ShuntVAG:
+    VWBOX::RegisterCanMessages(can);
+    break;
+  default:
+    break;
+  }
+}
+
+static void DecodeShuntCan(uint32_t id, uint32_t data[2]) {
+  switch (Param::GetInt(Param::ShuntType)) {
+  case ShuntISA:
+  case ShuntISAudcsw:
+    ISA::DecodeCAN(id, data);
+    break;
+  case ShuntSBOX:
+    SBOX::DecodeCAN(id, data);
+    break;
+  case ShuntVAG:
+    VWBOX::DecodeCAN(id, data);
+    break;
+  default:
+    break;
+  }
+}
+
+// Only the contactor boxes switch contactors, the ISA shunt just measures
+static void ControlShuntContactors(int opmode, CanHardware *can) {
+  switch (Param::GetInt(Param::ShuntType)) {
+  case ShuntSBOX:
+    SBOX::ControlContactors(opmode, can);
+    break;
+  case ShuntVAG:
+    VWBOX::ControlContactors(opmode, can);
+    break;
+  default:
+    break;
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void) {
   int opmode = Param::GetInt(Param::opmode);
@@ -394,7 +450,7 @@ static void Ms100Task(void) {
   int opmode = Param::GetInt(Param::opmode);
   utils::SelectDirection(selectedVehicle, selectedShifter);
 
-  if (Param::GetInt(Param::ShuntType) != 0) // Do not do any SOC calcs
+  if (Param::GetInt(Param::ShuntType) != ShuntNone) // Do not do any SOC calcs
   {
     utils::CalcSOC();
   }
@@ -807,7 +863,7 @@ static void Ms10Task(void) {
       if (selectedInverter != &openInv)
         DigIo::inv_out.Set(); // inverter power on but not if we are in charge
                               // mode and not if OI
-    } else if ((Param::GetInt(Param::ShuntType) == 0) &&
+    } else if ((Param::GetInt(Param::ShuntType) == ShuntNone) &&
                selectedInverter == &leafInv) // Shunt 0 + Leaf is precharge
                                              // using leaf inverter voltage
     {
@@ -948,14 +1004,7 @@ static void Ms10Task(void) {
   }
 
   ControlCabHeater(opmode);
-  if (Param::GetInt(Param::ShuntType) == 2)
-    SBOX::ControlContactors(
-        opmode,
-        canInterface[Param::GetInt(Param::ShuntCan)]); // BMW contactor box
-  if (Param::GetInt(Param::ShuntType) == 3)
-    VWBOX::ControlContactors(
-        opmode,
-        canInterface[Param::GetInt(Param::ShuntCan)]); // VW contactor box
+  ControlShuntContactors(opmode, canInterface[Param::GetInt(Param::ShuntCan)]);
 }
 
 static void Ms1Task(void) {
@@ -1004,9 +1053,7 @@ static void UpdateInv() {
     selectedInverter = &inverterAcp;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateVehicle() {
@@ -1038,9 +1085,7 @@ static void UpdateVehicle() {
     selectedVehicle = &classVehicle;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateCharger() {
@@ -1076,9 +1121,7 @@ static void UpdateCharger() {
     selectedCharger = &c5Chg;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateChargeInt() {
@@ -1100,9 +1143,7 @@ static void UpdateChargeInt() {
     selectedChargeInt = &Focccican;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateHeater() {
@@ -1143,9 +1184,7 @@ static void UpdateHeater() {
     webastoHeater.SetSubtype(WebastoHVH::HVH100);
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateBMS() {
@@ -1175,9 +1214,7 @@ static void UpdateBMS() {
     selectedBMS = &UnUsed;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateDCDC() {
@@ -1204,9 +1241,7 @@ static void UpdateDCDC() {
     selectedDCDC = &DCDCnone;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateCompressor() {
@@ -1220,9 +1255,7 @@ static void UpdateCompressor() {
     break;
   }
 
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateShifter() {
@@ -1257,9 +1290,7 @@ static void UpdateShifter() {
     selectedShifter = &shifterNone;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 // Whenever the user clears mapped can messages or changes the
@@ -1288,13 +1319,7 @@ static void SetCanFilters() {
   selectedHeater->SetCanInterface(heater_can);
   selectedCompressor->SetCanInterface(compressor_can);
 
-  if (Param::GetInt(Param::ShuntType) == 1 ||
-      Param::GetInt(Param::ShuntType) == 4)
-    ISA::RegisterCanMessages(shunt_can); // select isa shunt
-  if (Param::GetInt(Param::ShuntType) == 2)
-    SBOX::RegisterCanMessages(shunt_can); // select bmw sbox
-  if (Param::GetInt(Param::ShuntType) == 3)
-    VWBOX::RegisterCanMessages(shunt_can); // select vw sbox
+  RegisterShuntCanMessages(shunt_can);
 
   canInterface[1]->RegisterUserMessage(0x601); // CanSDO
   canInterface[0]->RegisterUserMessage(0x601); // CanSDO
@@ -1335,9 +1360,12 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   case Param::ShuntCan:
   case Param::LimCan:
   case Param::ChargerCan:
+  case Param::BMSCan:
+  case Param::OBD2Can:
+  case Param::DCDCCan:
+  case Param::HeaterCan:
   case Param::CompressorCan:
-    canInterface[0]->ClearUserMessages();
-    canInterface[1]->ClearUserMessages();
+    RefreshCanFilters();
     break;
   case Param::CAN3Speed:
     CANSPI_Initialize(); // init the MCP25625 on CAN3
@@ -1429,13 +1457,7 @@ static bool CanCallback(
     break;
 
   default:
-    if (Param::GetInt(Param::ShuntType) == 1 ||
-        Param::GetInt(Param::ShuntType) == 4)
-      ISA::DecodeCAN(id, data);
-    if (Param::GetInt(Param::ShuntType) == 2)
-      SBOX::DecodeCAN(id, data);
-    if (Param::GetInt(Param::ShuntType) == 3)
-      VWBOX::DecodeCAN(id, data);
+    DecodeShuntCan(id, data);
     selectedInverter->DecodeCAN(id, data);
     selectedVehicle->DecodeCAN(id, data);
     selectedCharger->DecodeCAN(id, data);

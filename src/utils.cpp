@@ -350,15 +350,15 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
 float ProcessUdc() {
   float udc = Param::GetFloat(Param::udc);
 
-  if (Param::GetInt(Param::ShuntType) == 0 &&
+  if (Param::GetInt(Param::ShuntType) == ShuntNone &&
       Param::GetInt(Param::BMS_Mode) != BMSSTW) {
     // This way we can have ShuntType 0 and still pull latests info
     if (Param::GetInt(Param::opmode) == MOD_OFF) {
       udc = 0; // ensure we reset udc during off state to keep precharge working
       Param::SetFloat(Param::udc, udc);
     }
-  } else if (Param::GetInt(Param::ShuntType) == 1 ||
-             Param::GetInt(Param::ShuntType) == 4) // ISA shunt
+  } else if (Param::GetInt(Param::ShuntType) == ShuntISA ||
+             Param::GetInt(Param::ShuntType) == ShuntISAudcsw) // ISA shunt
   {
     float udc =
         ((float)ISA::Voltage) /
@@ -387,7 +387,8 @@ float ProcessUdc() {
     Param::SetFloat(Param::AMPh, Amph);
     float deltaVolts1 = (udc2 / 2) - udc3;
     Param::SetFloat(Param::deltaV, deltaVolts1);
-    if (Param::GetInt(Param::ShuntType) == 4) // ISA Shunt with udcsw update
+    if (Param::GetInt(Param::ShuntType) ==
+        ShuntISAudcsw) // ISA Shunt with udcsw update
     {
       if (udc2 >
           Param::GetFloat(
@@ -397,7 +398,7 @@ float ProcessUdc() {
                         udc2 - 20); // Set udcsw to 20V under battery voltage
       }
     }
-  } else if (Param::GetInt(Param::ShuntType) == 2) // BMS Sbox
+  } else if (Param::GetInt(Param::ShuntType) == ShuntSBOX) // BMS Sbox
   {
     if (Param::GetInt(Param::opmode) != MOD_OFF) {
       float udc =
@@ -429,7 +430,7 @@ float ProcessUdc() {
     float kw = (udc * idc) /
                1000; // get power from isa sensor and post to parameter database
     Param::SetFloat(Param::power, kw);
-  } else if (Param::GetInt(Param::ShuntType) == 3) // VW
+  } else if (Param::GetInt(Param::ShuntType) == ShuntVAG) // VW
   {
     if (Param::GetInt(Param::opmode) != MOD_OFF) {
       float udc =

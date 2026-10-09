@@ -469,6 +469,14 @@ enum HeatType {
   HVH100
 };
 
+enum ShuntTypes {
+  ShuntNone = 0,
+  ShuntISA = 1,
+  ShuntSBOX = 2,
+  ShuntVAG = 3,
+  ShuntISAudcsw = 4
+};
+
 enum BMSModes {
   BMSModeNoBMS = 0,
   BMSModeSimpBMS = 1,
