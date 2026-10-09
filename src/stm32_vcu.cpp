@@ -796,6 +796,8 @@ static void Ms10Task(void) {
       vehicleStartTime = rtc_get_counter_val();
       maintainer12V.SetInitByMaintainer(true);
     }
+    if (opmode == MOD_PRECHARGE)
+      ErrorMessage::UnpostAll(); // log each error once per power-up cycle
     Param::SetInt(Param::opmode, opmode);
     break;
 
@@ -885,7 +887,6 @@ static void Ms10Task(void) {
     if (rlyDly == 0) {
       DigIo::dcsw_out.Set();
     }
-    ErrorMessage::UnpostAll();
     if (!chargeMode) {
       opmode = MOD_OFF;
       rlyDly = 250; // Recharge sequence timer for delayed shutdown
@@ -902,7 +903,6 @@ static void Ms10Task(void) {
       DigIo::inv_out.Set(); // inverter power on
     }
     Param::SetInt(Param::opmode, MOD_RUN);
-    ErrorMessage::UnpostAll();
     if (!selectedVehicle->Ready()) {
       opmode = MOD_OFF;
       rlyDly = 250; // Recharge sequence timer for delayed shutdown
