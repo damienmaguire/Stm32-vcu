@@ -717,6 +717,7 @@ static void Ms10Task(void) {
     initbyCharge = false;
     preheater.SetInitByPreHeat(false);
     maintainer12V.SetInitByMaintainer(false);
+    prechargeMinTime = 100; // re-arm 1 second minimum for the next precharge
 
     DigIo::inv_out.Clear();                           // inverter power off
     IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
