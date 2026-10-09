@@ -82,6 +82,7 @@
 #include "linbus.h"
 #include "my_math.h"
 #include "notused.h"
+#include "opmodecontrol.h"
 #include "param_save.h"
 #include "params.h"
 #include "printf.h"
@@ -115,8 +116,6 @@
 #include <libopencm3/stm32/usart.h>
 #include <stdint.h>
 
-#define PRECHARGE_TIMEOUT 5 // 5s
-
 #define PRINT_JSON 0
 
 extern "C" void __cxa_pure_virtual() {
@@ -141,21 +140,14 @@ static uint8_t ChgHrs_tmp;
 static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks = 0, ChgTicks_1Min = 0;
-static bool StartSig = false;
 static bool ACrequest = false;
-static bool initbyStart = false;
-static bool initbyCharge = false;
 static bool OutlanderCAN = false;
 static bool ExtHVreq = false;
 static bool CheckHVIL = 0;
 static bool HVILok = 0;
-static bool overvoltageLatch = false; // blocks restart after an overvoltage
 
 static volatile unsigned days = 0, hours = 0, minutes = 0, seconds = 0,
                          alarm = 0; // != 0 when alarm is pending
-
-static uint16_t rlyDly = 25;
-static uint16_t prechargeMinTime = 100;
 
 // Instantiate Classes
 static BMW_E31 e31Vehicle;
@@ -220,6 +212,7 @@ static OutlanderCompressor outlanderCompressor;
 static Compressor *selectedCompressor = &UnUsed;
 static PWMHeater pwmHeater;
 static Maintainer12V maintainer12V;
+static OpModeControl opModeControl(preheater, maintainer12V);
 
 // Clearing the user messages calls SetCanFilters() via the Clear callback,
 // which re-registers the CAN messages of every selected device
@@ -671,8 +664,6 @@ static void ControlCabHeater(int opmode) {
 }
 
 static void Ms10Task(void) {
-  static uint32_t vehicleStartTime = 0;
-
   int16_t previousSpeed = Param::GetInt(Param::speed);
   int16_t speed = 0;
   float torquePercent;
@@ -769,239 +760,16 @@ static void Ms10Task(void) {
   stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
   Param::SetInt(Param::status, stt);
 
-  // Overvoltage: leave any energised mode and stay off (see MOD_OFF) until
-  // every power-up request (ignition, charge, preheat, maintain) is removed
-  if (stt & STAT_UDCLIM) {
-    // If the motor is stationary the overvoltage comes from outside (e.g.
-    // the charger), so open the DC switch right away. Otherwise give the
-    // inverter 250ms at zero torque before opening it.
-    uint16_t ovDly = ABS(speed) < 50 ? 0 : 25;
-
-    if (opmode != MOD_OFF)
-      rlyDly = ovDly;
-    else
-      rlyDly = MIN(rlyDly, ovDly); // never extend a shutdown already running
-
-    opmode = MOD_OFF;
-    overvoltageLatch = true;
-    selectedCharger->Off();
-    maintainer12V.CancelMaintainer();
-    ErrorMessage::Post(ERR_OVERVOLTAGE);
-  }
-
-  switch (opmode) {
-  case MOD_OFF:
-    initbyStart = false;
-    initbyCharge = false;
-    preheater.SetInitByPreHeat(false);
-    maintainer12V.SetInitByMaintainer(false);
-    prechargeMinTime = 100; // re-arm 1 second minimum for the next precharge
-
-    DigIo::inv_out.Clear();                           // inverter power off
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
-                                                      // used
-    Param::SetInt(
-        Param::dir,
-        0); // shift to park/neutral on shutdown regardless of shifter pos
-    selectedVehicle->DashOff();
-
-    StartSig = false; // reset for next time
-
-    if (rlyDly != 0) {
-      rlyDly--; // here we are going to pause to allow system shut down before
-                // opening HV contactors
-      selectedCharger->Off(); // send message to charger to shut down
-    }
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Clear();
-      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)
-          ->Clear(); // Negative contactors off if used
-      DigIo::prec_out.Clear();
-    }
-
-    if (overvoltageLatch && !selectedVehicle->Ready() && !chargeMode &&
-        !preheater.GetRunPreHeat() && !maintainer12V.GetRunMaintainer())
-      overvoltageLatch = false; // all power-up requests removed, allow restart
-
-    if (Param::GetInt(Param::pot) < Param::GetInt(Param::potmin)) {
-      if (selectedVehicle->Start() && selectedVehicle->Ready() &&
-          (HVILok > 0) && !overvoltageLatch) {
-        StartSig = true;
-        opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
-                                // pressed , 2)ign on , 3)start signal rx, 4) HV
-                                // IL input is grounded if selected.
-        rlyDly = 25;            // Recharge sequence timer
-        vehicleStartTime = rtc_get_counter_val();
-        initbyStart = true;
-      }
-    }
-    if (chargeMode && !overvoltageLatch) {
-      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
-      rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
-      initbyCharge = true;
-    }
-    if (preheater.GetRunPreHeat() && !overvoltageLatch) {
-      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
-      rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
-      preheater.SetInitByPreHeat(true);
-    }
-    if (maintainer12V.GetRunMaintainer() && !overvoltageLatch) {
-      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
-      rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
-      maintainer12V.SetInitByMaintainer(true);
-    }
-    if (opmode == MOD_PRECHARGE)
-      ErrorMessage::UnpostAll(); // log each error once per power-up cycle
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_PRECHARGE:
-    if (!chargeMode) {
-      if (selectedInverter != &openInv)
-        DigIo::inv_out.Set(); // inverter power on but not if we are in charge
-                              // mode and not if OI
-    } else if ((Param::GetInt(Param::ShuntType) == ShuntNone) &&
-               selectedInverter == &leafInv) // Shunt 0 + Leaf is precharge
-                                             // using leaf inverter voltage
-    {
-      DigIo::inv_out.Set(); // inverter power on
-    }
-    IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0)
-      DigIo::prec_out.Set(); // commence precharge
-    if (prechargeMinTime != 0)
-      prechargeMinTime--; // 1 second minimum precharge time
-    if ((prechargeMinTime == 0) &&
-        (stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) ==
-            0) // Clarify operator precedence, exit precharge: time met and no
-               // faults
-    {
-      if (StartSig) {
-        opmode = MOD_RUN;
-        StartSig = false;                    // reset for next time
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-      } else if (chargeMode) {
-        opmode = MOD_CHARGE;
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-      } else if (preheater.GetRunPreHeat()) {
-        opmode = MOD_PREHEAT;
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-      } else if (maintainer12V.GetRunMaintainer()) {
-        opmode = MOD_MAINTAIN;
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-        Param::SetInt(Param::maintainWakeups,
-                      Param::GetInt(Param::maintainWakeups) + 1);
-      }
-    }
-    if (initbyCharge && !chargeMode)
-      opmode = MOD_OFF; // These two statements catch a precharge hang from
-                        // either start mode or run mode.
-    if (initbyStart && !selectedVehicle->Ready())
-      opmode = MOD_OFF;
-    if (preheater.GetInitByPreHeat() && !preheater.GetRunPreHeat())
-      opmode = MOD_OFF;
-    if (maintainer12V.GetInitByMaintainer() &&
-        !maintainer12V.GetRunMaintainer())
-      opmode = MOD_OFF;
-
-    if (udc < (Param::GetInt(Param::udcsw)) &&
-        rtc_get_counter_val() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
-      DigIo::prec_out.Clear();
-      ErrorMessage::Post(ERR_PRECHARGE);
-      opmode = MOD_PCHFAIL;
-    }
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_PCHFAIL:
-    StartSig = false;
-    DigIo::prec_out
-        .Clear(); // explicitly turn off precharge relay in a fail condition
-    if (initbyCharge && !chargeMode)
-      opmode = MOD_OFF; // only go to off if the signal from charge or vehicle
-                        // start is removed
-    if (initbyStart && !selectedVehicle->Ready())
-      opmode = MOD_OFF; // this avoids oscillation in the event of a precharge
-                        // system failure
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_CHARGE:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-    }
-    if (!chargeMode) {
-      opmode = MOD_OFF;
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_RUN:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-      DigIo::inv_out.Set(); // inverter power on
-    }
-    Param::SetInt(Param::opmode, MOD_RUN);
-    if (!selectedVehicle->Ready()) {
-      opmode = MOD_OFF;
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_MAINTAIN:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-    }
-
-    maintainer12V.Ms10Task();
-
-    if (!maintainer12V.GetRunMaintainer()) {
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-
-    if ((selectedVehicle->Start() && selectedVehicle->Ready())) {
-      maintainer12V.CancelMaintainer();
-    }
-
-    break;
-
-  case MOD_PREHEAT:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-    }
-
-    preheater.Ms10Task();
-
-    if (!preheater.GetRunPreHeat()) {
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-    break;
-  }
+  OpModeControl::Inputs modeInputs;
+  modeInputs.udc = udc;
+  modeInputs.stt = stt;
+  modeInputs.speed = speed;
+  modeInputs.chargeMode = chargeMode;
+  modeInputs.hvilOk = HVILok;
+  modeInputs.openInverter = selectedInverter == &openInv;
+  modeInputs.leafInverter = selectedInverter == &leafInv;
+  opmode =
+      opModeControl.Run(opmode, modeInputs, selectedVehicle, selectedCharger);
 
   ControlCabHeater(opmode);
   ControlShuntContactors(opmode, canInterface[Param::GetInt(Param::ShuntCan)]);

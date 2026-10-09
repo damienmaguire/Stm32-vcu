@@ -109,6 +109,7 @@
 		<Unit filename="include/iomatrix.h" />
 		<Unit filename="include/isa_shunt.h" />
 		<Unit filename="include/notused.h" />
+		<Unit filename="include/opmodecontrol.h" />
 		<Unit filename="include/param_prj.h" />
 		<Unit filename="include/shifters/E65_Lever.h" />
 		<Unit filename="include/shifters/F30_Lever.h" />
@@ -217,6 +218,7 @@
 		<Unit filename="src/inverters/outlanderinverter.cpp" />
 		<Unit filename="src/iomatrix.cpp" />
 		<Unit filename="src/isa_shunt.cpp" />
+		<Unit filename="src/opmodecontrol.cpp" />
 		<Unit filename="src/shifters/E65_Lever.cpp" />
 		<Unit filename="src/shifters/F30_Lever.cpp" />
 		<Unit filename="src/shifters/JLR_G1.cpp" />
