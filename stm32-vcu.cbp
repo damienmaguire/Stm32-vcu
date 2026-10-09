@@ -208,6 +208,7 @@
 		<Unit filename="src/dcdc/Maintainer12V.cpp" />
 		<Unit filename="src/dcdc/TeslaDCDC.cpp" />
 		<Unit filename="src/digipot.cpp" />
+		<Unit filename="src/direction.cpp" />
 		<Unit filename="src/hwinit.cpp" />
 		<Unit filename="src/inverters/Can_OI.cpp" />
 		<Unit filename="src/inverters/GS450H.cpp" />
