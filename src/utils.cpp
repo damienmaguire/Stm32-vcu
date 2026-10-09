@@ -197,6 +197,11 @@ void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
   uint8_t ChangeLim =
       Param::GetInt(Param::DirChange); //"0=None, 1=Speed Thres, 2=Speed+Brake"
 
+  // Forget the last valid direction at key-off, so the first forward/reverse
+  // selection of each drive cycle goes through the change limit checks again
+  if (Param::GetInt(Param::opmode) == MOD_OFF)
+    prevValidDir = 0;
+
   // Collecting Inputs//
   if (vehicle->GetGear(gear)) {
     // if the vehicle class supplies gear selection then use that
