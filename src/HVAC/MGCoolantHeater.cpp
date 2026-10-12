@@ -32,6 +32,12 @@ static const uint8_t powerSteps[3][3] = {
     {0x04, 0x0F, 0x01}, // ~15-16.5A, ~5.5-6kW
 };
 
+// Derate thresholds, the heater cuts out internally at ~55C so taper down to
+// the lowest step before then rather than cycling max power on and off
+#define TAPER_MID_TEMP 45 // above this cap at ~3.3kW
+#define TAPER_LOW_TEMP 50 // above this cap at ~1.7kW
+#define TAPER_HYST 3      // C below a threshold before stepping back up
+
 void mgCoolantHeater::SetPower(uint16_t power, bool HeatReq) {
   shouldHeat = HeatReq;
 
@@ -71,10 +77,22 @@ void mgCoolantHeater::Task100Ms() {
   bytes[6] = 0x00; // Fixed
   bytes[7] = 0x00; // Fixed
 
+  if (currentTemperature >= TAPER_LOW_TEMP)
+    tempLimitStep = 0;
+  else if (currentTemperature >= TAPER_MID_TEMP && tempLimitStep == 2)
+    tempLimitStep = 1;
+  else if (tempLimitStep == 0 &&
+           currentTemperature < TAPER_LOW_TEMP - TAPER_HYST)
+    tempLimitStep = 1;
+  else if (tempLimitStep == 1 &&
+           currentTemperature < TAPER_MID_TEMP - TAPER_HYST)
+    tempLimitStep = 2;
+
   if (shouldHeat) {
-    bytes[0] = powerSteps[powerStep][0];
-    bytes[1] = powerSteps[powerStep][1];
-    bytes[2] = powerSteps[powerStep][2]; // 0x01 enables heating
+    uint8_t step = MIN(powerStep, tempLimitStep);
+    bytes[0] = powerSteps[step][0];
+    bytes[1] = powerSteps[step][1];
+    bytes[2] = powerSteps[step][2]; // 0x01 enables heating
   }
 
   can->Send(0x2A0, (uint32_t *)bytes, 8);
@@ -117,7 +135,8 @@ void mgCoolantHeater::handle2B6(uint32_t data[2]) {
   hvVolt = bytes[2] ? bytes[2] * 2 + 100 : 0;
 
   // temp1 saturates at 63.75C so report the higher of the two sensors
-  Param::SetFloat(Param::tmpheater, MAX(temp1 * 0.25f, temp2 * 0.0625f));
+  currentTemperature = MAX(temp1 * 0.25f, temp2 * 0.0625f);
+  Param::SetFloat(Param::tmpheater, currentTemperature);
 
   Param::SetInt(Param::udcheater, hvVolt);
 }
