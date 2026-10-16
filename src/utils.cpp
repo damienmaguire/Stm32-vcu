@@ -59,7 +59,7 @@ void GetDigInputs(CanHardware *can) {
     ErrorMessage::Post(ERR_CANTIMEOUT);
   }
 
-  Param::SetInt(Param::din_HVreq, DigIo::HV_req.Get());
+  Param::SetInt(Param::din_12Vgp2, DigIo::gp_12Vin2.Get());
   Param::SetInt(Param::din_start,
                 DigIo::start_in.Get() | ((canio & CAN_IO_START) != 0));
   Param::SetInt(Param::din_brake,
@@ -69,7 +69,7 @@ void GetDigInputs(CanHardware *can) {
   Param::SetInt(Param::din_reverse,
                 DigIo::rev_in.Get() | ((canio & CAN_IO_REV) != 0));
   Param::SetInt(Param::din_bms, (canio & CAN_IO_BMS) != 0);
-  Param::SetInt(Param::din_12Vgp, DigIo::gp_12Vin.Get());
+  Param::SetInt(Param::din_12Vgp1, DigIo::gp_12Vin1.Get());
 }
 
 /**

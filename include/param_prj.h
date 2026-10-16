@@ -140,8 +140,8 @@
   PARAM_ENTRY(CAT_IOPINS, PWM1Func, PWMPINFUNCS, 0, 25, 0, 85)                 \
   PARAM_ENTRY(CAT_IOPINS, PWM2Func, PWMPINFUNCS, 0, 25, 4, 86)                 \
   PARAM_ENTRY(CAT_IOPINS, PWM3Func, PWMPINFUNCS, 0, 25, 2, 87)                 \
-  PARAM_ENTRY(CAT_IOPINS, GP12VInFunc, INPUTPINFUNCS, 0, 19, 12, 98)           \
-  PARAM_ENTRY(CAT_IOPINS, HVReqFunc, INPUTPINFUNCS, 0, 19, 12, 99)             \
+  PARAM_ENTRY(CAT_IOPINS, GP12VIn1Func, INPUTPINFUNCS, 0, 19, 12, 98)          \
+  PARAM_ENTRY(CAT_IOPINS, GP12VIn2Func, INPUTPINFUNCS, 0, 19, 12, 99)          \
   PARAM_ENTRY(CAT_IOPINS, PB1InFunc, INPUTPINFUNCS, 0, 19, 12, 140)            \
   PARAM_ENTRY(CAT_IOPINS, PB2InFunc, INPUTPINFUNCS, 0, 19, 12, 141)            \
   PARAM_ENTRY(CAT_IOPINS, PB3InFunc, INPUTPINFUNCS, 0, 19, 12, 142)            \
@@ -214,13 +214,13 @@
   VALUE_ENTRY(FrontRearBal, "%", 2082)                                         \
   VALUE_ENTRY(cruisespeed, "rpm", 2033)                                        \
   VALUE_ENTRY(cruisestt, CRUISESTATES, 2034)                                   \
-  VALUE_ENTRY(din_HVreq, ONOFF, 2035)                                          \
+  VALUE_ENTRY(din_12Vgp2, ONOFF, 2035)                                         \
   VALUE_ENTRY(din_start, ONOFF, 2036)                                          \
   VALUE_ENTRY(din_brake, ONOFF, 2037)                                          \
   VALUE_ENTRY(din_forward, ONOFF, 2038)                                        \
   VALUE_ENTRY(din_reverse, ONOFF, 2039)                                        \
   VALUE_ENTRY(din_bms, ONOFF, 2040)                                            \
-  VALUE_ENTRY(din_12Vgp, ONOFF, 2071)                                          \
+  VALUE_ENTRY(din_12Vgp1, ONOFF, 2071)                                         \
   VALUE_ENTRY(ShiftLock, ONOFF, 2108)                                          \
   VALUE_ENTRY(handbrk, ONOFF, 2041)                                            \
   VALUE_ENTRY(Gear1, ONOFF, 2042)                                              \
