@@ -193,24 +193,48 @@ void TestOffOpmodeSendsOnlyIdle29C() {
 void TestOffFrames() {
   Setup(MOD_OFF, Unused);
   charger->Off();
-  const uint32_t ids[] = {0x19C, 0x297, 0x29C, 0x1F1, 0x33F, 0x322, 0x33F,
+  const uint32_t ids[] = {0x19C, 0x297, 0x29C, 0x1F1, 0x33F, 0x322,
                           0x39B, 0x39A, 0x396, 0x343, 0x32E, 0x29B};
-  ASSERT(IdsAre(ids, 13));
+  ASSERT(IdsAre(ids, 12));
   ASSERT(DataIs(can.Find(0x19C), {0x26, 0xA0, 0x06, 0, 0, 0, 0, 0x7F}));
   ASSERT(DataIs(can.Find(0x297), {0, 0x01, 0, 0, 0, 0, 0, 0}));
   ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
   ASSERT(DataIs(can.Find(0x1F1), {0, 0, 0, 0, 0, 0, 0x20, 0}));
-  ASSERT(DataIs(can.Find(0x33F, 0), {0, 0, 0, 0, 0x28, 0, 0, 0x00}));
-  ASSERT(DataIs(can.Find(0x33F, 1), {0, 0, 0, 0, 0x28, 0, 0, 0x41}));
+  // One 0x33F with the off request, no longer toggling 00/41
+  ASSERT(DataIs(can.Find(0x33F), {0, 0, 0, 0, 0x28, 0, 0, 0x00}));
   ASSERT(DataIs(can.Find(0x29B), {0x3B, 0xCA, 0x86, 0x00, 0xFD, 0x60, 0, 0}));
 }
 
-void TestOffSendsOnEveryCall() {
-  // Off() is called from the 10 ms task during the shutdown window
+void TestOffSendsEvery10thCall() {
+  // Off() is called from the 10 ms task during the 2.5 s shutdown window
   Setup(MOD_OFF, Unused);
-  for (int i = 0; i < 10; i++)
+  charger->Off();
+  ASSERT(can.count == 12);
+  for (int i = 1; i < 10; i++)
     charger->Off();
-  ASSERT(can.count == 130);
+  ASSERT(can.count == 12);
+  charger->Off();
+  ASSERT(can.count == 24);
+
+  Setup(MOD_OFF, Unused);
+  for (int i = 0; i < 250; i++)
+    charger->Off();
+  ASSERT(can.count == 25 * 12);
+}
+
+void TestOffSendsAtOnceAfterRunOrCharge() {
+  const int opmodes[] = {MOD_RUN, MOD_CHARGE};
+  for (int i = 0; i < 2; i++) {
+    Setup(MOD_OFF, Unused);
+    for (int j = 0; j < 3; j++) // ends part way through a 100 ms period
+      charger->Off();
+    Param::SetInt(Param::opmode, opmodes[i]);
+    charger->Task100Ms();
+    Param::SetInt(Param::opmode, MOD_OFF);
+    can.Clear();
+    charger->Off();
+    ASSERT(can.count == 12);
+  }
 }
 
 void TestControlChargeUnusedFollows323PlugStatus() {
@@ -251,7 +275,8 @@ void MGgen2Test::RunTest() {
   TestCharge394DoesNotFollowVoltspntOrUdc();
   TestOffOpmodeSendsOnlyIdle29C();
   TestOffFrames();
-  TestOffSendsOnEveryCall();
+  TestOffSendsEvery10thCall();
+  TestOffSendsAtOnceAfterRunOrCharge();
   TestControlChargeUnusedFollows323PlugStatus();
   TestControlChargeInterfacesNeedRunAndAcRequest();
   TestDecode39F();

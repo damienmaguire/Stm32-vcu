@@ -42,6 +42,7 @@ public:
 
 private:
   bool clearToStart = false;
+  uint8_t offTick = 0; // Off() calls left to skip before the next send
   static uint8_t chgStatus, evseDuty;
   static float dcBusV, temp_1, temp_2, ACVolts, DCAmps, ACAmps;
   static float LV_Volts, LV_Amps;
