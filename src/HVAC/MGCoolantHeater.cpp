@@ -128,7 +128,7 @@ void mgCoolantHeater::handle2B6(uint32_t data[2]) {
       (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes.
                        // See comments are useful:)
 
-  uint8_t temp1 = bytes[6];                              // 0.25C/1
+  uint8_t temp1 = bytes[6];                             // 0.25C/1
   uint16_t temp2 = bytes[4] | ((bytes[3] & 0x0F) << 8); // 0.0625C/1
 
   // 2V/1 + 100V offset, raw 0 means no HV present
