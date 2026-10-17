@@ -172,15 +172,8 @@ void MGgen2V2Lcharger::Task100Ms() {
     bytes[7] = 0x46;                        // 46 start V2l? or 48
     can->Send(0x33F, (uint32_t *)bytes, 8); // V2L
 
-    bytes[0] = 0x3B;
-    bytes[1] = 0xCA;
-    bytes[2] = 0x86;
-    bytes[3] = 0x02;
-    bytes[4] = 0xFD;
-    bytes[5] = 0x60;
-    bytes[6] = 0x00;
-    bytes[7] = 0x00;
-    can->Send(0x29B, (uint32_t *)bytes, 8);
+    // No 0x29B in RUN: with b3 = 0x02 the DC-DC stayed off, and the car
+    // only sends that value at charge complete.
   }
 
   if (opmode == MOD_CHARGE) {

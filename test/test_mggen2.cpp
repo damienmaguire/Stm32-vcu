@@ -125,13 +125,13 @@ void TestRegistersRxIds() {
 void TestRunFrames() {
   Setup(MOD_RUN, Unused);
   charger->Task100Ms();
-  const uint32_t ids[] = {0x19C, 0x297, 0x1F1, 0x33F, 0x29B, 0x29C};
-  ASSERT(IdsAre(ids, 6));
+  // No 0x29B: b3 = 0x02 there kept the DC-DC off in RUN
+  const uint32_t ids[] = {0x19C, 0x297, 0x1F1, 0x33F, 0x29C};
+  ASSERT(IdsAre(ids, 5));
   ASSERT(DataIs(can.Find(0x19C), {0x06, 0xA0, 0x26, 0, 0, 0, 0, 0x7F}));
   ASSERT(DataIs(can.Find(0x297), {0, 0x03, 0, 0, 0, 0, 0x20, 0}));
   ASSERT(DataIs(can.Find(0x1F1), {0x0E, 0, 0, 0, 0, 0, 0x20, 0}));
   ASSERT(DataIs(can.Find(0x33F), {0, 0, 0, 0, 0x28, 0, 0, 0x46}));
-  ASSERT(DataIs(can.Find(0x29B), {0x3B, 0xCA, 0x86, 0x02, 0xFD, 0x60, 0, 0}));
   ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
 }
 
