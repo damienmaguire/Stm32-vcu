@@ -20,7 +20,9 @@
 // change to it shows up as a test change.
 
 #include "chargers/MGgen2V2Lcharger.h"
+#include "iomatrix.h"
 #include "test_list.h"
+#include <math.h>
 #include <string.h>
 
 using namespace std;
@@ -91,6 +93,10 @@ bool IdsAre(const uint32_t *ids, int n) {
   return true;
 }
 
+bool Near(Param::PARAM_NUM p, float expected) {
+  return fabsf(Param::GetFloat(p) - expected) < 0.05f;
+}
+
 bool DataIs(const uint8_t *data, const uint8_t (&expected)[8]) {
   return data != NULL && memcmp(data, expected, 8) == 0;
 }
@@ -121,7 +127,8 @@ const uint8_t ACTIVE_29C[8] = {0x28, 0x89, 0x07, 0xFE, 0x00, 0xDC, 0x57, 0x12};
 void TestRegistersRxIds() {
   Setup(MOD_OFF, Unused);
   ASSERT(can.IsRegistered(0x324) && can.IsRegistered(0x39F) &&
-         can.IsRegistered(0x323) && can.IsRegistered(0x33B));
+         can.IsRegistered(0x323) && can.IsRegistered(0x33B) &&
+         can.IsRegistered(0x33D));
 }
 
 void TestRunFrames() {
@@ -316,9 +323,90 @@ void TestControlChargeInterfacesNeedRunAndAcRequest() {
 void TestDecode39F() {
   Setup(MOD_RUN, Unused);
   Rx(0x39F, {0, 113, 0, 0, 20, 0, 0, 0}); // 113 * 0.125 = 14.125 V
-  // Integer division truncates to whole volts
-  ASSERT(Param::GetFloat(Param::U12V) == 14);
+  ASSERT(Near(Param::U12V, 14.125f));
   ASSERT(Param::GetInt(Param::I12V) == 20);
+}
+
+void TestDecode33DPublishesAc() {
+  Setup(MOD_CHARGE, Unused);
+  Rx(0x33D, {116, 120, 0x50, 0, 0, 0x18, 161, 0x20}); // Ben, 6 kW log
+  ASSERT(Near(Param::AC_Amps, 23.2f));
+  ASSERT(Near(Param::AC_Volts, 240));
+}
+
+void TestDecode324PublishesChgTemp() {
+  Setup(MOD_CHARGE, Unused);
+  Rx(0x324, {0x20, 0x48, 0x8A, 65, 70, 0, 0, 58}); // 371.4 V, 25/30 degC
+  ASSERT(Near(Param::ChgTemp, 30));
+}
+
+void TestPilotLimFromCpDuty() {
+  Setup(MOD_OFF, Unused);
+  const uint8_t duty[] = {0, 9, 10, 16, 26, 50, 85, 90, 96, 97, 100};
+  const float amps[] = {0, 0, 6, 9.6f, 15.6f, 30, 51, 65, 80, 0, 0};
+  for (int i = 0; i < 11; i++) {
+    Rx(0x33B, {duty[i], 0, 0, 0, 0, 0, 0, 0});
+    ASSERT(Near(Param::PilotLim, amps[i]));
+  }
+}
+
+void TestPlugDetFollowsPlug() {
+  Setup(MOD_OFF, Unused);
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  ASSERT(Param::GetInt(Param::PlugDet) == 1);
+  Rx(0x33B, {100, 0, 0, 0, 0, 0, 0, 0});
+  ASSERT(Param::GetInt(Param::PlugDet) == 0);
+  Rx(0x323, {0, 0, 0, 0, 0, 0x01, 0, 0});
+  ASSERT(Param::GetInt(Param::PlugDet) == 1);
+  Rx(0x323, {0, 0, 0, 0, 0, 0x00, 0, 0});
+  ASSERT(Param::GetInt(Param::PlugDet) == 0);
+}
+
+void TestChargeInterfaceKeepsPilotLimAndPlugDet() {
+  // i3LIM, CPC and Foccci write these themselves
+  Setup(MOD_OFF, i3LIM);
+  Param::SetInt(Param::PilotLim, 7);
+  Param::SetInt(Param::PlugDet, 0);
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  Rx(0x323, {0, 0, 0, 0, 0, 0x01, 0, 0});
+  ASSERT(Param::GetInt(Param::PilotLim) == 7);
+  ASSERT(Param::GetInt(Param::PlugDet) == 0);
+}
+
+void TestPilotProxPinKeepsPlugDet() {
+  // stm32_vcu.cpp writes PlugDet from the PP input
+  Setup(MOD_OFF, Unused);
+  Param::SetInt(Param::GPA2Func, IOMatrix::PILOT_PROX);
+  Param::SetInt(Param::PlugDet, 0);
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  ASSERT(Param::GetInt(Param::PlugDet) == 0);
+  ASSERT(Near(Param::PilotLim, 30));
+  Param::SetInt(Param::GPA2Func, IOMatrix::NONE_ANAL);
+}
+
+void TestValuesZeroOnceOnRxTimeout() {
+  Setup(MOD_OFF, Unused);
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  Rx(0x33D, {116, 120, 0x50, 0, 0, 0x18, 161, 0x20});
+  Rx(0x324, {0x20, 0x48, 0x8A, 65, 70, 0, 0, 58});
+  Rx(0x39F, {0, 113, 0, 0, 20, 0, 0, 0});
+  for (int i = 0; i < 10; i++)
+    charger->Task100Ms();
+  ASSERT(Param::GetInt(Param::PlugDet) == 1 && Near(Param::PilotLim, 30) &&
+         Near(Param::AC_Volts, 240) && Near(Param::AC_Amps, 23.2f) &&
+         Near(Param::ChgTemp, 30) && Near(Param::U12V, 14.125f) &&
+         Param::GetInt(Param::I12V) == 20);
+
+  charger->Task100Ms(); // 1.1 s without frames
+  ASSERT(Param::GetInt(Param::PlugDet) == 0 && Near(Param::PilotLim, 0) &&
+         Near(Param::AC_Volts, 0) && Near(Param::AC_Amps, 0) &&
+         Near(Param::ChgTemp, 0) && Near(Param::U12V, 0) &&
+         Param::GetInt(Param::I12V) == 0);
+
+  // Zeroed once only, so another source of U12V is not overwritten
+  Param::SetFloat(Param::U12V, 12.5f);
+  charger->Task100Ms();
+  ASSERT(Near(Param::U12V, 12.5f));
 }
 
 } // namespace
@@ -340,4 +428,11 @@ void MGgen2Test::RunTest() {
   TestPlugDetectTimesOutAfter1s();
   TestControlChargeInterfacesNeedRunAndAcRequest();
   TestDecode39F();
+  TestDecode33DPublishesAc();
+  TestDecode324PublishesChgTemp();
+  TestPilotLimFromCpDuty();
+  TestPlugDetFollowsPlug();
+  TestChargeInterfaceKeepsPilotLimAndPlugDet();
+  TestPilotProxPinKeepsPlugDet();
+  TestValuesZeroOnceOnRxTimeout();
 }

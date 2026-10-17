@@ -20,6 +20,7 @@
  */
 
 #include "chargers/MGgen2V2Lcharger.h"
+#include "iomatrix.h"
 
 /* Control of the MG Gen 2 V2L charger. */
 
@@ -33,18 +34,45 @@ float MGgen2V2Lcharger::ACAmps;
 float MGgen2V2Lcharger::DCAmps;
 float MGgen2V2Lcharger::LV_Volts;
 float MGgen2V2Lcharger::LV_Amps;
-uint16_t MGgen2V2Lcharger::batteryVolts;
 static uint8_t PlugStat = 0;
 
 // Receive timeout: a value is only used if its frame was seen within the
 // last RX_TIMEOUT_TICKS calls of Task100Ms(). Ages start out timed out.
 #define RX_TIMEOUT_TICKS 10
 static uint8_t age323 = RX_TIMEOUT_TICKS + 1;
+static uint8_t age324 = RX_TIMEOUT_TICKS + 1;
 static uint8_t age33B = RX_TIMEOUT_TICKS + 1;
+static uint8_t age33D = RX_TIMEOUT_TICKS + 1;
+static uint8_t age39F = RX_TIMEOUT_TICKS + 1;
 
-static void AgeRx(uint8_t &age) {
-  if (age <= RX_TIMEOUT_TICKS)
-    age++;
+// Returns true on the tick the frame times out
+static bool AgeRx(uint8_t &age) {
+  if (age > RX_TIMEOUT_TICKS)
+    return false;
+  age++;
+  return age > RX_TIMEOUT_TICKS;
+}
+
+// PilotLim and PlugDet are also written by the charge interfaces (i3LIM,
+// CPC, Foccci), so only publish them without one. PlugDet is also written
+// from a PILOT_PROX analogue input if one is set.
+static bool PublishPilotLim() {
+  return Param::GetInt(Param::interface) == Unused;
+}
+
+static bool PublishPlugDet() {
+  return PublishPilotLim() &&
+         Param::GetInt(Param::GPA1Func) != IOMatrix::PILOT_PROX &&
+         Param::GetInt(Param::GPA2Func) != IOMatrix::PILOT_PROX;
+}
+
+// J1772 pilot duty in % to the EVSE current limit in A
+static float PilotDutyToAmps(uint8_t duty) {
+  if (duty >= 10 && duty <= 85)
+    return duty * 0.6f;
+  if (duty > 85 && duty <= 96)
+    return (duty - 64) * 2.5f;
+  return 0;
 }
 
 bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq) {
@@ -86,6 +114,7 @@ void MGgen2V2Lcharger::SetCanInterface(CanHardware *c) {
   can->RegisterUserMessage(0x39F);
   can->RegisterUserMessage(0x323);
   can->RegisterUserMessage(0x33B);
+  can->RegisterUserMessage(0x33D);
   // can->RegisterUserMessage(0x326);//test
 }
 
@@ -103,6 +132,9 @@ void MGgen2V2Lcharger::DecodeCAN(int id, uint32_t data[2]) {
   case 0x33B:
     MGgen2V2Lcharger::handle33B(data);
     break;
+  case 0x33D:
+    MGgen2V2Lcharger::handle33D(data);
+    break;
     // case 0x38A:
     //    MGgen2V2Lcharger::handle38A(data);
     //    break;
@@ -112,8 +144,27 @@ void MGgen2V2Lcharger::DecodeCAN(int id, uint32_t data[2]) {
 void MGgen2V2Lcharger::Task100Ms() {
   int opmode = Param::GetInt(Param::opmode);
   uint8_t bytes[8];
-  AgeRx(age323);
-  AgeRx(age33B);
+
+  // On receive timeout set the values to 0 once, so they don't freeze at
+  // the last value received
+  if (AgeRx(age323) && PublishPlugDet())
+    Param::SetInt(Param::PlugDet, PlugPresent());
+  if (AgeRx(age33B)) {
+    if (PublishPilotLim())
+      Param::SetFloat(Param::PilotLim, 0);
+    if (PublishPlugDet())
+      Param::SetInt(Param::PlugDet, PlugPresent());
+  }
+  if (AgeRx(age324))
+    Param::SetFloat(Param::ChgTemp, 0);
+  if (AgeRx(age33D)) {
+    Param::SetFloat(Param::AC_Volts, 0);
+    Param::SetFloat(Param::AC_Amps, 0);
+  }
+  if (AgeRx(age39F)) {
+    Param::SetFloat(Param::U12V, 0);
+    Param::SetFloat(Param::I12V, 0);
+  }
 
   // The first Off() call of the next shutdown sends at once
   if (opmode != MOD_OFF)
@@ -487,15 +538,19 @@ void MGgen2V2Lcharger::handle324(uint32_t data[2])
   uint8_t *bytes =
       (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes.
                        // See comments are useful:)
-  batteryVolts = ((bytes[1] << 8) | (bytes[2])) * 0.02;
-  ;
+  chgStatus = bytes[0];
+  dcBusV = ((bytes[1] << 8) | (bytes[2])) * 0.02f; // matches ISA within 1 V
+  temp_1 = bytes[3] - 40;
+  temp_2 = bytes[4] - 40;
+  age324 = 0;
+  Param::SetFloat(Param::ChgTemp, MAX(temp_1, temp_2));
 
   if (Param::GetInt(Param::ShuntType) == 0 &&
       Param::GetInt(Param::Inverter) !=
           1) // Only populate if no shunt is used and not using Leaf inverter
              // !!!look to clean up
   {
-    // Param::SetFloat(Param::udc, batteryVolts);
+    // Param::SetFloat(Param::udc, dcBusV);
   }
 }
 
@@ -505,8 +560,9 @@ void MGgen2V2Lcharger::handle39F(uint32_t data[2])
   uint8_t *bytes =
       (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes.
                        // See comments are useful:)
-  LV_Volts = bytes[1] / 8;
+  LV_Volts = bytes[1] * 0.125f;
   LV_Amps = bytes[4];
+  age39F = 0;
   Param::SetFloat(Param::U12V, LV_Volts);
   Param::SetFloat(Param::I12V, LV_Amps);
 }
@@ -518,12 +574,28 @@ void MGgen2V2Lcharger::handle323(uint32_t data[2]) {
                        // See comments are useful:
   PlugStat = bytes[5];
   age323 = 0;
+  if (PublishPlugDet())
+    Param::SetInt(Param::PlugDet, PlugPresent());
 }
 
 void MGgen2V2Lcharger::handle33B(uint32_t data[2]) {
   uint8_t *bytes = (uint8_t *)data;
   evseDuty = bytes[0] & 0x7F; // CP duty in %, b7 is OBC charge active
   age33B = 0;
+  if (PublishPilotLim())
+    Param::SetFloat(Param::PilotLim, PilotDutyToAmps(evseDuty));
+  if (PublishPlugDet())
+    Param::SetInt(Param::PlugDet, PlugPresent());
+}
+
+void MGgen2V2Lcharger::handle33D(uint32_t data[2]) {
+  uint8_t *bytes = (uint8_t *)data;
+  ACAmps = bytes[0] * 0.2f;
+  ACVolts = bytes[1] * 2;
+  DCAmps = bytes[6] * 0.1f; // HV output, includes the DC-DC draw
+  age33D = 0;
+  Param::SetFloat(Param::AC_Volts, ACVolts);
+  Param::SetFloat(Param::AC_Amps, ACAmps);
 }
 /*
 void MGgen2V2Lcharger::handle38A(uint32_t data[2])

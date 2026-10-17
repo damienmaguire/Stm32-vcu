@@ -46,13 +46,13 @@ private:
   static uint8_t chgStatus, evseDuty;
   static float dcBusV, temp_1, temp_2, ACVolts, DCAmps, ACAmps;
   static float LV_Volts, LV_Amps;
-  static uint16_t batteryVolts;
 
   static bool PlugPresent();
 
   static void handle324(uint32_t data[2]);
   static void handle323(uint32_t data[2]);
   static void handle33B(uint32_t data[2]);
+  static void handle33D(uint32_t data[2]);
   static void handle39F(uint32_t data[2]);
   // static void handle38A(uint32_t data[2]);
 };
