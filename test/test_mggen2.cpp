@@ -109,7 +109,9 @@ void Setup(int opmode, int interface) {
   Param::SetInt(Param::interface, interface);
   Param::SetInt(Param::Voltspnt, 395);
   Param::SetInt(Param::udc, 380);
-  Rx(0x323, {0, 0, 0, 0, 0, 0, 0, 0}); // plug status is file-static
+  // Plug status and CP duty are file-static: reset to "not plugged"
+  Rx(0x323, {0, 0, 0, 0, 0, 0, 0, 0});
+  Rx(0x33B, {0, 0, 0, 0, 0, 0, 0, 0});
   can.Clear();
 }
 
@@ -119,7 +121,7 @@ const uint8_t ACTIVE_29C[8] = {0x28, 0x89, 0x07, 0xFE, 0x00, 0xDC, 0x57, 0x12};
 void TestRegistersRxIds() {
   Setup(MOD_OFF, Unused);
   ASSERT(can.IsRegistered(0x324) && can.IsRegistered(0x39F) &&
-         can.IsRegistered(0x323));
+         can.IsRegistered(0x323) && can.IsRegistered(0x33B));
 }
 
 void TestRunFrames() {
@@ -263,6 +265,44 @@ void TestControlChargeUnusedFollows323PlugStatus() {
   ASSERT(!charger->ControlCharge(true, true));
 }
 
+void TestControlChargeUnusedFollowsCpDuty() {
+  Setup(MOD_OFF, Unused);
+  const uint8_t duty[] = {0, 1, 9, 50, 99, 100, 0x80 | 50, 0x80 | 100};
+  const bool plugged[] = {false, true, true, true, true, false, true, false};
+  for (int i = 0; i < 8; i++) {
+    Rx(0x33B, {duty[i], 0, 0, 0, 0, 0, 0, 0});
+    ASSERT(charger->ControlCharge(true, true) == plugged[i]);
+  }
+}
+
+void TestControlChargeUnusedNeedsRunCh() {
+  // RunCh false = charge terminated, BMS stop, web UI disable or timer
+  Setup(MOD_OFF, Unused);
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  ASSERT(!charger->ControlCharge(false, true));
+  Setup(MOD_OFF, Unused);
+  Rx(0x323, {0, 0, 0, 0, 0, 0x01, 0, 0});
+  ASSERT(!charger->ControlCharge(false, true));
+}
+
+void TestPlugDetectTimesOutAfter1s() {
+  Setup(MOD_OFF, Unused);
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  for (int i = 0; i < 10; i++)
+    charger->Task100Ms();
+  ASSERT(charger->ControlCharge(true, true));
+  charger->Task100Ms();
+  ASSERT(!charger->ControlCharge(true, true));
+
+  Setup(MOD_OFF, Unused);
+  Rx(0x323, {0, 0, 0, 0, 0, 0x01, 0, 0});
+  for (int i = 0; i < 10; i++)
+    charger->Task100Ms();
+  ASSERT(charger->ControlCharge(true, true));
+  charger->Task100Ms();
+  ASSERT(!charger->ControlCharge(true, true));
+}
+
 void TestControlChargeInterfacesNeedRunAndAcRequest() {
   const int interfaces[] = {i3LIM, CPC, Foccci, Chademo};
   for (int i = 0; i < 4; i++) {
@@ -295,6 +335,9 @@ void MGgen2Test::RunTest() {
   TestOffSendsEvery10thCall();
   TestOffSendsAtOnceAfterRunOrCharge();
   TestControlChargeUnusedFollows323PlugStatus();
+  TestControlChargeUnusedFollowsCpDuty();
+  TestControlChargeUnusedNeedsRunCh();
+  TestPlugDetectTimesOutAfter1s();
   TestControlChargeInterfacesNeedRunAndAcRequest();
   TestDecode39F();
 }

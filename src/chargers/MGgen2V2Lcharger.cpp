@@ -36,68 +36,47 @@ float MGgen2V2Lcharger::LV_Amps;
 uint16_t MGgen2V2Lcharger::batteryVolts;
 static uint8_t PlugStat = 0;
 
-bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq) {
-  int chgmode = Param::GetInt(Param::interface);
-  switch (chgmode) {
-  case Unused:
-    if (PlugStat == 1 && ACReq) {
-      clearToStart = true;
-      return true;
-    } else {
-      clearToStart = false;
-      return false;
-    }
+// Receive timeout: a value is only used if its frame was seen within the
+// last RX_TIMEOUT_TICKS calls of Task100Ms(). Ages start out timed out.
+#define RX_TIMEOUT_TICKS 10
+static uint8_t age323 = RX_TIMEOUT_TICKS + 1;
+static uint8_t age33B = RX_TIMEOUT_TICKS + 1;
 
+static void AgeRx(uint8_t &age) {
+  if (age <= RX_TIMEOUT_TICKS)
+    age++;
+}
+
+bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq) {
+  switch (Param::GetInt(Param::interface)) {
+  case Unused:
+    // No charge interface, so the charger's own plug detection starts the
+    // charge. RunCh carries charge termination, the BMS stop, the web UI
+    // disable and the charge timer.
+    clearToStart = PlugPresent() && RunCh && ACReq;
     break;
 
   case i3LIM:
-    if (RunCh &&
-        ACReq) // we have a startup request to AC charge from a charge interface
-    {
-      clearToStart = true;
-      return true;
-    } else {
-      clearToStart = false;
-      return false;
-    }
-    break;
-
   case CPC:
-    if (RunCh &&
-        ACReq) // we have a startup request to AC charge from a charge interface
-    {
-      clearToStart = true;
-      return true;
-    } else {
-      clearToStart = false;
-      return false;
-    }
-    break;
-
   case Foccci:
-    if (RunCh &&
-        ACReq) // we have a startup request to AC charge from a charge interface
-    {
-      clearToStart = true;
-      return true;
-    } else {
-      clearToStart = false;
-      return false;
-    }
-    break;
-
   case Chademo:
-    if (RunCh && ACReq) {
-      clearToStart = true;
-      return true;
-    } else {
-      clearToStart = false;
-      return false;
-    }
-
+    // we have a startup request to AC charge from a charge interface
+    clearToStart = RunCh && ACReq;
     break;
+
+  default:
+    return false;
   }
-  return false;
+  return clearToStart;
+}
+
+// EVSE present: CP duty 1..99 % from 0x33B (seen on every unit; 100 % means
+// the EVSE stopped PWM). 0x323 b5 is only set by some units, so it is an
+// extra source, not the only one.
+bool MGgen2V2Lcharger::PlugPresent() {
+  bool cpValid = age33B <= RX_TIMEOUT_TICKS && evseDuty >= 1 && evseDuty <= 99;
+  bool plug323 = age323 <= RX_TIMEOUT_TICKS && PlugStat == 1;
+  return cpValid || plug323;
 }
 
 void MGgen2V2Lcharger::SetCanInterface(CanHardware *c) {
@@ -106,6 +85,7 @@ void MGgen2V2Lcharger::SetCanInterface(CanHardware *c) {
   can->RegisterUserMessage(0x324);
   can->RegisterUserMessage(0x39F);
   can->RegisterUserMessage(0x323);
+  can->RegisterUserMessage(0x33B);
   // can->RegisterUserMessage(0x326);//test
 }
 
@@ -120,6 +100,9 @@ void MGgen2V2Lcharger::DecodeCAN(int id, uint32_t data[2]) {
   case 0x323:
     MGgen2V2Lcharger::handle323(data);
     break;
+  case 0x33B:
+    MGgen2V2Lcharger::handle33B(data);
+    break;
     // case 0x38A:
     //    MGgen2V2Lcharger::handle38A(data);
     //    break;
@@ -129,6 +112,9 @@ void MGgen2V2Lcharger::DecodeCAN(int id, uint32_t data[2]) {
 void MGgen2V2Lcharger::Task100Ms() {
   int opmode = Param::GetInt(Param::opmode);
   uint8_t bytes[8];
+  AgeRx(age323);
+  AgeRx(age33B);
+
   // The first Off() call of the next shutdown sends at once
   if (opmode != MOD_OFF)
     offTick = 0;
@@ -531,6 +517,13 @@ void MGgen2V2Lcharger::handle323(uint32_t data[2]) {
       (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes.
                        // See comments are useful:
   PlugStat = bytes[5];
+  age323 = 0;
+}
+
+void MGgen2V2Lcharger::handle33B(uint32_t data[2]) {
+  uint8_t *bytes = (uint8_t *)data;
+  evseDuty = bytes[0] & 0x7F; // CP duty in %, b7 is OBC charge active
+  age33B = 0;
 }
 /*
 void MGgen2V2Lcharger::handle38A(uint32_t data[2])
