@@ -377,10 +377,19 @@ void MGgen2V2Lcharger::Task100Ms() {
     return;
 
   if (opmode == MOD_CHARGE && clearToStart) {
+    // Charge current limit in b2 bits 0..3 and b3: 0x7FE = unrestricted,
+    // 0x400 = zero (car, end of charge). The scale in between is not known
+    // yet; MGChgLimRaw lets a bench test step it.
+    int limitRaw = Param::GetInt(Param::MGChgLimRaw);
+    if (limitRaw < 0x400)
+      limitRaw = 0x400;
+    if (limitRaw > 0x7FE)
+      limitRaw = 0x7FE;
+
     bytes[0] = 0x28;
     bytes[1] = 0x89;
-    bytes[2] = 0x07;
-    bytes[3] = 0xFE;
+    bytes[2] = (limitRaw >> 8) & 0x0F;
+    bytes[3] = limitRaw & 0xFF;
     bytes[4] = 0x00;
     bytes[5] = 0xDC;
     bytes[6] = 0x57;

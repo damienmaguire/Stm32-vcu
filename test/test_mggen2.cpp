@@ -115,6 +115,7 @@ void Setup(int opmode, int interface) {
   Param::SetInt(Param::interface, interface);
   Param::SetInt(Param::Voltspnt, 395);
   Param::SetInt(Param::udc, 380);
+  Param::SetInt(Param::MGChgLimRaw, 2046);
   // Plug status and CP duty are file-static: reset to "not plugged"
   Rx(0x323, {0, 0, 0, 0, 0, 0, 0, 0});
   Rx(0x33B, {0, 0, 0, 0, 0, 0, 0, 0});
@@ -154,6 +155,42 @@ void TestOnlyChargeSendsActive29C() {
     charger->Task100Ms();
     ASSERT(can.CountId(0x29C) == 1 && DataIs(can.Find(0x29C), IDLE_29C));
   }
+}
+
+void TestChargeLimitFromMGChgLimRaw() {
+  // Only b2 bits 0..3 and b3 change; the rest stays as the car's frame
+  const int raw[] = {0x7FE, 0x600, 0x54C, 0x401, 0x400};
+  for (int i = 0; i < 5; i++) {
+    Setup(MOD_CHARGE, i3LIM);
+    Param::SetInt(Param::MGChgLimRaw, raw[i]);
+    charger->ControlCharge(true, true);
+    charger->Task100Ms();
+    const uint8_t hi = raw[i] >> 8, lo = raw[i] & 0xFF;
+    const uint8_t expected[8] = {0x28, 0x89, hi, lo, 0x00, 0xDC, 0x57, 0x12};
+    ASSERT(DataIs(can.Find(0x29C), expected));
+  }
+}
+
+void TestChargeLimitIsClamped() {
+  // The web UI range check is bypassed by SetInt; the driver clamps anyway
+  Setup(MOD_CHARGE, i3LIM);
+  charger->ControlCharge(true, true);
+  Param::SetInt(Param::MGChgLimRaw, 0x3FF); // idle value, below zero limit
+  charger->Task100Ms();
+  ASSERT(
+      DataIs(can.Find(0x29C), {0x28, 0x89, 0x04, 0x00, 0, 0xDC, 0x57, 0x12}));
+  can.Clear();
+  Param::SetInt(Param::MGChgLimRaw, 0xFFF);
+  charger->Task100Ms();
+  ASSERT(DataIs(can.Find(0x29C), ACTIVE_29C));
+}
+
+void TestMGChgLimRawOnlyAffectsCharge() {
+  Setup(MOD_RUN, i3LIM);
+  Param::SetInt(Param::MGChgLimRaw, 0x500);
+  charger->ControlCharge(true, true);
+  charger->Task100Ms();
+  ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
 }
 
 void TestChargeWithoutClearToStartSendsIdle29C() {
@@ -416,6 +453,9 @@ void MGgen2Test::RunTest() {
   TestRunFrames();
   TestOnlyChargeSendsActive29C();
   TestChargeWithoutClearToStartSendsIdle29C();
+  TestChargeLimitFromMGChgLimRaw();
+  TestChargeLimitIsClamped();
+  TestMGChgLimRawOnlyAffectsCharge();
   TestChargeFrames();
   TestCharge394DoesNotFollowVoltspntOrUdc();
   TestOffOpmodeSendsNothing();
