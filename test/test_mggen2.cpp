@@ -146,18 +146,15 @@ void TestChargeFrames() {
   Setup(MOD_CHARGE, i3LIM);
   charger->ControlCharge(true, true);
   charger->Task100Ms();
-  const uint32_t ids[] = {0x1F1, 0x297, 0x29B, 0x32E, 0x343,
-                          0x348, 0x394, 0x396, 0x39A, 0x39B,
-                          0x33F, 0x19C, 0x322, 0x394, 0x29C};
-  ASSERT(IdsAre(ids, 15));
+  const uint32_t ids[] = {0x1F1, 0x297, 0x29B, 0x32E, 0x343, 0x348, 0x396,
+                          0x39A, 0x39B, 0x33F, 0x19C, 0x322, 0x394, 0x29C};
+  ASSERT(IdsAre(ids, 14));
   ASSERT(DataIs(can.Find(0x1F1), {0x0E, 0, 0, 0, 0, 0, 0x20, 0}));
   ASSERT(DataIs(can.Find(0x297), {0, 0x06, 0, 0, 0, 0x20, 0x20, 0}));
   ASSERT(DataIs(can.Find(0x29B), {0x3B, 0xCA, 0x86, 0x00, 0xFD, 0x60, 0, 0}));
   ASSERT(DataIs(can.Find(0x32E), {0, 0, 0, 0, 0, 0, 0, 0}));
   ASSERT(DataIs(can.Find(0x343), {0, 0, 0, 0, 0, 0, 0, 0}));
   ASSERT(DataIs(can.Find(0x348), {0, 0, 0, 0, 0, 0, 0, 0}));
-  // First 0x394: ramp in b1, Voltspnt * 10 = 3950 = 0x0F6E in b4..b5
-  ASSERT(DataIs(can.Find(0x394, 0), {0, 0, 0, 0, 0x0F, 0x6E, 0, 0}));
   ASSERT(DataIs(can.Find(0x396),
                 {0x44, 0x6E, 0xB4, 0x28, 0x80, 0x4E, 0x4E, 0x4D}));
   ASSERT(DataIs(can.Find(0x39A), {0, 0x43, 0, 0, 0xCD, 0, 0, 0}));
@@ -165,29 +162,24 @@ void TestChargeFrames() {
   ASSERT(DataIs(can.Find(0x33F), {0, 0, 0, 0, 0x28, 0, 0, 0x41}));
   ASSERT(DataIs(can.Find(0x19C), {0x06, 0xA0, 0x26, 0, 0, 0, 0, 0x7F}));
   ASSERT(DataIs(can.Find(0x322), {0, 0, 0, 0x20, 0, 0, 0, 0}));
-  // Second 0x394, hard-coded
-  ASSERT(DataIs(can.Find(0x394, 1), {0, 0x28, 0, 0, 0x10, 0x43, 0, 0}));
+  ASSERT(DataIs(can.Find(0x394), {0, 0x28, 0, 0, 0x10, 0x43, 0, 0}));
   ASSERT(DataIs(can.Find(0x29C), ACTIVE_29C));
 }
 
-void TestChargeRampInFirst394() {
-  Setup(MOD_CHARGE, i3LIM);
-  charger->ControlCharge(true, true);
-  charger->Task100Ms(); // b1 = 0, ramp counts up below Voltspnt
-  can.Clear();
-  charger->Task100Ms();
-  const uint8_t *f = can.Find(0x394, 0);
-  ASSERT(f != NULL && f[1] == 1);
-
-  // At Voltspnt the uint8_t ramp underflows and is clamped to 0x28
-  Setup(MOD_CHARGE, i3LIM);
-  Param::SetInt(Param::udc, 395);
-  charger->ControlCharge(true, true);
-  charger->Task100Ms();
-  can.Clear();
-  charger->Task100Ms();
-  f = can.Find(0x394, 0);
-  ASSERT(f != NULL && f[1] == 0x28);
+void TestCharge394DoesNotFollowVoltspntOrUdc() {
+  const uint8_t car394[8] = {0, 0x28, 0, 0, 0x10, 0x43, 0, 0};
+  const int udcs[] = {380, 395, 400};
+  for (int i = 0; i < 3; i++) {
+    Setup(MOD_CHARGE, i3LIM);
+    Param::SetInt(Param::Voltspnt, 398);
+    Param::SetInt(Param::udc, udcs[i]);
+    charger->ControlCharge(true, true);
+    for (int tick = 0; tick < 3; tick++) {
+      can.Clear();
+      charger->Task100Ms();
+      ASSERT(can.CountId(0x394) == 1 && DataIs(can.Find(0x394), car394));
+    }
+  }
 }
 
 void TestOffOpmodeSendsOnlyIdle29C() {
@@ -256,7 +248,7 @@ void MGgen2Test::RunTest() {
   TestRunFrames();
   TestRunSendsActive29CWhenClearToStart();
   TestChargeFrames();
-  TestChargeRampInFirst394();
+  TestCharge394DoesNotFollowVoltspntOrUdc();
   TestOffOpmodeSendsOnlyIdle29C();
   TestOffFrames();
   TestOffSendsOnEveryCall();

@@ -22,8 +22,7 @@
 #ifndef MGgen2V2Lcharger_H
 #define MGgen2V2Lcharger_H
 
-/* Control of the Mitsubishi Outlander PHEV on board charger (OBC) and DCDC
- * Converter. */
+/* Control of the MG Gen2 on board charger (OBC) and DCDC converter. */
 
 #include "chargers/chargerhw.h"
 #include "hwinit.h"
@@ -42,11 +41,7 @@ public:
   void SetCanInterface(CanHardware *c);
 
 private:
-  int opmode;
-  uint16_t setVolts, actVolts, termAmps;
-  int16_t actAmps;
-  uint8_t currentRamp;
-  bool clearToStart = false, shutDownReq = false, pwmON = false;
+  bool clearToStart = false;
   static uint8_t chgStatus, evseDuty;
   static float dcBusV, temp_1, temp_2, ACVolts, DCAmps, ACAmps;
   static float LV_Volts, LV_Amps;
