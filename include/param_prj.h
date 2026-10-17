@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.41.0TA
+#define VER 2.42.0TA
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -467,6 +467,14 @@ enum HeatType {
   PWM = 6,
   HVH50,
   HVH100
+};
+
+enum ShuntTypes {
+  ShuntNone = 0,
+  ShuntISA = 1,
+  ShuntSBOX = 2,
+  ShuntVAG = 3,
+  ShuntISAudcsw = 4
 };
 
 enum BMSModes {
