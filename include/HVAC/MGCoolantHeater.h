@@ -31,12 +31,16 @@ public:
   void Task100Ms();
 
 private:
-  int8_t currentTemperature;
+  float currentTemperature; // heater coolant temp from 0x2B6
   int8_t desiredTemperature;
 
   bool shouldHeat;
-  static void handle2B5(uint32_t data[2]);
-  static void handle2B6(uint32_t data[2]);
+  uint8_t powerStep;         // index into the 0x2A0 power request table
+  uint8_t tempLimitStep = 2; // max step allowed by temperature taper
+  uint16_t hvVolt;           // HV voltage reported by the heater in 0x2B6
+
+  void handle2B5(uint32_t data[2]);
+  void handle2B6(uint32_t data[2]);
 };
 
 #endif // MGCOOLANTHEATER_H
