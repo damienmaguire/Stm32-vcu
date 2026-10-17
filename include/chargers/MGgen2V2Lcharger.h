@@ -30,7 +30,6 @@
 #include "my_fp.h"
 #include "my_math.h"
 #include "params.h"
-#include <libopencm3/stm32/timer.h>
 #include <stdint.h>
 
 class MGgen2V2Lcharger : public Chargerhw {
