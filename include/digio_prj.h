@@ -24,7 +24,7 @@
 #include "hwdefs.h"
 
 #define DIG_IO_LIST                                                            \
-  DIG_IO_ENTRY(HV_req, GPIOD, GPIO5, PinMode::INPUT_FLT)                       \
+  DIG_IO_ENTRY(gp_12Vin2, GPIOD, GPIO5, PinMode::INPUT_FLT)                    \
   DIG_IO_ENTRY(start_in, GPIOD, GPIO7, PinMode::INPUT_FLT)                     \
   DIG_IO_ENTRY(brake_in, GPIOA, GPIO15, PinMode::INPUT_FLT)                    \
   DIG_IO_ENTRY(fwd_in, GPIOB, GPIO4, PinMode::INPUT_FLT)                       \
@@ -55,7 +55,7 @@
   DIG_IO_ENTRY(PWM2, GPIOA, GPIO7, PinMode::OUTPUT)                            \
   DIG_IO_ENTRY(PWM1, GPIOA, GPIO6, PinMode::OUTPUT)                            \
   DIG_IO_ENTRY(t15_digi, GPIOD, GPIO6, PinMode::INPUT_FLT)                     \
-  DIG_IO_ENTRY(gp_12Vin, GPIOD, GPIO4, PinMode::INPUT_FLT)                     \
+  DIG_IO_ENTRY(gp_12Vin1, GPIOD, GPIO4, PinMode::INPUT_FLT)                    \
   DIG_IO_ENTRY(dummypin, GPIOE, GPIO7, PinMode::INPUT_PD)
 
 // dummypin is used by IOMatrix class for unused functions. Must be set to a pin
