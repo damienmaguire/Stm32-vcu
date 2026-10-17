@@ -135,11 +135,23 @@ void TestRunFrames() {
   ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
 }
 
-void TestRunSendsActive29CWhenClearToStart() {
-  Setup(MOD_RUN, i3LIM);
-  charger->ControlCharge(true, true);
+void TestOnlyChargeSendsActive29C() {
+  // Charge current is only permitted in CHARGE, even with a charge request
+  const int opmodes[] = {MOD_RUN, MOD_PRECHARGE, MOD_PCHFAIL, MOD_MAINTAIN,
+                         MOD_PREHEAT};
+  for (int i = 0; i < 5; i++) {
+    Setup(opmodes[i], i3LIM);
+    charger->ControlCharge(true, true);
+    charger->Task100Ms();
+    ASSERT(can.CountId(0x29C) == 1 && DataIs(can.Find(0x29C), IDLE_29C));
+  }
+}
+
+void TestChargeWithoutClearToStartSendsIdle29C() {
+  Setup(MOD_CHARGE, i3LIM);
+  charger->ControlCharge(true, false);
   charger->Task100Ms();
-  ASSERT(DataIs(can.Find(0x29C), ACTIVE_29C));
+  ASSERT(can.CountId(0x29C) == 1 && DataIs(can.Find(0x29C), IDLE_29C));
 }
 
 void TestChargeFrames() {
@@ -182,12 +194,16 @@ void TestCharge394DoesNotFollowVoltspntOrUdc() {
   }
 }
 
-void TestOffOpmodeSendsOnlyIdle29C() {
+void TestOffOpmodeSendsNothing() {
+  // Off() covers the shutdown delay; after that the bus stays quiet
   Setup(MOD_OFF, Unused);
   charger->Task100Ms();
-  const uint32_t ids[] = {0x29C};
-  ASSERT(IdsAre(ids, 1));
-  ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
+  ASSERT(can.count == 0);
+
+  Setup(MOD_OFF, i3LIM);
+  charger->ControlCharge(true, true);
+  charger->Task100Ms();
+  ASSERT(can.count == 0);
 }
 
 void TestOffFrames() {
@@ -270,10 +286,11 @@ void TestDecode39F() {
 void MGgen2Test::RunTest() {
   TestRegistersRxIds();
   TestRunFrames();
-  TestRunSendsActive29CWhenClearToStart();
+  TestOnlyChargeSendsActive29C();
+  TestChargeWithoutClearToStartSendsIdle29C();
   TestChargeFrames();
   TestCharge394DoesNotFollowVoltspntOrUdc();
-  TestOffOpmodeSendsOnlyIdle29C();
+  TestOffOpmodeSendsNothing();
   TestOffFrames();
   TestOffSendsEvery10thCall();
   TestOffSendsAtOnceAfterRunOrCharge();

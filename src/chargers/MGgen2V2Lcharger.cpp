@@ -332,7 +332,14 @@ void MGgen2V2Lcharger::Task100Ms() {
     bytes[7] = 0x00;
     can->Send(0x394, (uint32_t *)bytes, 8);
   }
-  if (clearToStart) {
+
+  // 0x29C is the charge current permission. Allow charge current only in
+  // CHARGE. In OFF nothing is sent; Off() sends the idle frame during the
+  // shutdown delay.
+  if (opmode == MOD_OFF)
+    return;
+
+  if (opmode == MOD_CHARGE && clearToStart) {
     bytes[0] = 0x28;
     bytes[1] = 0x89;
     bytes[2] = 0x07;
