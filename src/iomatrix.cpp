@@ -35,7 +35,7 @@ DigIo *IOMatrix::functionToPinIn[];
 DigIo *IOMatrix::functionToPinOut[];
 
 void IOMatrix::AssignFromParams() {
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < LAST_IN; i++) {
     functionToPinIn[i] = &DigIo::dummypin;
   }
 
