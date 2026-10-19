@@ -42,13 +42,16 @@ public:
 
 private:
   bool clearToStart = false;
-  uint8_t offTick = 0;   // Off() calls left to skip before the next send
-  uint16_t limitRaw = 0; // 0x29C current limit sent, 0 = not charging
+  uint8_t offTick = 0;     // Off() calls left to skip before the next send
+  uint16_t limitRaw = 0;   // 0x29C current limit sent, 0 = not charging
+  float cvLimitA = 0;      // CV taper limit in A
+  bool stopCharge = false; // hard stop or lost HV reading: 0 A until the end
   static uint8_t chgStatus, evseDuty;
   static float dcBusV, temp_1, temp_2, ACVolts, DCAmps, ACAmps;
   static float LV_Volts, LV_Amps;
 
   static bool PlugPresent();
+  void UpdateCvLimit();
 
   static void handle324(uint32_t data[2]);
   static void handle323(uint32_t data[2]);

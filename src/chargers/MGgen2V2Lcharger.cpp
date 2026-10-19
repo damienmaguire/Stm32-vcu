@@ -86,6 +86,18 @@ static float PilotDutyToAmps(uint8_t duty) {
 // +100 counts (2 A) per 100 ms tick
 #define LIMIT_RAW_START 0x428
 #define LIMIT_RAMP_STEP 100
+// Most current the limit field can ask for (0x7FE)
+#define LIMIT_AMPS_MAX ((LIMIT_RAW_MAX - LIMIT_RAW_ZERO) * LIMIT_AMPS_PER_COUNT)
+
+// CV taper towards Voltspnt, per 100 ms tick: above it, down by 1 A per
+// volt over (at least 0.2 A); more than 1 V below it, up by 0.1 A; hold in
+// between. At Voltspnt + 5 V the charge stops.
+#define CV_DOWN_A_PER_VOLT 1.0f
+#define CV_DOWN_MIN_A 0.2f
+#define CV_UP_A 0.1f
+#define CV_HOLD_BAND_V 1.0f
+#define CV_HARD_STOP_V 5.0f
+
 // BMS_ChargeLim at or above this means no BMS limit (no BMS sends 9999)
 #define BMS_NO_LIMIT 1000
 
@@ -205,8 +217,10 @@ void MGgen2V2Lcharger::Task100Ms() {
 
   // The next charge starts its ramp from the beginning
   bool charging = opmode == MOD_CHARGE && clearToStart;
-  if (!charging)
+  if (!charging) {
     limitRaw = 0;
+    stopCharge = false;
+  }
 
   if (opmode == MOD_RUN) // do some DC-DC stuff
   {
@@ -416,7 +430,14 @@ void MGgen2V2Lcharger::Task100Ms() {
 
   if (charging) {
     // Ramp up to the target, apply decreases at once
-    uint16_t target = AmpsToLimitRaw(TargetAmps());
+    if (limitRaw == 0) { // first tick of a charge
+      cvLimitA = LIMIT_AMPS_MAX;
+      stopCharge = false;
+    }
+    UpdateCvLimit();
+    float amps = stopCharge ? 0 : MIN(TargetAmps(), cvLimitA);
+
+    uint16_t target = AmpsToLimitRaw(amps);
     if (limitRaw == 0)
       limitRaw = MIN(target, LIMIT_RAW_START);
     else if (target > limitRaw)
@@ -449,6 +470,31 @@ void MGgen2V2Lcharger::Task100Ms() {
     bytes[7] = 0xFF;
     can->Send(0x29C, (uint32_t *)bytes, 8);
   }
+}
+
+void MGgen2V2Lcharger::UpdateCvLimit() {
+  // Without the OBC's own HV reading an overvoltage could go unseen: udc
+  // may come from an inverter that is unpowered while charging
+  if (age324 > RX_TIMEOUT_TICKS) {
+    stopCharge = true;
+    return;
+  }
+
+  float volts = MAX(Param::GetFloat(Param::udc), dcBusV);
+  float setpoint = Param::GetFloat(Param::Voltspnt);
+
+  if (volts >= setpoint + CV_HARD_STOP_V) {
+    stopCharge = true;
+  } else if (volts > setpoint) {
+    // Taper from the current actually flowing, not from a limit the EVSE
+    // or the OBC never let it reach
+    if (age33D <= RX_TIMEOUT_TICKS && cvLimitA > DCAmps)
+      cvLimitA = DCAmps;
+    cvLimitA -= MAX((volts - setpoint) * CV_DOWN_A_PER_VOLT, CV_DOWN_MIN_A);
+  } else if (volts < setpoint - CV_HOLD_BAND_V) {
+    cvLimitA += CV_UP_A;
+  }
+  cvLimitA = MAX(0.0f, MIN(cvLimitA, LIMIT_AMPS_MAX));
 }
 
 void MGgen2V2Lcharger::Off() {

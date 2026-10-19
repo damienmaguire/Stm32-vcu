@@ -107,6 +107,20 @@ void Rx(uint32_t id, const uint8_t (&bytes)[8]) {
   charger->DecodeCAN(id, data);
 }
 
+// What the simulated OBC reports in 0x324 (HV volts) and 0x33D (DC amps,
+// not sent while negative)
+float obcVolts;
+float obcDcAmps;
+
+void FeedObc() {
+  uint16_t raw = (uint16_t)(obcVolts / 0.02f + 0.5f);
+  Rx(0x324,
+     {0x20, (uint8_t)(raw >> 8), (uint8_t)(raw & 0xFF), 65, 70, 0, 0, 58});
+  if (obcDcAmps >= 0)
+    Rx(0x33D,
+       {116, 120, 0x50, 0, 0, 0x18, (uint8_t)(obcDcAmps * 10 + 0.5f), 0x20});
+}
+
 // Fresh driver (zero-initialised, as the firmware's static instance is)
 void Setup(int opmode, int interface) {
   instance = MGgen2V2Lcharger();
@@ -120,6 +134,9 @@ void Setup(int opmode, int interface) {
   // Plug status and CP duty are file-static: reset to "not plugged"
   Rx(0x323, {0, 0, 0, 0, 0, 0, 0, 0});
   Rx(0x33B, {0, 0, 0, 0, 0, 0, 0, 0});
+  obcVolts = 380;
+  obcDcAmps = -1;
+  FeedObc();
   can.Clear();
 }
 
@@ -164,6 +181,7 @@ uint16_t LimitRaw(const uint8_t *f) {
 
 // Current limit in the 0x29C frame of the next Task100Ms() tick
 uint16_t TickLimit() {
+  FeedObc();
   can.Clear();
   charger->Task100Ms();
   return LimitRaw(can.Find(0x29C));
@@ -174,10 +192,8 @@ const uint8_t *Charge29CWithMaxA(float amps) {
   Setup(MOD_CHARGE, i3LIM);
   Param::SetFloat(Param::MGChgMaxA, amps);
   charger->ControlCharge(true, true);
-  for (int i = 0; i < 15; i++) {
-    can.Clear();
-    charger->Task100Ms();
-  }
+  for (int i = 0; i < 15; i++)
+    TickLimit();
   return can.Find(0x29C);
 }
 
@@ -280,6 +296,96 @@ void TestBmsLimitDropAppliesAtOnce() {
   ASSERT(TickLimit() == 0x590);
   Param::SetInt(Param::BMS_ChargeLim, 9999);
   ASSERT(TickLimit() == 0x5F4); // back up at the ramp rate
+}
+
+// Raw count for a limit in A, as the driver rounds it
+uint16_t Raw(float amps) { return 0x400 + (int)(amps / 0.02f + 0.5f); }
+
+void TestCvTapersAboveVoltspnt() {
+  // Voltspnt = 395 V. The taper starts from the current flowing (16 A),
+  // not from the 20.4 A limit the OBC never reached
+  Charge29CWithMaxA(20);
+  obcDcAmps = 16;
+  obcVolts = 395.5f; // 0.5 V over: -0.5 A per tick
+  ASSERT(TickLimit() == Raw(15.5f));
+  ASSERT(TickLimit() == Raw(15));
+  obcVolts = 396; // 1 V over: -1 A
+  ASSERT(TickLimit() == Raw(14));
+  obcVolts = 395.1f; // 0.1 V over: the minimum step, -0.2 A
+  ASSERT(TickLimit() == Raw(13.8f));
+  obcVolts = 394.5f; // within 1 V below: hold
+  ASSERT(TickLimit() == Raw(13.8f));
+  ASSERT(TickLimit() == Raw(13.8f));
+  obcVolts = 393.9f; // more than 1 V below: +0.1 A
+  ASSERT(TickLimit() == Raw(13.9f));
+  ASSERT(TickLimit() == Raw(14));
+}
+
+void TestCvUsesHigherOfUdcAndObc() {
+  // udc above Voltspnt, OBC reading below: the higher one counts
+  Charge29CWithMaxA(20);
+  Param::SetFloat(Param::udc, 396);
+  ASSERT(TickLimit() == Raw(20.44f - 1)); // no 0x33D: tapers from 20.44 A
+
+  // No udc source (0 V while charging): the OBC reading counts
+  Charge29CWithMaxA(20);
+  Param::SetFloat(Param::udc, 0);
+  obcVolts = 396;
+  ASSERT(TickLimit() == Raw(20.44f - 1));
+}
+
+void TestCvLimitStopsAtZeroAndRecovers() {
+  Charge29CWithMaxA(20);
+  obcVolts = 399; // 4 V over, below the hard stop
+  for (int i = 0; i < 10; i++)
+    TickLimit();
+  ASSERT(TickLimit() == 0x400);
+  obcVolts = 390;
+  ASSERT(TickLimit() == Raw(0.1f)); // not a stop: recovers by 0.1 A a tick
+}
+
+void TestHardStopAtVoltspntPlus5V() {
+  Charge29CWithMaxA(20);
+  obcVolts = 399.9f;
+  ASSERT(TickLimit() != 0x400);
+  Charge29CWithMaxA(20);
+  obcVolts = 400.1f;
+  ASSERT(TickLimit() == 0x400);
+  obcVolts = 380; // latched for the rest of this charge
+  for (int i = 0; i < 20; i++)
+    TickLimit();
+  ASSERT(TickLimit() == 0x400);
+
+  // From udc too
+  Charge29CWithMaxA(20);
+  Param::SetFloat(Param::udc, 401);
+  ASSERT(TickLimit() == 0x400);
+}
+
+void TestStopClearsOnNextCharge() {
+  Charge29CWithMaxA(20);
+  obcVolts = 401;
+  ASSERT(TickLimit() == 0x400);
+  obcVolts = 380;
+  charger->ControlCharge(true, false); // charge request dropped
+  TickLimit();
+  charger->ControlCharge(true, true);
+  ASSERT(TickLimit() == 0x428);
+}
+
+void TestLostObcVoltageStops() {
+  // udc may come from an inverter that is off while charging, so without
+  // 0x324 an overvoltage could go unseen
+  Charge29CWithMaxA(20);        // its last tick is the 1st after the last 0x324
+  for (int i = 0; i < 9; i++) { // up to 1 s without 0x324: still fresh
+    can.Clear();
+    charger->Task100Ms();
+  }
+  ASSERT(LimitRaw(can.Find(0x29C)) == 0x7FE);
+  can.Clear();
+  charger->Task100Ms();
+  ASSERT(LimitRaw(can.Find(0x29C)) == 0x400);
+  ASSERT(TickLimit() == 0x400); // stays stopped when 0x324 is back
 }
 
 void TestChargeLimitTopOfRangeIsUnrestricted() {
@@ -572,6 +678,12 @@ void MGgen2Test::RunTest() {
   TestChargeLimitIsClamped();
   TestChargeTargetIsMinOfMaxAAndBms();
   TestBmsLimitDropAppliesAtOnce();
+  TestCvTapersAboveVoltspnt();
+  TestCvUsesHigherOfUdcAndObc();
+  TestCvLimitStopsAtZeroAndRecovers();
+  TestHardStopAtVoltspntPlus5V();
+  TestStopClearsOnNextCharge();
+  TestLostObcVoltageStops();
   TestMGChgMaxAOnlyAffectsCharge();
   TestChargeFrames();
   TestCharge394DoesNotFollowVoltspntOrUdc();
