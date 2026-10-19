@@ -116,6 +116,7 @@ void Setup(int opmode, int interface) {
   Param::SetInt(Param::Voltspnt, 395);
   Param::SetInt(Param::udc, 380);
   Param::SetInt(Param::MGChgMaxA, 20);
+  Param::SetInt(Param::BMS_ChargeLim, 9999); // as sent with no BMS
   // Plug status and CP duty are file-static: reset to "not plugged"
   Rx(0x323, {0, 0, 0, 0, 0, 0, 0, 0});
   Rx(0x33B, {0, 0, 0, 0, 0, 0, 0, 0});
@@ -250,6 +251,35 @@ void TestChargeLimitFromMGChgMaxA() {
     ASSERT(f != NULL && f[0] == 0x28 && f[1] == 0x89 && (f[2] & 0xF0) == 0 &&
            f[4] == 0x00 && f[5] == 0xDC && f[6] == 0x57 && f[7] == 0x12);
   }
+}
+
+// 0x29C limit once settled with these settings
+uint16_t SettledLimit(float maxA, float bmsLimit) {
+  Setup(MOD_CHARGE, i3LIM);
+  Param::SetFloat(Param::MGChgMaxA, maxA);
+  Param::SetFloat(Param::BMS_ChargeLim, bmsLimit);
+  charger->ControlCharge(true, true);
+  for (int i = 0; i < 15; i++)
+    TickLimit();
+  return TickLimit();
+}
+
+void TestChargeTargetIsMinOfMaxAAndBms() {
+  ASSERT(SettledLimit(20, 9999) == 0x7FE); // no BMS
+  ASSERT(SettledLimit(20, 1000) == 0x7FE); // 1000 and up = no limit
+  ASSERT(SettledLimit(20, 999) == 0x7FE);  // BMS above the OBC maximum
+  ASSERT(SettledLimit(20, 10) == 0x5F4);   // BMS limits
+  ASSERT(SettledLimit(5, 15) == 0x4FA);    // MGChgMaxA limits
+  ASSERT(SettledLimit(20, 0) == 0x400);    // BMS says stop
+  ASSERT(SettledLimit(20, -5) == 0x400);
+}
+
+void TestBmsLimitDropAppliesAtOnce() {
+  Charge29CWithMaxA(20);
+  Param::SetInt(Param::BMS_ChargeLim, 8);
+  ASSERT(TickLimit() == 0x590);
+  Param::SetInt(Param::BMS_ChargeLim, 9999);
+  ASSERT(TickLimit() == 0x5F4); // back up at the ramp rate
 }
 
 void TestChargeLimitTopOfRangeIsUnrestricted() {
@@ -540,6 +570,8 @@ void MGgen2Test::RunTest() {
   TestChargeLimitFromMGChgMaxA();
   TestChargeLimitTopOfRangeIsUnrestricted();
   TestChargeLimitIsClamped();
+  TestChargeTargetIsMinOfMaxAAndBms();
+  TestBmsLimitDropAppliesAtOnce();
   TestMGChgMaxAOnlyAffectsCharge();
   TestChargeFrames();
   TestCharge394DoesNotFollowVoltspntOrUdc();

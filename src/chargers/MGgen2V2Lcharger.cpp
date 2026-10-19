@@ -86,6 +86,18 @@ static float PilotDutyToAmps(uint8_t duty) {
 // +100 counts (2 A) per 100 ms tick
 #define LIMIT_RAW_START 0x428
 #define LIMIT_RAMP_STEP 100
+// BMS_ChargeLim at or above this means no BMS limit (no BMS sends 9999)
+#define BMS_NO_LIMIT 1000
+
+// Charge current target in A DC at the OBC output. That includes the DC-DC
+// draw, so limiting it to the BMS limit is on the safe side.
+static float TargetAmps() {
+  float amps = Param::GetFloat(Param::MGChgMaxA);
+  float bmsLimit = Param::GetFloat(Param::BMS_ChargeLim);
+  if (bmsLimit < BMS_NO_LIMIT)
+    amps = MIN(amps, bmsLimit);
+  return amps;
+}
 
 static uint16_t AmpsToLimitRaw(float amps) {
   if (amps >= MGCHGMAXA_TOP)
@@ -404,7 +416,7 @@ void MGgen2V2Lcharger::Task100Ms() {
 
   if (charging) {
     // Ramp up to the target, apply decreases at once
-    uint16_t target = AmpsToLimitRaw(Param::GetFloat(Param::MGChgMaxA));
+    uint16_t target = AmpsToLimitRaw(TargetAmps());
     if (limitRaw == 0)
       limitRaw = MIN(target, LIMIT_RAW_START);
     else if (target > limitRaw)
