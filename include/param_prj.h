@@ -256,6 +256,9 @@
   VALUE_ENTRY(ChgTemp, "°C", 2078)                                             \
   VALUE_ENTRY(AC_Volts, "V", 2079)                                             \
   VALUE_ENTRY(AC_Amps, "A", 2089)                                              \
+  VALUE_ENTRY(ChgDCAmps, "A", 2126)                                            \
+  VALUE_ENTRY(ChgHVVolts, "V", 2127)                                           \
+  VALUE_ENTRY(ChgLimAmps, "A", 2128)                                           \
   VALUE_ENTRY(canctr, "dig", 2091)                                             \
   VALUE_ENTRY(cpuload, "%", 2063)                                              \
   VALUE_ENTRY(PPVal, "dig", 2094)                                              \

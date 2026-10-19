@@ -233,11 +233,14 @@ void MGgen2V2Lcharger::Task100Ms() {
     if (PublishPlugDet())
       Param::SetInt(Param::PlugDet, PlugPresent());
   }
-  if (AgeRx(age324))
+  if (AgeRx(age324)) {
     Param::SetFloat(Param::ChgTemp, 0);
+    Param::SetFloat(Param::ChgHVVolts, 0);
+  }
   if (AgeRx(age33D)) {
     Param::SetFloat(Param::AC_Volts, 0);
     Param::SetFloat(Param::AC_Amps, 0);
+    Param::SetFloat(Param::ChgDCAmps, 0);
   }
   if (AgeRx(age39F)) {
     Param::SetFloat(Param::U12V, 0);
@@ -249,6 +252,10 @@ void MGgen2V2Lcharger::Task100Ms() {
     offTick = 0;
 
   UpdateChargeState(opmode);
+  // The 0x29C current limit sent this tick (0 when idle or complete)
+  Param::SetFloat(
+      Param::ChgLimAmps,
+      limitRaw == 0 ? 0 : (limitRaw - LIMIT_RAW_ZERO) * LIMIT_AMPS_PER_COUNT);
 
   if (opmode == MOD_RUN) // do some DC-DC stuff
   {
@@ -722,6 +729,7 @@ void MGgen2V2Lcharger::handle324(uint32_t data[2])
   temp_2 = bytes[4] - 40;
   age324 = 0;
   Param::SetFloat(Param::ChgTemp, MAX(temp_1, temp_2));
+  Param::SetFloat(Param::ChgHVVolts, dcBusV);
 
   if (Param::GetInt(Param::ShuntType) == 0 &&
       Param::GetInt(Param::Inverter) !=
@@ -774,6 +782,7 @@ void MGgen2V2Lcharger::handle33D(uint32_t data[2]) {
   age33D = 0;
   Param::SetFloat(Param::AC_Volts, ACVolts);
   Param::SetFloat(Param::AC_Amps, ACAmps);
+  Param::SetFloat(Param::ChgDCAmps, DCAmps);
 }
 /*
 void MGgen2V2Lcharger::handle38A(uint32_t data[2])

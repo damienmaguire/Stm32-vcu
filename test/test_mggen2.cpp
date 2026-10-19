@@ -778,6 +778,45 @@ void TestPilotProxPinKeepsPlugDet() {
   Param::SetInt(Param::GPA2Func, IOMatrix::NONE_ANAL);
 }
 
+void TestPublishesChargerDcValues() {
+  Setup(MOD_CHARGE, i3LIM);
+  obcVolts = 371.4f; // Ben, 6 kW log
+  obcDcAmps = 16.1f;
+  FeedObc();
+  ASSERT(Near(Param::ChgHVVolts, 371.4f));
+  ASSERT(Near(Param::ChgDCAmps, 16.1f));
+}
+
+void TestPublishesCommandedLimit() {
+  Setup(MOD_OFF, i3LIM);
+  charger->Task100Ms();
+  ASSERT(Near(Param::ChgLimAmps, 0)); // idle frame
+
+  Setup(MOD_CHARGE, i3LIM);
+  charger->ControlCharge(true, true);
+  TickLimit();
+  ASSERT(Near(Param::ChgLimAmps, 0.8f)); // 0x428, start of the ramp
+  for (int i = 0; i < 15; i++)
+    TickLimit();
+  ASSERT(Near(Param::ChgLimAmps, 20.44f)); // 0x7FE
+
+  obcDcAmps = 0;
+  charger->ControlCharge(false, true);
+  TickLimit();
+  ASSERT(Near(Param::ChgLimAmps, 0)); // 0x400 while stopping
+  TickLimit();
+  ASSERT(Near(Param::ChgLimAmps, 0)); // charge complete
+}
+
+void TestChargerDcValuesZeroOnRxTimeout() {
+  Setup(MOD_OFF, i3LIM);
+  obcDcAmps = 16.1f;
+  FeedObc();
+  for (int i = 0; i < 11; i++)
+    charger->Task100Ms();
+  ASSERT(Near(Param::ChgHVVolts, 0) && Near(Param::ChgDCAmps, 0));
+}
+
 void TestValuesZeroOnceOnRxTimeout() {
   Setup(MOD_OFF, Unused);
   Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
@@ -853,4 +892,7 @@ void MGgen2Test::RunTest() {
   TestChargeInterfaceKeepsPilotLimAndPlugDet();
   TestPilotProxPinKeepsPlugDet();
   TestValuesZeroOnceOnRxTimeout();
+  TestPublishesChargerDcValues();
+  TestPublishesCommandedLimit();
+  TestChargerDcValuesZeroOnRxTimeout();
 }
