@@ -82,6 +82,10 @@ static float PilotDutyToAmps(uint8_t duty) {
 #define LIMIT_RAW_MAX 0x7FE
 #define LIMIT_AMPS_PER_COUNT 0.02f
 #define MGCHGMAXA_TOP 20
+// Start of charge as on the MG5: first frame 0x428 (0.8 A), then at most
+// +100 counts (2 A) per 100 ms tick
+#define LIMIT_RAW_START 0x428
+#define LIMIT_RAMP_STEP 100
 
 static uint16_t AmpsToLimitRaw(float amps) {
   if (amps >= MGCHGMAXA_TOP)
@@ -186,6 +190,11 @@ void MGgen2V2Lcharger::Task100Ms() {
   // The first Off() call of the next shutdown sends at once
   if (opmode != MOD_OFF)
     offTick = 0;
+
+  // The next charge starts its ramp from the beginning
+  bool charging = opmode == MOD_CHARGE && clearToStart;
+  if (!charging)
+    limitRaw = 0;
 
   if (opmode == MOD_RUN) // do some DC-DC stuff
   {
@@ -393,10 +402,18 @@ void MGgen2V2Lcharger::Task100Ms() {
   if (opmode == MOD_OFF)
     return;
 
-  if (opmode == MOD_CHARGE && clearToStart) {
+  if (charging) {
+    // Ramp up to the target, apply decreases at once
+    uint16_t target = AmpsToLimitRaw(Param::GetFloat(Param::MGChgMaxA));
+    if (limitRaw == 0)
+      limitRaw = MIN(target, LIMIT_RAW_START);
+    else if (target > limitRaw)
+      limitRaw = MIN(target, limitRaw + LIMIT_RAMP_STEP);
+    else
+      limitRaw = target;
+
     // Only the current limit changes; the other bytes are the ZS frame
     // (other variants differ in b1, b2 bit 7 and b6..b7)
-    uint16_t limitRaw = AmpsToLimitRaw(Param::GetFloat(Param::MGChgMaxA));
 
     bytes[0] = 0x28;
     bytes[1] = 0x89;

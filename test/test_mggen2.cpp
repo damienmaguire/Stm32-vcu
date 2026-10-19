@@ -157,16 +157,86 @@ void TestOnlyChargeSendsActive29C() {
   }
 }
 
+uint16_t LimitRaw(const uint8_t *f) {
+  return f == NULL ? 0xFFFF : ((f[2] & 0x0F) << 8) | f[3];
+}
+
+// Current limit in the 0x29C frame of the next Task100Ms() tick
+uint16_t TickLimit() {
+  can.Clear();
+  charger->Task100Ms();
+  return LimitRaw(can.Find(0x29C));
+}
+
+// 0x29C once the start ramp has settled (0x428 -> 0x7FE takes 11 ticks)
 const uint8_t *Charge29CWithMaxA(float amps) {
   Setup(MOD_CHARGE, i3LIM);
   Param::SetFloat(Param::MGChgMaxA, amps);
   charger->ControlCharge(true, true);
-  charger->Task100Ms();
+  for (int i = 0; i < 15; i++) {
+    can.Clear();
+    charger->Task100Ms();
+  }
   return can.Find(0x29C);
 }
 
-uint16_t LimitRaw(const uint8_t *f) {
-  return f == NULL ? 0xFFFF : ((f[2] & 0x0F) << 8) | f[3];
+void TestChargeStartRamp() {
+  // Like the MG5: 0x428 first, then +100 counts (2 A) per 100 ms
+  Setup(MOD_CHARGE, i3LIM);
+  charger->ControlCharge(true, true);
+  uint16_t expected = 0x428;
+  for (int i = 0; i < 10; i++) {
+    ASSERT(TickLimit() == expected);
+    expected += 100;
+  }
+  ASSERT(TickLimit() == 0x7FE); // 0x428 + 1000 would be 0x810: capped
+  ASSERT(TickLimit() == 0x7FE);
+}
+
+void TestChargeRampStopsAtTarget() {
+  Setup(MOD_CHARGE, i3LIM);
+  Param::SetInt(Param::MGChgMaxA, 5); // 0x400 + 250 = 0x4FA
+  charger->ControlCharge(true, true);
+  ASSERT(TickLimit() == 0x428);
+  ASSERT(TickLimit() == 0x48C);
+  ASSERT(TickLimit() == 0x4F0);
+  ASSERT(TickLimit() == 0x4FA);
+  ASSERT(TickLimit() == 0x4FA);
+
+  // A target below the start value is sent straight away
+  Setup(MOD_CHARGE, i3LIM);
+  Param::SetFloat(Param::MGChgMaxA, 0.5f); // 0x419
+  charger->ControlCharge(true, true);
+  ASSERT(TickLimit() == 0x419);
+}
+
+void TestChargeLimitDecreasesAtOnce() {
+  Charge29CWithMaxA(20);
+  Param::SetInt(Param::MGChgMaxA, 10);
+  ASSERT(TickLimit() == 0x5F4);
+  Param::SetInt(Param::MGChgMaxA, 0);
+  ASSERT(TickLimit() == 0x400);
+  // ... and ramps up again from there
+  Param::SetInt(Param::MGChgMaxA, 20);
+  ASSERT(TickLimit() == 0x464);
+}
+
+void TestChargeRampRestartsEachCharge() {
+  Charge29CWithMaxA(20);
+  // Charge request dropped for one tick (idle frame), then back
+  charger->ControlCharge(true, false);
+  can.Clear();
+  charger->Task100Ms();
+  ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
+  charger->ControlCharge(true, true);
+  ASSERT(TickLimit() == 0x428);
+
+  // Through OFF and back to CHARGE
+  Charge29CWithMaxA(20);
+  Param::SetInt(Param::opmode, MOD_OFF);
+  charger->Task100Ms();
+  Param::SetInt(Param::opmode, MOD_CHARGE);
+  ASSERT(TickLimit() == 0x428);
 }
 
 void TestChargeLimitFromMGChgMaxA() {
@@ -229,7 +299,9 @@ void TestChargeFrames() {
   ASSERT(DataIs(can.Find(0x19C), {0x06, 0xA0, 0x26, 0, 0, 0, 0, 0x7F}));
   ASSERT(DataIs(can.Find(0x322), {0, 0, 0, 0x20, 0, 0, 0, 0}));
   ASSERT(DataIs(can.Find(0x394), {0, 0x28, 0, 0, 0x10, 0x43, 0, 0}));
-  ASSERT(DataIs(can.Find(0x29C), ACTIVE_29C));
+  // First tick of a charge: the ramp starts at 0x428 (0.8 A)
+  ASSERT(
+      DataIs(can.Find(0x29C), {0x28, 0x89, 0x04, 0x28, 0, 0xDC, 0x57, 0x12}));
 }
 
 void TestCharge394DoesNotFollowVoltspntOrUdc() {
@@ -461,6 +533,10 @@ void MGgen2Test::RunTest() {
   TestRunFrames();
   TestOnlyChargeSendsActive29C();
   TestChargeWithoutClearToStartSendsIdle29C();
+  TestChargeStartRamp();
+  TestChargeRampStopsAtTarget();
+  TestChargeLimitDecreasesAtOnce();
+  TestChargeRampRestartsEachCharge();
   TestChargeLimitFromMGChgMaxA();
   TestChargeLimitTopOfRangeIsUnrestricted();
   TestChargeLimitIsClamped();
