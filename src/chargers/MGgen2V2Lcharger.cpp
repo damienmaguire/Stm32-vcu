@@ -97,6 +97,15 @@ static float PilotDutyToAmps(uint8_t duty) {
 #define CV_UP_A 0.1f
 #define CV_HOLD_BAND_V 1.0f
 #define CV_HARD_STOP_V 5.0f
+// The charge is complete once the CV limit has been at or below
+// max(IdcTerm, 1 A) for 30 s
+#define CV_DONE_MIN_A 1.0f
+#define CV_DONE_TICKS 300
+
+// Stop: 0x29C at 0 A until the OBC's DC output is down to 1 A (its idle
+// 0.2 A plus the DC-DC draw), at most 3 s, then the charge complete frames
+#define STOP_CURRENT_A 1.0f
+#define STOP_TIMEOUT_TICKS 30
 
 // BMS_ChargeLim at or above this means no BMS limit (no BMS sends 9999)
 #define BMS_NO_LIMIT 1000
@@ -121,12 +130,14 @@ static uint16_t AmpsToLimitRaw(float amps) {
 }
 
 bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq) {
+  bool request, plugGone;
   switch (Param::GetInt(Param::interface)) {
   case Unused:
     // No charge interface, so the charger's own plug detection starts the
     // charge. RunCh carries charge termination, the BMS stop, the web UI
     // disable and the charge timer.
-    clearToStart = PlugPresent() && RunCh && ACReq;
+    request = PlugPresent() && RunCh && ACReq;
+    plugGone = !PlugPresent();
     break;
 
   case i3LIM:
@@ -134,13 +145,35 @@ bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq) {
   case Foccci:
   case Chademo:
     // we have a startup request to AC charge from a charge interface
-    clearToStart = RunCh && ACReq;
+    request = RunCh && ACReq;
+    plugGone = !ACReq;
     break;
 
   default:
     return false;
   }
+
+  // Charge ended from outside (BMS, termination, web UI, timer, EVSE): stay
+  // in CHARGE until the OBC has stopped, so the contactors open at 0 A
+  if (chargeState == CHG_RUNNING && !request)
+    StartStop(false);
+  // A charge the driver finished stays finished until unplugged
+  if (chargeState == CHG_DONE && plugGone)
+    chargeState = CHG_IDLE;
+
+  if (chargeState == CHG_STOPPING)
+    clearToStart = true;
+  else if (chargeState == CHG_DONE)
+    clearToStart = false;
+  else
+    clearToStart = request;
   return clearToStart;
+}
+
+void MGgen2V2Lcharger::StartStop(bool latch) {
+  chargeState = CHG_STOPPING;
+  latchAfterStop = latch;
+  stopTicks = 0;
 }
 
 // EVSE present: CP duty 1..99 % from 0x33B (seen on every unit; 100 % means
@@ -215,12 +248,7 @@ void MGgen2V2Lcharger::Task100Ms() {
   if (opmode != MOD_OFF)
     offTick = 0;
 
-  // The next charge starts its ramp from the beginning
-  bool charging = opmode == MOD_CHARGE && clearToStart;
-  if (!charging) {
-    limitRaw = 0;
-    stopCharge = false;
-  }
+  UpdateChargeState(opmode);
 
   if (opmode == MOD_RUN) // do some DC-DC stuff
   {
@@ -297,9 +325,13 @@ void MGgen2V2Lcharger::Task100Ms() {
     bytes[7] = 0x00;
     can->Send(0x1F1, (uint32_t *)bytes, 8);
 
+    // Once the charge is complete, the frames below carry the car's charge
+    // complete values until OFF: 0x297 mode 0A, 0x29B "plugged in, not
+    // charging", 0x33F 42 and the DC-DC off (as on the MG5)
     bytes[0] = 0x00;
-    bytes[1] = 0x06; // 01 is stand by, 03 is driving, 06 is AC charging, 07 is
-                     // CCS charging
+    // 01 is stand by, 03 is driving, 06 is AC charging, 07 is CCS charging,
+    // 0A is charge complete
+    bytes[1] = completeSent ? 0x0A : 0x06;
     bytes[2] = 0x00;
     bytes[3] = 0x00;
     bytes[4] = 0x00;
@@ -308,10 +340,10 @@ void MGgen2V2Lcharger::Task100Ms() {
     bytes[7] = 0x00;
     can->Send(0x297, (uint32_t *)bytes, 8);
 
-    bytes[0] = 0x3B;
+    bytes[0] = completeSent ? 0xBB : 0x3B;
     bytes[1] = 0xCA;
     bytes[2] = 0x86;
-    bytes[3] = 0x00;
+    bytes[3] = completeSent ? 0x02 : 0x00;
     bytes[4] = 0xFD;
     bytes[5] = 0x60;
     bytes[6] = 0x00;
@@ -386,12 +418,12 @@ void MGgen2V2Lcharger::Task100Ms() {
     bytes[4] = 0x28;
     bytes[5] = 0x00;
     bytes[6] = 0x00;
-    bytes[7] = 0x41;
+    bytes[7] = completeSent ? 0x42 : 0x41;
     can->Send(0x33F, (uint32_t *)bytes, 8);
 
     bytes[0] = 0x06;
     bytes[1] = 0xA0;
-    bytes[2] = 0x26;
+    bytes[2] = completeSent ? 0x06 : 0x26; // DC-DC off at charge complete
     bytes[3] = 0x00;
     bytes[4] = 0x00;
     bytes[5] = 0x00;
@@ -428,26 +460,20 @@ void MGgen2V2Lcharger::Task100Ms() {
   if (opmode == MOD_OFF)
     return;
 
-  if (charging) {
-    // Ramp up to the target, apply decreases at once
-    if (limitRaw == 0) { // first tick of a charge
-      cvLimitA = LIMIT_AMPS_MAX;
-      stopCharge = false;
-    }
-    UpdateCvLimit();
-    float amps = stopCharge ? 0 : MIN(TargetAmps(), cvLimitA);
-
-    uint16_t target = AmpsToLimitRaw(amps);
-    if (limitRaw == 0)
-      limitRaw = MIN(target, LIMIT_RAW_START);
-    else if (target > limitRaw)
-      limitRaw = MIN(target, limitRaw + LIMIT_RAMP_STEP);
-    else
-      limitRaw = target;
-
+  if (completeSent) {
+    // As the car sends at charge complete
+    bytes[0] = 0x00;
+    bytes[1] = 0x00;
+    bytes[2] = 0x00;
+    bytes[3] = 0x00;
+    bytes[4] = 0x00;
+    bytes[5] = 0x00;
+    bytes[6] = 0x00;
+    bytes[7] = 0x00;
+    can->Send(0x29C, (uint32_t *)bytes, 8);
+  } else if (limitRaw != 0) {
     // Only the current limit changes; the other bytes are the ZS frame
     // (other variants differ in b1, b2 bit 7 and b6..b7)
-
     bytes[0] = 0x28;
     bytes[1] = 0x89;
     bytes[2] = (limitRaw >> 8) & 0x0F;
@@ -469,6 +495,62 @@ void MGgen2V2Lcharger::Task100Ms() {
     bytes[6] = 0x7F;
     bytes[7] = 0xFF;
     can->Send(0x29C, (uint32_t *)bytes, 8);
+  }
+}
+
+// Charge state, current limit and charge end, once per 100 ms
+void MGgen2V2Lcharger::UpdateChargeState(int opmode) {
+  if (opmode != MOD_CHARGE)
+    completeSent = false;
+  if (opmode == MOD_RUN && chargeState == CHG_DONE)
+    chargeState = CHG_IDLE; // driving clears a finished charge
+
+  bool charging =
+      opmode == MOD_CHARGE && clearToStart && chargeState != CHG_DONE;
+  if (!charging) {
+    if (chargeState != CHG_DONE)
+      chargeState = CHG_IDLE;
+    limitRaw = 0; // the next charge starts its ramp from the beginning
+    return;
+  }
+
+  if (chargeState == CHG_IDLE) { // first tick of a charge
+    chargeState = CHG_RUNNING;
+    cvLimitA = LIMIT_AMPS_MAX;
+    stopCharge = false;
+    cvLowTicks = 0;
+    completeSent = false; // restarted without leaving CHARGE
+  }
+
+  if (chargeState == CHG_RUNNING) {
+    UpdateCvLimit();
+    float doneAmps = MAX(Param::GetFloat(Param::IdcTerm), CV_DONE_MIN_A);
+    cvLowTicks = cvLimitA <= doneAmps ? cvLowTicks + 1 : 0;
+
+    if (!stopCharge && cvLowTicks < CV_DONE_TICKS) {
+      // Ramp up to the target, apply decreases at once
+      uint16_t target = AmpsToLimitRaw(MIN(TargetAmps(), cvLimitA));
+      if (limitRaw == 0)
+        limitRaw = MIN(target, LIMIT_RAW_START);
+      else if (target > limitRaw)
+        limitRaw = MIN(target, limitRaw + LIMIT_RAMP_STEP);
+      else
+        limitRaw = target;
+      return;
+    }
+    StartStop(true); // CV phase finished, hard stop or HV reading lost
+  }
+
+  // Stopping: 0 A until the current has dropped, then charge complete
+  bool currentLow = age33D <= RX_TIMEOUT_TICKS && DCAmps <= STOP_CURRENT_A;
+  if (stopTicks > 0 && (currentLow || stopTicks >= STOP_TIMEOUT_TICKS)) {
+    completeSent = true;
+    clearToStart = false;
+    limitRaw = 0;
+    chargeState = latchAfterStop ? CHG_DONE : CHG_IDLE;
+  } else {
+    limitRaw = LIMIT_RAW_ZERO;
+    stopTicks++;
   }
 }
 

@@ -131,6 +131,7 @@ void Setup(int opmode, int interface) {
   Param::SetInt(Param::udc, 380);
   Param::SetInt(Param::MGChgMaxA, 20);
   Param::SetInt(Param::BMS_ChargeLim, 9999); // as sent with no BMS
+  Param::SetInt(Param::IdcTerm, 0);
   // Plug status and CP duty are file-static: reset to "not plugged"
   Rx(0x323, {0, 0, 0, 0, 0, 0, 0, 0});
   Rx(0x33B, {0, 0, 0, 0, 0, 0, 0, 0});
@@ -240,13 +241,14 @@ void TestChargeLimitDecreasesAtOnce() {
 
 void TestChargeRampRestartsEachCharge() {
   Charge29CWithMaxA(20);
-  // Charge request dropped for one tick (idle frame), then back
+  // Charge request dropped and back before the opmode left CHARGE
+  obcDcAmps = 0;
   charger->ControlCharge(true, false);
-  can.Clear();
-  charger->Task100Ms();
-  ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
-  charger->ControlCharge(true, true);
+  ASSERT(TickLimit() == 0x400); // stop sequence
+  TickLimit();                  // charge complete
+  ASSERT(charger->ControlCharge(true, true));
   ASSERT(TickLimit() == 0x428);
+  ASSERT(DataIs(can.Find(0x33F), {0, 0, 0, 0, 0x28, 0, 0, 0x41}));
 
   // Through OFF and back to CHARGE
   Charge29CWithMaxA(20);
@@ -365,12 +367,151 @@ void TestHardStopAtVoltspntPlus5V() {
 void TestStopClearsOnNextCharge() {
   Charge29CWithMaxA(20);
   obcVolts = 401;
+  obcDcAmps = 0;
   ASSERT(TickLimit() == 0x400);
   obcVolts = 380;
-  charger->ControlCharge(true, false); // charge request dropped
+  TickLimit(); // charge complete, latched
+  ASSERT(!charger->ControlCharge(true, true));
+  ASSERT(!charger->ControlCharge(true, false)); // ACReq false = unplugged
+  ASSERT(charger->ControlCharge(true, true));
+  ASSERT(TickLimit() == 0x428);
+}
+
+// The frames of the last tick are the car's charge complete frames
+bool CompleteFramesSent() {
+  const uint8_t *f297 = can.Find(0x297), *f29B = can.Find(0x29B);
+  const uint8_t *f33F = can.Find(0x33F), *f19C = can.Find(0x19C);
+  return DataIs(can.Find(0x29C), {0, 0, 0, 0, 0, 0, 0, 0}) && f297 != NULL &&
+         f297[1] == 0x0A && f29B != NULL && f29B[0] == 0xBB &&
+         f29B[3] == 0x02 && f33F != NULL && f33F[7] == 0x42 && f19C != NULL &&
+         f19C[2] == 0x06;
+}
+
+void TestExternalStopWaitsForZeroCurrent() {
+  // BMS stop, termination, web UI disable or timer: RunCh goes false
+  Charge29CWithMaxA(20);
+  obcDcAmps = 16;
+  ASSERT(charger->ControlCharge(false, true)); // held in CHARGE
+  ASSERT(TickLimit() == 0x400);
+  ASSERT(TickLimit() == 0x400); // still 16 A: wait
+  ASSERT(charger->ControlCharge(false, true));
+  obcDcAmps = 0.8f; // OBC idle plus the DC-DC draw
   TickLimit();
+  ASSERT(CompleteFramesSent());
+  ASSERT(!charger->ControlCharge(false, true)); // now to OFF
+  // Not latched: enabling again restarts the charge
+  ASSERT(charger->ControlCharge(true, true));
+}
+
+void TestExternalStopTimesOutAfter3s() {
+  const float dcAmps[] = {16, -1}; // current stays up / no 0x33D at all
+  for (int k = 0; k < 2; k++) {
+    Charge29CWithMaxA(20);
+    obcDcAmps = dcAmps[k];
+    charger->ControlCharge(false, true);
+    for (int i = 0; i < 30; i++)
+      ASSERT(TickLimit() == 0x400);
+    TickLimit(); // 3 s
+    ASSERT(CompleteFramesSent());
+  }
+}
+
+void TestCompleteFramesRepeatUntilOff() {
+  Charge29CWithMaxA(20);
+  obcDcAmps = 0;
+  charger->ControlCharge(false, true);
+  TickLimit();
+  TickLimit();
+  ASSERT(CompleteFramesSent());
+  TickLimit(); // still in CHARGE: the car keeps sending them
+  ASSERT(CompleteFramesSent());
+  Param::SetInt(Param::opmode, MOD_OFF);
+  charger->Task100Ms();
+  Param::SetInt(Param::opmode, MOD_CHARGE);
   charger->ControlCharge(true, true);
   ASSERT(TickLimit() == 0x428);
+  ASSERT(!CompleteFramesSent());
+  const uint8_t *f19C = can.Find(0x19C);
+  ASSERT(f19C != NULL && f19C[2] == 0x26); // DC-DC on again
+}
+
+void TestStopBeforeChargingIsImmediate() {
+  Setup(MOD_PRECHARGE, i3LIM);
+  ASSERT(charger->ControlCharge(true, true));
+  ASSERT(!charger->ControlCharge(false, true));
+}
+
+void TestCvPhaseCompletesAfter30s() {
+  Charge29CWithMaxA(20);
+  obcVolts = 399; // 4 V over Voltspnt: the CV limit falls to 0 at once
+  obcDcAmps = 0.5f;
+  int ticks = 0;
+  do {
+    TickLimit();
+    ticks++;
+  } while (!CompleteFramesSent() && ticks < 400);
+  // 300 ticks at the CV end, one at 0 A, then charge complete
+  ASSERT(ticks == 301);
+
+  // Latched while still plugged in, cleared by unplugging (ACReq false)
+  obcVolts = 380;
+  ASSERT(!charger->ControlCharge(true, true));
+  charger->ControlCharge(true, false);
+  ASSERT(charger->ControlCharge(true, true));
+}
+
+// Ticks until charge complete with the CV limit held at 2 A
+int TicksToCompleteAt2A(int idcTerm) {
+  Charge29CWithMaxA(20);
+  Param::SetInt(Param::IdcTerm, idcTerm);
+  obcDcAmps = 16;
+  obcVolts = 396; // 1 V over: 16 A -> 2 A in 14 ticks
+  for (int i = 0; i < 14; i++)
+    TickLimit();
+  obcVolts = 394.5f; // hold band: the limit stays at 2 A
+  obcDcAmps = 0.5f;  // the OBC follows the falling limit
+  int ticks = 0;
+  do {
+    TickLimit();
+    ticks++;
+  } while (!CompleteFramesSent() && ticks < 400);
+  return ticks;
+}
+
+void TestCvTerminationUsesIdcTerm() {
+  ASSERT(TicksToCompleteAt2A(0) == 400); // 2 A > 1 A floor: keeps charging
+  ASSERT(TicksToCompleteAt2A(3) < 300);  // 2 A <= IdcTerm 3 A: complete
+}
+
+void TestHardStopLatchUnusedClearsOnUnplug() {
+  Setup(MOD_CHARGE, Unused);
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  ASSERT(charger->ControlCharge(true, true));
+  obcDcAmps = 0;
+  obcVolts = 401;
+  TickLimit(); // hard stop: 0 A
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  TickLimit();
+  ASSERT(CompleteFramesSent());
+  obcVolts = 380;
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  ASSERT(!charger->ControlCharge(true, true)); // still plugged in
+  Rx(0x33B, {100, 0, 0, 0, 0, 0, 0, 0});       // EVSE stopped PWM
+  ASSERT(!charger->ControlCharge(true, true));
+  Rx(0x33B, {50, 0, 0, 0, 0, 0, 0, 0});
+  ASSERT(charger->ControlCharge(true, true));
+}
+
+void TestDoneLatchClearsInRun() {
+  Charge29CWithMaxA(20);
+  obcDcAmps = 0;
+  obcVolts = 401;
+  TickLimit();
+  TickLimit();
+  ASSERT(!charger->ControlCharge(true, true));
+  Param::SetInt(Param::opmode, MOD_RUN);
+  charger->Task100Ms();
+  ASSERT(charger->ControlCharge(true, true));
 }
 
 void TestLostObcVoltageStops() {
@@ -684,6 +825,14 @@ void MGgen2Test::RunTest() {
   TestHardStopAtVoltspntPlus5V();
   TestStopClearsOnNextCharge();
   TestLostObcVoltageStops();
+  TestExternalStopWaitsForZeroCurrent();
+  TestExternalStopTimesOutAfter3s();
+  TestCompleteFramesRepeatUntilOff();
+  TestStopBeforeChargingIsImmediate();
+  TestCvPhaseCompletesAfter30s();
+  TestCvTerminationUsesIdcTerm();
+  TestHardStopLatchUnusedClearsOnUnplug();
+  TestDoneLatchClearsInRun();
   TestMGChgMaxAOnlyAffectsCharge();
   TestChargeFrames();
   TestCharge394DoesNotFollowVoltspntOrUdc();

@@ -41,17 +41,31 @@ public:
   void SetCanInterface(CanHardware *c);
 
 private:
+  enum ChargeState : uint8_t {
+    CHG_IDLE,     // not charging
+    CHG_RUNNING,  // charging, current limit ramp and CV taper
+    CHG_STOPPING, // 0 A, waiting for the OBC to stop
+    CHG_DONE      // finished by the driver: no restart until unplugged
+  };
+
   bool clearToStart = false;
   uint8_t offTick = 0;     // Off() calls left to skip before the next send
   uint16_t limitRaw = 0;   // 0x29C current limit sent, 0 = not charging
   float cvLimitA = 0;      // CV taper limit in A
   bool stopCharge = false; // hard stop or lost HV reading: 0 A until the end
+  ChargeState chargeState = CHG_IDLE;
+  bool latchAfterStop = false; // stop ends in CHG_DONE rather than CHG_IDLE
+  bool completeSent = false;   // charge complete frames go out until OFF
+  uint8_t stopTicks = 0;       // 100 ms ticks since the stop began
+  uint16_t cvLowTicks = 0;     // 100 ms ticks with the CV limit at its end
   static uint8_t chgStatus, evseDuty;
   static float dcBusV, temp_1, temp_2, ACVolts, DCAmps, ACAmps;
   static float LV_Volts, LV_Amps;
 
   static bool PlugPresent();
   void UpdateCvLimit();
+  void UpdateChargeState(int opmode);
+  void StartStop(bool latch);
 
   static void handle324(uint32_t data[2]);
   static void handle323(uint32_t data[2]);
