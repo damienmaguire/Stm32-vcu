@@ -75,6 +75,23 @@ static float PilotDutyToAmps(uint8_t duty) {
   return 0;
 }
 
+// 0x29C b2 bits 0..3 + b3: OBC DC output current limit, measured on the MG5
+// as (raw - 0x400) x 0.02 A. 0x7FE (20.4 A) is the most the field holds and
+// means unrestricted; the top of the MGChgMaxA range sends it.
+#define LIMIT_RAW_ZERO 0x400
+#define LIMIT_RAW_MAX 0x7FE
+#define LIMIT_AMPS_PER_COUNT 0.02f
+#define MGCHGMAXA_TOP 20
+
+static uint16_t AmpsToLimitRaw(float amps) {
+  if (amps >= MGCHGMAXA_TOP)
+    return LIMIT_RAW_MAX;
+  if (amps <= 0)
+    return LIMIT_RAW_ZERO;
+  int raw = LIMIT_RAW_ZERO + (int)(amps / LIMIT_AMPS_PER_COUNT + 0.5f);
+  return raw > LIMIT_RAW_MAX ? LIMIT_RAW_MAX : raw;
+}
+
 bool MGgen2V2Lcharger::ControlCharge(bool RunCh, bool ACReq) {
   switch (Param::GetInt(Param::interface)) {
   case Unused:
@@ -377,14 +394,9 @@ void MGgen2V2Lcharger::Task100Ms() {
     return;
 
   if (opmode == MOD_CHARGE && clearToStart) {
-    // Charge current limit in b2 bits 0..3 and b3: 0x7FE = unrestricted,
-    // 0x400 = zero (car, end of charge). The scale in between is not known
-    // yet; MGChgLimRaw lets a bench test step it.
-    int limitRaw = Param::GetInt(Param::MGChgLimRaw);
-    if (limitRaw < 0x400)
-      limitRaw = 0x400;
-    if (limitRaw > 0x7FE)
-      limitRaw = 0x7FE;
+    // Only the current limit changes; the other bytes are the ZS frame
+    // (other variants differ in b1, b2 bit 7 and b6..b7)
+    uint16_t limitRaw = AmpsToLimitRaw(Param::GetFloat(Param::MGChgMaxA));
 
     bytes[0] = 0x28;
     bytes[1] = 0x89;

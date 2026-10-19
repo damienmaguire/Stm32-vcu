@@ -115,7 +115,7 @@ void Setup(int opmode, int interface) {
   Param::SetInt(Param::interface, interface);
   Param::SetInt(Param::Voltspnt, 395);
   Param::SetInt(Param::udc, 380);
-  Param::SetInt(Param::MGChgLimRaw, 2046);
+  Param::SetInt(Param::MGChgMaxA, 20);
   // Plug status and CP duty are file-static: reset to "not plugged"
   Rx(0x323, {0, 0, 0, 0, 0, 0, 0, 0});
   Rx(0x33B, {0, 0, 0, 0, 0, 0, 0, 0});
@@ -157,37 +157,45 @@ void TestOnlyChargeSendsActive29C() {
   }
 }
 
-void TestChargeLimitFromMGChgLimRaw() {
-  // Only b2 bits 0..3 and b3 change; the rest stays as the car's frame
-  const int raw[] = {0x7FE, 0x600, 0x54C, 0x401, 0x400};
+const uint8_t *Charge29CWithMaxA(float amps) {
+  Setup(MOD_CHARGE, i3LIM);
+  Param::SetFloat(Param::MGChgMaxA, amps);
+  charger->ControlCharge(true, true);
+  charger->Task100Ms();
+  return can.Find(0x29C);
+}
+
+uint16_t LimitRaw(const uint8_t *f) {
+  return f == NULL ? 0xFFFF : ((f[2] & 0x0F) << 8) | f[3];
+}
+
+void TestChargeLimitFromMGChgMaxA() {
+  // raw = 0x400 + A / 0.02 (MG5 logs); MGChgMaxA has 1/32 A resolution
+  const float amps[] = {0, 0.5f, 10, 15, 19.5f};
+  const uint16_t raw[] = {0x400, 0x419, 0x5F4, 0x6EE, 0x7CF};
   for (int i = 0; i < 5; i++) {
-    Setup(MOD_CHARGE, i3LIM);
-    Param::SetInt(Param::MGChgLimRaw, raw[i]);
-    charger->ControlCharge(true, true);
-    charger->Task100Ms();
-    const uint8_t hi = raw[i] >> 8, lo = raw[i] & 0xFF;
-    const uint8_t expected[8] = {0x28, 0x89, hi, lo, 0x00, 0xDC, 0x57, 0x12};
-    ASSERT(DataIs(can.Find(0x29C), expected));
+    const uint8_t *f = Charge29CWithMaxA(amps[i]);
+    ASSERT(LimitRaw(f) == raw[i]);
+    // Only b2 bits 0..3 and b3 change; the rest stays as the ZS frame
+    ASSERT(f != NULL && f[0] == 0x28 && f[1] == 0x89 && (f[2] & 0xF0) == 0 &&
+           f[4] == 0x00 && f[5] == 0xDC && f[6] == 0x57 && f[7] == 0x12);
   }
 }
 
-void TestChargeLimitIsClamped() {
-  // The web UI range check is bypassed by SetInt; the driver clamps anyway
-  Setup(MOD_CHARGE, i3LIM);
-  charger->ControlCharge(true, true);
-  Param::SetInt(Param::MGChgLimRaw, 0x3FF); // idle value, below zero limit
-  charger->Task100Ms();
-  ASSERT(
-      DataIs(can.Find(0x29C), {0x28, 0x89, 0x04, 0x00, 0, 0xDC, 0x57, 0x12}));
-  can.Clear();
-  Param::SetInt(Param::MGChgLimRaw, 0xFFF);
-  charger->Task100Ms();
-  ASSERT(DataIs(can.Find(0x29C), ACTIVE_29C));
+void TestChargeLimitTopOfRangeIsUnrestricted() {
+  // 20 A (the default) sends 0x7FE, the same frame as before
+  ASSERT(DataIs(Charge29CWithMaxA(20), ACTIVE_29C));
 }
 
-void TestMGChgLimRawOnlyAffectsCharge() {
+void TestChargeLimitIsClamped() {
+  // SetFloat bypasses the web UI range check; the driver clamps anyway
+  ASSERT(DataIs(Charge29CWithMaxA(25), ACTIVE_29C));
+  ASSERT(LimitRaw(Charge29CWithMaxA(-1)) == 0x400);
+}
+
+void TestMGChgMaxAOnlyAffectsCharge() {
   Setup(MOD_RUN, i3LIM);
-  Param::SetInt(Param::MGChgLimRaw, 0x500);
+  Param::SetInt(Param::MGChgMaxA, 5);
   charger->ControlCharge(true, true);
   charger->Task100Ms();
   ASSERT(DataIs(can.Find(0x29C), IDLE_29C));
@@ -453,9 +461,10 @@ void MGgen2Test::RunTest() {
   TestRunFrames();
   TestOnlyChargeSendsActive29C();
   TestChargeWithoutClearToStartSendsIdle29C();
-  TestChargeLimitFromMGChgLimRaw();
+  TestChargeLimitFromMGChgMaxA();
+  TestChargeLimitTopOfRangeIsUnrestricted();
   TestChargeLimitIsClamped();
-  TestMGChgLimRawOnlyAffectsCharge();
+  TestMGChgMaxAOnlyAffectsCharge();
   TestChargeFrames();
   TestCharge394DoesNotFollowVoltspntOrUdc();
   TestOffOpmodeSendsNothing();
