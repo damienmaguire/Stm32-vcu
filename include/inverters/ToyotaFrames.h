@@ -91,6 +91,15 @@ inline MthData DecodeMthGs300h(const uint8_t *mth) {
   return d;
 }
 
+// Torque scale in percent: 0 while cut, otherwise ramps up to 100 by rampStep
+inline float RampTorqueScale(float scale, bool cut, float rampStep) {
+  if (cut)
+    return 0;
+  if (rampStep <= 0 || scale + rampStep >= 100)
+    return 100;
+  return scale + rampStep;
+}
+
 /* Tracks the MTH link. Bad checksums and timeouts both count as failures;
  * more than maxFailures in a row means the link is lost. While lost the
  * torque scale is 0, and once frames are good again it ramps back to 100%.
@@ -114,18 +123,44 @@ public:
 
   // Call once per torque update, returns the torque scale in percent
   float UpdateTorqueScale(float rampStep) {
-    if (Lost())
-      torqueScale = 0;
-    else if (rampStep <= 0 || torqueScale + rampStep >= 100)
-      torqueScale = 100;
-    else
-      torqueScale += rampStep;
+    torqueScale = RampTorqueScale(torqueScale, Lost(), rampStep);
     return torqueScale;
   }
 
 private:
   uint16_t maxFailures;
   uint16_t failures;
+  float torqueScale;
+};
+
+constexpr int OVERSPEED_HYSTERESIS = 500; // rpm
+
+/* Cuts MG1/MG2 torque while MG2 turns faster than the limit, in either
+ * direction. The cut holds until MG2 is OVERSPEED_HYSTERESIS below the
+ * limit, then torque ramps back in. */
+class OverspeedCut {
+public:
+  OverspeedCut() : cut(false), torqueScale(100) {}
+
+  // Call once per torque update, returns the torque scale in percent
+  float Update(int16_t mg2Speed, int limit, float rampStep) {
+    int speed = mg2Speed;
+    if (speed < 0)
+      speed = -speed;
+
+    if (speed > limit)
+      cut = true;
+    else if (speed < limit - OVERSPEED_HYSTERESIS)
+      cut = false;
+
+    torqueScale = RampTorqueScale(torqueScale, cut, rampStep);
+    return torqueScale;
+  }
+
+  bool Cut() const { return cut; }
+
+private:
+  bool cut;
   float torqueScale;
 };
 

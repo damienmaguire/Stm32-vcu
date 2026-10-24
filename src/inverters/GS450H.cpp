@@ -38,6 +38,7 @@ static uint16_t rx_timeout = 0;
 static const uint16_t RX_TIMEOUT_MS = 20; // 20ms timeout for inverter response
 static const uint16_t MAX_FAILURES = 10;  // Enter safe mode after 10 failures
 static ToyotaFrames::CommMonitor comm(MAX_FAILURES);
+static ToyotaFrames::OverspeedCut overspeed;
 static uint8_t mth_status = 0; // MTH byte 1 of the last good GS450h frame
 
 // Double buffering for DMA to prevent data corruption
@@ -344,11 +345,31 @@ void GS450HClass::SetTorque(float torquePercent) {
     }
   }
 
-  // No torque while the inverter link is lost, then ramp back in at throtramp
-  float commScale =
-      comm.UpdateTorqueScale(Param::GetFloat(Param::throtramp)) * 0.01f;
-  mg1_torque *= commScale;
-  mg2_torque *= commScale;
+  // No torque while the inverter link is lost or MG2 is over its speed limit,
+  // then ramp back in at throtramp
+  float rampStep = Param::GetFloat(Param::throtramp);
+  float scale = comm.UpdateTorqueScale(rampStep) * 0.01f;
+  scale *= overspeed.Update(mg2_speed, Mg2SpeedLimit(), rampStep) * 0.01f;
+  mg1_torque *= scale;
+  mg2_torque *= scale;
+}
+
+// MG2MaxSpeed param, or the drivetrain default when it is 0
+int GS450HClass::Mg2SpeedLimit() {
+  int limit = Param::GetInt(Param::MG2MaxSpeed);
+  if (limit > 0)
+    return limit;
+
+  // Only the GS450h value comes from working code (v7 Arduino and the gateway
+  // controller); the others use it too until there is data for them.
+  switch (DriveType) {
+  case PRIUS:
+    return MG2MAXSPEED;
+  case IS300H:
+    return MG2MAXSPEED;
+  default:
+    return MG2MAXSPEED;
+  }
 }
 
 float GS450HClass::GetMotorTemperature() {

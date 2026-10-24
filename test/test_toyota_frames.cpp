@@ -238,6 +238,37 @@ static void TestCommMonitorRampClamps() {
          b.UpdateTorqueScale(0) == 100);
 }
 
+// OVERSPEED
+static void TestOverspeedFullTorqueBelowLimit() {
+  OverspeedCut cut;
+  ASSERT(cut.Update(9999, 10000, 10) == 100 &&
+         cut.Update(-9999, 10000, 10) == 100 && !cut.Cut());
+}
+
+static void TestOverspeedCutsAboveLimitBothDirections() {
+  OverspeedCut fwd, rev;
+  ASSERT(fwd.Update(10001, 10000, 10) == 0 && fwd.Cut() &&
+         rev.Update(-10001, 10000, 10) == 0 && rev.Cut());
+}
+
+static void TestOverspeedHoldsCutInsideHysteresis() {
+  OverspeedCut cut;
+  cut.Update(10500, 10000, 10);
+  ASSERT(cut.Update(9600, 10000, 10) == 0 && cut.Cut());
+}
+
+static void TestOverspeedRampsBackBelowHysteresis() {
+  OverspeedCut cut;
+  cut.Update(10500, 10000, 10);
+  ASSERT(cut.Update(9400, 10000, 10) == 10 && !cut.Cut() &&
+         cut.Update(9400, 10000, 10) == 20);
+}
+
+static void TestOverspeedHandlesMostNegativeSpeed() {
+  OverspeedCut cut;
+  ASSERT(cut.Update(-32768, 10000, 10) == 0 && cut.Cut());
+}
+
 // HTM BUILDING
 static void TestBuildHtmGs450hPlacesTorqueLikeOemFrame() {
   uint8_t htm[GS450H_HTM_LEN];
@@ -301,6 +332,11 @@ void ToyotaFramesTest::RunTest() {
   TestCommMonitorRampsFromZeroAfterRecovery();
   TestCommMonitorFailureCountSaturates();
   TestCommMonitorRampClamps();
+  TestOverspeedFullTorqueBelowLimit();
+  TestOverspeedCutsAboveLimitBothDirections();
+  TestOverspeedHoldsCutInsideHysteresis();
+  TestOverspeedRampsBackBelowHysteresis();
+  TestOverspeedHandlesMostNegativeSpeed();
   TestBuildHtmGs450hPlacesTorqueLikeOemFrame();
   TestBuildHtmGs300hPlacesTorqueLikeOemFrame();
   TestBuildHtmPriusStepsCounterEverySecondFrame();

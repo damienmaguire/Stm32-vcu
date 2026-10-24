@@ -69,6 +69,7 @@ private:
   bool timerIsRunning;
   int scaledTorqueTarget;
   bool ReceiveMth(bool (*readMth)(const uint8_t *, ToyotaFrames::MthData &));
+  int Mg2SpeedLimit();
   void setTimerState(bool);
   void GS450Hgear();
   void GS450Houtput();
