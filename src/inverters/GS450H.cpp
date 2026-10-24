@@ -369,13 +369,15 @@ void GS450HClass::SetTorque(float torquePercent) {
     }
   }
 
-  // No torque while the inverter link is lost or MG2 is over its speed limit,
-  // then ramp back in at throtramp
+  // No torque while the inverter link is lost, and no MG2 torque while MG2 is
+  // over its speed limit (MG2 only, like the v7 Arduino, so MG1 blending is
+  // left alone). Torque ramps back in at throtramp.
   float rampStep = Param::GetFloat(Param::throtramp);
-  float scale = comm.UpdateTorqueScale(rampStep) * 0.01f;
-  scale *= overspeed.Update(mg2_speed, Mg2SpeedLimit(), rampStep) * 0.01f;
-  mg1_torque *= scale;
-  mg2_torque *= scale;
+  float commScale = comm.UpdateTorqueScale(rampStep) * 0.01f;
+  float mg2Scale =
+      overspeed.Update(mg2_speed, Mg2SpeedLimit(), rampStep) * 0.01f;
+  mg1_torque *= commScale;
+  mg2_torque *= commScale * mg2Scale;
 }
 
 // MG2MaxSpeed param, or the drivetrain default when it is 0

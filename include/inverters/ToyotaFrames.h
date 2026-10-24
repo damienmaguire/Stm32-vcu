@@ -135,7 +135,7 @@ private:
 
 constexpr int OVERSPEED_HYSTERESIS = 500; // rpm
 
-/* Cuts MG1/MG2 torque while MG2 turns faster than the limit, in either
+/* Cuts MG2 torque while MG2 turns faster than the limit, in either
  * direction. The cut holds until MG2 is OVERSPEED_HYSTERESIS below the
  * limit, then torque ramps back in. */
 class OverspeedCut {
