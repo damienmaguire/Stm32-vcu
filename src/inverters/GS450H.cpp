@@ -844,6 +844,13 @@ static void dma_read(uint8_t *data, int size) {
   /* Reset DMA channel*/
   dma_channel_reset(DMA1, DMA_CHANNEL6);
 
+  // Drop any byte that arrived while the channel was off (end of a late or
+  // partial frame), so it does not become byte 0 of the new frame. Reading SR
+  // then DR also clears the overrun, framing and noise error flags.
+  volatile uint32_t status = USART_SR(USART2);
+  (void)status;
+  (void)usart_recv(USART2);
+
   dma_set_peripheral_address(DMA1, DMA_CHANNEL6, (uint32_t)&USART2_DR);
   dma_set_memory_address(DMA1, DMA_CHANNEL6, (uint32_t)data);
   dma_set_number_of_data(DMA1, DMA_CHANNEL6, size);
