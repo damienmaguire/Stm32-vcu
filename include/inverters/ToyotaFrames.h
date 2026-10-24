@@ -220,9 +220,23 @@ inline void BuildHtmGs450h(uint8_t *htm, int16_t mg1Torque, int16_t mg2Torque,
   SetChecksum16(htm, GS450H_HTM_LEN);
 }
 
+/* Prius HTM bytes under test for the power limit. Compared with OEM frames,
+ * 76-77 is the regen limit, 78-79 the discharge limit, 86 the ready flags and
+ * 88 a "speed limit" like value. */
+struct PriusLimits {
+  int16_t regenLimit;     // bytes 76-77
+  int16_t dischargeLimit; // bytes 78-79
+  uint8_t byte86;
+  uint8_t byte88;
+};
+
+// The values sent so far: 76-79 from the "forced zero" block, 86 and 88 = 137
+constexpr PriusLimits PRIUS_DEFAULT_LIMITS = {9568, 1106, 137, 137};
+
 // frameCount is the caller's frame counter, byte 94 steps every second frame
 inline void BuildHtmPrius(uint8_t *htm, int16_t mg1Torque, int16_t mg2Torque,
-                          int scaledTorqueTarget, uint8_t &frameCount) {
+                          int scaledTorqueTarget, uint8_t &frameCount,
+                          const PriusLimits &limits) {
   // Bytes 75/76 seem to be MG1 for startup, but the relation to the MG1 bytes
   // is unclear (byte order flipped?), so they are not set from mg1Torque here.
 
@@ -258,13 +272,13 @@ inline void BuildHtmPrius(uint8_t *htm, int16_t mg1Torque, int16_t mg2Torque,
   htm[73] = 0x04;
   htm[74] = 0x75;
   htm[75] = 0x12;
-  htm[76] = 0x60;
-  htm[77] = 0x25;
-  htm[78] = 0x52;
-  htm[79] = 0x04;
+  htm[76] = limits.regenLimit & 0xFF;
+  htm[77] = (limits.regenLimit >> 8) & 0xFF;
+  htm[78] = limits.dischargeLimit & 0xFF;
+  htm[79] = (limits.dischargeLimit >> 8) & 0xFF;
 
-  htm[86] = 137; // from start up
-  htm[88] = 137; // 221 on start
+  htm[86] = limits.byte86; // 137 from start up
+  htm[88] = limits.byte88; // 137, 221 on start
 
   if (++frameCount & 0x01) {
     htm[94]++;

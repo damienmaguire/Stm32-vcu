@@ -695,7 +695,8 @@ void GS450HClass::Task1Ms() {
                                // to web interface
 
     ToyotaFrames::BuildHtmPrius(htm_data, mg1_torque, mg2_torque,
-                                scaledTorqueTarget, frame_count);
+                                scaledTorqueTarget, frame_count,
+                                ToyotaFrames::PRIUS_DEFAULT_LIMITS);
 
     htm_state = 5;
     break;

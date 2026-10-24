@@ -309,8 +309,36 @@ static void TestBuildHtmPriusStepsCounterEverySecondFrame() {
   const uint8_t start = htm[94];
 
   for (int i = 0; i < 4; i++)
-    BuildHtmPrius(htm, 0, 0, 0, frameCount);
+    BuildHtmPrius(htm, 0, 0, 0, frameCount, PRIUS_DEFAULT_LIMITS);
   ASSERT(htm[94] == (uint8_t)(start + 2) && frameCount == 4 &&
+         Checksum16Ok(htm, PRIUS_HTM_LEN));
+}
+
+static void TestBuildHtmPriusDefaultLimitsAreTheOldBytes() {
+  uint8_t htm[PRIUS_HTM_LEN];
+  memcpy(htm, PRIUS_HTM_BENCH_INIT, PRIUS_HTM_LEN);
+  uint8_t frameCount = 0;
+  BuildHtmPrius(htm, 0, 0, 0, frameCount, PRIUS_DEFAULT_LIMITS);
+
+  // the hard-coded block and bytes 86/88 sent before the limits became inputs
+  const uint8_t old72to79[] = {0x40, 0x04, 0x75, 0x12, 0x60, 0x25, 0x52, 0x04};
+  ASSERT(memcmp(&htm[72], old72to79, sizeof(old72to79)) == 0 &&
+         htm[86] == 137 && htm[88] == 137);
+}
+
+static void TestBuildHtmPriusUsesGivenLimits() {
+  uint8_t htm[PRIUS_HTM_LEN];
+  memcpy(htm, PRIUS_HTM_BENCH_INIT, PRIUS_HTM_LEN);
+  uint8_t frameCount = 0;
+  const PriusLimits oem = {-2000, 1660, 202, 239};
+  BuildHtmPrius(htm, 0, 0, 0, frameCount, oem);
+
+  int16_t regen = htm[76] | (htm[77] << 8);
+  int16_t discharge = htm[78] | (htm[79] << 8);
+  // bytes 72-75 stay hard-coded
+  const uint8_t old72to75[] = {0x40, 0x04, 0x75, 0x12};
+  ASSERT(regen == -2000 && discharge == 1660 && htm[86] == 202 &&
+         htm[88] == 239 && memcmp(&htm[72], old72to75, 4) == 0 &&
          Checksum16Ok(htm, PRIUS_HTM_LEN));
 }
 
@@ -340,4 +368,6 @@ void ToyotaFramesTest::RunTest() {
   TestBuildHtmGs450hPlacesTorqueLikeOemFrame();
   TestBuildHtmGs300hPlacesTorqueLikeOemFrame();
   TestBuildHtmPriusStepsCounterEverySecondFrame();
+  TestBuildHtmPriusDefaultLimitsAreTheOldBytes();
+  TestBuildHtmPriusUsesGivenLimits();
 }
