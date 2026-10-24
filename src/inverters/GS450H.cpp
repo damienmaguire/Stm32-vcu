@@ -618,6 +618,10 @@ void GS450HClass::Task1Ms() {
       htm_state++;
     break;
   case 4:
+    Param::SetInt(Param::torque,
+                  mg2_torque); // post processed final torue value sent to inv
+                               // to web interface
+
     ToyotaFrames::BuildHtmGs450h(htm_data, mg1_torque, mg2_torque, mg1_speed,
                                  mg2_speed);
 
