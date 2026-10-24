@@ -6,7 +6,8 @@ CFLAGS    = -std=c99 -ggdb -I../include -I../libopeninv/include
 CPPFLAGS    = -ggdb -I../include -I../libopeninv/include
 LDFLAGS     = -g
 BINARY		= test_vcu
-OBJS		= test_main.o my_string.o params.o throttle.o test_throttle.o
+OBJS		= test_main.o my_string.o params.o throttle.o test_throttle.o \
+		  test_toyota_frames.o
 VPATH = ../src ../libopeninv/src
 
 all: $(BINARY)
