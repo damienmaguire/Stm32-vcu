@@ -220,6 +220,8 @@ uint8_t htm_data_Init_GS300H[6][105] = {
      0,   0,  0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 4,  0, 0,
      0,   0,  0, 0, 4,   75, 25, 212, 254, 190, 15, 0, 0, 0,   0, 0,  0, 0,
      137, 0,  0, 0, 168, 0,  0,  0,   2,   0,   0,  0, 0, 203, 4}};
+static const uint8_t GS300H_INIT_FRAMES =
+    sizeof(htm_data_Init_GS300H) / sizeof(htm_data_Init_GS300H[0]);
 
 void GS450HClass::SetTorque(float torquePercent) {
   uint8_t MotorActive = Param::GetInt(Param::MotActive);
@@ -692,7 +694,8 @@ void GS450HClass::Task1Ms() {
     TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
 
     // Now start DMA synchronized to the rising edge of CLK
-    if (inv_status > 6) {
+    // send each init frame once, then normal frames
+    if (inv_status >= GS300H_INIT_FRAMES) {
       if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
         tx_complete_flag = false;
         dma_write(htm_data, 105);
