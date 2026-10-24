@@ -102,7 +102,6 @@ static bool dma_channel_is_enabled(uint32_t dma, uint8_t channel) {
 }
 
 // 80 bytes out and 100 bytes back in (with offset of 8 bytes.
-static uint8_t mth_data[140];
 static const uint8_t htm_data_setup[100] = {
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 4, 0, 0,  0,
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 4, 0,  0,
@@ -560,10 +559,10 @@ void GS450HClass::Task1Ms() {
     // Wait for RX completion with timeout
     if (rx_complete_flag) {
       rx_complete_flag = false;
-      // Check buffer integrity - processing_rx_buffer was swapped by ISR
-      if (!ToyotaFrames::Checksum16Ok(mth_data, ToyotaFrames::GS450H_MTH_LEN) &&
-          !ToyotaFrames::Checksum8Ok(processing_rx_buffer,
-                                     ToyotaFrames::GS450H_MTH_LEN)) {
+      // Check the frame just received - processing_rx_buffer was swapped by
+      // ISR
+      ToyotaFrames::MthData mth;
+      if (!ToyotaFrames::ReadMthGs450h(processing_rx_buffer, mth)) {
         consecutive_failures++;
         if (consecutive_failures > MAX_FAILURES) {
           statusInv = 0;
@@ -575,17 +574,11 @@ void GS450HClass::Task1Ms() {
         // exchange data and prepare next HTM frame using processing buffer
         consecutive_failures = 0;
         statusInv = 1;
-        ToyotaFrames::MthData mth =
-            ToyotaFrames::DecodeMthGs450h(processing_rx_buffer);
         dc_bus_voltage = mth.dcBusVoltage;
         temp_inv_water = mth.tempInvWater;
         temp_inv_inductor = mth.tempInvInductor;
         mg1_speed = mth.mg1Speed;
         mg2_speed = mth.mg2Speed;
-
-        // Copy to mth_data for compatibility with existing code
-        for (int i = 0; i < ToyotaFrames::GS450H_MTH_LEN; i++)
-          mth_data[i] = processing_rx_buffer[i];
       }
       htm_state++;
     } else {
@@ -669,10 +662,10 @@ void GS450HClass::Task1Ms() {
     // Wait for RX completion with timeout
     if (rx_complete_flag) {
       rx_complete_flag = false;
-      // Check buffer integrity - processing_rx_buffer was swapped by ISR
-      if (!ToyotaFrames::Checksum16Ok(mth_data, ToyotaFrames::PRIUS_MTH_LEN) &&
-          !ToyotaFrames::Checksum8Ok(processing_rx_buffer,
-                                     ToyotaFrames::PRIUS_MTH_LEN)) {
+      // Check the frame just received - processing_rx_buffer was swapped by
+      // ISR
+      ToyotaFrames::MthData mth;
+      if (!ToyotaFrames::ReadMthPrius(processing_rx_buffer, mth)) {
         consecutive_failures++;
         if (consecutive_failures > MAX_FAILURES) {
           statusInv = 0;
@@ -684,17 +677,11 @@ void GS450HClass::Task1Ms() {
         // exchange data and prepare next HTM frame using processing buffer
         consecutive_failures = 0;
         statusInv = 1;
-        ToyotaFrames::MthData mth =
-            ToyotaFrames::DecodeMthPrius(processing_rx_buffer);
         dc_bus_voltage = mth.dcBusVoltage;
         temp_inv_water = mth.tempInvWater;
         temp_inv_inductor = mth.tempInvInductor;
         mg1_speed = mth.mg1Speed;
         mg2_speed = mth.mg2Speed;
-
-        // Copy to mth_data for compatibility with existing code
-        for (int i = 0; i < ToyotaFrames::PRIUS_MTH_LEN; i++)
-          mth_data[i] = processing_rx_buffer[i];
       }
       htm_state++;
     } else {
@@ -770,10 +757,10 @@ void GS450HClass::Task1Ms() {
     // Wait for RX completion with timeout
     if (rx_complete_flag) {
       rx_complete_flag = false;
-      // Check buffer integrity - processing_rx_buffer was swapped by ISR
-      if (!ToyotaFrames::Checksum16Ok(mth_data, ToyotaFrames::GS300H_MTH_LEN) &&
-          !ToyotaFrames::Checksum8Ok(processing_rx_buffer,
-                                     ToyotaFrames::GS300H_MTH_LEN)) {
+      // Check the frame just received - processing_rx_buffer was swapped by
+      // ISR
+      ToyotaFrames::MthData mth;
+      if (!ToyotaFrames::ReadMthGs300h(processing_rx_buffer, mth)) {
         consecutive_failures++;
         if (consecutive_failures > MAX_FAILURES) {
           statusInv = 0;
@@ -784,17 +771,11 @@ void GS450HClass::Task1Ms() {
         // exchange data and prepare next HTM frame using processing buffer
         consecutive_failures = 0;
         statusInv = 1;
-        ToyotaFrames::MthData mth =
-            ToyotaFrames::DecodeMthGs300h(processing_rx_buffer);
         dc_bus_voltage = mth.dcBusVoltage;
         temp_inv_water = mth.tempInvWater;
         temp_inv_inductor = mth.tempInvInductor;
         mg1_speed = mth.mg1Speed;
         mg2_speed = mth.mg2Speed;
-
-        // Copy to mth_data for compatibility with existing code
-        for (int i = 0; i < ToyotaFrames::GS300H_MTH_LEN; i++)
-          mth_data[i] = processing_rx_buffer[i];
       }
       htm_state++;
     } else {

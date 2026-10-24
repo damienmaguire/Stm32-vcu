@@ -108,6 +108,72 @@ static void TestDecodeMthPriusOnAurisFrames() {
          d1.tempInvWater == 15 && d2.mg2Speed == -219);
 }
 
+// MTH RECEIVE CHECK
+static bool SameMth(const MthData &a, const MthData &b) {
+  return a.dcBusVoltage == b.dcBusVoltage && a.mg1Speed == b.mg1Speed &&
+         a.mg2Speed == b.mg2Speed && a.tempInvWater == b.tempInvWater &&
+         a.tempInvInductor == b.tempInvInductor;
+}
+
+// No GS450h MTH capture yet, so build a valid frame by hand
+static void MakeGs450hMth(uint8_t *mth) {
+  memset(mth, 0, GS450H_MTH_LEN);
+  mth[1] = 12;
+  mth[6] = 0x2C; // MG1 300 rpm
+  mth[7] = 0x01;
+  mth[31] = 0xD0; // MG2 2000 rpm
+  mth[32] = 0x07;
+  mth[42] = 25;
+  mth[84] = 0x20; // 800 / 2 = 400 V
+  mth[85] = 0x03;
+  SetChecksum16(mth, GS450H_MTH_LEN);
+}
+
+static void TestReadMthAcceptsValidFrames() {
+  uint8_t gs450h[GS450H_MTH_LEN];
+  MakeGs450hMth(gs450h);
+  MthData a, b, c;
+  ASSERT(ReadMthGs450h(gs450h, a) && a.mg1Speed == 300 && a.mg2Speed == 2000 &&
+         a.dcBusVoltage == 400 && ReadMthPrius(AURIS_MTH_1800, b) &&
+         SameMth(b, DecodeMthPrius(AURIS_MTH_1800)) &&
+         ReadMthGs300h(PHV_MTH_DRIVE, c) &&
+         SameMth(c, DecodeMthGs300h(PHV_MTH_DRIVE)));
+}
+
+// A good frame followed by a corrupt one: the corrupt one must be rejected
+// and the values from the good one kept
+static void TestReadMthRejectsCorruptFrameAfterGoodFrame() {
+  uint8_t gs450h[GS450H_MTH_LEN], prius[PRIUS_MTH_LEN], gs300h[GS300H_MTH_LEN];
+  MthData a, b, c;
+  MakeGs450hMth(gs450h);
+  memcpy(prius, AURIS_MTH_1800, PRIUS_MTH_LEN);
+  memcpy(gs300h, PHV_MTH_DRIVE, GS300H_MTH_LEN);
+  bool goodRead = ReadMthGs450h(gs450h, a) && ReadMthPrius(prius, b) &&
+                  ReadMthGs300h(gs300h, c);
+  const MthData lastA = a, lastB = b, lastC = c;
+
+  gs450h[32] ^= 0x40; // MG2 speed high byte
+  prius[39] ^= 0x40;
+  gs300h[44] ^= 0x40;
+  bool rejected = !ReadMthGs450h(gs450h, a) && !ReadMthPrius(prius, b) &&
+                  !ReadMthGs300h(gs300h, c);
+  ASSERT(goodRead && rejected && SameMth(a, lastA) && SameMth(b, lastB) &&
+         SameMth(c, lastC));
+}
+
+// The old code also accepted an 8-bit sum in the last byte
+static void TestReadMthRejectsFrameWithOnly8BitChecksum() {
+  uint8_t mth[PRIUS_MTH_LEN];
+  memcpy(mth, AURIS_MTH_2700, PRIUS_MTH_LEN);
+  mth[38] ^= 0x01;
+  uint8_t sum8 = 0;
+  for (int i = 0; i < PRIUS_MTH_LEN - 1; i++)
+    sum8 += mth[i];
+  mth[PRIUS_MTH_LEN - 1] = sum8;
+  MthData d;
+  ASSERT(!ReadMthPrius(mth, d));
+}
+
 // HTM BUILDING
 static void TestBuildHtmGs450hPlacesTorqueLikeOemFrame() {
   uint8_t htm[GS450H_HTM_LEN];
@@ -161,6 +227,9 @@ void ToyotaFramesTest::RunTest() {
   TestSetChecksum16MatchesCapturedFrames();
   TestDecodeMthGs300hOnPriusPhvFrame();
   TestDecodeMthPriusOnAurisFrames();
+  TestReadMthAcceptsValidFrames();
+  TestReadMthRejectsCorruptFrameAfterGoodFrame();
+  TestReadMthRejectsFrameWithOnly8BitChecksum();
   TestBuildHtmGs450hPlacesTorqueLikeOemFrame();
   TestBuildHtmGs300hPlacesTorqueLikeOemFrame();
   TestBuildHtmPriusStepsCounterEverySecondFrame();

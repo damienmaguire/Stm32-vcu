@@ -61,15 +61,6 @@ inline bool Checksum16Ok(const uint8_t *frame, int len) {
   return checksum == (frame[len - 2] | (frame[len - 1] << 8));
 }
 
-// 8-bit sum of all bytes before the last one, in the last byte
-inline bool Checksum8Ok(const uint8_t *frame, int len) {
-  uint8_t checksum = 0;
-
-  for (int i = 0; i < len - 1; i++)
-    checksum += frame[i];
-  return checksum == frame[len - 1];
-}
-
 inline MthData DecodeMthGs450h(const uint8_t *mth) {
   MthData d;
   d.dcBusVoltage = ((mth[84] | mth[85] << 8) / 2);
@@ -98,6 +89,29 @@ inline MthData DecodeMthGs300h(const uint8_t *mth) {
   d.mg1Speed = mth[10] | mth[11] << 8;
   d.mg2Speed = mth[43] | mth[44] << 8;
   return d;
+}
+
+// Check and decode a received MTH frame. Returns false and leaves out
+// unchanged when the checksum is wrong.
+inline bool ReadMthGs450h(const uint8_t *mth, MthData &out) {
+  if (!Checksum16Ok(mth, GS450H_MTH_LEN))
+    return false;
+  out = DecodeMthGs450h(mth);
+  return true;
+}
+
+inline bool ReadMthPrius(const uint8_t *mth, MthData &out) {
+  if (!Checksum16Ok(mth, PRIUS_MTH_LEN))
+    return false;
+  out = DecodeMthPrius(mth);
+  return true;
+}
+
+inline bool ReadMthGs300h(const uint8_t *mth, MthData &out) {
+  if (!Checksum16Ok(mth, GS300H_MTH_LEN))
+    return false;
+  out = DecodeMthGs300h(mth);
+  return true;
 }
 
 inline void BuildHtmGs450h(uint8_t *htm, int16_t mg1Torque, int16_t mg2Torque,
