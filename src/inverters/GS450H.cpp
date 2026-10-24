@@ -694,9 +694,17 @@ void GS450HClass::Task1Ms() {
                   mg2_torque); // post processed final torue value sent to inv
                                // to web interface
 
-    ToyotaFrames::BuildHtmPrius(htm_data, mg1_torque, mg2_torque,
-                                scaledTorqueTarget, frame_count,
-                                ToyotaFrames::PRIUS_DEFAULT_LIMITS);
+    {
+      // Temporary test params for the Prius power limit, not saved; their
+      // defaults are PRIUS_DEFAULT_LIMITS
+      const ToyotaFrames::PriusLimits limits = {
+          (int16_t)Param::GetInt(Param::PriusRegenLim),
+          (int16_t)Param::GetInt(Param::PriusDischLim),
+          (uint8_t)Param::GetInt(Param::PriusByte86),
+          (uint8_t)Param::GetInt(Param::PriusByte88)};
+      ToyotaFrames::BuildHtmPrius(htm_data, mg1_torque, mg2_torque,
+                                  scaledTorqueTarget, frame_count, limits);
+    }
 
     htm_state = 5;
     break;

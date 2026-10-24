@@ -18,6 +18,7 @@
  */
 
 #include "inverters/ToyotaFrames.h"
+#include "params.h"
 #include "test_list.h"
 #include "toyota_fixtures.h"
 #include <string.h>
@@ -326,6 +327,17 @@ static void TestBuildHtmPriusDefaultLimitsAreTheOldBytes() {
          htm[86] == 137 && htm[88] == 137);
 }
 
+// The Prius test params must default to the values sent so far
+static void TestPriusTestParamDefaultsAreTheDefaultLimits() {
+  ASSERT(Param::GetInt(Param::PriusRegenLim) ==
+             PRIUS_DEFAULT_LIMITS.regenLimit &&
+         Param::GetInt(Param::PriusDischLim) ==
+             PRIUS_DEFAULT_LIMITS.dischargeLimit &&
+         Param::GetInt(Param::PriusByte86) == PRIUS_DEFAULT_LIMITS.byte86 &&
+         Param::GetInt(Param::PriusByte88) == PRIUS_DEFAULT_LIMITS.byte88 &&
+         Param::GetType(Param::PriusRegenLim) == Param::TYPE_TESTPARAM);
+}
+
 static void TestBuildHtmPriusUsesGivenLimits() {
   uint8_t htm[PRIUS_HTM_LEN];
   memcpy(htm, PRIUS_HTM_BENCH_INIT, PRIUS_HTM_LEN);
@@ -369,5 +381,6 @@ void ToyotaFramesTest::RunTest() {
   TestBuildHtmGs300hPlacesTorqueLikeOemFrame();
   TestBuildHtmPriusStepsCounterEverySecondFrame();
   TestBuildHtmPriusDefaultLimitsAreTheOldBytes();
+  TestPriusTestParamDefaultsAreTheDefaultLimits();
   TestBuildHtmPriusUsesGivenLimits();
 }

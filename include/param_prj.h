@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 171
+// Next param id (increase when adding new parameter!): 175
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -170,6 +170,10 @@
   PARAM_ENTRY(CAT_PWM, DC_MinTemp, "", 1, 100, 0, 144)                         \
   PARAM_ENTRY(CAT_PWM, DC_MaxSOC, "", 1, 100, 10, 145)                         \
   PARAM_ENTRY(CAT_PWM, DC_MinSOC, "", 1, 100, 0, 146)                          \
+  TESTP_ENTRY(CAT_LEXUS, PriusRegenLim, "dig", -20000, 20000, 9568, 171)       \
+  TESTP_ENTRY(CAT_LEXUS, PriusDischLim, "dig", 0, 20000, 1106, 172)            \
+  TESTP_ENTRY(CAT_LEXUS, PriusByte86, "dig", 0, 255, 137, 173)                 \
+  TESTP_ENTRY(CAT_LEXUS, PriusByte88, "dig", 0, 255, 137, 174)                 \
   VALUE_ENTRY(version, VERSTR, 2000)                                           \
   VALUE_ENTRY(opmode, OPMODES, 2002)                                           \
   VALUE_ENTRY(chgtyp, CHGTYPS, 2003)                                           \
