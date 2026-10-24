@@ -26,6 +26,7 @@
  * using sync serial */
 
 #include "digio.h"
+#include "inverters/ToyotaFrames.h"
 #include "inverters/inverter.h"
 #include "my_fp.h"
 #include "params.h"
@@ -67,6 +68,7 @@ private:
   float temp_inv_water, temp_inv_inductor;
   bool timerIsRunning;
   int scaledTorqueTarget;
+  bool ReceiveMth(bool (*readMth)(const uint8_t *, ToyotaFrames::MthData &));
   void setTimerState(bool);
   void GS450Hgear();
   void GS450Houtput();

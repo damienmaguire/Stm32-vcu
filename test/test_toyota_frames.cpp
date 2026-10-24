@@ -174,6 +174,70 @@ static void TestReadMthRejectsFrameWithOnly8BitChecksum() {
   ASSERT(!ReadMthPrius(mth, d));
 }
 
+// COMM LOSS
+static void TestCommMonitorStartsLostWithNoTorque() {
+  CommMonitor comm(10);
+  ASSERT(comm.Lost() && comm.UpdateTorqueScale(10) == 0);
+}
+
+static void TestCommMonitorRampsTorqueInAfterGoodFrame() {
+  CommMonitor comm(10);
+  comm.FrameOk();
+  bool ramp = true;
+  for (int i = 1; i <= 10; i++)
+    ramp = ramp && comm.UpdateTorqueScale(10) == i * 10;
+  ASSERT(!comm.Lost() && ramp && comm.UpdateTorqueScale(10) == 100);
+}
+
+static void TestCommMonitorLostAfterMoreThanMaxFailures() {
+  CommMonitor comm(10);
+  comm.FrameOk();
+  comm.UpdateTorqueScale(100);
+  for (int i = 0; i < 10; i++)
+    comm.FrameBad();
+  bool stillUp = !comm.Lost() && comm.UpdateTorqueScale(100) == 100;
+  comm.FrameBad();
+  ASSERT(stillUp && comm.Lost() && comm.UpdateTorqueScale(100) == 0);
+}
+
+static void TestCommMonitorGoodFrameResetsFailureCount() {
+  CommMonitor comm(10);
+  for (int i = 0; i < 10; i++)
+    comm.FrameBad();
+  comm.FrameOk();
+  for (int i = 0; i < 10; i++)
+    comm.FrameBad();
+  ASSERT(!comm.Lost() && comm.Failures() == 10);
+}
+
+static void TestCommMonitorRampsFromZeroAfterRecovery() {
+  CommMonitor comm(10);
+  comm.FrameOk();
+  comm.UpdateTorqueScale(100);
+  for (int i = 0; i < 11; i++)
+    comm.FrameBad();
+  comm.FrameOk();
+  ASSERT(comm.UpdateTorqueScale(25) == 25 && comm.UpdateTorqueScale(25) == 50);
+}
+
+static void TestCommMonitorFailureCountSaturates() {
+  CommMonitor comm(10);
+  for (long i = 0; i < 70000; i++)
+    comm.FrameBad();
+  bool saturated = comm.Lost() && comm.Failures() == 65535;
+  comm.FrameOk();
+  ASSERT(saturated && !comm.Lost());
+}
+
+static void TestCommMonitorRampClamps() {
+  CommMonitor a(10), b(10);
+  a.FrameOk();
+  b.FrameOk();
+  ASSERT(a.UpdateTorqueScale(30) == 30 && a.UpdateTorqueScale(30) == 60 &&
+         a.UpdateTorqueScale(30) == 90 && a.UpdateTorqueScale(30) == 100 &&
+         b.UpdateTorqueScale(0) == 100);
+}
+
 // HTM BUILDING
 static void TestBuildHtmGs450hPlacesTorqueLikeOemFrame() {
   uint8_t htm[GS450H_HTM_LEN];
@@ -230,6 +294,13 @@ void ToyotaFramesTest::RunTest() {
   TestReadMthAcceptsValidFrames();
   TestReadMthRejectsCorruptFrameAfterGoodFrame();
   TestReadMthRejectsFrameWithOnly8BitChecksum();
+  TestCommMonitorStartsLostWithNoTorque();
+  TestCommMonitorRampsTorqueInAfterGoodFrame();
+  TestCommMonitorLostAfterMoreThanMaxFailures();
+  TestCommMonitorGoodFrameResetsFailureCount();
+  TestCommMonitorRampsFromZeroAfterRecovery();
+  TestCommMonitorFailureCountSaturates();
+  TestCommMonitorRampClamps();
   TestBuildHtmGs450hPlacesTorqueLikeOemFrame();
   TestBuildHtmGs300hPlacesTorqueLikeOemFrame();
   TestBuildHtmPriusStepsCounterEverySecondFrame();

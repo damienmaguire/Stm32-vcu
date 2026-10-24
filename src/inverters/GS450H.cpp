@@ -36,8 +36,9 @@ static volatile bool rx_complete_flag = false;
 // Timeout and error tracking
 static uint16_t rx_timeout = 0;
 static const uint16_t RX_TIMEOUT_MS = 20; // 20ms timeout for inverter response
-static uint16_t consecutive_failures = 0;
-static const uint16_t MAX_FAILURES = 10; // Enter safe mode after 10 failures
+static const uint16_t MAX_FAILURES = 10;  // Enter safe mode after 10 failures
+static ToyotaFrames::CommMonitor comm(MAX_FAILURES);
+static uint8_t mth_status = 0; // MTH byte 1 of the last good GS450h frame
 
 // Double buffering for DMA to prevent data corruption
 static uint8_t rx_buffer_a[140];
@@ -342,6 +343,12 @@ void GS450HClass::SetTorque(float torquePercent) {
       mg1_torque = 0;
     }
   }
+
+  // No torque while the inverter link is lost, then ramp back in at throtramp
+  float commScale =
+      comm.UpdateTorqueScale(Param::GetFloat(Param::throtramp)) * 0.01f;
+  mg1_torque *= commScale;
+  mg2_torque *= commScale;
 }
 
 float GS450HClass::GetMotorTemperature() {
@@ -505,7 +512,7 @@ void GS450HClass::Task1Ms() {
   Param::SetInt(Param::DMA_RxComplete, rx_complete_flag ? 1 : 0);
   Param::SetInt(Param::DMA_TxComplete, tx_complete_flag ? 1 : 0);
   Param::SetInt(Param::DMA_RxTimeout, rx_timeout);
-  Param::SetInt(Param::DMA_ConsecFail, consecutive_failures);
+  Param::SetInt(Param::DMA_ConsecFail, comm.Failures());
   Param::SetInt(Param::HTM_State, htm_state);
 
   switch (htm_state) {
@@ -540,9 +547,9 @@ void GS450HClass::Task1Ms() {
     } else {
       tx_complete_flag = false;
       dma_write(htm_data_setup, 80);
-      if (processing_rx_buffer[1] != 0)
-        inv_status--; // Use processing buffer
-      if (processing_rx_buffer[1] == 0)
+      if (mth_status != 0)
+        inv_status--; // byte 1 of the last good MTH frame
+      if (mth_status == 0)
         inv_status = 1;
     }
     htm_state++;
@@ -557,42 +564,8 @@ void GS450HClass::Task1Ms() {
     break;
   case 3:
     // Wait for RX completion with timeout
-    if (rx_complete_flag) {
-      rx_complete_flag = false;
-      // Check the frame just received - processing_rx_buffer was swapped by
-      // ISR
-      ToyotaFrames::MthData mth;
-      if (!ToyotaFrames::ReadMthGs450h(processing_rx_buffer, mth)) {
-        consecutive_failures++;
-        if (consecutive_failures > MAX_FAILURES) {
-          statusInv = 0;
-          mg1_speed = 0;
-          mg2_speed = 0;
-          Param::SetInt(Param::cruisespeed, 0);
-        }
-      } else {
-        // exchange data and prepare next HTM frame using processing buffer
-        consecutive_failures = 0;
-        statusInv = 1;
-        dc_bus_voltage = mth.dcBusVoltage;
-        temp_inv_water = mth.tempInvWater;
-        temp_inv_inductor = mth.tempInvInductor;
-        mg1_speed = mth.mg1Speed;
-        mg2_speed = mth.mg2Speed;
-      }
+    if (ReceiveMth(ToyotaFrames::ReadMthGs450h))
       htm_state++;
-    } else {
-      // Handle timeout
-      rx_timeout++;
-      if (rx_timeout > RX_TIMEOUT_MS) {
-        consecutive_failures++;
-        statusInv = 0;
-        mg1_speed = 0;
-        mg2_speed = 0;
-        Param::SetInt(Param::cruisespeed, 0);
-        htm_state++; // Move on despite timeout
-      }
-    }
     break;
   case 4:
     ToyotaFrames::BuildHtmGs450h(htm_data, mg1_torque, mg2_torque, mg1_speed,
@@ -660,42 +633,8 @@ void GS450HClass::Task1Ms() {
     break;
   case 8:
     // Wait for RX completion with timeout
-    if (rx_complete_flag) {
-      rx_complete_flag = false;
-      // Check the frame just received - processing_rx_buffer was swapped by
-      // ISR
-      ToyotaFrames::MthData mth;
-      if (!ToyotaFrames::ReadMthPrius(processing_rx_buffer, mth)) {
-        consecutive_failures++;
-        if (consecutive_failures > MAX_FAILURES) {
-          statusInv = 0;
-          mg1_speed = 0;
-          mg2_speed = 0;
-          Param::SetInt(Param::cruisespeed, 0);
-        }
-      } else {
-        // exchange data and prepare next HTM frame using processing buffer
-        consecutive_failures = 0;
-        statusInv = 1;
-        dc_bus_voltage = mth.dcBusVoltage;
-        temp_inv_water = mth.tempInvWater;
-        temp_inv_inductor = mth.tempInvInductor;
-        mg1_speed = mth.mg1Speed;
-        mg2_speed = mth.mg2Speed;
-      }
+    if (ReceiveMth(ToyotaFrames::ReadMthPrius))
       htm_state++;
-    } else {
-      // Handle timeout
-      rx_timeout++;
-      if (rx_timeout > RX_TIMEOUT_MS) {
-        consecutive_failures++;
-        statusInv = 0;
-        mg1_speed = 0;
-        mg2_speed = 0;
-        Param::SetInt(Param::cruisespeed, 0);
-        htm_state++; // Move on despite timeout
-      }
-    }
     break;
   case 9:
     Param::SetInt(Param::torque,
@@ -755,38 +694,8 @@ void GS450HClass::Task1Ms() {
     break;
   case 13:
     // Wait for RX completion with timeout
-    if (rx_complete_flag) {
-      rx_complete_flag = false;
-      // Check the frame just received - processing_rx_buffer was swapped by
-      // ISR
-      ToyotaFrames::MthData mth;
-      if (!ToyotaFrames::ReadMthGs300h(processing_rx_buffer, mth)) {
-        consecutive_failures++;
-        if (consecutive_failures > MAX_FAILURES) {
-          statusInv = 0;
-          // Optionally reset inv_status if needed
-          // inv_status=0;
-        }
-      } else {
-        // exchange data and prepare next HTM frame using processing buffer
-        consecutive_failures = 0;
-        statusInv = 1;
-        dc_bus_voltage = mth.dcBusVoltage;
-        temp_inv_water = mth.tempInvWater;
-        temp_inv_inductor = mth.tempInvInductor;
-        mg1_speed = mth.mg1Speed;
-        mg2_speed = mth.mg2Speed;
-      }
+    if (ReceiveMth(ToyotaFrames::ReadMthGs300h))
       htm_state++;
-    } else {
-      // Handle timeout
-      rx_timeout++;
-      if (rx_timeout > RX_TIMEOUT_MS) {
-        consecutive_failures++;
-        statusInv = 0;
-        htm_state++; // Move on despite timeout
-      }
-    }
     break;
   case 14:
     Param::SetInt(Param::torque,
@@ -819,6 +728,45 @@ void GS450HClass::setTimerState(bool desiredTimerState) {
 }
 
 int GS450HClass::GetInverterState() { return statusInv; }
+
+// End of an MTH receive attempt, the same for all variants: a good frame, a
+// bad checksum or a timeout. Returns false while still waiting for the frame.
+bool GS450HClass::ReceiveMth(bool (*readMth)(const uint8_t *,
+                                             ToyotaFrames::MthData &)) {
+  if (rx_complete_flag) {
+    rx_complete_flag = false;
+    // Check the frame just received - processing_rx_buffer was swapped by ISR
+    ToyotaFrames::MthData mth;
+    if (readMth(processing_rx_buffer, mth)) {
+      comm.FrameOk();
+      statusInv = 1;
+      dc_bus_voltage = mth.dcBusVoltage;
+      temp_inv_water = mth.tempInvWater;
+      temp_inv_inductor = mth.tempInvInductor;
+      mg1_speed = mth.mg1Speed;
+      mg2_speed = mth.mg2Speed;
+      mth_status = processing_rx_buffer[1];
+    } else {
+      comm.FrameBad();
+    }
+  } else if (++rx_timeout > RX_TIMEOUT_MS) {
+    comm.FrameBad(); // Move on despite timeout
+  } else {
+    return false;
+  }
+
+  if (comm.Lost()) {
+    // safe state until good frames come back, torque ramps in after that
+    statusInv = 0;
+    mg1_speed = 0;
+    mg2_speed = 0;
+    mg1_torque = 0;
+    mg2_torque = 0;
+    mth_status = 0;
+    Param::SetInt(Param::cruisespeed, 0);
+  }
+  return true;
+}
 //////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

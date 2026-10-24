@@ -91,6 +91,44 @@ inline MthData DecodeMthGs300h(const uint8_t *mth) {
   return d;
 }
 
+/* Tracks the MTH link. Bad checksums and timeouts both count as failures;
+ * more than maxFailures in a row means the link is lost. While lost the
+ * torque scale is 0, and once frames are good again it ramps back to 100%.
+ * Starts out lost, so torque only ramps in after the first good frame. */
+class CommMonitor {
+public:
+  explicit CommMonitor(uint16_t maxFailures)
+      : maxFailures(maxFailures), failures(maxFailures + 1), torqueScale(0) {}
+
+  void FrameOk() { failures = 0; }
+
+  void FrameBad() {
+    if (failures < UINT16_MAX)
+      failures++;
+    if (Lost())
+      torqueScale = 0;
+  }
+
+  bool Lost() const { return failures > maxFailures; }
+  uint16_t Failures() const { return failures; }
+
+  // Call once per torque update, returns the torque scale in percent
+  float UpdateTorqueScale(float rampStep) {
+    if (Lost())
+      torqueScale = 0;
+    else if (rampStep <= 0 || torqueScale + rampStep >= 100)
+      torqueScale = 100;
+    else
+      torqueScale += rampStep;
+    return torqueScale;
+  }
+
+private:
+  uint16_t maxFailures;
+  uint16_t failures;
+  float torqueScale;
+};
+
 // Check and decode a received MTH frame. Returns false and leaves out
 // unchanged when the checksum is wrong.
 inline bool ReadMthGs450h(const uint8_t *mth, MthData &out) {
