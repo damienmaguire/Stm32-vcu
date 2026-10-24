@@ -28,6 +28,7 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/timer.h>
+#include <string.h>
 
 // DMA completion flags - must be volatile for ISR access
 static volatile bool tx_complete_flag = false;
@@ -128,11 +129,13 @@ static const uint8_t htm_data_setup[100] = {
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 4, 0,  0,
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0,
     4, 0, 25, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 128, 0, 0, 0, 37, 1};
-static uint8_t htm_data[105] = {
+static const uint8_t htm_data_GS450H[80] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+// HTM frame being sent, loaded from the variant's template in StartVariant()
+static uint8_t htm_data[105];
 static const uint8_t htm_data_GS300H[105] = {
     0,   14, 0,   2,  0,  0,   0,   0,  0,   0,   0,  0, 0, 23, 0, 97, 0, 0,
     0,   0,  0,   0,  0,  248, 254, 8,  1,   0,   0,  0, 0, 0,  0, 22, 0, 0,
@@ -518,34 +521,42 @@ void GS450HClass::GS450Houtput() //!!! should be ran every 10ms
 // Dilbert's code here
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/* Start a drivetrain from scratch: its own HTM template, the first state of
+ * its state machine and a fresh link, whatever ran before. The Set functions
+ * only run at start-up and when the Inverter param is set, after DeInit(). */
+static void StartVariant(uint8_t firstState, uint8_t invStatus,
+                         const uint8_t *htmTemplate, int templateLen) {
+  memset(htm_data, 0, sizeof(htm_data));
+  memcpy(htm_data, htmTemplate, templateLen);
+  htm_state = firstState;
+  inv_status = invStatus;
+  frame_count = 0;
+  inverter_delay_counter = 0;
+  mth_status = 0;
+  mg1_torque = 0;
+  mg2_torque = 0;
+  statusInv = 0;
+  comm = ToyotaFrames::CommMonitor(MAX_FAILURES);
+}
+
 void GS450HClass::SetPrius() {
   setTimerState(true); // start toyota timers
-  if (htm_state < 5) {
-    htm_state = 5;
-    inv_status = 0; // must be 0 for prius
-  }
-  for (int i = 0; i < 100; i++)
-    htm_data[i] = htm_data_Prius[i];
+  // inv_status must be 0 for prius
+  StartVariant(5, 0, htm_data_Prius, sizeof(htm_data_Prius));
   DriveType = PRIUS;
 }
 
 void GS450HClass::SetGS450H() {
   setTimerState(true); // start toyota timers
-  if (htm_state > 4) {
-    htm_state = 0;
-    inv_status = 1; // must be 1 for gs450h
-  }
+  // inv_status must be 1 for gs450h
+  StartVariant(0, 1, htm_data_GS450H, sizeof(htm_data_GS450H));
   DriveType = GS450H;
 }
 
 void GS450HClass::SetGS300H() {
   setTimerState(true); // start toyota timers
-  if (htm_state < 10) {
-    htm_state = 10;
-  }
-  inv_status = 0; // must be 0 for gs300h
-  for (int i = 0; i < 105; i++)
-    htm_data[i] = htm_data_GS300H[i];
+  // inv_status must be 0 for gs300h
+  StartVariant(10, 0, htm_data_GS300H, sizeof(htm_data_GS300H));
   DriveType = IS300H;
 }
 
