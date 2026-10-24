@@ -103,6 +103,25 @@ static bool dma_channel_is_enabled(uint32_t dma, uint8_t channel) {
   return (DMA_CCR(dma, channel) & DMA_CCR_EN) != 0;
 }
 
+// TIM2 period is 2 us; this many polls is roughly 100-150 us at 72 MHz
+static const uint16_t CLOCK_EDGE_MAX_POLLS = 1000;
+
+// Wait for the TIM2 update flag (start of a new CLK period) before starting TX.
+// Runs in the 1 ms task, so it must never hang: skip the wait if TIM2 is not
+// running and give up after CLOCK_EDGE_MAX_POLLS.
+static void WaitForClockEdge() {
+  if (!(TIM_CR1(TIM2) & TIM_CR1_CEN))
+    return;
+
+  for (uint16_t i = 0; i < CLOCK_EDGE_MAX_POLLS; i++) {
+    if (TIM_SR(TIM2) & TIM_SR_UIF)
+      break;
+  }
+  // Writes ~UIF: flags are rc_w0, so only UIF clears (no read-modify-write
+  // that could clear other flags set in between)
+  timer_clear_flag(TIM2, TIM_SR_UIF);
+}
+
 // 80 bytes out and 100 bytes back in (with offset of 8 bytes.
 static const uint8_t htm_data_setup[100] = {
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 4, 0, 0,  0,
@@ -554,10 +573,7 @@ void GS450HClass::Task1Ms() {
         .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
 
     // Wait for next TIM2 update event (start of new clock period = rising edge)
-    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-      // Wait for TIM2 update flag - indicates start of new CLK period
-    }
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+    WaitForClockEdge();
 
     // Now start DMA synchronized to the rising edge of CLK
     // Only transmit if previous TX completed (checked via flag or channel not
@@ -624,10 +640,7 @@ void GS450HClass::Task1Ms() {
         .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
 
     // Wait for next TIM2 update event (start of new clock period = rising edge)
-    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-      // Wait for TIM2 update flag - indicates start of new CLK period
-    }
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+    WaitForClockEdge();
 
     // Now start DMA synchronized to the rising edge of CLK
     if (inv_status > 5) {
@@ -688,10 +701,7 @@ void GS450HClass::Task1Ms() {
         .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
 
     // Wait for next TIM2 update event (start of new clock period = rising edge)
-    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-      // Wait for TIM2 update flag - indicates start of new CLK period
-    }
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+    WaitForClockEdge();
 
     // Now start DMA synchronized to the rising edge of CLK
     // send each init frame once, then normal frames
