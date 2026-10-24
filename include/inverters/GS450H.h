@@ -67,8 +67,6 @@ private:
   float temp_inv_water, temp_inv_inductor;
   bool timerIsRunning;
   int scaledTorqueTarget;
-  uint8_t VerifyMTHChecksum(uint16_t);
-  void CalcHTMChecksum(uint16_t);
   void setTimerState(bool);
   void GS450Hgear();
   void GS450Houtput();
