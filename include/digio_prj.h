@@ -56,6 +56,7 @@
   DIG_IO_ENTRY(PWM1, GPIOA, GPIO6, PinMode::OUTPUT)                            \
   DIG_IO_ENTRY(t15_digi, GPIOD, GPIO6, PinMode::INPUT_FLT)                     \
   DIG_IO_ENTRY(gp_12Vin, GPIOD, GPIO4, PinMode::INPUT_FLT)                     \
+  DIG_IO_ENTRY(hwver_in, GPIOC, GPIO13, PinMode::INPUT_PD)                     \
   DIG_IO_ENTRY(dummypin, GPIOE, GPIO7, PinMode::INPUT_PD)
 
 // dummypin is used by IOMatrix class for unused functions. Must be set to a pin
