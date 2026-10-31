@@ -18,7 +18,6 @@
  */
 
 #include "vehicles/BMW_F11.h"
-#include "digio.h"
 #include "stm32_can.h"
 #include "utils.h"
 
@@ -117,8 +116,10 @@ static uint16_t PedalRaw() {
 BMW_F11::BMW_F11()
     : motorRpm(0), coolantC(0), busQuiet100(20), busWasAwake(false), tick10(0),
       aliveA5(0), aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0), alive3F9(0),
-      seen3f9(false), age3f910(0), milOffSent(false), dscLimitFresh(false),
-      dscLimitAge10ms(0), dscLimitNm(0), dscTorqueCanId(0) {
+      seen3f9(false), age3f910(0), milOffSent(false), kl15On(false),
+      kl50On(false), brakePressed(false), brakeSeen(false), brakeAge10ms(0),
+      dscLimitFresh(false), dscLimitAge10ms(0), dscLimitNm(0),
+      dscTorqueCanId(0) {
   for (int i = 0; i < 6; i++)
     last3f9[i] = 0;
 }
@@ -126,20 +127,26 @@ BMW_F11::BMW_F11()
 void BMW_F11::SetCanInterface(CanHardware *c) {
   can = c;
 
-  // The notes name 0x12F as the sign the bus is awake (gateway copy of
-  // FlexRay 0x74 L9). The receive path does not say which CAN port a
-  // frame came from, so a catch-all would also count the inverter bus
-  // and could make us the node that starts PT-CAN. Only this ID counts.
+  // 0x12F is the gateway copy of FlexRay 0x74 L9 (KL15, 100 ms).
+  // 0x173 is the gateway copy of FlexRay 0x2F PDU12 (brake, 100 ms).
+  // The receive path does not say which CAN port a frame came from, so
+  // a catch-all would also count the inverter bus. Only these IDs count
+  // as "PT-CAN is already awake".
   can->RegisterUserMessage(0x12F);
+  can->RegisterUserMessage(0x173);
 
-  // TODO: brake pedal. The notes do not give a PT-CAN ID for it.
   // TODO: DSC torque ceiling from the pico. No ID has been assigned,
   // so nothing is registered. See HandleDscTorqueCeiling().
 }
 
-bool BMW_F11::Ready() { return DigIo::t15_digi.Get(); }
+// E46 reads the T15 pin here. On the F11 that same gate follows the
+// bus. The pin is left out: it floats, and 0x12F is the source the DDE
+// uses.
+bool BMW_F11::Ready() { return kl15On; }
 
-bool BMW_F11::Start() { return Param::GetBool(Param::din_start); }
+// The start button still works. Crank on 0x12F (>= 0xD, held through
+// 0xC) counts as start as well.
+bool BMW_F11::Start() { return kl50On || Param::GetBool(Param::din_start); }
 
 void BMW_F11::OnBusWake() {
   busWasAwake = true;
@@ -163,6 +170,12 @@ void BMW_F11::OnBusSleep() {
   alive8F = 0;
   alive3F9 = 0;
   seen3f9 = false;
+  // The rundown normally sends nibble 6 before the bus goes quiet.
+  // If the frames just stop, drop ignition and the CAN brake with them.
+  kl15On = false;
+  kl50On = false;
+  brakePressed = false;
+  brakeSeen = false;
 }
 
 void BMW_F11::NoteBusState() {
@@ -176,19 +189,83 @@ void BMW_F11::NoteBusState() {
 }
 
 void BMW_F11::DecodeCAN(int id, uint32_t *data) {
-  // 0x12F keeps arriving while PT-CAN is up. Anything else that happens
-  // to be delivered (inverter, charger, mapped IDs) must not count.
-  if (id == 0x12F)
+  uint8_t *bytes = (uint8_t *)data;
+
+  // 0x12F and 0x173 are PT-CAN. Anything else that happens to be
+  // delivered (inverter, charger, mapped IDs) must not count.
+  if (id == 0x12F || id == 0x173)
     busQuiet100 = 0;
 
-  // TODO: 0x12F byte layout for KL15. The notes name the frame and not
-  // the byte, so the payload is not decoded. TX uses the ignition-on,
-  // engine-off baselines whenever the bus is awake and the VCU is not
-  // in RUN. Pre-KL15 and after-off payloads are not selected yet.
+  switch (id) {
+  case 0x12F:
+    Handle12F(bytes);
+    break;
+  case 0x173:
+    Handle173(bytes);
+    break;
+  default:
+    break;
+  }
 
   // DSC ceiling. dscTorqueCanId is 0 until the pico frame is defined.
   if (dscTorqueCanId != 0 && id == (int)dscTorqueCanId)
     HandleDscTorqueCeiling(data);
+}
+
+void BMW_F11::Handle12F(uint8_t *bytes) {
+  // Byte 2 low nibble, Intel bits 16-19. 6 = off, 9/A = KL15, C/D =
+  // crank. 9 holds KL15 only after it has already been on. 0xC holds
+  // start the same way. 0xE and 0xF are invalid: leave both flags.
+  uint8_t st = bytes[2] & 0x0F;
+  if (st >= 0x0E)
+    return;
+
+  if (st >= 0x0A || (st == 0x09 && kl15On))
+    kl15On = true;
+  else
+    kl15On = false;
+
+  if (st >= 0x0D || (st == 0x0C && kl50On))
+    kl50On = true;
+  else
+    kl50On = false;
+}
+
+void BMW_F11::Handle173(uint8_t *bytes) {
+  brakeSeen = true;
+  brakeAge10ms = 0;
+
+  // Bit 5 = invalid / init. Keep the last pedal state.
+  if (bytes[7] & 0x20)
+    return;
+
+  // Bit 0 and bit 1 are the two brake-switch channels. Which one is the
+  // brake-light switch and which is the test switch is not confirmed
+  // (needs a slow-press capture). Either bit means the pedal is down.
+  // Bit 2 (pressure above ~7 bar) and bit 4 (standstill) are not the pedal.
+  brakePressed = (bytes[7] & 0x03) != 0;
+
+  // 0x0EF (20 ms) is the PT-CAN copy of brake torque: d2..d3 and d5..d6,
+  // Nm = raw - 32000. brakepressure is a raw digit, not Nm, so 0x0EF is
+  // not decoded and not registered.
+}
+
+void BMW_F11::ApplyBrake() {
+  if (brakeSeen) {
+    if (brakeAge10ms < 255)
+      brakeAge10ms++;
+    // 0x173 is 100 ms. Half a second with no frame drops the CAN brake
+    // so a dead bus cannot leave the pedal latched. The wired pin is
+    // sampled on its own, in GetDigInputs.
+    if (brakeAge10ms > 50) {
+      brakePressed = false;
+      brakeSeen = false;
+    }
+  }
+
+  // GetDigInputs has already stored the brake pin. OR the CAN pedal in.
+  if (brakePressed)
+    Param::SetInt(Param::din_brake, 1);
 }
 
 void BMW_F11::HandleDscTorqueCeiling(uint32_t *data) {
@@ -250,6 +327,7 @@ uint16_t BMW_F11::RpmTx() const {
 void BMW_F11::Task10Ms() {
   AgeDscLimit();
   NoteBusState();
+  ApplyBrake();
 
   // Clear the MIL edge even if the bus is already asleep, so the next
   // READY sends OFF again.

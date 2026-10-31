@@ -63,6 +63,9 @@ private:
   uint16_t RpmTx() const;
   float DriverDemandNm() const;
   void AgeDscLimit();
+  void Handle12F(uint8_t *bytes);
+  void Handle173(uint8_t *bytes);
+  void ApplyBrake();
   void HandleDscTorqueCeiling(uint32_t *data);
   // TODO: a latched ZombieVerter fault. Stays false, so MIL ON is never
   // sent. The ON payload would be 40 22 00 15 FF FF FF FF.
@@ -73,7 +76,7 @@ private:
 
   int motorRpm;
   float coolantC;
-  uint8_t busQuiet100; // 100 ms ticks since the last 0x12F. 20 = 2 s.
+  uint8_t busQuiet100; // 100 ms ticks since 0x12F or 0x173. 20 = 2 s.
   bool busWasAwake;
   uint16_t tick10;
 
@@ -89,6 +92,16 @@ private:
   uint8_t last3f9[6];
 
   bool milOffSent;
+
+  // 0x12F byte 2 low nibble. KL15 holds through a 9 after it has been on.
+  // Start holds through a 0xC after it has been on. 0xE/0xF keep these.
+  bool kl15On;
+  bool kl50On;
+
+  // 0x173 byte 7. Either switch bit counts as pressed. Bit 5 keeps this.
+  bool brakePressed;
+  bool brakeSeen;
+  uint8_t brakeAge10ms;
 
   // DSC torque ceiling. The DSC talks to the DDE on FlexRay only. The
   // pico will forward that limit on CAN. The ID and the byte layout are
