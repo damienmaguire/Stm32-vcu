@@ -1010,6 +1010,7 @@ static void UpdateVehicle() {
     selectedVehicle = &e31Vehicle;
     break;
   case vehicles::vBMW_F11:
+    // F11: pretend to be the removed diesel ECU on PT-CAN.
     selectedVehicle = &f11Vehicle;
     break;
   case vehicles::Classic:

@@ -511,7 +511,7 @@ enum vehicles {
   vVAG = 6,
   vSUBARU = 7,
   vBMW_E31 = 8,
-  vBMW_F11 = 9
+  vBMW_F11 = 9 // F11 Touring: stand in for the removed diesel ECU
 };
 
 enum _potmodes {
