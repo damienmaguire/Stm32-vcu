@@ -102,6 +102,7 @@
 #include "vehicles/BMW_E31.h"
 #include "vehicles/BMW_E39.h"
 #include "vehicles/BMW_E65.h"
+#include "vehicles/BMW_F11.h"
 #include "vehicles/Can_VAG.h"
 #include "vehicles/V_Classic.h"
 #include "vehicles/subaruvehicle.h"
@@ -159,6 +160,7 @@ static uint16_t prechargeMinTime = 100;
 static BMW_E31 e31Vehicle;
 static BMW_E65 e65Vehicle;
 static BMW_E39 e39Vehicle;
+static BMW_F11 f11Vehicle;
 static Can_VAG vagVehicle;
 static SubaruVehicle subaruVehicle;
 static GS450HClass gs450Inverter;
@@ -1006,6 +1008,9 @@ static void UpdateVehicle() {
     break;
   case vehicles::vBMW_E31:
     selectedVehicle = &e31Vehicle;
+    break;
+  case vehicles::vBMW_F11:
+    selectedVehicle = &f11Vehicle;
     break;
   case vehicles::Classic:
     selectedVehicle = &classVehicle;
