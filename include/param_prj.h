@@ -34,7 +34,7 @@
 #define VALUE_ENTRY_HW(name, unit, id, minHWVer) VALUE_ENTRY(name, unit, id)
 #endif
 
-// Next param id (increase when adding new parameter!): 157
+// Next param id (increase when adding new parameter!): 171
 /*              category     name         unit       min     max     default id
  * [minHWVer]
  */
@@ -94,6 +94,7 @@
   PARAM_ENTRY(CAT_THROTTLE, throtrpmfilt, "rpm/10ms", 0.1, 200, 15, 131)       \
   PARAM_ENTRY(CAT_LEXUS, Gear, LOWHIGH, 0, 3, 0, 27)                           \
   PARAM_ENTRY(CAT_LEXUS, OilPump, "%", 0, 100, 50, 28)                         \
+  PARAM_ENTRY(CAT_LEXUS, MG2MaxSpeed, "rpm", 0, 20000, 0, 170)                 \
   PARAM_ENTRY(CAT_CRUISE, cruisestep, "rpm", 1, 1000, 200, 29)                 \
   PARAM_ENTRY(CAT_CRUISE, cruiseramp, "rpm/100ms", 1, 1000, 20, 30)            \
   PARAM_ENTRY(CAT_CRUISE, regenlevel, "", 0, 3, 2, 31)                         \
