@@ -1430,6 +1430,25 @@ static void ConfigureVariantIO() {
   AnaIn::Start();
 }
 
+static void ApplyHwVersionVisibility(HWVer hwver) {
+  (void)hwver;
+#define PARAM_ENTRY(cat, name, unit, min, max, def, id)
+#define VALUE_ENTRY(name, unit, id)
+#undef PARAM_ENTRY_HW
+#undef VALUE_ENTRY_HW
+#define PARAM_ENTRY_HW(cat, name, unit, min, max, def, id, minHWVer)           \
+  if (hwver < (minHWVer))                                                      \
+    Param::SetFlag(Param::name, Param::FLAG_HIDDEN);
+#define VALUE_ENTRY_HW(name, unit, id, minHWVer)                               \
+  if (hwver < (minHWVer))                                                      \
+    Param::SetFlag(Param::name, Param::FLAG_HIDDEN);
+  PARAM_LIST
+#undef PARAM_ENTRY_HW
+#undef VALUE_ENTRY_HW
+#undef PARAM_ENTRY
+#undef VALUE_ENTRY
+}
+
 extern "C" void tim4_isr(void) { scheduler->Run(); }
 
 extern "C" void exti15_10_isr(void) // CAN3 MCP25625 interruppt
@@ -1543,7 +1562,10 @@ int main(void) {
     ISA::initialize(shunt_can); // only call this once if a new sensor is
                                 // fitted.
 
-  Param::SetInt(Param::version, 4);      // backward compatibility
+  Param::SetInt(Param::version, 4); // backward compatibility
+  HWVer hwver = DigIo::hwver_in.Get() ? HWVer::HW_1_3 : HWVer::HW_1_0;
+  Param::SetInt(Param::hwver, hwver);
+  ApplyHwVersionVisibility(hwver);
   Param::SetInt(Param::opmode, MOD_OFF); // always off at startup
 
   while (1) {
