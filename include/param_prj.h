@@ -31,7 +31,7 @@
  */
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 9, 0, 5)                       \
-  PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 8, 0, 6)                        \
+  PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 9, 0, 6)                        \
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 5, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
@@ -329,7 +329,7 @@
   "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES                                                               \
   "0=BMW_E46, 1=BMW_E6x+, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru, "     \
-  "8=BMW_E31"
+  "8=BMW_E31, 9=BMW_F11"
 #define BMSMODES                                                               \
   "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual, 4=LeafBms, "    \
   "5=RenaultKangoo33, 6=STW, 7=OIFlyingAdc"
@@ -510,7 +510,8 @@ enum vehicles {
   vBMW_E39 = 5,
   vVAG = 6,
   vSUBARU = 7,
-  vBMW_E31 = 8
+  vBMW_E31 = 8,
+  vBMW_F11 = 9 // F11 Touring: stand in for the removed diesel ECU
 };
 
 enum _potmodes {
