@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VER 2.41.0TA
+#define VER 2.42.3TA
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -113,6 +113,7 @@
   PARAM_ENTRY(CAT_CHARGER, ChgAcVolt, "Vac", 0, 250, 240, 120)                 \
   PARAM_ENTRY(CAT_CHARGER, ChgEff, "%", 0, 100, 90, 121)                       \
   PARAM_ENTRY(CAT_CHARGER, ConfigFoccci, ONOFF, 0, 1, 0, 133)                  \
+  PARAM_ENTRY(CAT_CHARGER, MGChgMaxA, "A", 0, 20, 20, 162)                     \
   PARAM_ENTRY(CAT_DCDC, DCdc_Type, DCDCTYPES, 0, 3, 0, 105)                    \
   PARAM_ENTRY(CAT_DCDC, DCSetPnt, "V", 9, 15, 14, 106)                         \
   PARAM_ENTRY(CAT_BMS, BMS_Timeout, "sec", 1, 120, 10, 91)                     \
@@ -265,6 +266,9 @@
   VALUE_ENTRY(ChgTemp, "°C", 2078)                                             \
   VALUE_ENTRY(AC_Volts, "V", 2079)                                             \
   VALUE_ENTRY(AC_Amps, "A", 2089)                                              \
+  VALUE_ENTRY(ChgDCAmps, "A", 2126)                                            \
+  VALUE_ENTRY(ChgHVVolts, "V", 2127)                                           \
+  VALUE_ENTRY(ChgLimAmps, "A", 2128)                                           \
   VALUE_ENTRY(canctr, "dig", 2091)                                             \
   VALUE_ENTRY(cpuload, "%", 2063)                                              \
   VALUE_ENTRY(PPVal, "dig", 2094)                                              \
