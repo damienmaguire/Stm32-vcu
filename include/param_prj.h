@@ -26,8 +26,17 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
+#ifndef PARAM_ENTRY_HW
+#define PARAM_ENTRY_HW(category, name, unit, min, max, def, id, minHWVer)      \
+  PARAM_ENTRY(category, name, unit, min, max, def, id)
+#endif
+#ifndef VALUE_ENTRY_HW
+#define VALUE_ENTRY_HW(name, unit, id, minHWVer) VALUE_ENTRY(name, unit, id)
+#endif
+
 // Next param id (increase when adding new parameter!): 157
 /*              category     name         unit       min     max     default id
+ * [minHWVer]
  */
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 9, 0, 5)                       \
@@ -170,6 +179,7 @@
   PARAM_ENTRY(CAT_PWM, DC_MaxSOC, "", 1, 100, 10, 145)                         \
   PARAM_ENTRY(CAT_PWM, DC_MinSOC, "", 1, 100, 0, 146)                          \
   VALUE_ENTRY(version, VERSTR, 2000)                                           \
+  VALUE_ENTRY(hwver, HWVERSTR, 2126)                                           \
   VALUE_ENTRY(opmode, OPMODES, 2002)                                           \
   VALUE_ENTRY(chgtyp, CHGTYPS, 2003)                                           \
   VALUE_ENTRY(lasterr, errorListString, 2004)                                  \
@@ -282,7 +292,7 @@
   VALUE_ENTRY(DMA_ConsecFail, "", 2122)                                        \
   VALUE_ENTRY(HTM_State, "", 2123)
 
-// Next value Id: 2124
+// Next value Id: 2127
 
 // Dead params
 /*
@@ -297,6 +307,7 @@
 // clang-format off
 #define VERSTR STRINGIFY(4=VER)
 // clang-format on
+#define HWVERSTR "0=1.0, 1=1.3"
 
 #define OUTPUTPINFUNCS                                                         \
   "0=None, 1=ChaDeMoAlw, 2=OBCEnable, 3=HeaterEnable, 4=RunIndication, "       \
@@ -402,6 +413,12 @@
 #define FIRST_IO_PARAM Param::Out1Func
 #define SEC_IO_PARAM Param::PB1InFunc
 #define FIRST_AI_PARAM Param::GPA1Func
+
+enum HWVer {
+  HW_1_0 = 0,
+  HW_1_3 = 1,
+};
+
 enum modes {
   MOD_OFF = 0,
   MOD_RUN,
