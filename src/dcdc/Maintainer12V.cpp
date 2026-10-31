@@ -19,7 +19,6 @@
 
 #include "dcdc/Maintainer12V.h"
 #include "digio.h"
-#include "errormessage.h"
 #include "iomatrix.h"
 #include "utils.h"
 
@@ -40,7 +39,6 @@ bool Maintainer12V::GetRunMaintainer() { return runMaintainer; }
 
 void Maintainer12V::Ms10Task() {
   Param::SetInt(Param::opmode, MOD_MAINTAIN);
-  ErrorMessage::UnpostAll();
   if (!runMaintainer) {
     Param::SetInt(Param::opmode, MOD_OFF);
   }
@@ -95,6 +93,7 @@ void Maintainer12V::Task200Ms(int opmode) {
 }
 
 void Maintainer12V::CancelMaintainer() {
+  runMaintainer = false;
   maintainDur_tmp = 0;
   maintainTicks = 0;
   minsUntilAllowedAgain = WAKEUP_BLOCK_MINS;

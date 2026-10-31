@@ -82,6 +82,7 @@
 #include "linbus.h"
 #include "my_math.h"
 #include "notused.h"
+#include "opmodecontrol.h"
 #include "param_save.h"
 #include "params.h"
 #include "printf.h"
@@ -115,8 +116,6 @@
 #include <libopencm3/stm32/usart.h>
 #include <stdint.h>
 
-#define PRECHARGE_TIMEOUT 5 // 5s
-
 #define PRINT_JSON 0
 
 extern "C" void __cxa_pure_virtual() {
@@ -130,6 +129,7 @@ static bool chargeModeDC = false;
 static bool ChgLck = false;
 static CanHardware *canInterface[3];
 static CanMap *canMap;
+static CanHardware *canMapCan; // bus the CanMap was bound to at boot
 static CanSdo *canSdo;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
@@ -140,10 +140,7 @@ static uint8_t ChgHrs_tmp;
 static uint8_t ChgMins_tmp;
 static uint16_t ChgDur_tmp;
 static uint32_t ChgTicks = 0, ChgTicks_1Min = 0;
-static bool StartSig = false;
 static bool ACrequest = false;
-static bool initbyStart = false;
-static bool initbyCharge = false;
 static bool OutlanderCAN = false;
 static bool ExtHVreq = false;
 static bool CheckHVIL = 0;
@@ -151,9 +148,6 @@ static bool HVILok = 0;
 
 static volatile unsigned days = 0, hours = 0, minutes = 0, seconds = 0,
                          alarm = 0; // != 0 when alarm is pending
-
-static uint16_t rlyDly = 25;
-static uint16_t prechargeMinTime = 100;
 
 // Instantiate Classes
 static BMW_E31 e31Vehicle;
@@ -218,6 +212,63 @@ static OutlanderCompressor outlanderCompressor;
 static Compressor *selectedCompressor = &UnUsed;
 static PWMHeater pwmHeater;
 static Maintainer12V maintainer12V;
+static OpModeControl opModeControl(preheater, maintainer12V);
+
+// Clearing the user messages calls SetCanFilters() via the Clear callback,
+// which re-registers the CAN messages of every selected device
+static void RefreshCanFilters() {
+  canInterface[0]->ClearUserMessages();
+  canInterface[1]->ClearUserMessages();
+}
+
+// Current shunt / contactor box selected by Param::ShuntType
+static void RegisterShuntCanMessages(CanHardware *can) {
+  switch (Param::GetInt(Param::ShuntType)) {
+  case ShuntISA:
+  case ShuntISAudcsw:
+    ISA::RegisterCanMessages(can);
+    break;
+  case ShuntSBOX:
+    SBOX::RegisterCanMessages(can);
+    break;
+  case ShuntVAG:
+    VWBOX::RegisterCanMessages(can);
+    break;
+  default:
+    break;
+  }
+}
+
+static void DecodeShuntCan(uint32_t id, uint32_t data[2]) {
+  switch (Param::GetInt(Param::ShuntType)) {
+  case ShuntISA:
+  case ShuntISAudcsw:
+    ISA::DecodeCAN(id, data);
+    break;
+  case ShuntSBOX:
+    SBOX::DecodeCAN(id, data);
+    break;
+  case ShuntVAG:
+    VWBOX::DecodeCAN(id, data);
+    break;
+  default:
+    break;
+  }
+}
+
+// Only the contactor boxes switch contactors, the ISA shunt just measures
+static void ControlShuntContactors(int opmode, CanHardware *can) {
+  switch (Param::GetInt(Param::ShuntType)) {
+  case ShuntSBOX:
+    SBOX::ControlContactors(opmode, can);
+    break;
+  case ShuntVAG:
+    VWBOX::ControlContactors(opmode, can);
+    break;
+  default:
+    break;
+  }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void Ms200Task(void) {
@@ -392,7 +443,7 @@ static void Ms100Task(void) {
   int opmode = Param::GetInt(Param::opmode);
   utils::SelectDirection(selectedVehicle, selectedShifter);
 
-  if (Param::GetInt(Param::ShuntType) != 0) // Do not do any SOC calcs
+  if (Param::GetInt(Param::ShuntType) != ShuntNone) // Do not do any SOC calcs
   {
     utils::CalcSOC();
   }
@@ -613,8 +664,6 @@ static void ControlCabHeater(int opmode) {
 }
 
 static void Ms10Task(void) {
-  static uint32_t vehicleStartTime = 0;
-
   int16_t previousSpeed = Param::GetInt(Param::speed);
   int16_t speed = 0;
   float torquePercent;
@@ -676,7 +725,7 @@ static void Ms10Task(void) {
   speed = selectedInverter->GetMotorSpeed(); // set motor rpm on interface
 
   Param::SetInt(Param::speed, speed);
-  utils::GetDigInputs(canInterface[Param::GetInt(Param::InverterCan)]);
+  utils::GetDigInputs(canMapCan); // canio is received via the CanMap
 
   if (opmode == MOD_RUN ||
       opmode == MOD_CHARGE) // only set rev counter when in RUN or CHARGE
@@ -703,7 +752,7 @@ static void Ms10Task(void) {
   //////////////////////////////////////////////////
   //            MODE CONTROL SECTION              //
   //////////////////////////////////////////////////
-  float udc = utils::ProcessUdc(speed);
+  float udc = utils::ProcessUdc();
   stt |= Param::GetInt(Param::pot) <= Param::GetInt(Param::potmin)
              ? STAT_NONE
              : STAT_POTPRESSED;
@@ -711,224 +760,19 @@ static void Ms10Task(void) {
   stt |= udc < Param::GetFloat(Param::udclim) ? STAT_NONE : STAT_UDCLIM;
   Param::SetInt(Param::status, stt);
 
-  switch (opmode) {
-  case MOD_OFF:
-    initbyStart = false;
-    initbyCharge = false;
-    preheater.SetInitByPreHeat(false);
-    maintainer12V.SetInitByMaintainer(false);
-
-    DigIo::inv_out.Clear();                           // inverter power off
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Clear(); // Coolant pump off if
-                                                      // used
-    Param::SetInt(
-        Param::dir,
-        0); // shift to park/neutral on shutdown regardless of shifter pos
-    selectedVehicle->DashOff();
-
-    StartSig = false; // reset for next time
-
-    if (rlyDly != 0) {
-      rlyDly--; // here we are going to pause to allow system shut down before
-                // opening HV contactors
-      selectedCharger->Off(); // send message to charger to shut down
-    }
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Clear();
-      IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)
-          ->Clear(); // Negative contactors off if used
-      DigIo::prec_out.Clear();
-    }
-
-    if (Param::GetInt(Param::pot) < Param::GetInt(Param::potmin)) {
-      if (selectedVehicle->Start() && selectedVehicle->Ready() &&
-          (HVILok > 0)) {
-        StartSig = true;
-        opmode = MOD_PRECHARGE; // proceed to precharge if 1)throttle not
-                                // pressed , 2)ign on , 3)start signal rx, 4) HV
-                                // IL input is grounded if selected.
-        rlyDly = 25;            // Recharge sequence timer
-        vehicleStartTime = rtc_get_counter_val();
-        initbyStart = true;
-      }
-    }
-    if (chargeMode) {
-      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
-      rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
-      initbyCharge = true;
-    }
-    if (preheater.GetRunPreHeat()) {
-      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
-      rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
-      preheater.SetInitByPreHeat(true);
-    }
-    if (maintainer12V.GetRunMaintainer()) {
-      opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
-      rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
-      maintainer12V.SetInitByMaintainer(true);
-    }
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_PRECHARGE:
-    if (!chargeMode) {
-      if (selectedInverter != &openInv)
-        DigIo::inv_out.Set(); // inverter power on but not if we are in charge
-                              // mode and not if OI
-    } else if ((Param::GetInt(Param::ShuntType) == 0) &&
-               selectedInverter == &leafInv) // Shunt 0 + Leaf is precharge
-                                             // using leaf inverter voltage
-    {
-      DigIo::inv_out.Set(); // inverter power on
-    }
-    IOMatrix::GetPin(IOMatrix::NEGCONTACTOR)->Set();
-    IOMatrix::GetPin(IOMatrix::COOLANTPUMP)->Set();
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0)
-      DigIo::prec_out.Set(); // commence precharge
-    if (prechargeMinTime != 0)
-      prechargeMinTime--; // 1 second minimum precharge time
-    if ((prechargeMinTime == 0) &&
-        (stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) ==
-            0) // Clarify operator precedence, exit precharge: time met and no
-               // faults
-    {
-      if (StartSig) {
-        opmode = MOD_RUN;
-        StartSig = false;                    // reset for next time
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-      } else if (chargeMode) {
-        opmode = MOD_CHARGE;
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-      } else if (preheater.GetRunPreHeat()) {
-        opmode = MOD_PREHEAT;
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-      } else if (maintainer12V.GetRunMaintainer()) {
-        opmode = MOD_MAINTAIN;
-        rlyDly = 25;                         // Recharge sequence timer
-        Param::SetInt(Param::TorqDerate, 0); // clear torque derate reason
-        Param::SetInt(Param::maintainWakeups,
-                      Param::GetInt(Param::maintainWakeups) + 1);
-      }
-    }
-    if (initbyCharge && !chargeMode)
-      opmode = MOD_OFF; // These two statements catch a precharge hang from
-                        // either start mode or run mode.
-    if (initbyStart && !selectedVehicle->Ready())
-      opmode = MOD_OFF;
-    if (preheater.GetInitByPreHeat() && !preheater.GetRunPreHeat())
-      opmode = MOD_OFF;
-    if (maintainer12V.GetInitByMaintainer() &&
-        !maintainer12V.GetRunMaintainer())
-      opmode = MOD_OFF;
-
-    if (udc < (Param::GetInt(Param::udcsw)) &&
-        rtc_get_counter_val() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
-      DigIo::prec_out.Clear();
-      ErrorMessage::Post(ERR_PRECHARGE);
-      opmode = MOD_PCHFAIL;
-    }
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_PCHFAIL:
-    StartSig = false;
-    DigIo::prec_out
-        .Clear(); // explicitly turn off precharge relay in a fail condition
-    if (initbyCharge && !chargeMode)
-      opmode = MOD_OFF; // only go to off if the signal from charge or vehicle
-                        // start is removed
-    if (initbyStart && !selectedVehicle->Ready())
-      opmode = MOD_OFF; // this avoids oscillation in the event of a precharge
-                        // system failure
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_CHARGE:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-    }
-    ErrorMessage::UnpostAll();
-    if (!chargeMode) {
-      opmode = MOD_OFF;
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_RUN:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-      DigIo::inv_out.Set(); // inverter power on
-    }
-    Param::SetInt(Param::opmode, MOD_RUN);
-    ErrorMessage::UnpostAll();
-    if (!selectedVehicle->Ready()) {
-      opmode = MOD_OFF;
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-    Param::SetInt(Param::opmode, opmode);
-    break;
-
-  case MOD_MAINTAIN:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-    }
-
-    maintainer12V.Ms10Task();
-
-    if (!maintainer12V.GetRunMaintainer()) {
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-
-    if ((selectedVehicle->Start() && selectedVehicle->Ready())) {
-      maintainer12V.CancelMaintainer();
-    }
-
-    break;
-
-  case MOD_PREHEAT:
-    if (rlyDly != 0)
-      rlyDly--; // here we are going to pause before energising precharge to
-                // prevent too many contactors pulling amps at the same time
-    if (rlyDly == 0) {
-      DigIo::dcsw_out.Set();
-    }
-
-    preheater.Ms10Task();
-
-    if (!preheater.GetRunPreHeat()) {
-      rlyDly = 250; // Recharge sequence timer for delayed shutdown
-    }
-    break;
-  }
+  OpModeControl::Inputs modeInputs;
+  modeInputs.udc = udc;
+  modeInputs.stt = stt;
+  modeInputs.speed = speed;
+  modeInputs.chargeMode = chargeMode;
+  modeInputs.hvilOk = HVILok;
+  modeInputs.openInverter = selectedInverter == &openInv;
+  modeInputs.leafInverter = selectedInverter == &leafInv;
+  opmode =
+      opModeControl.Run(opmode, modeInputs, selectedVehicle, selectedCharger);
 
   ControlCabHeater(opmode);
-  if (Param::GetInt(Param::ShuntType) == 2)
-    SBOX::ControlContactors(
-        opmode,
-        canInterface[Param::GetInt(Param::ShuntCan)]); // BMW contactor box
-  if (Param::GetInt(Param::ShuntType) == 3)
-    VWBOX::ControlContactors(
-        opmode,
-        canInterface[Param::GetInt(Param::ShuntCan)]); // VW contactor box
+  ControlShuntContactors(opmode, canInterface[Param::GetInt(Param::ShuntCan)]);
 }
 
 static void Ms1Task(void) {
@@ -977,9 +821,7 @@ static void UpdateInv() {
     selectedInverter = &inverterAcp;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateVehicle() {
@@ -1011,9 +853,7 @@ static void UpdateVehicle() {
     selectedVehicle = &classVehicle;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateCharger() {
@@ -1049,9 +889,7 @@ static void UpdateCharger() {
     selectedCharger = &c5Chg;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateChargeInt() {
@@ -1073,9 +911,7 @@ static void UpdateChargeInt() {
     selectedChargeInt = &Focccican;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateHeater() {
@@ -1116,9 +952,7 @@ static void UpdateHeater() {
     webastoHeater.SetSubtype(WebastoHVH::HVH100);
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateBMS() {
@@ -1148,9 +982,7 @@ static void UpdateBMS() {
     selectedBMS = &UnUsed;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateDCDC() {
@@ -1177,9 +1009,7 @@ static void UpdateDCDC() {
     selectedDCDC = &DCDCnone;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateCompressor() {
@@ -1193,9 +1023,7 @@ static void UpdateCompressor() {
     break;
   }
 
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 static void UpdateShifter() {
@@ -1230,9 +1058,7 @@ static void UpdateShifter() {
     selectedShifter = &shifterNone;
     break;
   }
-  // This will call SetCanFilters() via the Clear Callback
-  canInterface[0]->ClearUserMessages();
-  canInterface[1]->ClearUserMessages();
+  RefreshCanFilters();
 }
 
 // Whenever the user clears mapped can messages or changes the
@@ -1261,13 +1087,7 @@ static void SetCanFilters() {
   selectedHeater->SetCanInterface(heater_can);
   selectedCompressor->SetCanInterface(compressor_can);
 
-  if (Param::GetInt(Param::ShuntType) == 1 ||
-      Param::GetInt(Param::ShuntType) == 4)
-    ISA::RegisterCanMessages(shunt_can); // select isa shunt
-  if (Param::GetInt(Param::ShuntType) == 2)
-    SBOX::RegisterCanMessages(shunt_can); // select bmw sbox
-  if (Param::GetInt(Param::ShuntType) == 3)
-    VWBOX::RegisterCanMessages(shunt_can); // select vw sbox
+  RegisterShuntCanMessages(shunt_can);
 
   canInterface[1]->RegisterUserMessage(0x601); // CanSDO
   canInterface[0]->RegisterUserMessage(0x601); // CanSDO
@@ -1308,9 +1128,12 @@ void Param::Change(Param::PARAM_NUM paramNum) {
   case Param::ShuntCan:
   case Param::LimCan:
   case Param::ChargerCan:
+  case Param::BMSCan:
+  case Param::OBD2Can:
+  case Param::DCDCCan:
+  case Param::HeaterCan:
   case Param::CompressorCan:
-    canInterface[0]->ClearUserMessages();
-    canInterface[1]->ClearUserMessages();
+    RefreshCanFilters();
     break;
   case Param::CAN3Speed:
     CANSPI_Initialize(); // init the MCP25625 on CAN3
@@ -1402,13 +1225,7 @@ static bool CanCallback(
     break;
 
   default:
-    if (Param::GetInt(Param::ShuntType) == 1 ||
-        Param::GetInt(Param::ShuntType) == 4)
-      ISA::DecodeCAN(id, data);
-    if (Param::GetInt(Param::ShuntType) == 2)
-      SBOX::DecodeCAN(id, data);
-    if (Param::GetInt(Param::ShuntType) == 3)
-      VWBOX::DecodeCAN(id, data);
+    DecodeShuntCan(id, data);
     selectedInverter->DecodeCAN(id, data);
     selectedVehicle->DecodeCAN(id, data);
     selectedCharger->DecodeCAN(id, data);
@@ -1528,6 +1345,7 @@ int main(void) {
   c2.AddCallback(&cb);
   TerminalCommands::SetCanMap(&cm);
   canMap = &cm;
+  canMapCan = CanMapDev;
   canSdo = &sdo;
 
   CanHardware *shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
