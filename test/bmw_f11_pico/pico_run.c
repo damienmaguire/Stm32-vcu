@@ -1,11 +1,13 @@
 // Runs the Pico v1h.3 PT-CAN core + engine + gear on the shared scenario.
 // pico_run m = manual car: DDE frames only, gear off (PTE_MASK_DDE).
+// An 's' in the argument (s, ms) = the sleep scenario (scenario.h).
 // Same output format as zv_run. Also: pico_run --crc <file> checks E2E of a log.
 #include "ptcan_emu_core.h"
 #include "dde_engine.h"
 #include "dde_gear.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "scenario.h"
 static pte_t P;
 static eng_t E;
@@ -39,7 +41,8 @@ static int crc_check(const char *fn) {
 }
 int main(int argc, char **argv) {
   if (argc > 2) return crc_check(argv[2]);
-  Auto = !(argc > 1 && argv[1][0] == 'm');
+  Auto = !(argc > 1 && strchr(argv[1], 'm'));
+  scen_sleep = argc > 1 && strchr(argv[1], 's') != NULL;
   pte_init(&P);
   pte_set_mask(&P, Auto ? PTE_MASK_ALL : PTE_MASK_DDE);
   eng_reset(&E);

@@ -60,12 +60,16 @@
 // keeps FlexRay. Each PT-CAN id must be sent by one box only.
 //
 // When we may transmit (the v1h.3 bus gate):
+//   Nothing either while KL15 is off, no other ECU sent an NM frame
+//   (0x500-0x57F) for 1.95 s and our own NM (0x512 / 0x518) has ended
+//   ("prepare sleep"), so we never keep the car awake.
 //   W (wake) is the first 0x12F, 0x173 or 0x0EF after at least 1 s of
 //   silence. Every frame starts at its own captured time after W, and
 //   all counters restart. 200 ms with none of those three ids stops all
 //   transmission at once, so a silent car is never woken by us.
-//   If 0x3F9 or 0x0A5 arrives from another box, we stop for good
-//   (F11Fault = 1) until a parameter is written or the VCU restarts.
+//   If one of our ids (0x3F9, 0x0A5, 0x512; automatic also 0x3FD,
+//   0x518) arrives from another box, we stop for good (F11Fault = 1)
+//   until a parameter is written or the VCU restarts.
 //
 // "Engine running" on the bus follows a short fake engine start, as the
 // Pico v1h.3 SHORT profile: ST_KL D (crank) with the brake down starts
@@ -192,6 +196,16 @@ private:
   void Send3FD();
   void Send39A();
   void Send518();
+  // Slow DDE frames (v1h.3 step tables): 0x381, 0x3B3, 0x397, 0x3FB
+  // and NM 0x512.
+  void SendSlowDde();
+  void Send512();
+  // NM frames allowed now (v1h.3 frame_active)? And the "prepare
+  // sleep" state: KL15 off, no other NM for 1.95 s, ours released.
+  bool Nm512Active() const;
+  bool Nm518Active() const;
+  bool PrepSleep() const;
+  uint32_t NmCeilingRef() const;
   // One frame's v1h.3 send timing (pte_next / pte_commit): the first
   // frame at W + firstMs, then a fixed grid. With gapMs > 0 a changed
   // payload (from byte `from`) also goes out at once, at most every
@@ -226,6 +240,8 @@ private:
   uint32_t onMs, offMs;
   // Last 0x12F that said KL15 on (or W). NM frames stop 60 s after it.
   uint32_t lastOnEvMs;
+  // Last NM frame (0x500-0x57F) from another ECU, or W.
+  volatile uint32_t lastFnmMs;
   // 0x592: next frame time, and the one last frame after KL15 off.
   uint32_t next592;
   bool final592;
@@ -255,6 +271,10 @@ private:
     uint16_t rpm4, torque, f3val, fuel;
     uint8_t r29b5;
     bool f97c;
+    // slow frames: 0x3FB "injecting", 0x381 running, 0x3B3 bytes 1-3,
+    // 0x397 bytes 0-2, and the end of the 0x397 stop walk
+    bool inj, r381Run, fb9Set, r397Set, stopWalkDone;
+    uint8_t fb9[3], r397[3];
   } eng;
   // 1 s frames on the 200 ms task: ticks since W.
   uint8_t tick200;
@@ -297,6 +317,11 @@ private:
   volatile bool brake173Have;
   uint8_t alive3FD;
   TxSlot s3FD, s39A, s518;
+  TxSlot s381, s3B3, s397, s3FB;
+  // 0x512: next grid time (set at KL15 on), and how many of the four
+  // pre-KL15 frames went out in this wake.
+  uint32_t next512;
+  uint8_t pre512;
 
   bool seen3f9;
   uint32_t next3f9, last3f9Ms;

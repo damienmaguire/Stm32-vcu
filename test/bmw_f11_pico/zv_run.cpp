@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
   int trans = argc > 2 ? atoi(argv[2]) : 1;
   int noRun = argc > 3 && argv[3][0] == 'n';    // VCU never reaches RUN
   int foreign = argc > 3 && argv[3][0] == 'f';  // a second box sends 0x3F9 at 6 s
+  scen_sleep = argc > 3 && argv[3][0] == 's';    // sleep scenario (scenario.h)
   LogCan can;
   Param::SetInt(Param::Transmission, trans);
   Param::SetFloat(Param::uaux, 13.8f);

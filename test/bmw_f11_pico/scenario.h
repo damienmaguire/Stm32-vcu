@@ -4,7 +4,12 @@
 #include <string.h>
 typedef void (*rx_fn)(uint16_t id, const uint8_t *d, uint8_t len);
 #define SCEN_END_MS 24000u
+// Sleep variant: KL15 never comes; another ECU sends NM 0x540 from 5 s
+// to 8 s. Checks the "prepare sleep" silence and the 0x512 pre frames.
+static int scen_sleep = 0;
+static inline int scen_nm540(uint32_t t) { return scen_sleep && t >= 5000 && t < 8000; }
 static inline uint8_t scen_stkl(uint32_t t) {
+  if (scen_sleep) return 0x8;
   if (t < 2000) return 0x8;
   if (t < 4000) return 0xA;
   if (t < 4800) return 0xD;   // crank request (start button, brake down)
@@ -67,6 +72,11 @@ static inline void scen_rx(uint32_t t, rx_fn rx) {
   if (t % 100 == 61) {
     memset(d, 0, 8);
     rx(0x0EF, d, 8);
+  }
+  if (t % 100 == 80 && scen_nm540(t)) {
+    memset(d, 0, 8);
+    d[0] = 0x40;
+    rx(0x540, d, 8);
   }
   if (t % 30 == 11) {
     memset(d, 0, 8);

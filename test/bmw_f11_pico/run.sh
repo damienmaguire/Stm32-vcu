@@ -44,4 +44,17 @@ for ph in 0 5; do
   printf 'manual, grid phase %s ms: ' $ph; tail -n 1 "$OUT/cmpm$ph.txt"
   tail -n 1 "$OUT/cmpm$ph.txt" | grep -q PASS || fail=1
 done
+# Sleep scenario (no KL15, foreign NM 0x540 5-8 s): 0x512 pre frames,
+# and silence once no NM keeps the bus awake (manual: from W+3.1 s).
+for m in a m; do
+  pa=s; tr=1; sk=281
+  [ $m = m ] && { pa=ms; tr=0; sk=281,3F9; }
+  "$OUT/pico_run" $pa > "$OUT/pico_s$m.log" 2> /dev/null
+  for ph in 0 5; do
+    "$OUT/zv_run" $ph $tr s > "$OUT/zv_s$m.log" 2> /dev/null
+    python3 compare.py "$OUT/zv_s$m.log" "$OUT/pico_s$m.log" $sk > "$OUT/cmps$m$ph.txt" || true
+    printf 'sleep %s, grid phase %s ms: ' $m $ph; tail -n 1 "$OUT/cmps$m$ph.txt"
+    tail -n 1 "$OUT/cmps$m$ph.txt" | grep -q PASS || fail=1
+  done
+done
 exit $fail

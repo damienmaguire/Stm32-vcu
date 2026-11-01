@@ -104,7 +104,8 @@ static uint16_t PedalRaw() {
 BMW_F11::BMW_F11()
     : motorRpm(0), coolantC(0), nowMs(0), lastRxMs(0), wakeMs(0), wakeSeq(0),
       wakeSeqSeen(0), rxEver(false), busWasAwake(false), foreignTx(false),
-      kl15Ever(false), onMs(0), offMs(0), lastOnEvMs(0), next592(0),
+      kl15Ever(false), onMs(0), offMs(0), lastOnEvMs(0), lastFnmMs(0),
+      next592(0),
       final592(false),
       startFault(false), stKl(0), stKlMs(0), stKlHave(false), brakeDownMs(0),
       brakeDownHave(false), eng(), tick200(0), tick10(0), fastTick(0),
@@ -112,6 +113,7 @@ BMW_F11::BMW_F11()
       aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0), alive3F9(0),
       gear(), lv197Ms(0), lv197Seq(0), lv197Seen(0), brake173Ms(0),
       brake173Have(false), alive3FD(0), s3FD(), s39A(), s518(),
+      s381(), s3B3(), s397(), s3FB(), next512(0), pre512(0),
       seen3f9(false), next3f9(0), last3f9Ms(0), kl15On(false),
       kl50On(false), brakePressed(false), brakeOneSwitch(false),
       brakePressure(false), brakeSeen(false), brakeAge10ms(0), brakeTorqueNm(0),
@@ -150,6 +152,10 @@ void BMW_F11::SetCanInterface(CanHardware *c) {
   can->RegisterUserMessage(0x197);
   // 0x3FD  sent by us on an automatic. From anyone else: stop.
   can->RegisterUserMessage(0x3FD);
+  // 0x500-0x57F  network management of the other ECUs (one mask
+  // filter). While one of them keeps the bus awake we may talk with
+  // KL15 off; 0x512 / 0x518 from anyone else is a second sender.
+  can->RegisterUserMessage(0x500, 0x780);
 
   // TODO: DSC torque cuts arrive on FlexRay, not here. The Pico will
   // forward them later. No CAN id is assigned. See
@@ -200,6 +206,11 @@ void BMW_F11::OnBusWake() {
   s3FD = TxSlot();
   s39A = TxSlot();
   s518 = TxSlot();
+  s381 = TxSlot();
+  s3B3 = TxSlot();
+  s397 = TxSlot();
+  s3FB = TxSlot();
+  pre512 = 0;
 }
 
 // One second with no 0x12F, 0x173 or 0x0EF (we stopped talking after
@@ -240,10 +251,10 @@ void BMW_F11::NoteBusState() {
 }
 
 // v1h.3 bus gate (ptcan_emu_core.c pte_state): we may talk while one
-// of the car's frames came in the last 200 ms, and nobody else sends
-// our ids.
+// of the car's frames came in the last 200 ms, nobody else sends our
+// ids, and the bus is not preparing to sleep.
 bool BMW_F11::BusAwake() const {
-  return rxEver && !foreignTx && (nowMs - lastRxMs) <= 200;
+  return rxEver && !foreignTx && (nowMs - lastRxMs) <= 200 && !PrepSleep();
 }
 
 // One frame from the car. >= 1 s after the last one it is a new wake
@@ -254,6 +265,7 @@ void BMW_F11::NoteRx() {
   if (!rxEver || (now - lastRxMs) >= 1000) {
     wakeMs = now;
     lastOnEvMs = now;
+    lastFnmMs = now;
     kl15On = false;
     kl50On = false;
     kl15Ever = false;
@@ -275,8 +287,12 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
   if (id == 0x12F || id == 0x173 || id == 0x0EF)
     NoteRx();
   // Someone else sends one of our frames: stay silent (F11Fault 1).
-  if (id == 0x3F9 || id == 0x0A5 || (id == 0x3FD && AutoBox()))
+  bool egsId = id == 0x3FD || id == 0x518;
+  if (id == 0x3F9 || id == 0x0A5 || id == 0x512 || (egsId && AutoBox()))
     foreignTx = true;
+  // NM frame of another ECU (v1h.3 pte_on_rx last_fnm).
+  else if (id >= 0x500 && id <= 0x57F)
+    lastFnmMs = nowMs;
 
   switch (id) {
   case 0x12F:
@@ -363,6 +379,7 @@ void BMW_F11::Handle12F(uint8_t *bytes) {
     kl15Ever = true;
     onMs = now;
     next592 = now + 98; // first 0x592 at ON+98 ms
+    next512 = now + 106; // 0x512 grid from ON+106 ms
     final592 = false;
   } else if (!kl15On && wasOn) {
     offMs = now;
@@ -930,6 +947,8 @@ void BMW_F11::Task1Ms() {
     return;
   Send3F9(EngineRunning());
   Send592();
+  SendSlowDde();
+  Send512();
   if (AutoBox()) {
     Send3FD();
     Send39A();
@@ -1091,6 +1110,14 @@ void BMW_F11::EngineWatchdog() {
 static const uint32_t kBlipOff = 105, kFire = 50, kRunup = 130;
 static const uint32_t kT92 = 2, kRpm82 = 950, kFlareEnd = 1500;
 static const uint32_t kIdleRpm = 780;
+static const uint32_t kInj = 40; // 0x3FB "injecting" 40 ms after the start
+
+// 0x397 byte 2 while running: 0x5F..0x79, a new value every 60 ms
+// (dde_engine.c, the same hash).
+static uint8_t Rand397(uint32_t ms) {
+  uint32_t h = (ms / 60u) * 2654435761u;
+  return (uint8_t)(0x5F + (h >> 24) % 27u);
+}
 
 // exp(-x/10) * 1000 for x = 0..50 (dde_engine.c exp_tab)
 static const uint16_t kExpTab[51] = {
@@ -1150,6 +1177,15 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
   e.torque = 0;
   e.r29b5 = 0;
   e.f97c = false;
+  bool prevFb9 = e.fb9Set; // the run-down keeps the last 0x3B3 bytes
+  uint8_t pf[3] = {0, 0, 0};
+  for (int i = 0; i < 3 && prevFb9; i++)
+    pf[i] = e.fb9[i];
+  e.inj = false;
+  e.r381Run = false;
+  e.fb9Set = false;
+  e.r397Set = false;
+  e.stopWalkDone = false;
   if (e.phase == 0 && !e.hasRun) {
     e.f3q8 = 0; // not started in this wake: templates only
     return;
@@ -1168,6 +1204,9 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     }
     if (t < kBlipOff)
       e.cntHi = 3; // crank marker
+    if (t >= kInj)
+      e.inj = true; // 0x3FB "injecting"
+    uint32_t tr = e.curRun ? SinceMs(now, e.trpm) : 0; // ms since first rpm
     if (e.phase == 1 && e.rpm4 >= 4u * kRpm82) {
       e.phase = 2; // 0x82 from here
       e.t82 = now;
@@ -1188,13 +1227,30 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
       uint32_t real = 4u * RpmTx();
       if (t >= kFlareEnd && real > e.rpm4)
         e.rpm4 = (uint16_t)real;
+      uint32_t t82 = SinceMs(now, e.t82);
+      e.r381Run = true;
+      // 0x397: C2 (D2 from first rpm + 2.8 s), E2 -> E1 (+60) -> DD
+      // (+120), byte 2 a random 0x5F..0x79 every 60 ms
+      e.r397Set = true;
+      e.r397[0] = tr >= 2800u ? 0xD2 : 0xC2;
+      e.r397[1] = t82 < 60u ? 0xE2 : (t82 < 120u ? 0xE1 : 0xDD);
+      e.r397[2] = Rand397(now);
     }
     if (e.curRun) {
-      uint32_t tr = SinceMs(now, e.trpm); // ms since the first rpm
       if (tr >= 7u)
         e.r29b5 = 0x72;
       if (tr >= 100u)
         e.f97c = true;
+      // 0x3B3 bytes 1-3: 00 04 00; byte 1 ramps 0x2D -> 0xC8 from
+      // +2 s (+4 per 100 ms); byte 2 04 -> 00 at +5 s
+      e.fb9Set = true;
+      e.fb9[0] = 0;
+      if (tr >= 2000u) {
+        uint32_t v = 0x2Du + 4u * ((tr - 2000u) / 100u);
+        e.fb9[0] = (uint8_t)(v > 0xC8u ? 0xC8u : v);
+      }
+      e.fb9[1] = tr >= 5000u ? 0x00 : 0x04;
+      e.fb9[2] = 0x00;
     } else if (e.hasRun) {
       // restart after an earlier run, before this start's first rpm:
       // the "stopped" values stay until the first rpm
@@ -1207,7 +1263,13 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
       }
       if (!e.torque)
         e.torque = 1978;
+      e.fb9Set = true;
+      e.fb9[0] = 0x00;
+      e.fb9[1] = 0xFF;
+      e.fb9[2] = 0x7F;
     }
+    if (e.rpm4)
+      e.r381Run = true;
     break;
   }
   case 3: // stop: run-down
@@ -1220,6 +1282,18 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     e.torque = ts < 400u ? 2098 : 1947;
     e.r29b5 = ts >= kT92 ? 0x7C : 0x72;
     e.f97c = true;
+    e.inj = ts < 360u; // 0x3FB back to "not injecting"
+    e.r381Run = true;
+    e.fb9Set = true; // 0x3B3: FF 7F at +240 ms
+    e.fb9[0] = pf[0];
+    e.fb9[1] = ts >= 240u ? 0xFF : pf[1];
+    e.fb9[2] = ts >= 240u ? 0x7F : pf[2];
+    // 0x397: DD until +140 ms, then A2, 2E (+200), 24 (+260); byte 2
+    // 00 from +440 ms
+    e.r397Set = true;
+    e.r397[0] = SinceMs(now, e.trpm) >= 2800u ? 0xD2 : 0xC2;
+    e.r397[1] = ts < 140u ? 0xDD : (ts < 200u ? 0xA2 : (ts < 260u ? 0x2E : 0x24));
+    e.r397[2] = ts < 440u ? Rand397(now) : 0x00;
     if (e.rpm4 != 0 || ts < 1200u)
       break;
     e.phase = 4;
@@ -1227,14 +1301,33 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
   }
   /* fall through */
   case 4: // stopped
+  {
+    uint32_t t80 = SinceMs(now, e.t80);
     e.rpm4 = 0;
     e.e6b3 = 0x80;
     e.e6b4 = 0x64;
-    e.e6ready = SinceMs(now, e.t80) >= 20u ? 1 : 0;
+    e.e6ready = t80 >= 20u ? 1 : 0;
     e.torque = 1978;
     e.r29b5 = 0x7C;
     e.f97c = true;
+    e.fb9Set = true;
+    e.fb9[0] = 0x00;
+    e.fb9[1] = 0xFF;
+    e.fb9[2] = 0x7F;
+    e.r381Run = false;
+    // 0x397: D0 24 00, then the walk 29 AF DF DE DD DF E2 from +2.09 s.
+    // After E2 (+2.913 s) the normal 0x397 content is back.
+    static const uint16_t walkMs[8] = {0, 2090, 2150, 2210, 2270, 2370, 2854, 2913};
+    static const uint8_t walkV[8] = {0x24, 0x29, 0xAF, 0xDF, 0xDE, 0xDD, 0xDF, 0xE2};
+    e.r397Set = true;
+    e.r397[0] = 0xD0;
+    e.r397[2] = 0x00;
+    for (int k = 0; k < 8; k++)
+      if (t80 >= walkMs[k])
+        e.r397[1] = walkV[k];
+    e.stopWalkDone = t80 >= 2913u;
     break;
+  }
   default:
     break;
   }
@@ -1618,10 +1711,7 @@ void BMW_F11::Send39A() {
 // until OFF+30 s, or W+30 s if KL15 never came; never later than 60 s
 // after the last KL15-on 0x12F (or W). v1h.3 frame_active / build().
 void BMW_F11::Send518() {
-  uint32_t ref = (int32_t)(lastOnEvMs - wakeMs) > 0 ? lastOnEvMs : wakeMs;
-  if (SinceMs(nowMs, ref) > 60000)
-    return;
-  if (!kl15On && (kl15Ever ? SinceOff() >= 30000 : SinceWake() >= 30000))
+  if (!Nm518Active())
     return;
   bool kl = !s518.started ||
             (kl15On ? SinceOn() >= 157 : (kl15Ever && SinceOff() < 225));
@@ -1631,4 +1721,216 @@ void BMW_F11::Send518() {
     return;
   can->Send(0x518, b, 8);
   SlotSent(s518, b, 645);
+}
+
+// ---------------------------------------------------------------------
+// Network management and the slow DDE frames (manual and automatic).
+// v1h.3 ptcan_emu_core.c frame_active, pte_state, build(), and the
+// engine bytes from dde_engine.c eng_patch_can.
+// ---------------------------------------------------------------------
+
+// NM frames end 60 s after the last 0x12F with KL15 on (or W).
+uint32_t BMW_F11::NmCeilingRef() const {
+  return (int32_t)(lastOnEvMs - wakeMs) > 0 ? lastOnEvMs : wakeMs;
+}
+
+// 0x512 (DDE NM): from ON+106 ms while KL15 is on, until OFF+46 s.
+// A wake without KL15: four frames only (see Send512).
+bool BMW_F11::Nm512Active() const {
+  if (SinceMs(nowMs, NmCeilingRef()) > 60000)
+    return false;
+  if (kl15On)
+    return SinceOn() >= 106;
+  if (kl15Ever)
+    return SinceOff() < 46000;
+  return pre512 < 4;
+}
+
+// 0x518 (EGS NM): while KL15 is on, until OFF+30 s, or W+30 s when
+// KL15 never came (an assumption in v1h.3: not captured).
+bool BMW_F11::Nm518Active() const {
+  if (SinceMs(nowMs, NmCeilingRef()) > 60000)
+    return false;
+  if (kl15On)
+    return true;
+  if (kl15Ever)
+    return SinceOff() < 30000;
+  return SinceWake() < 30000;
+}
+
+// "Prepare sleep" (v1h.3 PTE_ST_PREP_SLEEP): KL15 off, no NM frame
+// from another ECU for 1.95 s, and our own NM has ended. Then we send
+// nothing, so the car can go to sleep.
+bool BMW_F11::PrepSleep() const {
+  if (kl15On || SinceMs(nowMs, lastFnmMs) < 1950)
+    return false;
+  return !Nm512Active() && !(AutoBox() && Nm518Active());
+}
+
+// 0x512  PT-CAN  DDE network management, `00 00 00 00 FF FF 00 12`.
+// Wake without KL15: at W+529, 1179, 2459 and 3109 ms, then quiet.
+// With KL15: a 645 ms grid from ON+106 ms, kept after KL15 off.
+void BMW_F11::Send512() {
+  static const uint16_t preMs[4] = {529, 1179, 2459, 3109};
+  if (!Nm512Active())
+    return;
+  uint32_t due = kl15Ever ? next512 : wakeMs + preMs[pre512];
+  if ((int32_t)(nowMs - due) < 0)
+    return;
+  uint8_t b[8] = {0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x12};
+  can->Send(0x512, b, 8);
+  if (!kl15Ever) {
+    pre512++;
+  } else {
+    next512 += 645; // keep the grid; 250 ms behind restarts it
+    if ((int32_t)(nowMs - next512) >= 250)
+      next512 = nowMs + 645;
+  }
+}
+
+// 0x397 short "E3" blips of the real DDE (run 4): the first at
+// W+1.321 s, then these gaps in ms, repeating. Each lasts 60 ms (20 ms
+// less than the gap when the gap is shorter than 80 ms).
+static const uint16_t kBlip397[62] = {
+    4120, 840,  2240, 360,  540,  60,   780,  3260, 4040, 1380, 540,
+    1120, 1000, 420,  1760, 220,  180,  460,  1320, 1060, 1560, 1500,
+    1620, 3940, 260,  2020, 6420, 1560, 580,  2860, 1500, 840,  1660,
+    1620, 1540, 2440, 480,  4020, 1340, 120,  4019, 4040, 8660, 3820,
+    3560, 120,  720,  1300, 3939, 4140, 1920, 1000, 800,  220,  6220,
+    1860, 1340, 3160, 5180, 2440, 2560, 2000};
+static bool Blip397(uint32_t w) {
+  static uint32_t cycle = 0;
+  if (!cycle)
+    for (int k = 0; k < 62; k++)
+      cycle += kBlip397[k];
+  if (w < 1321)
+    return false;
+  uint32_t pos = (w - 1321) % cycle;
+  for (int k = 0; k < 62; k++) {
+    uint32_t len = kBlip397[k] < 80 ? kBlip397[k] - 20u : 60u;
+    if (pos < kBlip397[k])
+      return pos < len;
+    pos -= kBlip397[k];
+  }
+  return false;
+}
+
+// The four slow DDE frames. No E2E. Each goes out on its own period
+// and, when its bytes change, at once (at most every "gap" ms).
+// All times from v1h.3 build(); "engine" = our start story overlay.
+void BMW_F11::SendSlowDde() {
+  uint32_t w = SinceWake();
+  bool on = kl15On, ever = kl15Ever && !kl15On;
+  uint32_t ton = SinceOn(), toff = SinceOff();
+  uint8_t b[8];
+
+  // 0x381  every 10 s from W+435 ms, change gap 20 ms. Two bytes.
+  //   0C F0 -> 7C F0 at W+1.411 s. KL15: 7C F0, 79 F0 at ON+0.867 s,
+  //   0C F2 at ON+3.867 s. Off: 0C F2, 7C F0 from OFF+0.423 s.
+  //   Engine turning: 79 F0.
+  memset(b, 0, 8);
+  b[1] = 0xF0;
+  if (on) {
+    b[0] = ton < 867 ? 0x7C : (ton < 3867 ? 0x79 : 0x0C);
+    if (ton >= 3867)
+      b[1] = 0xF2;
+  } else if (ever) {
+    b[0] = toff < 423 ? 0x0C : 0x7C;
+    if (toff < 423)
+      b[1] = 0xF2;
+  } else {
+    b[0] = w < 1411 ? 0x0C : 0x7C;
+  }
+  if (eng.active && eng.r381Run) {
+    b[0] = 0x79;
+    b[1] = 0xF0;
+  }
+  if (SlotDue(s381, b, 0, 2, 435, 20)) {
+    can->Send(0x381, b, 2);
+    SlotSent(s381, b, 10000);
+  }
+
+  // 0x3B3  every 5 s from W+437 ms, change gap 20 ms. Seven bytes.
+  //   0F 00 00 00 00 00 F8 until W+561 ms; then 1F 00 04 00 00 03 F8
+  //   with KL15 (from ON+79 ms, until OFF+234 ms), else
+  //   1F 00 FF 7F 00 03 F8. Engine: bytes 1-3 from the story.
+  static const uint8_t s0[7] = {0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8};
+  static const uint8_t kl[7] = {0x1F, 0x00, 0x04, 0x00, 0x00, 0x03, 0xF8};
+  static const uint8_t nokl[7] = {0x1F, 0x00, 0xFF, 0x7F, 0x00, 0x03, 0xF8};
+  bool k = on ? ton >= 79 : (ever && toff < 234);
+  memset(b, 0, 8);
+  memcpy(b, w < 561 ? s0 : (k ? kl : nokl), 7);
+  if (eng.active && eng.fb9Set) {
+    b[1] = eng.fb9[0];
+    b[2] = eng.fb9[1];
+    b[3] = eng.fb9[2];
+  }
+  if (SlotDue(s3B3, b, 0, 7, 437, 20)) {
+    can->Send(0x3B3, b, 7);
+    SlotSent(s3B3, b, 5000);
+  }
+
+  // 0x397  every 1 s from W+437 ms, change gap 15 ms. `C0 xx 00`.
+  //   Byte 1: wake ramp FE E8 E9 E6 E4, then E2 with short E3 blips.
+  //   After KL15 off (no engine run): DF DE DD .. walk, DD held, DF at
+  //   OFF+4.073 s, E2 at OFF+4.133 s. Engine: bytes from the story.
+  uint8_t d1 = 0xE2;
+  if (w < 461)
+    d1 = 0xFE;
+  else if (w < 481)
+    d1 = 0xE8;
+  else if (w < 541)
+    d1 = 0xE9;
+  else if (w < 601)
+    d1 = 0xE6;
+  else if (w < 661)
+    d1 = 0xE4;
+  else if (Blip397(w))
+    d1 = 0xE3;
+  if (ever && toff < 4133 && !eng.active) {
+    static const uint16_t walkMs[10] = {93, 153, 273, 373, 434, 513, 634, 713, 773, 4073};
+    static const uint8_t walkV[10] = {0xDF, 0xDE, 0xDD, 0xDE, 0xDD, 0xDE, 0xDD, 0xDE, 0xDD, 0xDF};
+    for (int i = 0; i < 10; i++)
+      if (toff >= walkMs[i])
+        d1 = walkV[i];
+    if (toff < 93)
+      d1 = 0xE2;
+  }
+  memset(b, 0, 8);
+  b[0] = 0xC0;
+  b[1] = d1;
+  if (eng.active) {
+    if (eng.r397Set && !eng.stopWalkDone) {
+      b[0] = eng.r397[0];
+      b[1] = eng.r397[1];
+      b[2] = eng.r397[2];
+    } else if (eng.stopWalkDone) {
+      b[0] = 0xD0;
+    }
+  }
+  if (SlotDue(s397, b, 0, 3, 437, 15)) {
+    can->Send(0x397, b, 3);
+    SlotSent(s397, b, 1000);
+  }
+
+  // 0x3FB  every 1 s from W+437 ms, change gap 60 ms.
+  //   `D0 r 01 10 F1 r/2`: r ramps about 31 per second from W+0.44 s
+  //   up to 0xB1. Engine: byte 4 bit 0 = 0 while "injecting" (the
+  //   gateway copies it to FlexRay).
+  uint32_t r = w > 440 ? (w - 440) * 31u / 1000u : 0;
+  if (r > 0xB1)
+    r = 0xB1;
+  memset(b, 0, 8);
+  b[0] = 0xD0;
+  b[1] = (uint8_t)r;
+  b[2] = 0x01;
+  b[3] = 0x10;
+  b[4] = 0xF1;
+  b[5] = (uint8_t)(r >> 1);
+  if (eng.active && eng.inj)
+    b[4] = (uint8_t)(b[4] & 0xFE);
+  if (SlotDue(s3FB, b, 0, 6, 437, 60)) {
+    can->Send(0x3FB, b, 6);
+    SlotSent(s3FB, b, 1000);
+  }
 }

@@ -1,7 +1,10 @@
 import sys, bisect, collections
 DYN = {'0A5':30,'0F3':30,'08F':40,'2C4':120}
-E2E = {'08F','0A5','0D9','0DC','0F3','3F9','3FD','39A','3B3','381','397','3FB'}
-TOL = {'0A5':10,'0D9':25,'0DC':20,'0F3':10,'08F':10,'2C4':100,'281':100,'1B9':200,'396':200,'3F9':10,'592':10,'3FD':5,'39A':5,'518':5}
+E2E = {'08F','0A5','0D9','0DC','0F3','3F9','3FD','39A'}
+TOL = {'0A5':10,'0D9':25,'0DC':20,'0F3':10,'08F':10,'2C4':100,'281':100,'1B9':200,'396':200,'3F9':10,'592':10,'3FD':5,'39A':5,'518':5,
+       # 0x397: the Pico engine steps every 5 ms, and the random byte 2 events
+       # (other draw times on the two boxes) can hold a change for the 15 ms gap
+       '397':20}
 def load(fn):
     d = collections.defaultdict(list)
     for l in open(fn):
@@ -10,6 +13,8 @@ def load(fn):
         t = int(p[0]); b = [int(x,16) for x in p[3:]]
         if p[1] in E2E: b = [0, b[1] & 0xF0] + b[2:]   # drop CRC and alive counter
         if p[1] == '3F9': b[4] = b[5] = 0   # real temperatures on the ZV (by design)
+        # 0x397 byte 2 while running is random 0x5F..0x79 (new every 60 ms)
+        if p[1] == '397' and 0x5F <= b[2] <= 0x79: b[2] = 0x5F
         d[p[1]].append((t, tuple(b)))
     return d
 def changes(seq):
@@ -37,6 +42,8 @@ def between(id_, b, cand):
 skip = set(sys.argv[3].split(',')) if len(sys.argv) > 3 else set()
 z, p = load(sys.argv[1]), load(sys.argv[2])
 fail = 0
+for id_ in sorted(set(p) - set(z) - skip):
+    print(f"{id_}: sent by the Pico only ({len(p[id_])} frames) -> DIFF"); fail += 1
 for id_ in sorted(z):
     if id_ in skip: continue
     tol = TOL.get(id_, 10)
