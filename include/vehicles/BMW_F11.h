@@ -48,11 +48,21 @@
 // We only transmit after 0x12F or 0x173 has been heard in the last 2
 // seconds, so a silent car is never woken by us.
 //
+// "Engine running" on the bus (0x3F9 byte 2 = 0x82, rev counter, MIL
+// off) follows the ZombieVerter RUN mode, and only after a start
+// request. Ignition on (KL15) alone is not running.
+//
 // Not done yet, and not tried on the car:
 //   real motor torque in Nm (we report 0 Nm)
-//   a DSC torque limit from the Pico (no CAN id chosen)
+//   DSC torque cuts, which arrive on FlexRay and will be forwarded
+//     by the Pico (dde_dsc_torque_rx.md). No CAN id yet.
+//   cruise torque request on FlexRay 0x21 (dde_cruise_rx.md). The
+//     cruise stalk is not on this bus. No CAN id yet.
+//   the gear lever. It is on PT-CAN2 as well as PT-CAN. F30_Lever
+//     matches byte 2 as 0x?E; an F11 lever sends 0x?F, so that match
+//     needs a 0xF0 mask. 0x3FD (gear display, "P" while parked) is
+//     sent by F30_Lever, not by this class.
 //   turning the MIL on for a real fault
-//   which brake-switch bit is the brake-light switch
 //   the ignition-off variants of a few engine frames
 
 #include "vehicles/vehicle.h"
@@ -76,7 +86,9 @@ public:
   // True when KL15 (ignition) is on. The rest of the VCU treats this
   // the way an E46 treats the terminal-15 pin.
   bool Ready();
-  // True for the start button, or for KL50 (crank) on 0x12F.
+  // True when the brake is down and start is requested (0x12F crank
+  // position, or the wired start button). That is what lets the VCU
+  // leave OFF and begin precharge.
   bool Start();
 
   // Driver demand in Nm, limited by the DSC torque ceiling. With no
@@ -96,7 +108,7 @@ private:
   void NoteBusState();
   void OnBusWake();
   void OnBusSleep();
-  // True until 2 seconds have passed with no 0x12F and no 0x173.
+  // True until 2 seconds have passed with no 0x12F, 0x173 or 0x0EF.
   bool BusAwake() const { return busQuiet100 < 20; }
   // rpm for the dash. At least 750 while the inverter is running.
   uint16_t RpmTx() const;
@@ -108,8 +120,14 @@ private:
   void Handle12F(uint8_t *bytes);
   // Decode the brake pedal from 0x173.
   void Handle173(uint8_t *bytes);
+  // Decode total brake torque from 0x0EF.
+  void Handle0EF(uint8_t *bytes);
   // OR the CAN brake pedal into the normal brake input.
   void ApplyBrake();
+  // Optional brake-torque regen. Does nothing while BrkRegen is off.
+  void UpdateBrakeRegen();
+  // True only in RUN mode, and only after a start request.
+  bool EngineRunning() const;
   // TODO: Pico frame that carries the DSC torque ceiling. No id yet.
   void HandleDscTorqueCeiling(uint32_t *data);
   // TODO: return true for a latched ZombieVerter fault. While this
@@ -147,12 +165,23 @@ private:
   bool kl15On;
   bool kl50On;
 
-  // From 0x173 byte 7 bits 0 and 1. Either switch means the pedal is
-  // down. Which bit is the brake-light switch is still unconfirmed.
+  // From 0x173 byte 7. Both switch bits must be set for "pedal down".
+  // One bit alone is a plausibility warning, not a press. Which bit
+  // is the brake-light switch is still unconfirmed.
   bool brakePressed;
+  bool brakeOneSwitch;
+  bool brakePressure; // bit 2, pressure above about 5 bar
   bool brakeSeen;
   // 10 ms ticks since the last 0x173. Past 50 (500 ms) we let go.
   uint8_t brakeAge10ms;
+  // 0x0EF bytes 2-3, little-endian, Nm = raw - 32000. Negative while
+  // braking. 0 when the frame has gone quiet.
+  float brakeTorqueNm;
+  bool brakeTorqueSeen;
+  uint8_t brakeTorqueAge10ms;
+  // Latched when start is requested with the brake down. Cleared when
+  // the ignition goes off. Stops us reporting "running" before START.
+  bool startSeen;
 
   // DSC torque ceiling. The DSC talks to the DDE on FlexRay only. The
   // pico will forward that limit on CAN. The ID and the byte layout are

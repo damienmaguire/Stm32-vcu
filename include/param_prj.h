@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 157
+// Next param id (increase when adding new parameter!): 164
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -119,6 +119,8 @@
   PARAM_ENTRY(CAT_HEATER, HeatPotOn, "dig", 0, 4095, 0, 151)                   \
   PARAM_ENTRY(CAT_HEATER, HeatPotFull, "dig", 0, 4095, 0, 152)                 \
   PARAM_ENTRY(CAT_HEATER, PreHeatNow, ONOFF, 0, 1, 0, 161)                     \
+  PARAM_ENTRY(CAT_THROTTLE, BrkRegen, ONOFF, 0, 1, 0, 162)                     \
+  PARAM_ENTRY(CAT_THROTTLE, BrkRegenNm, "Nm", 200, 20000, 7000, 163)           \
   PARAM_ENTRY(CAT_AIRCON, Compressor, COMPRESSMODES, 0, 1, 0, 153)             \
   PARAM_ENTRY(CAT_AIRCON, AirConCtrl, ONOFF, 0, 1, 0, 154)                     \
   PARAM_ENTRY(CAT_CLOCK, Set_Day, DOW, 0, 6, 0, 46)                            \
@@ -280,9 +282,13 @@
   VALUE_ENTRY(DMA_TxComplete, ONOFF, 2120)                                     \
   VALUE_ENTRY(DMA_RxTimeout, "", 2121)                                         \
   VALUE_ENTRY(DMA_ConsecFail, "", 2122)                                        \
-  VALUE_ENTRY(HTM_State, "", 2123)
+  VALUE_ENTRY(HTM_State, "", 2123)                                             \
+  VALUE_ENTRY(BrkTrq, "Nm", 2126)                                              \
+  VALUE_ENTRY(BrkWarn, ONOFF, 2127)                                            \
+  VALUE_ENTRY(BrkPress, ONOFF, 2128)                                           \
+  VALUE_ENTRY(BrkRegenPct, "%", 2129)
 
-// Next value Id: 2124
+// Next value Id: 2130
 
 // Dead params
 /*

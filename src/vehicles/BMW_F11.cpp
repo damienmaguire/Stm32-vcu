@@ -138,7 +138,9 @@ BMW_F11::BMW_F11()
     : motorRpm(0), coolantC(0), busQuiet100(20), busWasAwake(false), tick10(0),
       aliveA5(0), aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0), alive3F9(0),
       seen3f9(false), age3f910(0), milOffSent(false), kl15On(false),
-      kl50On(false), brakePressed(false), brakeSeen(false), brakeAge10ms(0),
+      kl50On(false), brakePressed(false), brakeOneSwitch(false),
+      brakePressure(false), brakeSeen(false), brakeAge10ms(0), brakeTorqueNm(0),
+      brakeTorqueSeen(false), brakeTorqueAge10ms(0), startSeen(false),
       dscLimitFresh(false), dscLimitAge10ms(0), dscLimitNm(0),
       dscTorqueCanId(0) {
   for (int i = 0; i < 6; i++)
@@ -152,15 +154,24 @@ BMW_F11::BMW_F11()
 void BMW_F11::SetCanInterface(CanHardware *c) {
   can = c;
 
-  // 0x12F  every 100 ms. Ignition and start, from the body gateway
-  // (a copy of FlexRay 0x74). See Handle12F.
+  // 0x12F  ignition and start, from the body gateway (a copy of
+  // FlexRay 0x74). Normally every 100 ms. While the terminal state
+  // is C or D (start in progress / crank) the gateway sends it every
+  // 20 ms. We only receive it. See Handle12F.
   can->RegisterUserMessage(0x12F);
-  // 0x173  every 100 ms. Brake pedal, a copy of the DSC FlexRay frame.
-  // See Handle173.
+  // 0x173  every 100 ms. Brake switches, a copy of the DSC FlexRay
+  // frame. See Handle173.
   can->RegisterUserMessage(0x173);
+  // 0x0EF  every 20 ms. Total brake torque. See Handle0EF.
+  can->RegisterUserMessage(0x0EF);
 
-  // TODO: DSC torque ceiling from the pico. No ID has been assigned,
-  // so nothing is registered. See HandleDscTorqueCeiling().
+  // TODO: DSC torque cuts arrive on FlexRay, not here. The Pico will
+  // forward them later. No CAN id is assigned. See
+  // HandleDscTorqueCeiling() and dde_dsc_torque_rx.md.
+  // TODO: cruise torque is FlexRay 0x21 (1 Nm per bit, offset -32000).
+  // The stalk is not on PT-CAN. No CAN id is assigned. See
+  // dde_cruise_rx.md. Do not invent a 0x12F replacement if the
+  // gateway is removed; something else must send the real frame.
 }
 
 // Ignition present? The E46 answers this from the terminal-15 pin.
@@ -168,9 +179,17 @@ void BMW_F11::SetCanInterface(CanHardware *c) {
 // it floats, and the bus is what the diesel ECU trusted.
 bool BMW_F11::Ready() { return kl15On; }
 
-// Start request. The dashboard button still counts. So does KL50,
-// the crank position on 0x12F (nibble >= 0xD, held while it reads 0xC).
-bool BMW_F11::Start() { return kl50On || Param::GetBool(Param::din_start); }
+// Start request, and only with the brake pedal down.
+// 0x12F crank (KL50, nibble D, held through C) is the car's START
+// button. The CAS does not send a separate start frame, and it only
+// reaches D if its own brake check passed. We still require both
+// brake switches here, so a single-switch fault cannot start the car.
+// The wired start button is accepted the same way.
+bool BMW_F11::Start() {
+  if (!Param::GetBool(Param::din_brake))
+    return false;
+  return kl50On || Param::GetBool(Param::din_start);
+}
 
 // PT-CAN just woke. Restart the alive counters so the next frame
 // carries 1, and send 0x3F9 straight away rather than waiting a second.
@@ -187,8 +206,8 @@ void BMW_F11::OnBusWake() {
   age3f910 = 0;
 }
 
-// Two seconds with no 0x12F and no 0x173. Stop talking, and forget
-// ignition and the brake pedal so we cannot hold the car awake.
+// Two seconds with no 0x12F, 0x173 or 0x0EF. Stop talking, and forget
+// ignition and the brake so we cannot hold the car awake.
 void BMW_F11::OnBusSleep() {
   busWasAwake = false;
   aliveA5 = 0;
@@ -203,7 +222,12 @@ void BMW_F11::OnBusSleep() {
   kl15On = false;
   kl50On = false;
   brakePressed = false;
+  brakeOneSwitch = false;
+  brakePressure = false;
   brakeSeen = false;
+  brakeTorqueNm = 0;
+  brakeTorqueSeen = false;
+  startSeen = false;
 }
 
 // Called every 10 ms and every 100 ms. Notices the bus going to
@@ -223,9 +247,9 @@ void BMW_F11::NoteBusState() {
 void BMW_F11::DecodeCAN(int id, uint32_t *data) {
   uint8_t *bytes = (uint8_t *)data;
 
-  // 0x12F and 0x173 are PT-CAN. Anything else that happens to be
-  // delivered (inverter, charger, mapped IDs) must not count.
-  if (id == 0x12F || id == 0x173)
+  // These three ids are PT-CAN from the car. Inverter and charger
+  // frames must not count, or we could be the box that wakes the bus.
+  if (id == 0x12F || id == 0x173 || id == 0x0EF)
     busQuiet100 = 0;
 
   switch (id) {
@@ -234,6 +258,9 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
     break;
   case 0x173:
     Handle173(bytes);
+    break;
+  case 0x0EF:
+    Handle0EF(bytes);
     break;
   default:
     break;
@@ -244,21 +271,27 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
     HandleDscTorqueCeiling(data);
 }
 
-// 0x12F  PT-CAN  every 100 ms  ignition and start.
-// The body gateway sends this (a copy of FlexRay 0x74). The CAS, the
-// key and start module, does not send its own start frame. Crank is
-// this nibble. If the CAS or the gateway is ever removed, something
-// else has to transmit 0x12F or we will see ignition off.
+// 0x12F  PT-CAN  ignition and start, from the body gateway.
+// Normally every 100 ms. While the nibble below is C or D the gateway
+// sends it every 20 ms (not "100 ms plus an occasional extra").
+// The CAS (key and start module) does not send a separate start frame.
+// Crank is this nibble. Tests reached "engine running" with no
+// immobiliser exchange, so we send none. If the CAS or the gateway
+// is removed, something else has to transmit 0x12F or ignition stays
+// off and we stop transmitting 2 seconds later.
 //
-//   byte 2, low nibble (bits 16-19):
+//   byte 2, low nibble (bits 16-19), called ST_KL:
 //     6      ignition off. The bus can still be awake.
 //     9      accessory. Does not turn KL15 on by itself. If KL15 is
 //            already on, a 9 holds it on (the diesel ECU did this).
-//     >= A   KL15, ignition on
+//     A, B   KL15, ignition on
 //     C      start in progress. Holds KL50 only if crank was already on.
-//     >= D   KL50, start / crank
+//     D      KL50, the start request / crank
 //     E, F   invalid. Keep the last ignition and start state.
-//   The high half of byte 2, and the other bytes, are not used.
+//   byte 6   brake-switch mirror. Released 0x30, both switches 0x33.
+//            The low two bits copy 0x173 bits 0 and 1. We do not use
+//            this byte as the brake input; 0x173 is that input.
+//   Other bytes are not used.
 void BMW_F11::Handle12F(uint8_t *bytes) {
   uint8_t st = bytes[2] & 0x0F;
   if (st >= 0x0E)
@@ -275,25 +308,24 @@ void BMW_F11::Handle12F(uint8_t *bytes) {
     kl50On = false;
 }
 
-// 0x173  PT-CAN  every 100 ms  brake pedal.
+// 0x173  PT-CAN  every 100 ms  brake switches.
 // Gateway copy of the DSC (stability control) FlexRay frame 0x2F.
 // The diesel ECU had no brake-switch wire. It read this instead.
 //
 //   byte 7:
 //     bit 0  one brake-switch channel
 //     bit 1  the other channel
-//     bit 2  brake pressure above about 7 bar. Not used as "pedal down".
+//     bit 2  brake pressure above about 5 bar (about 450 Nm on 0x0EF)
 //     bit 4  car standing still. Not the pedal.
 //     bit 5  value not valid (seen for a moment after wake). We then
 //            keep the previous pedal state.
 //     bits 6-7  normally set. Ignored.
-// Which of bit 0 and bit 1 is the brake-light switch is not known yet.
-// A slow press on the car has to settle that. Until then either bit
-// means the pedal is pressed.
-//
-// 0x0EF (every 20 ms) is brake torque, not read here: bytes 2-3 and
-// bytes 5-6, Nm = raw - 32000. There is no Nm slot for it in the
-// parameter list, so the frame is not registered.
+// Pedal down means BOTH bit 0 and bit 1 are set. That is what enables
+// start, and what the rest of the VCU treats as the brake pedal for
+// creep and regen. Exactly one bit is a plausibility warning (BrkWarn
+// on the web interface), not a press. Which bit is the brake-light
+// switch is still not confirmed. A slow press on the car has to
+// settle that.
 void BMW_F11::Handle173(uint8_t *bytes) {
   brakeSeen = true;
   brakeAge10ms = 0;
@@ -302,8 +334,33 @@ void BMW_F11::Handle173(uint8_t *bytes) {
   if (bytes[7] & 0x20)
     return;
 
-  // Either switch channel. See the note above.
-  brakePressed = (bytes[7] & 0x03) != 0;
+  uint8_t sw = bytes[7] & 0x03;
+  if (sw == 0x03) {
+    brakePressed = true;
+    brakeOneSwitch = false;
+  } else if (sw == 0x00) {
+    brakePressed = false;
+    brakeOneSwitch = false;
+  } else {
+    brakePressed = false;
+    brakeOneSwitch = true;
+  }
+  brakePressure = (bytes[7] & 0x04) != 0;
+}
+
+// 0x0EF  PT-CAN  every 20 ms  total brake torque.
+// Gateway copy of FlexRay 0x2B. Little-endian: byte 2 is the low
+// byte, byte 3 the high byte. Nm = raw - 32000, so 32000 is 0 Nm
+// and the value goes negative as the driver brakes harder.
+// Captured examples: about -1134 light, -2952 firm, -6959 full.
+// Bytes 5-6 are a second copy within a few Nm. We publish byte 2-3
+// as BrkTrq. Nothing is transmitted in reply.
+void BMW_F11::Handle0EF(uint8_t *bytes) {
+  uint16_t raw = (uint16_t)(bytes[2] | (bytes[3] << 8));
+  brakeTorqueNm = (float)raw - 32000.0f;
+  brakeTorqueSeen = true;
+  brakeTorqueAge10ms = 0;
+  Param::SetFloat(Param::BrkTrq, brakeTorqueNm);
 }
 
 // Put the CAN brake pedal into the normal brake input, after the
@@ -319,22 +376,71 @@ void BMW_F11::ApplyBrake() {
     // sampled on its own, in GetDigInputs.
     if (brakeAge10ms > 50) {
       brakePressed = false;
+      brakeOneSwitch = false;
+      brakePressure = false;
       brakeSeen = false;
     }
   }
+  if (brakeTorqueSeen) {
+    if (brakeTorqueAge10ms < 255)
+      brakeTorqueAge10ms++;
+    // 0x0EF is 20 ms. Same half-second quiet limit.
+    if (brakeTorqueAge10ms > 50) {
+      brakeTorqueNm = 0;
+      brakeTorqueSeen = false;
+      Param::SetFloat(Param::BrkTrq, 0);
+    }
+  }
 
-  // GetDigInputs has already stored the brake pin. OR the CAN pedal in.
+  Param::SetInt(Param::BrkWarn, brakeOneSwitch ? 1 : 0);
+  Param::SetInt(Param::BrkPress, brakePressure ? 1 : 0);
+
+  // GetDigInputs has already stored the brake pin. OR the CAN pedal
+  // in. Both switch bits are required, so one bit does not count.
+  // Creep and regen in the throttle code read this same brake input.
   if (brakePressed)
     Param::SetInt(Param::din_brake, 1);
 }
 
-// TODO: DSC torque ceiling from the Pico.
-// DSC (stability control) used to tell the diesel ECU to cut torque,
-// and it did that on FlexRay only, never on PT-CAN. The Pico will
-// forward that limit later. The CAN id and the byte layout are not
-// chosen, so this function is never called and the ceiling stays
-// "no limit". When it is filled in, store dscLimitNm and set
-// dscLimitFresh, then zero dscLimitAge10ms.
+// BrkRegen is off by default. When it is turned on, brake torque from
+// 0x0EF scales the normal brake-regen setting. BrkRegenNm is the
+// torque (default 7000 Nm, a full press) that means 100 percent.
+// A light press (~1100 Nm) is then a small fraction of brake regen.
+// Coasting regen, with the pedal up, is unchanged.
+void BMW_F11::UpdateBrakeRegen() {
+  float pct = 0;
+  if (Param::GetInt(Param::BrkRegen) != 0 && brakeTorqueSeen) {
+    float full = Param::GetFloat(Param::BrkRegenNm);
+    if (full < 1.0f)
+      full = 1.0f;
+    float mag = -brakeTorqueNm;
+    if (mag > 0.0f)
+      pct = (mag / full) * 100.0f;
+    if (pct > 100.0f)
+      pct = 100.0f;
+  }
+  Param::SetFloat(Param::BrkRegenPct, pct);
+}
+
+// The bus picture of a running engine. True only when the inverter
+// is in RUN, and only after start was requested with the brake down.
+// KL15 (ignition) alone stays "engine stopped", so we never tell the
+// CAS the engine is running before START. The check-engine light goes
+// off at the same moment.
+bool BMW_F11::EngineRunning() const {
+  return startSeen && Param::GetInt(Param::opmode) == MOD_RUN;
+}
+
+// TODO: DSC torque ceiling from the Pico. Not implemented.
+// DSC (stability control) tells the diesel ECU to cut torque on
+// FlexRay only (dde_dsc_torque_rx.md). The Pico will forward that
+// limit later. Cruise is the same kind of gap: FlexRay 0x21 carries
+// a requested wheel torque, 1 Nm per bit with 32000 meaning 0 Nm
+// (dde_cruise_rx.md). Neither has a CAN id yet, so this function is
+// never called and the ceiling stays "no limit". When a frame is
+// defined, store dscLimitNm, set dscLimitFresh, and zero
+// dscLimitAge10ms. Do not send immobiliser frames, PT-CAN2, 0x137
+// or 0x6xx diagnostics from here.
 void BMW_F11::HandleDscTorqueCeiling(uint32_t *data) { (void)data; }
 
 // Forget a DSC torque cut that has gone quiet. 50 ticks of 10 ms is
@@ -372,12 +478,13 @@ float BMW_F11::FinalTorqueNm(float driverNm) const {
 // TODO: supply demand in Nm. FinalTorqueNm then applies the DSC limit.
 float BMW_F11::DriverDemandNm() const { return 0.0f; }
 
-// rpm to put on the bus. 0 unless the inverter is in Run. While it is
-// running we never report below 750, so the dash and the DSC see an
-// idling engine instead of a stalled one. 8000 is the diesel ECU's
-// maximum: 8000 * 4 = 32000, which still fits the 16-bit rpm slot.
+// rpm to put on the bus. 0 until the inverter is actually in RUN
+// after a start request. While it is running we never report below
+// 750, so the dash and the DSC see an idling engine instead of a
+// stalled one. 8000 is the diesel ECU's maximum: 8000 * 4 = 32000,
+// which still fits the 16-bit rpm slot.
 uint16_t BMW_F11::RpmTx() const {
-  if (Param::GetInt(Param::opmode) != MOD_RUN)
+  if (!EngineRunning())
     return 0;
   int rpm = motorRpm;
   if (rpm < 0)
@@ -397,11 +504,22 @@ void BMW_F11::Task10Ms() {
   AgeDscLimit();
   NoteBusState();
   ApplyBrake();
+  UpdateBrakeRegen();
 
-  // Clear the MIL edge even if the bus is already asleep, so the next
-  // READY sends OFF again.
-  bool ready = Param::GetInt(Param::opmode) == MOD_RUN;
-  if (!ready)
+  // Start is remembered from here until the ignition drops, so the
+  // running report can begin later, when precharge finishes and the
+  // VCU enters RUN. It is not the running report itself.
+  if (Param::GetBool(Param::din_brake) &&
+      (kl50On || Param::GetBool(Param::din_start)))
+    startSeen = true;
+  if (!kl15On)
+    startSeen = false;
+
+  // Clear the MIL edge when we are not running, so the next RUN sends
+  // the off frame again. "Running" is RUN mode after a start request,
+  // not merely ignition on.
+  bool running = EngineRunning();
+  if (!running)
     milOffSent = false;
 
   if (!BusAwake())
@@ -430,7 +548,7 @@ void BMW_F11::Task10Ms() {
     b[1] = 0x10;
     b[2] = 0x00;
     b[3] = 0x7D;
-    b[4] = ready ? 0x72 : 0x7C; // low nibble 2 running, 12 stopped
+    b[4] = running ? 0x72 : 0x7C; // low nibble 2 running, 12 stopped
     b[5] = 0x00;
     b[6] = 0x18;
     b[7] = 0x10; // high nibble 1: ignition on / running
@@ -438,11 +556,11 @@ void BMW_F11::Task10Ms() {
     can->Send(0x08F, b, 8);
   }
 
-  Send3F9(ready);
+  Send3F9(running);
 
-  // One MIL-off when the inverter enters Run. See SendMilOff.
-  // MilFaultLatched() is where a real fault would turn it on later.
-  if (ready && !milOffSent) {
+  // MIL off in the same moment we first say the engine is running.
+  // Never sent before the start request, and the ON frame is never sent.
+  if (running && !milOffSent) {
     SendMilOff();
     milOffSent = true;
   }
@@ -556,17 +674,22 @@ void BMW_F11::SendFastFrames() {
 // real ECU's shortest gap was about 33 ms.
 //   byte 0      CRC
 //   byte 1      alive in the low nibble, high nibble 1
-//   byte 2      0x80 stopped, 0x82 running. 0x81 meant "cranking"
-//               and is never sent.
-//   byte 3      0x64 stopped, 0x26 running. The whole captured byte,
-//               not only the 2-bit start phase inside it.
+//   byte 2      0x80 stopped, 0x82 running. 0x82 is sent only once the
+//               VCU is in RUN after a start request. 0x81 meant
+//               "cranking" and is never sent. Ignition on alone stays
+//               0x80, so the CAS does not drop the starter early.
+//   byte 3      0x64 stopped, 0x26 running. Bits 4-5 of this byte
+//               (bits 28-29 of the frame) stay at 2, which means
+//               "Park secured". The CAS watches that.
 //   byte 4      coolant, degrees C + 48. While driving, clamped to
 //               70..105 C so the gauge does not sit on cold or hot.
 //   byte 5      oil, same +48 scale, from the motor temperature.
 //               Not clamped to 70..105.
 //   byte 6      low nibble = gear (3 Park, 2 Reverse, 5 Drive).
-//               Bit value 2 in the next nibble means "ready to start"
-//               and is set only while stopped.
+//               Bits 4-5 (frame bits 52-53, "start-ready") are 2
+//               while stopped and 0 once we report running. The CAS
+//               releases the starter (KL50) after it sees 0 here
+//               together with byte 2 = 0x82.
 //   byte 7      0x47, copied from the captures
 void BMW_F11::Send3F9(bool ready) {
   GearCode gear = GearFromDir(Param::GetInt(Param::dir));
@@ -583,6 +706,9 @@ void BMW_F11::Send3F9(bool ready) {
   b[1] = 0x10;
   b[2] = ready ? 0x82 : 0x80; // running / stopped. Never 0x81.
   b[3] = ready ? 0x26 : 0x64;
+  // Bits 28-29 sit in bits 4-5 of this byte. Keep them at 2 ("Park
+  // secured"). Both captured bytes already have that, this forces it.
+  b[3] = (uint8_t)((b[3] & 0xCF) | 0x20);
   b[4] = TempPlus48(coolant);
   b[5] = TempPlus48(Param::GetFloat(Param::tmpm)); // oil, degrees C + 48
   b[6] = (uint8_t)(gear.nibble | (ready ? 0x00 : 0x20));
