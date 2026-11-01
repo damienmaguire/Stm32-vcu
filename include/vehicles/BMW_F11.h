@@ -51,7 +51,8 @@
 //           and 0x0DC carry fixed "manual / neutral" values.
 //   Auto    the class also stands in for the removed EGS (the gearbox
 //           ECU): gear display 0x3FD, gear state 0x39A and NM 0x518,
-//           with the lever (0x197) and brake gear logic. (Step 2.)
+//           with the lever (0x197) and brake gear logic (dde_gear.c).
+//           The VCU only gets R or D once that gear is engaged.
 //
 // Timing and bytes copy the Pico emulator v1h.3 (pico-flexray
 // src/ptcan_emu_core.c, dde_engine.c, dde_gear.c) and the spec
@@ -86,13 +87,15 @@ public:
   void Task10Ms();
   // 100 ms tick: fuel counter and 12 V.
   void Task100Ms();
-  // 1 ms tick: bus gate, fake engine story, and the frames whose timing
-  // must be exact (0x3F9, 0x592).
+  // 1 ms tick: bus gate, fake engine story, gear logic, and the frames
+  // whose timing must be exact (0x3F9, 0x592; automatic: 0x3FD, 0x39A,
+  // 0x518).
   void Task1Ms();
   // 200 ms tick: the 1 s constant frames 0x396 and 0x1B9.
   void Task200Ms();
   // Gear for the VCU. NEUTRAL (no torque) unless our engine story says
-  // running. Manual: then the normal direction inputs decide.
+  // running. Manual: then the normal direction inputs decide. Automatic:
+  // R or D only once that gear is engaged.
   bool GetGear(Vehicle::gear &outGear);
   // A parameter was written: forget the "second sender" fault.
   void ClearFaults() { foreignTx = false; }
@@ -100,7 +103,8 @@ public:
   void SetRevCounter(int s) { motorRpm = s; }
   // Inverter coolant temperature, degrees C. Shown on 0x3F9.
   void SetTemperatureGauge(float temp) { coolantC = temp; }
-  // Incoming PT-CAN: ignition (0x12F) and brake pedal (0x173).
+  // Incoming PT-CAN: ignition (0x12F), brake pedal (0x173) and, for an
+  // automatic, the gear lever (0x197).
   void DecodeCAN(int id, uint32_t *data);
   // True when KL15 (ignition) is on. The rest of the VCU treats this
   // the way an E46 treats the terminal-15 pin.
@@ -113,6 +117,12 @@ public:
   // Driver demand in Nm, limited by the DSC torque ceiling. With no
   // Pico frame the ceiling is "no limit" and driverNm comes back as-is.
   float FinalTorqueNm(float driverNm) const;
+
+  // What one gear puts in the frames: 0x3FD byte 2, 0x39A bytes 3-4,
+  // 0x3F9 P lock bits and gear nibble, 0x0DC bytes 2 and 5.
+  struct GearBytes {
+    uint8_t b3fd, a3, a4, park, nib, dc2, dc5;
+  };
 
 private:
   // 0x0A5, 0x0D9, 0x0DC and 0x0F3, every 20 ms.
@@ -167,6 +177,33 @@ private:
   void UpdateBrakeRegen();
   // True while the engine story says running (0x82 on 0x3F9).
   bool EngineRunning() const;
+  // Automatic gearbox (v1h.3 dde_gear.c), stepped every 1 ms.
+  void GearTask();
+  void GearLever(const uint8_t *d, uint32_t ms);
+  void GearAct(uint8_t dir, uint8_t depth, uint32_t ms);
+  void GearStart(uint8_t to, uint32_t ms);
+  void GearStep();
+  bool GearBrake(uint32_t ms) const;
+  // The gear bytes the EGS frames carry (see GearOut). False = fixed P
+  // (no change to the templates), as v1h.3 while P is locked or on a
+  // manual box.
+  bool GearOut(GearBytes &g) const;
+  // EGS frames (automatic only): 0x3FD, 0x39A and NM 0x518.
+  void Send3FD();
+  void Send39A();
+  void Send518();
+  // One frame's v1h.3 send timing (pte_next / pte_commit): the first
+  // frame at W + firstMs, then a fixed grid. With gapMs > 0 a changed
+  // payload (from byte `from`) also goes out at once, at most every
+  // gapMs, without moving the grid.
+  struct TxSlot {
+    uint32_t next, last;
+    bool started, pend, cyc;
+    uint8_t want[8];
+  };
+  bool SlotDue(TxSlot &s, const uint8_t *d, uint8_t from, uint8_t dlc,
+               uint32_t firstMs, uint32_t gapMs);
+  void SlotSent(TxSlot &s, const uint8_t *d, uint32_t periodMs);
   // TODO: Pico frame that carries the DSC torque ceiling. No id yet.
   void HandleDscTorqueCeiling(uint32_t *data);
 
@@ -187,6 +224,8 @@ private:
   // KL15 history in this wake, for the frame timelines.
   bool kl15Ever;
   uint32_t onMs, offMs;
+  // Last 0x12F that said KL15 on (or W). NM frames stop 60 s after it.
+  uint32_t lastOnEvMs;
   // 0x592: next frame time, and the one last frame after KL15 off.
   uint32_t next592;
   bool final592;
@@ -234,6 +273,30 @@ private:
   uint8_t aliveF3;
   uint8_t alive8F;
   uint8_t alive3F9;
+
+  // Gear state (v1h.3 gear_t). Gears 0 P, 1 R, 2 N, 3 D. Stages:
+  // 0 P locked, 1 leaving P, 2 steady, 3 going to P, 4 P not yet
+  // locked, 5 P released by a lever push (brake on).
+  struct GearState {
+    uint8_t target, from, stage, relPrev;
+    uint32_t tStage, tAct;
+    bool lvHave;
+    uint32_t lvMs;
+    uint8_t gestDir, gestDepth, pendDir, pendDepth;
+    uint32_t pendMs, pushMs;
+    bool pushRel, pbtnDone, running;
+  } gear;
+  // 0x197 from DecodeCAN for the 1 ms task. seq is odd while writing.
+  volatile uint8_t lv197[4];
+  volatile uint32_t lv197Ms;
+  volatile uint8_t lv197Seq;
+  uint8_t lv197Seen;
+  // Last 0x173 with both brake switches on. The gear logic uses only
+  // this (dde_emu.c brmb), not the 0x12F mirror.
+  volatile uint32_t brake173Ms;
+  volatile bool brake173Have;
+  uint8_t alive3FD;
+  TxSlot s3FD, s39A, s518;
 
   bool seen3f9;
   uint32_t next3f9, last3f9Ms;

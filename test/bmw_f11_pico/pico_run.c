@@ -1,22 +1,27 @@
-// Runs the Pico v1h.3 PT-CAN core + engine on the shared scenario (no gear: P).
+// Runs the Pico v1h.3 PT-CAN core + engine + gear on the shared scenario.
+// pico_run m = manual car: DDE frames only, gear off (PTE_MASK_DDE).
 // Same output format as zv_run. Also: pico_run --crc <file> checks E2E of a log.
 #include "ptcan_emu_core.h"
 #include "dde_engine.h"
+#include "dde_gear.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "scenario.h"
 static pte_t P;
 static eng_t E;
+static gear_t G;
+static int Auto = 1;
 static uint32_t Tms;
 static uint32_t lastRx = 0;
 static void rx(uint16_t id, const uint8_t *d, uint8_t len) {
   uint64_t us = (uint64_t)Tms * 1000u + 1000000u;
   // In the car FlexRay wakes with PT-CAN; the Pico resets its engine on a FlexRay wake.
-  if (Tms - lastRx >= 1000u) eng_reset(&E);
+  if (Tms - lastRx >= 1000u) { eng_reset(&E); gear_reset(&G, Auto); }
   lastRx = Tms;
   pte_on_rx(&P, id, d, len, us);
   if (id == 0x12F) eng_input_stkl(&E, d[2] & 0xF, (d[6] & 3) == 3, (uint32_t)us);
-  if (id == 0x173 && (d[7] & 3) == 3) eng_input_brake(&E, true, (uint32_t)us);
+  if (id == 0x173 && (d[7] & 3) == 3) { eng_input_brake(&E, true, (uint32_t)us); gear_input_brake(&G, (uint32_t)us); }
+  if (id == 0x197) gear_input_lever(&G, d, len, (uint32_t)us);
 }
 static int crc_check(const char *fn) {
   FILE *f = fopen(fn, "r");
@@ -34,9 +39,11 @@ static int crc_check(const char *fn) {
 }
 int main(int argc, char **argv) {
   if (argc > 2) return crc_check(argv[2]);
+  Auto = !(argc > 1 && argv[1][0] == 'm');
   pte_init(&P);
-  pte_set_mask(&P, PTE_MASK_ALL);
+  pte_set_mask(&P, Auto ? PTE_MASK_ALL : PTE_MASK_DDE);
   eng_reset(&E);
+  gear_reset(&G, Auto);
   eng_set_profile(&E, ENG_PROF_SHORT);
   for (Tms = 0; Tms < SCEN_END_MS; Tms++) {
     scen_rx(Tms, rx);
@@ -45,6 +52,10 @@ int main(int argc, char **argv) {
       if (us % 5000u == 0) {
         if (us % 1000000u == 0) eng_set_mode(&E, ENG_MODE_CAS, (uint32_t)us);
         eng_step(&E, (uint32_t)us);
+      }
+      if (sub == 0) {   // core 1 gear_tick, every 1 ms
+        gear_step(&G, (uint32_t)us, E.phase == ENG_RUN);
+        gear_fill_out(&G, &E.out);
       }
       P.eng = E.out.active ? &E.out : NULL;
       pte_tx_t tx;

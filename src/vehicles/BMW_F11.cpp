@@ -20,6 +20,7 @@
 #include "vehicles/BMW_F11.h"
 #include "stm32_can.h"
 #include "utils.h"
+#include <string.h>
 
 // What this file does is described at the top of BMW_F11.h.
 // Short version: on PT-CAN we imitate the removed diesel ECU (DDE).
@@ -103,11 +104,14 @@ static uint16_t PedalRaw() {
 BMW_F11::BMW_F11()
     : motorRpm(0), coolantC(0), nowMs(0), lastRxMs(0), wakeMs(0), wakeSeq(0),
       wakeSeqSeen(0), rxEver(false), busWasAwake(false), foreignTx(false),
-      kl15Ever(false), onMs(0), offMs(0), next592(0), final592(false),
+      kl15Ever(false), onMs(0), offMs(0), lastOnEvMs(0), next592(0),
+      final592(false),
       startFault(false), stKl(0), stKlMs(0), stKlHave(false), brakeDownMs(0),
       brakeDownHave(false), eng(), tick200(0), tick10(0), fastTick(0),
       fastOn(false), tick8F(0), on8F(false), last8F7(0x80), aliveA5(0),
       aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0), alive3F9(0),
+      gear(), lv197Ms(0), lv197Seq(0), lv197Seen(0), brake173Ms(0),
+      brake173Have(false), alive3FD(0), s3FD(), s39A(), s518(),
       seen3f9(false), next3f9(0), last3f9Ms(0), kl15On(false),
       kl50On(false), brakePressed(false), brakeOneSwitch(false),
       brakePressure(false), brakeSeen(false), brakeAge10ms(0), brakeTorqueNm(0),
@@ -115,6 +119,8 @@ BMW_F11::BMW_F11()
       dscTorqueCanId(0) {
   for (int i = 0; i < 6; i++)
     last3f9[i] = 0;
+  for (int i = 0; i < 4; i++)
+    lv197[i] = 0;
 }
 
 // Tell the CAN driver which port is PT-CAN, and which incoming ids
@@ -139,6 +145,11 @@ void BMW_F11::SetCanInterface(CanHardware *c) {
   // v1h.3 ptcan_emu_core.c pte_on_rx, PTE_FAULT_FOREIGN.
   can->RegisterUserMessage(0x3F9);
   can->RegisterUserMessage(0x0A5);
+  // 0x197  gear lever (GWS), about every 30 ms. Automatic only; see
+  // GearLever. Registered always: Transmission can change at run time.
+  can->RegisterUserMessage(0x197);
+  // 0x3FD  sent by us on an automatic. From anyone else: stop.
+  can->RegisterUserMessage(0x3FD);
 
   // TODO: DSC torque cuts arrive on FlexRay, not here. The Pico will
   // forward them later. No CAN id is assigned. See
@@ -184,6 +195,11 @@ void BMW_F11::OnBusWake() {
   alive8F = 0;
   alive3F9 = 0;
   seen3f9 = false;
+  gear = GearState();
+  alive3FD = 0;
+  s3FD = TxSlot();
+  s39A = TxSlot();
+  s518 = TxSlot();
 }
 
 // One second with no 0x12F, 0x173 or 0x0EF (we stopped talking after
@@ -237,6 +253,7 @@ void BMW_F11::NoteRx() {
   uint32_t now = nowMs;
   if (!rxEver || (now - lastRxMs) >= 1000) {
     wakeMs = now;
+    lastOnEvMs = now;
     kl15On = false;
     kl50On = false;
     kl15Ever = false;
@@ -258,7 +275,7 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
   if (id == 0x12F || id == 0x173 || id == 0x0EF)
     NoteRx();
   // Someone else sends one of our frames: stay silent (F11Fault 1).
-  if (id == 0x3F9 || id == 0x0A5)
+  if (id == 0x3F9 || id == 0x0A5 || (id == 0x3FD && AutoBox()))
     foreignTx = true;
 
   switch (id) {
@@ -270,6 +287,15 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
     break;
   case 0x0EF:
     Handle0EF(bytes);
+    break;
+  case 0x197:
+    // Hand the lever frame to the 1 ms task (v1h.3 dde_emu.c lvmb).
+    // The count is odd while the copy is being written.
+    lv197Seq++;
+    for (int i = 0; i < 4; i++)
+      lv197[i] = bytes[i];
+    lv197Ms = nowMs;
+    lv197Seq++;
     break;
   default:
     break;
@@ -287,7 +313,7 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
 // Crank is this nibble. Tests reached "engine running" with no
 // immobiliser exchange, so we send none. If the CAS or the gateway
 // is removed, something else has to transmit 0x12F or ignition stays
-// off and we stop transmitting 2 seconds later.
+// off.
 //
 //   byte 2, low nibble (bits 16-19), called ST_KL:
 //     6      ignition off. The bus can still be awake.
@@ -331,6 +357,8 @@ void BMW_F11::Handle12F(uint8_t *bytes) {
     brakeDownHave = true;
   }
   // KL15 edges start the frame timelines (v1h.3 pte_on_rx).
+  if (kl15On)
+    lastOnEvMs = now;
   if (kl15On && !wasOn) {
     kl15Ever = true;
     onMs = now;
@@ -374,6 +402,8 @@ void BMW_F11::Handle173(uint8_t *bytes) {
   if (sw == 0x03) {
     brakeDownMs = nowMs; // for the engine story and the gear logic
     brakeDownHave = true;
+    brake173Ms = nowMs; // the gear logic uses only this one
+    brake173Have = true;
     brakePressed = true;
     brakeOneSwitch = false;
   } else if (sw == 0x00) {
@@ -661,7 +691,7 @@ void BMW_F11::SendFastFrames() {
   // E2E, data id 0x005A. Wake ramp of the real DDE (bytes 2-5):
   //   80 FF FF F0 until W+502 ms, 20 D0 07 F1 until W+703 ms,
   //   then 22 D0 07 FE (0x22 = Park).
-  // Automatic: bytes 2 and 5 follow our gear (Step 2). Manual: the
+  // Automatic: bytes 2 and 5 follow our gear (GearOut). Manual: the
   // template stays (22 .. FE is also the neutral code).
   uint32_t w = SinceWake();
   uint8_t dc[8] = {0};
@@ -672,6 +702,11 @@ void BMW_F11::SendFastFrames() {
     dc[2] = 0x20; dc[3] = 0xD0; dc[4] = 0x07; dc[5] = 0xF1;
   } else {
     dc[2] = 0x22; dc[3] = 0xD0; dc[4] = 0x07; dc[5] = 0xFE;
+  }
+  GearBytes g;
+  if (GearOut(g)) {
+    dc[2] = g.dc2;
+    dc[5] = g.dc5;
   }
   E2ESeal(dc, 6, 0x005A, &aliveDc);
   can->Send(0x0DC, dc, 6);
@@ -707,7 +742,7 @@ void BMW_F11::SendFastFrames() {
 //   byte 3      0x64 stopped, 0x65 cranking, 0x26 running, 0x66 stopping.
 //               Bits 4-5 (frame bits 28-29) = P lock: 2 = "Park
 //               secured", which the CAS watches. Automatic: from our
-//               gear (Step 2). Manual: 0 (no P on a manual box).
+//               gear (GearOut). Manual: 0 (no P on a manual box).
 //   byte 4      coolant, degrees C + 48. While driving, clamped to
 //               70..105 C so the gauge does not sit on cold or hot.
 //   byte 5      oil, same +48 scale, from the motor temperature.
@@ -759,6 +794,11 @@ void BMW_F11::Send3F9(bool ready) {
       b[3] = (uint8_t)(b[3] & 0xCF);
     if (w >= 709)
       b[6] = (uint8_t)((b[6] & 0xF0) | 0x01);
+  }
+  GearBytes g;
+  if (GearOut(g)) {
+    b[3] = (uint8_t)((b[3] & 0xCF) | (g.park << 4));
+    b[6] = (uint8_t)((b[6] & 0xF0) | g.nib);
   }
 
   bool changed = seen3f9 && (b[2] != last3f9[0] || b[3] != last3f9[1] ||
@@ -869,10 +909,18 @@ void BMW_F11::Task1Ms() {
   if ((nowMs % 5) == 0)
     EngineStep();
   EngineWatchdog();
+  GearTask();
 
-  // No torque unless our engine story says running. SelectDirection
+  // No torque unless our engine story says running, and on an
+  // automatic only in the direction of the engaged gear. SelectDirection
   // only runs every 200 ms, so cut the direction here at once.
-  if (!EngineRunning() && Param::GetInt(Param::dir) != 0)
+  Vehicle::gear gr;
+  int allowed = 0;
+  if (GetGear(gr))
+    allowed = gr == Vehicle::DRIVE ? 1 : (gr == Vehicle::REVERSE ? -1 : 0);
+  else
+    allowed = Param::GetInt(Param::dir); // manual, running: inputs decide
+  if (Param::GetInt(Param::dir) != 0 && Param::GetInt(Param::dir) != allowed)
     Param::SetInt(Param::dir, 0);
 
   Param::SetInt(Param::F11Eng, eng.phase);
@@ -882,6 +930,11 @@ void BMW_F11::Task1Ms() {
     return;
   Send3F9(EngineRunning());
   Send592();
+  if (AutoBox()) {
+    Send3FD();
+    Send39A();
+    Send518();
+  }
 }
 
 // Runs every 200 ms: the 1 s constant frames, from W+611 ms.
@@ -906,12 +959,23 @@ void BMW_F11::Task200Ms() {
 // and the throttle code multiplies by the direction.)
 // Manual box with the story running: return false, so the normal
 // forward / reverse inputs decide.
+// Automatic: R or D only once that gear is engaged (stage "steady"),
+// NEUTRAL in every other state, P included.
+// A second sender (F11Fault 1) silences us, so the car no longer sees
+// our gear or "running": NEUTRAL as well.
 bool BMW_F11::GetGear(Vehicle::gear &outGear) {
-  if (!EngineRunning()) {
+  if (!EngineRunning() || foreignTx) {
     outGear = Vehicle::NEUTRAL;
     return true;
   }
-  return false;
+  if (!AutoBox())
+    return false;
+  outGear = Vehicle::NEUTRAL;
+  if (gear.stage == 2 && gear.target == 1)
+    outGear = Vehicle::REVERSE;
+  if (gear.stage == 2 && gear.target == 3)
+    outGear = Vehicle::DRIVE;
+  return true;
 }
 
 // Brake down now (pin or CAN), or a pressed 0x173 / 0x12F mirror
@@ -1190,4 +1254,381 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     e.fuelQ10 += per100 * dtMs * 10u / 100u;
     e.fuel = (uint16_t)(e.fuelQ10 / 10u);
   }
+}
+
+// ---------------------------------------------------------------------
+// Automatic gearbox (Transmission = Automatic). The EGS (gearbox ECU)
+// is gone, so we read the lever ourselves and show the gear the way
+// the EGS did. Ported from pico-flexray v1h.3 src/dde_gear.c, timings
+// from its dde_gear.h. Nothing here runs on a manual car.
+// ---------------------------------------------------------------------
+
+// Gears and stages, as dde_gear.h.
+enum { kGearP = 0, kGearR = 1, kGearN = 2, kGearD = 3 };
+enum {
+  kGstPLocked = 0,  // P, pawl confirmed (the fixed v1h templates)
+  kGstLeaveP = 1,   // new gear on 0x3FD, gear code follows
+  kGstSteady = 2,   // R / N / D engaged
+  kGstToP = 3,      // P requested, codes step towards P
+  kGstPUnlocked = 4, // P shown, pawl not yet confirmed
+  kGstPReleased = 5 // P released by a lever push with the brake on
+};
+static const uint32_t kGearBrakeMs = 250;   // brake "on" if a press came this recently
+static const uint32_t kLeverStaleMs = 90;   // no valid 0x197 this long: lever lost
+static const uint32_t kGearActMs = 40;      // act 40 ms after a notch appears
+static const uint32_t kGearReleaseMs = 20;  // P released 20 ms after the first notch
+static const uint32_t kCodeLagMs = 10;      // gear code 10 ms after 0x3FD
+static const uint32_t kCodeLagNMs = 100;    // N: 100 ms (N bytes are a hypothesis)
+static const uint32_t kPbtn39AMs = 21;      // P button: 0x39A gear 01 at +21 ms
+static const uint32_t kPbtn3F9Ms = 42;      //   0x3F9 gear 1, 0x0DC 22 FC at +42 ms
+static const uint32_t kPbtn39APMs = 881;    //   0x39A 03 at +881 ms
+static const uint32_t kToPMs = 900;         //   0x3FD P at +900 ms
+static const uint32_t kPLockMs = 3000;      // pawl confirmed 3 s after the P request ...
+static const uint32_t kPawlBrakeMs = 340;   // ... or 340 ms after the brake was let go
+
+// What each gear puts in the frames (dde_gear.c gb_gear):
+//   0x3FD byte 2, 0x39A bytes 3-4, 0x3F9 P lock bits and gear nibble,
+//   0x0DC bytes 2 and 5. P, R and D are captures. N on 0x39A, 0x3F9
+//   and 0x0DC is a hypothesis (0x3FD 0x60 is captured).
+static const BMW_F11::GearBytes kGearTab[4] = {
+    {0x20, 0x03, 0xE2, 2, 3, 0x22, 0xFE}, // P, pawl in
+    {0x40, 0x02, 0xE0, 0, 2, 0x25, 0xF4}, // R
+    {0x60, 0x01, 0xE0, 0, 1, 0x22, 0xFE}, // N
+    {0x80, 0x05, 0xE0, 0, 5, 0x24, 0xF4}, // D
+};
+static const BMW_F11::GearBytes kGearPUnlocked = {0x20, 0x03, 0xE0, 0, 3, 0x22, 0xFE};
+
+// Brake pressed (0x173, both switches) within the last 250 ms of ms.
+bool BMW_F11::GearBrake(uint32_t ms) const {
+  return brake173Have && SinceMs(ms, brake173Ms) <= kGearBrakeMs;
+}
+
+// Every 1 ms: take a new lever frame, then step the gear (gear_tick).
+void BMW_F11::GearTask() {
+  if (!AutoBox()) {
+    gear = GearState(); // manual: fixed P, nothing patched
+    Param::SetInt(Param::F11Gear, 4);
+    return;
+  }
+  uint8_t sq = lv197Seq;
+  if (sq != lv197Seen && !(sq & 1)) {
+    uint8_t d[4] = {lv197[0], lv197[1], lv197[2], lv197[3]};
+    uint32_t ms = lv197Ms;
+    lv197Seen = sq;
+    if (lv197Seq == sq) // torn copy: skip, the next one comes in ~30 ms
+      GearLever(d, ms);
+  }
+  GearStep();
+  Param::SetInt(Param::F11Gear, gear.target);
+}
+
+// Begin a change to gear `to` (dde_gear.c start).
+void BMW_F11::GearStart(uint8_t to, uint32_t ms) {
+  uint8_t cur = gear.target;
+  gear.target = to;
+  gear.tAct = ms;
+  if (to == kGearP) { // P button or engine off
+    gear.from = cur;
+    gear.stage = kGstToP;
+    gear.tStage = ms;
+  } else if (gear.stage == kGstPLocked || gear.stage == kGstPUnlocked ||
+             gear.stage == kGstToP || gear.stage == kGstPReleased) {
+    gear.from = kGearP;
+    gear.stage = kGstLeaveP; // gear on 0x3FD now, the code 10 ms later
+    gear.tStage = ms;
+  } else if (gear.stage == kGstLeaveP) {
+    gear.tStage = ms; // 2nd notch of the same push (P -> N -> R)
+  } else {
+    gear.from = to;
+    gear.stage = kGstSteady; // R / N / D: at once
+  }
+}
+
+// A lever move or the P button (dde_gear.c gear_act). dir 1 forward,
+// 2 back, 3 P button. depth 1 or 2 notches.
+//   forward: P -> N (1) or R (2), N -> R, D -> N (1) or R (2)
+//   back:    P -> D, N -> D, R -> N (1) or D (2)
+// Leaving P needs the engine running. Leaving P, and N -> R / D, need
+// the brake (not for the 2nd notch of the same push out of P).
+void BMW_F11::GearAct(uint8_t dir, uint8_t depth, uint32_t ms) {
+  uint8_t cur = gear.target, want = 0xFF;
+  if (dir == 3) {
+    if (cur != kGearP)
+      want = kGearP;
+  } else if (dir == 1) {
+    if (cur == kGearP || cur == kGearD)
+      want = depth >= 2 ? kGearR : kGearN;
+    else if (cur == kGearN)
+      want = kGearR;
+  } else {
+    if (cur == kGearP || cur == kGearN)
+      want = kGearD;
+    else if (cur == kGearR)
+      want = depth >= 2 ? kGearD : kGearN;
+  }
+  if (want == 0xFF || want == cur)
+    return;
+  if (want != kGearP) {
+    if (!gear.running)
+      return; // refused: engine not running
+    bool samePush = gear.stage == kGstLeaveP;
+    bool need = cur == kGearP ||
+                (cur == kGearN && (want == kGearR || want == kGearD) && !samePush);
+    if (need && !GearBrake(ms))
+      return; // refused: brake not pressed
+  }
+  GearStart(want, ms);
+}
+
+// 0x197  PT-CAN  gear lever (GWS), about every 30 ms. Read only.
+//   byte 0      CRC-8 (poly 0x1D) over data id 3F 00 and bytes 1-3
+//   byte 2      high nibble = lever: 0 centre, 1 forward, 2 forward
+//               two notches, 3 back, 4 back two notches
+//   byte 3      bits 0-5 = P button: 0x15 pressed, 0x00 released
+// A notch acts 40 ms after it first shows (the deepest one wins).
+void BMW_F11::GearLever(const uint8_t *d, uint32_t ms) {
+  static const uint8_t id[2] = {0x3F, 0x00};
+  if (Crc8_1d(d + 1, 3, Crc8_1d(id, 2, 0)) != d[0])
+    return;
+  uint8_t pos = (uint8_t)(d[2] >> 4);
+  uint8_t pb = d[3] & 0x3F;
+  gear.lvHave = true;
+  gear.lvMs = ms;
+  if (pos == 0) {
+    gear.gestDir = 0;
+    gear.gestDepth = 0;
+  } else if (pos <= 4) {
+    uint8_t dir = pos <= 2 ? 1 : 2;
+    uint8_t depth = (pos == 2 || pos == 4) ? 2 : 1;
+    bool newPush = gear.gestDir == 0 && gear.pendDir == 0;
+    uint8_t curDir = gear.pendDir ? gear.pendDir : gear.gestDir;
+    uint8_t curDepth = gear.pendDir ? gear.pendDepth : gear.gestDepth;
+    bool deeper = curDir == dir && depth > curDepth;
+    if (newPush || deeper) {
+      if (gear.pendDir == 0 || deeper)
+        gear.pendMs = ms;
+      gear.pendDir = dir;
+      gear.pendDepth = depth;
+      if (newPush) {
+        gear.pushMs = ms;
+        gear.pushRel = false;
+      }
+      if (gear.gestDir == 0)
+        gear.gestDir = dir;
+    }
+  } // other positions (M/S gate, + / -): ignored
+  if (pb == 0x15) {
+    if (!gear.pbtnDone) {
+      gear.pbtnDone = true;
+      GearAct(3, 0, ms);
+    }
+  } else if (pb == 0x00) {
+    gear.pbtnDone = false;
+  }
+}
+
+// One gear step (dde_gear.c gear_step).
+void BMW_F11::GearStep() {
+  uint32_t now = nowMs;
+  gear.running = EngineRunning();
+  if (gear.lvHave && SinceMs(now, gear.lvMs) > kLeverStaleMs) {
+    gear.lvHave = false; // lever lost: hold the gear, forget the push
+    gear.gestDir = 0;
+    gear.gestDepth = 0;
+    gear.pendDir = 0;
+  }
+  if (gear.pendDir && SinceMs(now, gear.pendMs) >= kGearActMs) {
+    uint8_t dir = gear.pendDir, depth = gear.pendDepth;
+    gear.pendDir = 0;
+    gear.gestDepth = depth;
+    GearAct(dir, depth, now);
+  }
+  if (!gear.running && gear.target != kGearP)
+    GearStart(kGearP, now); // engine off: back to P
+  bool pushing = gear.gestDir || gear.pendDir;
+  if (pushing && !gear.pushRel && gear.target == kGearP &&
+      (gear.stage == kGstPLocked || gear.stage == kGstPUnlocked) &&
+      SinceMs(now, gear.pushMs) >= kGearReleaseMs && gear.running &&
+      GearBrake(now)) {
+    gear.pushRel = true;
+    gear.relPrev = gear.stage;
+    gear.stage = kGstPReleased;
+    gear.tStage = now;
+  }
+  uint32_t ts = SinceMs(now, gear.tStage), ta = SinceMs(now, gear.tAct);
+  switch (gear.stage) {
+  case kGstPReleased:
+    if (!pushing) {
+      gear.stage = gear.relPrev;
+      gear.tStage = now;
+    }
+    break;
+  case kGstLeaveP:
+    if (ts >= (gear.target == kGearN ? kCodeLagNMs : kCodeLagMs)) {
+      gear.stage = kGstSteady;
+      gear.from = gear.target;
+    }
+    break;
+  case kGstToP:
+    if (ts >= kToPMs) {
+      gear.stage = kGstPUnlocked;
+      gear.tStage = now;
+      gear.from = kGearP;
+    }
+    break;
+  case kGstPUnlocked:
+    if (!brake173Have || SinceMs(now, brake173Ms) >= kPawlBrakeMs ||
+        ta >= kPLockMs)
+      gear.stage = kGstPLocked; // pawl confirmed
+    break;
+  default:
+    break;
+  }
+}
+
+// The gear bytes for the frames now (dde_gear.c gear_fill_out). False
+// while P is locked, before the first engine start of this wake, or on
+// a manual box: the frames then keep their templates.
+bool BMW_F11::GearOut(GearBytes &g) const {
+  if (!AutoBox() || !eng.active || gear.stage == kGstPLocked)
+    return false;
+  switch (gear.stage) {
+  case kGstPReleased:
+    g = kGearTab[kGearP];
+    g.a4 = 0xE1;
+    g.park = 1;
+    break;
+  case kGstLeaveP:
+    g = kGearTab[kGearP];
+    g.a4 = 0xE1;
+    g.park = 1;
+    g.b3fd = kGearTab[gear.target & 3].b3fd;
+    break;
+  case kGstSteady:
+    g = kGearTab[gear.target & 3];
+    break;
+  case kGstToP: {
+    uint32_t ts = SinceMs(nowMs, gear.tStage);
+    g = gear.from == kGearP ? kGearPUnlocked : kGearTab[gear.from & 3];
+    if (ts >= kPbtn39AMs)
+      g.a3 = 0x01;
+    if (ts >= kPbtn3F9Ms) {
+      g.nib = 1;
+      g.dc2 = 0x22;
+      g.dc5 = 0xFC;
+    }
+    if (ts >= kPbtn39APMs)
+      g.a3 = 0x03;
+    break;
+  }
+  default: // P, pawl not yet confirmed
+    g = kGearPUnlocked;
+    break;
+  }
+  return true;
+}
+
+// v1h.3 pte_next for one frame: true when it should go out now.
+bool BMW_F11::SlotDue(TxSlot &s, const uint8_t *d, uint8_t from, uint8_t dlc,
+                      uint32_t firstMs, uint32_t gapMs) {
+  s.cyc = false;
+  if (!s.started)
+    return SinceWake() >= firstMs;
+  bool due = (int32_t)(nowMs - s.next) >= 0;
+  if (gapMs) {
+    // a change is compared with what we last meant to send
+    if (memcmp(d + from, s.want + from, dlc - from) != 0) {
+      memcpy(s.want, d, 8);
+      s.pend = true;
+    }
+    if (!due && s.pend && SinceMs(nowMs, s.last) >= gapMs)
+      return true; // change copy, the grid stays
+  }
+  s.cyc = due;
+  return due;
+}
+
+// v1h.3 pte_commit: a frame went out. A late grid frame keeps the
+// grid; more than 250 ms behind restarts it from now.
+void BMW_F11::SlotSent(TxSlot &s, const uint8_t *d, uint32_t periodMs) {
+  if (!s.started) {
+    s.next = nowMs + periodMs;
+  } else if (s.cyc) {
+    s.next += periodMs;
+    if ((int32_t)(nowMs - s.next) > 250)
+      s.next = nowMs + periodMs;
+  }
+  s.started = true;
+  s.last = nowMs;
+  memcpy(s.want, d, 8);
+  s.pend = false;
+}
+
+// 0x3FD  PT-CAN  every 100 ms from W+462 ms  EGS gear display.
+// Five bytes, E2E data id 0x0039 (byte 1 high nibble 0).
+//   byte 2      gear shown: 0x20 P, 0x40 R, 0x60 N, 0x80 D. 0x00 =
+//               display off: before ON+27 ms and from OFF+30.164 s.
+//               A gear only replaces a lit display.
+//   byte 3-4    FC FF
+// While a gear is patched in, a change also goes out at once (at most
+// every 5 ms). v1h.3 ptcan_emu_core.c build() and pte_next.
+void BMW_F11::Send3FD() {
+  bool lit = kl15On ? SinceOn() >= 27 : (kl15Ever && SinceOff() < 30164);
+  uint8_t b[8] = {0, 0, (uint8_t)(lit ? 0x20 : 0x00), 0xFC, 0xFF, 0, 0, 0};
+  GearBytes g;
+  bool gs = GearOut(g);
+  if (gs && b[2] != 0)
+    b[2] = g.b3fd;
+  if (!SlotDue(s3FD, b, 2, 5, 462, gs ? 5 : 0))
+    return;
+  E2ESeal(b, 5, 0x0039, &alive3FD);
+  can->Send(0x3FD, b, 5);
+  SlotSent(s3FD, b, 100);
+}
+
+// 0x39A  PT-CAN  every 1 s from W+462 ms, and on every change (5 ms
+// gap)  EGS gear and P lock. Six bytes, no E2E.
+//   byte 1      ATF temperature, raw - 40 C. 0x35 (captured).
+//   byte 3      gear code: 3 P, 2 R, 1 N, 5 D
+//   byte 4      bits 0-1: 2 = P pawl in, 1 = P released, 0 = not P
+// Wake ramp: 00 00 00 00 E3 00 until W+583 ms, 00 00 00 00 E2 00
+// until W+680 ms, then 00 35 00 03 E2 00.
+void BMW_F11::Send39A() {
+  static const uint8_t s0[6] = {0x00, 0x00, 0x00, 0x00, 0xE3, 0x00};
+  static const uint8_t s1[6] = {0x00, 0x00, 0x00, 0x00, 0xE2, 0x00};
+  static const uint8_t fin[6] = {0x00, 0x35, 0x00, 0x03, 0xE2, 0x00};
+  uint32_t w = SinceWake();
+  uint8_t b[8] = {0};
+  memcpy(b, w < 583 ? s0 : (w < 680 ? s1 : fin), 6);
+  GearBytes g;
+  if (GearOut(g)) {
+    b[3] = g.a3;
+    b[4] = g.a4;
+  }
+  if (!SlotDue(s39A, b, 0, 6, 462, 5))
+    return;
+  can->Send(0x39A, b, 6);
+  SlotSent(s39A, b, 1000);
+}
+
+// 0x518  PT-CAN  every 645 ms from W+543 ms  EGS network management
+// ("keep the bus awake"). `00 00 00 00 B0 30 00 18` with KL15 (and on
+// the first frame of a wake), `.. 44 2F ..` without. KL15 on: B0 30
+// from ON+157 ms; off: 44 2F from OFF+225 ms. Sent while KL15 is on,
+// until OFF+30 s, or W+30 s if KL15 never came; never later than 60 s
+// after the last KL15-on 0x12F (or W). v1h.3 frame_active / build().
+void BMW_F11::Send518() {
+  uint32_t ref = (int32_t)(lastOnEvMs - wakeMs) > 0 ? lastOnEvMs : wakeMs;
+  if (SinceMs(nowMs, ref) > 60000)
+    return;
+  if (!kl15On && (kl15Ever ? SinceOff() >= 30000 : SinceWake() >= 30000))
+    return;
+  bool kl = !s518.started ||
+            (kl15On ? SinceOn() >= 157 : (kl15Ever && SinceOff() < 225));
+  uint8_t b[8] = {0, 0, 0, 0, (uint8_t)(kl ? 0xB0 : 0x44),
+                  (uint8_t)(kl ? 0x30 : 0x2F), 0, 0x18};
+  if (!SlotDue(s518, b, 0, 8, 543, 0))
+    return;
+  can->Send(0x518, b, 8);
+  SlotSent(s518, b, 645);
 }

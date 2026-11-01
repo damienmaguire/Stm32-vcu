@@ -47,9 +47,18 @@ int main(int argc, char **argv) {
     if ((T + phase) % 10 == 0) car.Task10Ms();
     if ((T + phase) % 100 == 0) car.Task100Ms();
     if ((T + phase) % 200 == 0) car.Task200Ms();
+    // utils::SelectDirection asks GetGear every 200 ms.
+    if ((T + phase) % 200 == 0) {
+      Vehicle::gear g;
+      if (car.GetGear(g))
+        Param::SetInt(Param::dir, g == Vehicle::DRIVE ? 1 : (g == Vehicle::REVERSE ? -1 : 0));
+      else
+        Param::SetInt(Param::dir, Param::GetInt(Param::opmode) == MOD_RUN ? 1 : 0);
+    }
     if (T % 50 == 0)
-      fprintf(stderr, "%u eng %d fault %d dir %d opmode %d\n", T, Param::GetInt(Param::F11Eng),
-              Param::GetInt(Param::F11Fault), Param::GetInt(Param::dir), Param::GetInt(Param::opmode));
+      fprintf(stderr, "%u eng %d fault %d dir %d opmode %d gear %d\n", T, Param::GetInt(Param::F11Eng),
+              Param::GetInt(Param::F11Fault), Param::GetInt(Param::dir), Param::GetInt(Param::opmode),
+              Param::GetInt(Param::F11Gear));
   }
   return 0;
 }

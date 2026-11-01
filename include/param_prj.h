@@ -289,7 +289,8 @@
   VALUE_ENTRY(BrkPress, ONOFF, 2128)                                           \
   VALUE_ENTRY(BrkRegenPct, "%", 2129)                                          \
   VALUE_ENTRY(F11Eng, F11ENG, 2130)                                            \
-  VALUE_ENTRY(F11Fault, F11FLT, 2131)
+  VALUE_ENTRY(F11Fault, F11FLT, 2131)                                          \
+  VALUE_ENTRY(F11Gear, F11GEAR, 2132)
 
 // Next value Id: 2132
 
@@ -380,6 +381,7 @@
 #define TRNMODES "0=Manual, 1=Auto"
 #define F11ENG "0=Off, 1=Crank, 2=Run, 3=Stop, 4=Stopped"
 #define F11FLT "0=None, 1=SecondSender, 2=StartWatchdog"
+#define F11GEAR "0=P, 1=R, 2=N, 3=D, 4=Manual"
 #define CAT_AIRCON "Air Conditioning"
 #define CAN_DEV "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
