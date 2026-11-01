@@ -26,12 +26,12 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 157
+// Next param id (increase when adding new parameter!): 164
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 9, 0, 5)                       \
-  PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 8, 0, 6)                        \
+  PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 9, 0, 6)                        \
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 5, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
@@ -119,6 +119,8 @@
   PARAM_ENTRY(CAT_HEATER, HeatPotOn, "dig", 0, 4095, 0, 151)                   \
   PARAM_ENTRY(CAT_HEATER, HeatPotFull, "dig", 0, 4095, 0, 152)                 \
   PARAM_ENTRY(CAT_HEATER, PreHeatNow, ONOFF, 0, 1, 0, 161)                     \
+  PARAM_ENTRY(CAT_THROTTLE, BrkRegen, ONOFF, 0, 1, 0, 162)                     \
+  PARAM_ENTRY(CAT_THROTTLE, BrkRegenNm, "Nm", 200, 20000, 7000, 163)           \
   PARAM_ENTRY(CAT_AIRCON, Compressor, COMPRESSMODES, 0, 1, 0, 153)             \
   PARAM_ENTRY(CAT_AIRCON, AirConCtrl, ONOFF, 0, 1, 0, 154)                     \
   PARAM_ENTRY(CAT_CLOCK, Set_Day, DOW, 0, 6, 0, 46)                            \
@@ -280,9 +282,13 @@
   VALUE_ENTRY(DMA_TxComplete, ONOFF, 2120)                                     \
   VALUE_ENTRY(DMA_RxTimeout, "", 2121)                                         \
   VALUE_ENTRY(DMA_ConsecFail, "", 2122)                                        \
-  VALUE_ENTRY(HTM_State, "", 2123)
+  VALUE_ENTRY(HTM_State, "", 2123)                                             \
+  VALUE_ENTRY(BrkTrq, "Nm", 2126)                                              \
+  VALUE_ENTRY(BrkWarn, ONOFF, 2127)                                            \
+  VALUE_ENTRY(BrkPress, ONOFF, 2128)                                           \
+  VALUE_ENTRY(BrkRegenPct, "%", 2129)
 
-// Next value Id: 2124
+// Next value Id: 2130
 
 // Dead params
 /*
@@ -329,7 +335,7 @@
   "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES                                                               \
   "0=BMW_E46, 1=BMW_E6x+, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru, "     \
-  "8=BMW_E31"
+  "8=BMW_E31, 9=BMW_F11"
 #define BMSMODES                                                               \
   "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual, 4=LeafBms, "    \
   "5=RenaultKangoo33, 6=STW, 7=OIFlyingAdc"
@@ -510,7 +516,8 @@ enum vehicles {
   vBMW_E39 = 5,
   vVAG = 6,
   vSUBARU = 7,
-  vBMW_E31 = 8
+  vBMW_E31 = 8,
+  vBMW_F11 = 9 // F11 Touring: stand in for the removed diesel ECU
 };
 
 enum _potmodes {

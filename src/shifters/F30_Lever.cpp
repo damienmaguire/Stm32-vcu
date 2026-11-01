@@ -94,6 +94,11 @@ void F30_Lever::DecodeCAN(int id, uint32_t *data) {
     SideDown = false;
     SideUp = false;
 
+    // TODO (F11): this lever also lives on PT-CAN2. An F11 gear lever
+    // sends 0x?F here, while these cases match 0x?E. Mask with 0xF0
+    // (or accept E and F) before matching. Not changed yet. See
+    // egs_gws_lever_can.md. Do not send 0x3FD from the F11 class as
+    // well, or the two gear displays will clash.
     switch (bytes[2]) {
     case 0x1E:
       Up1 = true;

@@ -160,12 +160,25 @@ float Throttle::CalcThrottle(int potval, int potIdx, bool brkpedal) {
   if (brkpedal) {
     if (speed < 100 || speed < regenendRpm) {
       return 0;
-    } else if (speed < regenRpm) {
+    }
+    // Brake regen is the fixed "regenBrake" setting. The F11 class can
+    // turn on BrkRegen and then scale that by how hard the pedal is
+    // pressed (BrkRegenPct, 0..100). Left at 0, so other cars are unchanged.
+    float brakeRegen = regenBrake;
+    if (Param::GetInt(Param::BrkRegen) != 0) {
+      float pct = Param::GetFloat(Param::BrkRegenPct);
+      if (pct < 0.0f)
+        pct = 0.0f;
+      if (pct > 100.0f)
+        pct = 100.0f;
+      brakeRegen = regenBrake * (pct / 100.0f);
+    }
+    if (speed < regenRpm) {
       potnom = utils::changeFloat(speed, regenendRpm, regenRpm, 0,
-                                  regenBrake); // taper regen according to speed
+                                  brakeRegen); // taper regen according to speed
       return potnom;
     } else {
-      potnom = regenBrake;
+      potnom = brakeRegen;
       return potnom;
     }
   }
