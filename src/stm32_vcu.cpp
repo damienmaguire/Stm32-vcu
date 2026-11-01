@@ -1236,6 +1236,11 @@ static void UpdateShifter() {
     selectedShifter = &shifterNone;
     break;
   }
+  // BMW F-series: the vehicle class sends 0x3FD itself (automatic), so
+  // F30_Lever must not run alongside it.
+  if (Param::GetInt(Param::Vehicle) == vehicles::vBMW_F11 &&
+      selectedShifter == &F30GearLever)
+    selectedShifter = &shifterNone;
   // This will call SetCanFilters() via the Clear Callback
   canInterface[0]->ClearUserMessages();
   canInterface[1]->ClearUserMessages();
@@ -1281,12 +1286,14 @@ static void SetCanFilters() {
 
 void Param::Change(Param::PARAM_NUM paramNum) {
   // This function is called when the user changes a parameter
+  f11Vehicle.ClearFaults(); // BMW F-series: any write clears F11Fault 1
   switch (paramNum) {
   case Param::Inverter:
     UpdateInv();
     break;
   case Param::Vehicle:
     UpdateVehicle();
+    UpdateShifter(); // BMW F-series turns F30_Lever off
     break;
   case Param::chargemodes:
     UpdateCharger();

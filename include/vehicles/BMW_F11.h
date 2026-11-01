@@ -45,26 +45,35 @@
 //         half of byte 1 is a counter that steps 0..14. If either is
 //         wrong the receiving ECU throws the frame away.
 //
-// We only transmit after 0x12F or 0x173 has been heard in the last 2
-// seconds, so a silent car is never woken by us.
+// Any F-series (F10/F11/F30/F31...) with its engine removed can use this
+// class. The Transmission setting says what gearbox the car had:
+//   Manual  only the engine frames are sent. The gear fields in 0x3F9
+//           and 0x0DC carry fixed "manual / neutral" values.
+//   Auto    the class also stands in for the removed EGS (the gearbox
+//           ECU): gear display 0x3FD, gear state 0x39A and NM 0x518,
+//           with the lever (0x197) and brake gear logic. (Step 2.)
 //
-// "Engine running" on the bus (0x3F9 byte 2 = 0x82, rev counter, MIL
-// off) follows the ZombieVerter RUN mode, and only after a start
-// request. Ignition on (KL15) alone is not running.
+// Timing and bytes copy the Pico emulator v1h.3 (pico-flexray
+// src/ptcan_emu_core.c, dde_engine.c, dde_gear.c) and the spec
+// flexray-re-notes analysis/pico_zv_private_can.md section 5. The Pico
+// keeps FlexRay. Each PT-CAN id must be sent by one box only.
 //
-// Not done yet, and not tried on the car:
-//   real motor torque in Nm (we report 0 Nm)
-//   DSC torque cuts, which arrive on FlexRay and will be forwarded
-//     by the Pico (dde_dsc_torque_rx.md). No CAN id yet.
-//   cruise torque request on FlexRay 0x21 (dde_cruise_rx.md). The
-//     cruise stalk is not on this bus. No CAN id yet.
-//   the gear lever. It is on PT-CAN2 as well as PT-CAN. F30_Lever
-//     matches byte 2 as 0x?E; an F11 lever sends 0x?F, so that match
-//     needs a 0xF0 mask. 0x3FD (gear display, "P" while parked) is
-//     sent by F30_Lever, not by this class.
-//   turning the MIL on for a real fault
-//   the ignition-off variants of a few engine frames
-
+// When we may transmit (the v1h.3 bus gate):
+//   W (wake) is the first 0x12F, 0x173 or 0x0EF after at least 1 s of
+//   silence. Every frame starts at its own captured time after W, and
+//   all counters restart. 200 ms with none of those three ids stops all
+//   transmission at once, so a silent car is never woken by us.
+//   If 0x3F9 or 0x0A5 arrives from another box, we stop for good
+//   (F11Fault = 1) until a parameter is written or the VCU restarts.
+//
+// "Engine running" on the bus follows a short fake engine start, as the
+// Pico v1h.3 SHORT profile: ST_KL D (crank) with the brake down starts
+// it, and 0x3F9 shows 0x82 (running) about 172 ms later. Motor torque is
+// only allowed while that story says running AND the VCU is in RUN. If
+// the VCU has not reached RUN 5 s after 0x82, the story stops
+// (F11Fault = 2) until the next crank request. 0x592 stays "MIL off" as
+// in v1h.3: the "lamp on" byte was never proven on this car.
+//
 #include "vehicles/vehicle.h"
 #include <stdint.h>
 
@@ -73,10 +82,20 @@ public:
   BMW_F11();
   // Choose the Vehicle CAN port and ask to be told about 0x12F and 0x173.
   void SetCanInterface(CanHardware *c);
-  // 10 ms tick: fast engine frames, temperatures, MIL off.
+  // 10 ms tick: the 20 ms engine frames and 0x08F (30 ms).
   void Task10Ms();
-  // 100 ms tick: fuel counter, 12 V, and the 2 second bus-sleep timer.
+  // 100 ms tick: fuel counter and 12 V.
   void Task100Ms();
+  // 1 ms tick: bus gate, fake engine story, and the frames whose timing
+  // must be exact (0x3F9, 0x592).
+  void Task1Ms();
+  // 200 ms tick: the 1 s constant frames 0x396 and 0x1B9.
+  void Task200Ms();
+  // Gear for the VCU. NEUTRAL (no torque) unless our engine story says
+  // running. Manual: then the normal direction inputs decide.
+  bool GetGear(Vehicle::gear &outGear);
+  // A parameter was written: forget the "second sender" fault.
+  void ClearFaults() { foreignTx = false; }
   // Inverter rpm. While driving, the dash is shown at least 750 rpm.
   void SetRevCounter(int s) { motorRpm = s; }
   // Inverter coolant temperature, degrees C. Shown on 0x3F9.
@@ -100,16 +119,36 @@ private:
   void SendFastFrames();
   // 0x3F9 temperatures and engine-running, every 1 s and on change.
   void Send3F9(bool ready);
+  // 0x08F wheel torque / engine state, every 30 ms.
+  void Send08F();
   // 0x2C4 fuel used and 0x281 12 V, every 100 ms.
   void Send100MsFrames();
-  // One check-engine-light off frame on 0x592.
-  void SendMilOff();
   // Notice PT-CAN waking or going to sleep.
   void NoteBusState();
   void OnBusWake();
   void OnBusSleep();
-  // True until 2 seconds have passed with no 0x12F, 0x173 or 0x0EF.
-  bool BusAwake() const { return busQuiet100 < 20; }
+  // True while we may transmit: a 0x12F, 0x173 or 0x0EF in the last
+  // 200 ms, and no second sender seen (v1h.3 gate).
+  bool BusAwake() const;
+  // Note one PT-CAN frame from the car. Starts a new wake after >= 1 s
+  // of silence.
+  void NoteRx();
+  // ms since the wake (W), since KL15 on (ON) and since KL15 off (OFF).
+  uint32_t SinceWake() const { return nowMs - wakeMs; }
+  uint32_t SinceOn() const { return nowMs - onMs; }
+  uint32_t SinceOff() const { return nowMs - offMs; }
+  bool AutoBox() const { return Param::GetInt(Param::Transmission) == 1; }
+  // Fake engine start/stop (v1h.3 dde_engine.c, SHORT profile only).
+  void EngineStep();
+  void EngineCheckStart();
+  void EngineCheckStop();
+  void EngineStopNow();
+  void EngineOutputs(uint32_t dtMs);
+  void EngineWatchdog();
+  bool BrakeRecent(uint32_t ms) const;
+  // 0x592 MIL-off frames on the v1h.3 timeline (ON+98 ms, every 5.1 s,
+  // one last frame at OFF+54 ms).
+  void Send592();
   // rpm for the dash. At least 750 while the inverter is running.
   uint16_t RpmTx() const;
   // Driver torque in Nm. Currently 0 until a real Nm source exists.
@@ -126,25 +165,68 @@ private:
   void ApplyBrake();
   // Optional brake-torque regen. Does nothing while BrkRegen is off.
   void UpdateBrakeRegen();
-  // True only in RUN mode, and only after a start request.
+  // True while the engine story says running (0x82 on 0x3F9).
   bool EngineRunning() const;
   // TODO: Pico frame that carries the DSC torque ceiling. No id yet.
   void HandleDscTorqueCeiling(uint32_t *data);
-  // TODO: return true for a latched ZombieVerter fault. While this
-  // stays false the check-engine light (MIL) is never turned on.
-  // The ON frame would be 40 22 00 15 FF FF FF FF.
-  bool MilFaultLatched() const { return false; }
 
   static uint8_t Crc8_1d(const uint8_t *data, int len, uint8_t crc);
   static void E2ESeal(uint8_t *frame, int dlc, uint16_t dataId, uint8_t *alive);
 
   int motorRpm;
   float coolantC;
-  // 100 ms ticks since the last 0x12F or 0x173. 20 ticks = 2 seconds,
-  // which means PT-CAN has gone to sleep and we must stop talking.
-  uint8_t busQuiet100;
+  // Our own clock, +1 every Task1Ms. All times below are in ms.
+  volatile uint32_t nowMs;
+  uint32_t lastRxMs; // last 0x12F, 0x173 or 0x0EF
+  uint32_t wakeMs;   // W
+  volatile uint16_t wakeSeq;
+  uint16_t wakeSeqSeen;
+  bool rxEver;
   bool busWasAwake;
+  bool foreignTx; // another box sends 0x3F9 / 0x0A5: we stay silent
+  // KL15 history in this wake, for the frame timelines.
+  bool kl15Ever;
+  uint32_t onMs, offMs;
+  // 0x592: next frame time, and the one last frame after KL15 off.
+  uint32_t next592;
+  bool final592;
+  // The start watchdog fired (VCU not in RUN 5 s after we said
+  // "running"). Shown as F11Fault = 2; cleared when KL15 goes off.
+  bool startFault;
+  // Raw ST_KL and the last time the brake was seen down (0x173 both
+  // switches, or the 0x12F byte 6 mirror). For the engine story.
+  uint8_t stKl;
+  uint32_t stKlMs;
+  bool stKlHave;
+  uint32_t brakeDownMs;
+  bool brakeDownHave;
+  // The fake engine (v1h.3 dde_engine.c eng_t, cut down to what PT-CAN
+  // needs). Phases: 0 off, 1 crank, 2 run, 3 stop, 4 stopped.
+  struct EngStory {
+    uint8_t phase;
+    uint32_t t0, t82, ts, t80, trpm, t9, lastStep;
+    bool curRun, hasRun, startD, dEnded, t82Have, t9Have, stepHave;
+    bool wdOk;    // the VCU reached RUN after this start
+    bool wdBlock; // watchdog fired: no new start until ST_KL leaves D
+    uint16_t rpmAtStop;
+    uint32_t f3q8, fuelQ10;
+    // outputs (v1h.3 eng_out_t)
+    bool active;
+    uint8_t cntHi, e6b3, e6b4, e6ready;
+    uint16_t rpm4, torque, f3val, fuel;
+    uint8_t r29b5;
+    bool f97c;
+  } eng;
+  // 1 s frames on the 200 ms task: ticks since W.
+  uint8_t tick200;
   uint16_t tick10;
+  // The 20 ms group and 0x08F start on their first-frame time after W
+  // and then keep their own grid on the 10 ms task.
+  uint16_t fastTick;
+  bool fastOn;
+  uint16_t tick8F;
+  bool on8F;
+  uint8_t last8F7;
 
   uint8_t aliveA5;
   uint8_t aliveD9;
@@ -154,10 +236,8 @@ private:
   uint8_t alive3F9;
 
   bool seen3f9;
-  uint8_t age3f910;
+  uint32_t next3f9, last3f9Ms;
   uint8_t last3f9[6];
-
-  bool milOffSent;
 
   // From 0x12F byte 2, low nibble. 6 = off, 9 = accessory (holds KL15
   // only if it was already on), >= 0xA = ignition on, >= 0xD = crank.
@@ -179,9 +259,6 @@ private:
   float brakeTorqueNm;
   bool brakeTorqueSeen;
   uint8_t brakeTorqueAge10ms;
-  // Latched when start is requested with the brake down. Cleared when
-  // the ignition goes off. Stops us reporting "running" before START.
-  bool startSeen;
 
   // DSC torque ceiling. The DSC talks to the DDE on FlexRay only. The
   // pico will forward that limit on CAN. The ID and the byte layout are

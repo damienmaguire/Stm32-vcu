@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 164
+// Next param id (increase when adding new parameter!): 165
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -121,6 +121,7 @@
   PARAM_ENTRY(CAT_HEATER, PreHeatNow, ONOFF, 0, 1, 0, 161)                     \
   PARAM_ENTRY(CAT_THROTTLE, BrkRegen, ONOFF, 0, 1, 0, 162)                     \
   PARAM_ENTRY(CAT_THROTTLE, BrkRegenNm, "Nm", 200, 20000, 7000, 163)           \
+  PARAM_ENTRY(CAT_THROTTLE, F11Pedal, ONOFF, 0, 1, 0, 164)                     \
   PARAM_ENTRY(CAT_AIRCON, Compressor, COMPRESSMODES, 0, 1, 0, 153)             \
   PARAM_ENTRY(CAT_AIRCON, AirConCtrl, ONOFF, 0, 1, 0, 154)                     \
   PARAM_ENTRY(CAT_CLOCK, Set_Day, DOW, 0, 6, 0, 46)                            \
@@ -286,9 +287,11 @@
   VALUE_ENTRY(BrkTrq, "Nm", 2126)                                              \
   VALUE_ENTRY(BrkWarn, ONOFF, 2127)                                            \
   VALUE_ENTRY(BrkPress, ONOFF, 2128)                                           \
-  VALUE_ENTRY(BrkRegenPct, "%", 2129)
+  VALUE_ENTRY(BrkRegenPct, "%", 2129)                                          \
+  VALUE_ENTRY(F11Eng, F11ENG, 2130)                                            \
+  VALUE_ENTRY(F11Fault, F11FLT, 2131)
 
-// Next value Id: 2130
+// Next value Id: 2132
 
 // Dead params
 /*
@@ -375,6 +378,8 @@
 #define CHGINT "0=Unused, 1=i3LIM, 2=Chademo, 3=CPC, 4=Foccci"
 #define CAN3SPD "0=k33.3, 1=k500, 2=k100"
 #define TRNMODES "0=Manual, 1=Auto"
+#define F11ENG "0=Off, 1=Crank, 2=Run, 3=Stop, 4=Stopped"
+#define F11FLT "0=None, 1=SecondSender, 2=StartWatchdog"
 #define CAT_AIRCON "Air Conditioning"
 #define CAN_DEV "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
