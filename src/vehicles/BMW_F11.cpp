@@ -522,14 +522,14 @@ bool BMW_F11::EngineRunning() const { return eng.phase == 2; }
 
 // TODO: DSC torque ceiling from the Pico. Not implemented.
 // DSC (stability control) tells the diesel ECU to cut torque on
-// FlexRay only (dde_dsc_torque_rx.md). The Pico will forward that
-// limit later. Cruise is the same kind of gap: FlexRay 0x21 carries
-// a requested wheel torque, 1 Nm per bit with 32000 meaning 0 Nm
-// (dde_cruise_rx.md). Neither has a CAN id yet, so this function is
-// never called and the ceiling stays "no limit". When a frame is
-// defined, store dscLimitNm, set dscLimitFresh, and zero
-// dscLimitAge10ms. Do not send PT-CAN2, 0x137 or 0x6xx diagnostics
-// from here.
+// FlexRay only (docs/bmw-f-series/dde_dsc_torque_rx.md). The Pico
+// will forward that limit later. Cruise is the same kind of gap:
+// FlexRay 0x21 carries a requested wheel torque, 1 Nm per bit with
+// 32000 meaning 0 Nm (docs/bmw-f-series/dde_cruise_rx.md). Neither has
+// a CAN id yet, so this function is never called and the ceiling stays
+// "no limit". When a frame is defined, store dscLimitNm, set dscLimitFresh, and
+// zero dscLimitAge10ms. Do not send PT-CAN2, 0x137 or 0x6xx diagnostics from
+// here.
 void BMW_F11::HandleDscTorqueCeiling(uint32_t *data) { (void)data; }
 
 // Forget a DSC torque cut that has gone quiet. 50 ticks of 10 ms is
@@ -925,8 +925,8 @@ void BMW_F11::Send100MsFrames() {
 
 // ---------------------------------------------------------------------
 // Added for the v1h.3 timing (pico-flexray v1h.3, spec
-// pico_zv_private_can.md section 5). Small pieces, in the order the
-// 1 ms task runs them.
+// docs/bmw-f-series/pico_zv_private_can.md section 5). Small pieces,
+// in the order the 1 ms task runs them.
 // ---------------------------------------------------------------------
 
 // ms from t to now, never negative.
@@ -1435,7 +1435,9 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
 // Automatic gearbox (Transmission = Automatic). The EGS (gearbox ECU)
 // is gone, so we read the lever ourselves and show the gear the way
 // the EGS did. Ported from pico-flexray v1h.3 src/dde_gear.c, timings
-// from its dde_gear.h. Nothing here runs on a manual car.
+// from its dde_gear.h. Background on the real EGS:
+// docs/bmw-f-series/egs_gear_report_tx.md. Nothing here runs on a
+// manual car.
 // ---------------------------------------------------------------------
 
 // Gears and stages, as dde_gear.h.
@@ -1878,9 +1880,10 @@ void BMW_F11::Send512() {
   }
 }
 
-// 0x397 short "E3" blips of the real DDE (run 4): the first at
-// W+1.321 s, then these gaps in ms, repeating. Each lasts 60 ms (20 ms
-// less than the gap when the gap is shorter than 80 ms).
+// 0x397 short "E3" blips of the real DDE (run 4,
+// docs/bmw-f-series/f11_emu_run4.md): the first at W+1.321 s, then
+// these gaps in ms, repeating. Each lasts 60 ms (20 ms less than the
+// gap when the gap is shorter than 80 ms).
 static const uint16_t kBlip397[62] = {
     4120, 840,  2240, 360,  540,  60,   780,  3260, 4040, 1380, 540,
     1120, 1000, 420,  1760, 220,  180,  460,  1320, 1060, 1560, 1500,
@@ -2028,12 +2031,12 @@ void BMW_F11::SendSlowDde() {
 }
 
 // ---------------------------------------------------------------------
-// Private link to the Pico (F11Pico = 1). Spec pico_zv_private_can.md
-// section 6 and .dbc (draft 2), as Pico dde-emu v1z.1 (src/zv_link.c)
-// sends and reads it. DLC 8, Intel order. Byte 0 = CRC-8 (poly 0x1D)
-// over [id low, id high, bytes 1-7]; byte 1 low nibble = alive 0..14,
-// first frame after a wake = 1. Sent only while the bus gate is open,
-// from W+20 ms, like the Pico.
+// Private link to the Pico (F11Pico = 1). Spec
+// docs/bmw-f-series/pico_zv_private_can.md section 6 and .dbc (draft 2), as
+// Pico dde-emu v1z.1 (src/zv_link.c) sends and reads it. DLC 8, Intel order.
+// Byte 0 = CRC-8 (poly 0x1D) over [id low, id high, bytes 1-7]; byte 1 low
+// nibble = alive 0..14, first frame after a wake = 1. Sent only while the bus
+// gate is open, from W+20 ms, like the Pico.
 // ---------------------------------------------------------------------
 
 static const uint8_t kZvLinkVer = 0x10; // 0x304 FW_VER: link v1.0

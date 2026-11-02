@@ -37,8 +37,9 @@
 // emulates the DDE there. This class does not speak FlexRay. The ZV
 // sends every BMW frame on PT-CAN; the Pico sends no BMW frame at all.
 // With F11Pico = 1 the two also talk over a small private link on the
-// same bus (ids 0x304-0x30C, spec pico_zv_private_can.md section 6,
-// as Pico dde-emu v1z.1 implements it):
+// same bus (ids 0x304-0x30C, spec
+// docs/bmw-f-series/pico_zv_private_can.md section 6, as Pico
+// dde-emu v1z.1 implements it):
 //   ZV -> Pico  0x304 status, 0x305 / 0x306 / 0x307 the engine story
 //               and gear, so FlexRay shows exactly what PT-CAN shows.
 //   Pico -> ZV  0x308 status, 0x309 DSC request, 0x30A brake pressure
@@ -72,9 +73,10 @@
 //
 // Timing and bytes copy the Pico emulator v1h.3 (pico-flexray
 // src/ptcan_emu_core.c, dde_engine.c, dde_gear.c) and the spec
-// flexray-re-notes analysis/pico_zv_private_can.md section 5. The Pico
-// keeps FlexRay. Each PT-CAN id must be sent by one box only: run a
-// Pico build that sends no BMW frames (v1z or later).
+// docs/bmw-f-series/pico_zv_private_can.md section 5 (notes index:
+// docs/bmw-f-series/README.md). The Pico keeps FlexRay. Each PT-CAN id
+// must be sent by one box only: run a Pico build that sends no BMW
+// frames (v1z or later).
 //
 // When we may transmit (the v1h.3 bus gate):
 //   Nothing either while KL15 is off, no other ECU sent an NM frame
