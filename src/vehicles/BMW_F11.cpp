@@ -24,7 +24,9 @@
 
 // What this file does is described at the top of BMW_F11.h.
 // Short version: on PT-CAN we imitate the removed diesel ECU (DDE).
-// FlexRay is the Pico's job. PT-CAN2 (the old gearbox bus) is silent.
+// FlexRay is the Pico's job; with F11Pico = 1 we keep it in step over
+// the private link (0x304-0x30C). PT-CAN2 (the old gearbox bus) is
+// silent.
 //
 // Every protected frame uses E2E. That is the car's anti-corruption
 // check: byte 0 is a CRC-8 (poly 0x1D, start at 0), computed over the
@@ -103,22 +105,29 @@ static uint16_t PedalRaw() {
 // Start asleep: nothing is sent until the car speaks first.
 BMW_F11::BMW_F11()
     : motorRpm(0), coolantC(0), nowMs(0), lastRxMs(0), wakeMs(0), wakeSeq(0),
-      wakeSeqSeen(0), rxEver(false), busWasAwake(false), foreignTx(false),
-      kl15Ever(false), onMs(0), offMs(0), lastOnEvMs(0), lastFnmMs(0),
-      next592(0), final592(false), startFault(false), stKl(0), stKlMs(0),
-      stKlHave(false), brakeDownMs(0), brakeDownHave(false), eng(), tick200(0),
-      tick10(0), fastTick(0), fastOn(false), tick8F(0), on8F(false),
-      last8F7(0x80), aliveA5(0), aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0),
-      alive3F9(0), gear(), lv197Ms(0), lv197Seq(0), lv197Seen(0), brake173Ms(0),
+      wakeSeqSeen(0), rxEver(false), busWasAwake(false), kl15Ever(false),
+      onMs(0), offMs(0), lastOnEvMs(0), lastFnmMs(0), next592(0),
+      final592(false), startFault(false), stKl(0), stKlMs(0), stKlHave(false),
+      brakeDownMs(0), brakeDownHave(false), eng(), tick200(0), tick10(0),
+      fastTick(0), fastOn(false), tick8F(0), on8F(false), last8F7(0x80),
+      aliveA5(0), aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0), alive3F9(0),
+      gear(), lv197Ms(0), lv197Seq(0), lv197Seen(0), brake173Ms(0),
       brake173Have(false), alive3FD(0), s3FD(), s39A(), s518(), s381(), s3B3(),
-      s397(), s3FB(), next512(0), pre512(0), seen3f9(false), next3f9(0),
+      s397(), s3FB(), next512(0), pre512(0), pBad(0), picoLost(false),
+      picoMil(false), alive304(0), alive305(0), alive306(0), alive307(0),
+      step305(0), last305(0), s304(), s307(), seen3f9(false), next3f9(0),
       last3f9Ms(0), kl15On(false), kl50On(false), brakePressed(false),
       brakeOneSwitch(false), brakePressure(false), brakeSeen(false),
       brakeAge10ms(0), brakeTorqueNm(0), brakeTorqueSeen(false),
       brakeTorqueAge10ms(0), dscLimitFresh(false), dscLimitAge10ms(0),
       dscLimitNm(0), dscTorqueCanId(0) {
   for (int i = 0; i < 6; i++)
-    last3f9[i] = 0;
+    last3f9[i] = last306[i] = 0;
+  for (int i = 0; i < 5; i++) {
+    pAlive[i] = 0xFF;
+    pMs[i] = 0;
+    pHave[i] = false;
+  }
   for (int i = 0; i < 4; i++)
     lv197[i] = 0;
 }
@@ -140,28 +149,22 @@ void BMW_F11::SetCanInterface(CanHardware *c) {
   can->RegisterUserMessage(0x173);
   // 0x0EF  every 20 ms. Total brake torque. See Handle0EF.
   can->RegisterUserMessage(0x0EF);
-  // 0x3F9 and 0x0A5 are frames WE send. If they arrive, another box
-  // (an old Pico build, a real DDE) is sending them too, and we stop.
-  // v1h.3 ptcan_emu_core.c pte_on_rx, PTE_FAULT_FOREIGN.
-  can->RegisterUserMessage(0x3F9);
-  can->RegisterUserMessage(0x0A5);
   // 0x197  gear lever (GWS), about every 30 ms. Automatic only; see
   // GearLever. Registered always: Transmission can change at run time.
   can->RegisterUserMessage(0x197);
-  // 0x3FD  sent by us on an automatic. From anyone else: stop.
-  can->RegisterUserMessage(0x3FD);
   // 0x500-0x57F  network management of the other ECUs (one mask
   // filter). While one of them keeps the bus awake we may talk with
-  // KL15 off; 0x512 / 0x518 from anyone else is a second sender.
+  // KL15 off (prepare sleep, see PrepSleep).
   can->RegisterUserMessage(0x500, 0x780);
+  // 0x308-0x30F  the Pico's private frames (one mask filter). Always
+  // registered so F11Pico can change at run time; ignored while off.
+  can->RegisterUserMessage(0x308, 0x7F8);
 
-  // TODO: DSC torque cuts arrive on FlexRay, not here. The Pico will
-  // forward them later. No CAN id is assigned. See
-  // HandleDscTorqueCeiling() and dde_dsc_torque_rx.md.
-  // TODO: cruise torque is FlexRay 0x21 (1 Nm per bit, offset -32000).
-  // The stalk is not on PT-CAN. No CAN id is assigned. See
-  // dde_cruise_rx.md. Do not invent a 0x12F replacement if the
-  // gateway is removed; something else must send the real frame.
+  // DSC torque cuts and the cruise request arrive on FlexRay. The Pico
+  // forwards them on 0x309 / 0x30B; they are shown only (F11DscNm,
+  // F11CrsNm), nothing acts on them yet. Do not invent a 0x12F
+  // replacement if the gateway is removed; something else must send
+  // the real frame.
 }
 
 // Ignition present? The E46 answers this from the terminal-15 pin.
@@ -209,6 +212,15 @@ void BMW_F11::OnBusWake() {
   s397 = TxSlot();
   s3FB = TxSlot();
   pre512 = 0;
+  // The private link restarts with the bus too: alive 1 again, and
+  // the Pico gets 100 ms from its first frame time to show up.
+  for (int i = 0; i < 5; i++)
+    pAlive[i] = 0xFF;
+  picoLost = false;
+  alive304 = alive305 = alive306 = alive307 = 0;
+  step305 = 0;
+  s304 = TxSlot();
+  s307 = TxSlot();
 }
 
 // One second with no 0x12F, 0x173 or 0x0EF (we stopped talking after
@@ -249,10 +261,10 @@ void BMW_F11::NoteBusState() {
 }
 
 // v1h.3 bus gate (ptcan_emu_core.c pte_state): we may talk while one
-// of the car's frames came in the last 200 ms, nobody else sends our
-// ids, and the bus is not preparing to sleep.
+// of the car's frames came in the last 200 ms and the bus is not
+// preparing to sleep.
 bool BMW_F11::BusAwake() const {
-  return rxEver && !foreignTx && (nowMs - lastRxMs) <= 200 && !PrepSleep();
+  return rxEver && (nowMs - lastRxMs) <= 200 && !PrepSleep();
 }
 
 // One frame from the car. >= 1 s after the last one it is a new wake
@@ -284,13 +296,11 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
   // frames must not count, or we could be the box that wakes the bus.
   if (id == 0x12F || id == 0x173 || id == 0x0EF)
     NoteRx();
-  // Someone else sends one of our frames: stay silent (F11Fault 1).
-  bool egsId = id == 0x3FD || id == 0x518;
-  if (id == 0x3F9 || id == 0x0A5 || id == 0x512 || (egsId && AutoBox()))
-    foreignTx = true;
   // NM frame of another ECU (v1h.3 pte_on_rx last_fnm).
-  else if (id >= 0x500 && id <= 0x57F)
+  if (id >= 0x500 && id <= 0x57F)
     lastFnmMs = nowMs;
+  if (id >= 0x308 && id <= 0x30C)
+    PicoRx(id, bytes);
 
   switch (id) {
   case 0x12F:
@@ -324,10 +334,10 @@ void BMW_F11::DecodeCAN(int id, uint32_t *data) {
 // Normally every 100 ms. While the nibble below is C or D the gateway
 // sends it every 20 ms (not "100 ms plus an occasional extra").
 // The CAS (key and start module) does not send a separate start frame.
-// Crank is this nibble. Tests reached "engine running" with no
-// immobiliser exchange, so we send none. If the CAS or the gateway
-// is removed, something else has to transmit 0x12F or ignition stays
-// off.
+// Crank is this nibble. The ZV never asks the car for an immobiliser
+// exchange, and in testing the car never asked for one, so nothing is
+// needed. If the CAS or the gateway is removed, something else has to
+// transmit 0x12F or ignition stays off.
 //
 //   byte 2, low nibble (bits 16-19), called ST_KL:
 //     6      ignition off. The bus can still be awake.
@@ -518,13 +528,14 @@ bool BMW_F11::EngineRunning() const { return eng.phase == 2; }
 // (dde_cruise_rx.md). Neither has a CAN id yet, so this function is
 // never called and the ceiling stays "no limit". When a frame is
 // defined, store dscLimitNm, set dscLimitFresh, and zero
-// dscLimitAge10ms. Do not send immobiliser frames, PT-CAN2, 0x137
-// or 0x6xx diagnostics from here.
+// dscLimitAge10ms. Do not send PT-CAN2, 0x137 or 0x6xx diagnostics
+// from here.
 void BMW_F11::HandleDscTorqueCeiling(uint32_t *data) { (void)data; }
 
 // Forget a DSC torque cut that has gone quiet. 50 ticks of 10 ms is
-// 500 ms. The Pico frame does not exist yet, so this does nothing
-// until HandleDscTorqueCeiling is filled in. The 500 ms figure is a
+// 500 ms. Nothing sets the limit yet (the Pico's 0x309 is only shown,
+// not acted on), so this does nothing until HandleDscTorqueCeiling is
+// filled in. The 500 ms figure is a
 // placeholder until that frame's real period is known.
 void BMW_F11::AgeDscLimit() {
   if (!dscLimitFresh)
@@ -852,18 +863,18 @@ void BMW_F11::Send3F9(bool ready) {
 // KL15 is on, and one last frame at OFF+54 ms.
 //   byte 0      0x40  check-control message, no extra data
 //   byte 1-2    22 00  message id 34, little-endian
-//   byte 3      0x14 = lamp off. The real DDE sent 0x15 after its
-//               immobiliser exchange; not proven to be "lamp on", so
-//               never sent (as v1h.3).
+//   byte 3      0x14 = lamp off. 0x15 = lamp on, sent only while the
+//               Pico link is lost (spec 6.3). The real DDE sent 0x15,
+//               but "lamp on" is not yet proven on this car.
 //   byte 4-7    FF FF FF FF
-// Immobiliser frames on this id (they start with 0x80 or 0x85) are
-// never sent, nor are 0x580, 0x5C0, 0x380 or 0x351.
+// Byte 0 is always 0x40. 0x580, 0x5C0, 0x380 and 0x351 are never sent.
 void BMW_F11::Send592() {
   if (!kl15On && !final592)
     return;
   if ((int32_t)(nowMs - next592) < 0)
     return;
-  uint8_t b[8] = {0x40, 0x22, 0x00, 0x14, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t b[8] = {0x40, 0x22, 0x00, (uint8_t)(picoMil ? 0x15 : 0x14),
+                  0xFF, 0xFF, 0xFF, 0xFF};
   can->Send(0x592, b, 8);
   if (!kl15On)
     final592 = false;
@@ -933,6 +944,7 @@ void BMW_F11::Task1Ms() {
   if ((nowMs % 5) == 0)
     EngineStep();
   EngineWatchdog();
+  PicoTask();
   GearTask();
 
   // No torque unless our engine story says running, and on an
@@ -948,7 +960,7 @@ void BMW_F11::Task1Ms() {
     Param::SetInt(Param::dir, 0);
 
   Param::SetInt(Param::F11Eng, eng.phase);
-  Param::SetInt(Param::F11Fault, foreignTx ? 1 : (startFault ? 2 : 0));
+  Param::SetInt(Param::F11Fault, picoLost ? 1 : (startFault ? 2 : 0));
 
   if (!BusAwake())
     return;
@@ -987,10 +999,10 @@ void BMW_F11::Task200Ms() {
 // forward / reverse inputs decide.
 // Automatic: R or D only once that gear is engaged (stage "steady"),
 // NEUTRAL in every other state, P included.
-// A second sender (F11Fault 1) silences us, so the car no longer sees
-// our gear or "running": NEUTRAL as well.
+// Pico lost (F11Fault 1): NEUTRAL as well, at once (the story is
+// stopping anyway).
 bool BMW_F11::GetGear(Vehicle::gear &outGear) {
-  if (!EngineRunning() || foreignTx) {
+  if (!EngineRunning() || picoLost) {
     outGear = Vehicle::NEUTRAL;
     return true;
   }
@@ -1035,8 +1047,8 @@ void BMW_F11::EngineCheckStart() {
     return;
   if (stKl != 0x0D)
     eng.wdBlock = false; // the crank request ended: a new start is allowed
-  if (eng.wdBlock)
-    return;
+  if (eng.wdBlock || picoLost)
+    return; // no start while the Pico (FlexRay) is lost
   bool cas = stKl == 0x0D && BrakeRecent(2000);
   bool pin = Param::GetBool(Param::din_start) &&
              (stKl == 0x0A || stKl == 0x0D) && BrakeRecent(300);
@@ -1170,8 +1182,14 @@ static uint32_t Rpm4Stop(uint32_t rpm4AtStop, uint32_t t) {
   return 0;
 }
 
-// What the story puts on the bus right now (dde_engine.c set_outputs,
-// the PT-CAN part only).
+// rpm4 -> the 0x26 turbine value (dde_engine.c)
+static uint16_t Turbine(uint16_t rpm4) {
+  return (uint16_t)(2000u + (rpm4 / 4u > 56u ? rpm4 / 4u - 56u : 0u));
+}
+
+// What the story puts on the bus right now (dde_engine.c set_outputs:
+// the PT-CAN part, plus the FlexRay-only bytes the Pico gets on the
+// private link).
 void BMW_F11::EngineOutputs(uint32_t dtMs) {
   EngStory &e = eng;
   uint32_t now = nowMs;
@@ -1193,6 +1211,12 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
   e.fb9Set = false;
   e.r397Set = false;
   e.stopWalkDone = false;
+  uint8_t pe89 = e.e89, pe89b1 = e.e89b1; // a stop keeps the 0xE8 content
+  bool pe8fast = e.e8fast;
+  e.c3b34 = e.c3b56 = e.r29b8 = e.b142b8 = e.b142b23 = 0;
+  e.e89 = e.e89b1 = 0;
+  e.e8fast = e.e8crank = false;
+  e.turbine = e.fb7mv = 0;
   if (e.phase == 0 && !e.hasRun) {
     e.f3q8 = 0; // not started in this wake: templates only
     return;
@@ -1225,6 +1249,7 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
       e.e6ready = 1;
       e.torque =
           t < kFire ? 2560 : (uint16_t)(2560u - (t - kFire) * 420u / kRunup);
+      e.fb7mv = 10600; // starter dip
     } else {
       e.e6b3 = 0x82;
       e.e6b4 = 0x26;
@@ -1243,12 +1268,31 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
       e.r397[0] = tr >= 2800u ? 0xD2 : 0xC2;
       e.r397[1] = t82 < 60u ? 0xE2 : (t82 < 120u ? 0xE1 : 0xDD);
       e.r397[2] = Rand397(now);
+      // 0x142 byte 8: 84 running, A4 from 50 ms into ST_KL 9; FB L7
+      // 12.4 V -> 14.7 V over 5 s
+      e.b142b8 = (e.t9Have && SinceMs(now, e.t9) >= 50u) ? 0xA4 : 0x84;
+      e.fb7mv =
+          (uint16_t)(12400u + (t82 > 5000u ? 2300u : t82 * 2300u / 5000u));
     }
     if (e.curRun) {
       if (tr >= 7u)
         e.r29b5 = 0x72;
       if (tr >= 100u)
         e.f97c = true;
+      // FlexRay: 0x28 c3 codes, 0x29 b8, 0x142 b23, 0xE8 running
+      // content from +2.8 s (b1 ramp 12 18 1E 25, fast rate), turbine
+      e.c3b56 = tr < 100u ? 1 : 2;
+      e.c3b34 = 1;
+      e.r29b8 = 0x10;
+      if (tr >= 50u)
+        e.b142b23 = 0x24;
+      if (tr >= 2800u) {
+        uint32_t k = (tr - 2800u) / 100u;
+        e.e89 = 1;
+        e.e89b1 = (uint8_t)(k > 3u ? 3u : k);
+        e.e8fast = true;
+      }
+      e.turbine = Turbine(e.rpm4);
       // 0x3B3 bytes 1-3: 00 04 00; byte 1 ramps 0x2D -> 0xC8 from
       // +2 s (+4 per 100 ms); byte 2 04 -> 00 at +5 s
       e.fb9Set = true;
@@ -1264,6 +1308,13 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
       // the "stopped" values stay until the first rpm
       e.r29b5 = 0x7C;
       e.f97c = true;
+      e.c3b56 = 3;
+      e.c3b34 = 2;
+      e.r29b8 = 0xC0;
+      e.b142b8 = 0xA4;
+      e.b142b23 = 0x24;
+      e.e89 = 2;
+      e.turbine = 2000;
       if (!e.e6b3) {
         e.e6b3 = 0x80;
         e.e6b4 = 0x64;
@@ -1278,6 +1329,7 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     }
     if (e.rpm4)
       e.r381Run = true;
+    e.e8crank = !e.e8fast; // 0xE8 at the crank rate until the fast rate
     break;
   }
   case 3: // stop: run-down
@@ -1290,6 +1342,16 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     e.torque = ts < 400u ? 2098 : 1947;
     e.r29b5 = ts >= kT92 ? 0x7C : 0x72;
     e.f97c = true;
+    e.b142b8 = 0xA4;
+    e.b142b23 = 0x24;
+    e.c3b56 = ts >= kT92 ? 3 : 2;
+    e.c3b34 = 1;
+    e.r29b8 = ts >= 35u ? 0xC0 : 0x10;
+    e.e89 = pe89;
+    e.e89b1 = pe89b1;
+    e.e8fast = pe8fast;
+    e.fb7mv = 14700;
+    e.turbine = Turbine(e.rpm4);
     e.inj = ts < 360u; // 0x3FB back to "not injecting"
     e.r381Run = true;
     e.fb9Set = true; // 0x3B3: FF 7F at +240 ms
@@ -1324,6 +1386,15 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     e.fb9[1] = 0xFF;
     e.fb9[2] = 0x7F;
     e.r381Run = false;
+    e.turbine = 2000;
+    e.b142b8 = 0xA4;
+    e.b142b23 = 0x24;
+    e.c3b56 = 3;
+    e.c3b34 = 2;
+    e.r29b8 = 0xC0;
+    e.e89 = 2;
+    e.e8fast = t80 < 1500u; // 0xE8 back to 1/s 1.5 s after the stop
+    e.fb7mv = (uint16_t)(t80 >= 5000u ? 0u : 14700u - 1829u * t80 / 5000u);
     // 0x397: D0 24 00, then the walk 29 AF DF DE DD DF E2 from +2.09 s.
     // After E2 (+2.913 s) the normal 0x397 content is back.
     static const uint16_t walkMs[8] = {0,    2090, 2150, 2210,
@@ -1953,5 +2024,221 @@ void BMW_F11::SendSlowDde() {
   if (SlotDue(s3FB, b, 0, 6, 437, 60)) {
     can->Send(0x3FB, b, 6);
     SlotSent(s3FB, b, 1000);
+  }
+}
+
+// ---------------------------------------------------------------------
+// Private link to the Pico (F11Pico = 1). Spec pico_zv_private_can.md
+// section 6 and .dbc (draft 2), as Pico dde-emu v1z.1 (src/zv_link.c)
+// sends and reads it. DLC 8, Intel order. Byte 0 = CRC-8 (poly 0x1D)
+// over [id low, id high, bytes 1-7]; byte 1 low nibble = alive 0..14,
+// first frame after a wake = 1. Sent only while the bus gate is open,
+// from W+20 ms, like the Pico.
+// ---------------------------------------------------------------------
+
+static const uint8_t kZvLinkVer = 0x10; // 0x304 FW_VER: link v1.0
+
+// value -> 2-bit code of the DBC tables (0 = none)
+static uint8_t Code2(uint8_t v, uint8_t a, uint8_t b) {
+  return v == a ? 1 : (v == b ? 2 : 0);
+}
+
+void BMW_F11::PicoSend(uint16_t id, uint8_t *b, uint8_t *alive) {
+  E2ESeal(b, 8, id, alive);
+  can->Send(id, b, 8);
+}
+
+// One frame 0x308-0x30C. Dropped (and counted in F11LinkErr) with a
+// bad CRC, alive 15 or the same alive as the last good one.
+void BMW_F11::PicoRx(int id, const uint8_t *b) {
+  if (!PicoLinkOn())
+    return;
+  int k = id - 0x308;
+  uint8_t idb[2] = {(uint8_t)(id & 0xFF), (uint8_t)(id >> 8)};
+  uint8_t a = b[1] & 0x0F;
+  if (Crc8_1d(b + 1, 7, Crc8_1d(idb, 2, 0)) != b[0] || a == 15 ||
+      a == pAlive[k]) {
+    pBad++;
+    return;
+  }
+  pAlive[k] = a;
+  pMs[k] = nowMs;
+  pHave[k] = true;
+  switch (id) {
+  case 0x308: // PICO_Status: PICO_MODE
+    Param::SetInt(Param::F11PicoMd, b[1] >> 4);
+    break;
+  case 0x309: { // PICO_Dsc: wheel torque request, 1 Nm, offset -32000
+    bool act = b[4] & 0x10;
+    Param::SetInt(Param::F11DscAct, act);
+    Param::SetInt(Param::F11DscNm, act ? (b[2] | (b[3] << 8)) - 32000 : 0);
+    break;
+  }
+  case 0x30A: { // PICO_Brake: pressure 1/16 bar, pedal travel raw
+    bool fresh = b[5] & 0x01;
+    Param::SetFloat(Param::F11BrkBar,
+                    fresh ? (b[2] | ((b[3] & 0x0F) << 8)) * 0.0625f : 0.0f);
+    Param::SetInt(Param::F11BrkPed, fresh ? (b[3] >> 4) | (b[4] << 4) : 0);
+    break;
+  }
+  case 0x30B: { // PICO_Cruise: wheel torque request, as 0x309
+    bool act = b[5] & 0x10;
+    Param::SetInt(Param::F11CrsAct, act);
+    Param::SetInt(Param::F11CrsNm, act ? (b[2] | (b[3] << 8)) - 32000 : 0);
+    break;
+  }
+  default: // 0x30C FlexRay echo: only its timing is kept
+    break;
+  }
+}
+
+// 0x305 / 0x306 / 0x307 from the engine story and the gear (the
+// eng_out_t the Pico rebuilds; zv_link.c build_priv).
+void BMW_F11::PicoEngFrames(uint8_t *f, uint8_t *s, uint8_t *x) {
+  const EngStory &e = eng;
+  memset(f, 0, 8);
+  memset(s, 0, 8);
+  memset(x, 0, 8);
+  // 0x305 ZV_EngFast: ACTIVE, CNT_HI3, E8_FAST, E8_CRANK, RPM4,
+  // TORQUE_RAW, C3_B34, C3_B56, TURBINE
+  f[1] = (uint8_t)((e.active ? 0x10 : 0) | (e.cntHi == 3 ? 0x20 : 0) |
+                   (e.e8fast ? 0x40 : 0) | (e.e8crank ? 0x80 : 0));
+  f[2] = (uint8_t)e.rpm4;
+  f[3] = (uint8_t)(e.rpm4 >> 8);
+  f[4] = (uint8_t)e.torque;
+  f[5] = (uint8_t)(((e.torque >> 8) & 0x0F) | (e.c3b34 << 4) | (e.c3b56 << 6));
+  f[6] = (uint8_t)e.turbine;
+  f[7] = (uint8_t)(e.turbine >> 8);
+  // 0x306 ZV_EngState. Gear as the Pico would read it from 0x3F9 /
+  // 0x0DC (zv_link.c build_pt), so FlexRay matches PT-CAN: automatic
+  // from GearOut (FlexRay keeps P lock 2 while P is being released),
+  // manual "no P lock, nibble 1" once the wake ramp is over.
+  GearBytes g = {0, 0, 0, 0, 0, 0, 0};
+  bool gs = false;
+  uint8_t frPark = 0, gc = 2; // gc: 0 P, 1 R, 2 N, 3 D
+  if (AutoBox()) {
+    gc = gear.target & 3;
+    gs = GearOut(g);
+    frPark =
+        (gear.stage == kGstPReleased || gear.stage == kGstLeaveP) ? 2 : g.park;
+  } else if (SinceWake() >= 709) {
+    gs = true;
+    g.nib = 1;
+    g.dc2 = 0x22;
+    g.dc5 = 0xFE;
+  }
+  if (!gs)
+    g = GearBytes{0, 0, 0, 0, 0, 0, 0};
+  s[1] = (uint8_t)((gs ? 0x10 : 0) | (e.f97c ? 0x20 : 0) | (e.e89 << 6));
+  s[2] = e.e6b3;
+  s[3] = e.e6b4;
+  s[4] =
+      (uint8_t)((e.e6ready == 0xFF ? 15 : (e.e6ready & 0x0F)) | (g.nib << 4));
+  s[5] = g.dc2;
+  s[6] = g.dc5;
+  s[7] = (uint8_t)((gs ? frPark : 0) | ((e.phase & 7) << 2) | (gc << 5));
+  // 0x307 ZV_EngAux: FB9 (0x3B3) bytes, FB7 mV and the coded bytes
+  x[1] = (uint8_t)((e.fb9Set ? 0x10 : 0) | (e.b142b23 == 0x24 ? 0x20 : 0));
+  if (e.fb9Set) {
+    x[2] = e.fb9[0];
+    x[3] = e.fb9[1];
+    x[4] = e.fb9[2];
+  }
+  x[5] = (uint8_t)e.fb7mv;
+  x[6] = (uint8_t)(e.fb7mv >> 8);
+  x[7] = (uint8_t)((e.e89b1 & 3) | (Code2(e.b142b8, 0x84, 0xA4) << 2) |
+                   (Code2(e.r29b5, 0x72, 0x7C) << 4) |
+                   (Code2(e.r29b8, 0x10, 0xC0) << 6));
+}
+
+// Every 1 ms: timeouts, "Pico lost", the F11 link values, and our
+// frames 0x304 (20 ms), 0x305 + 0x306 (20 ms, right after the 5 ms
+// engine step, 0x305 first; both again when the step changes ACTIVE,
+// CNT_HI3 or 0x306 bytes 2-7; 0x306 alone when the gear changes
+// between steps), 0x307 (100 ms, and on a change at most every 5 ms).
+void BMW_F11::PicoTask() {
+  static const uint16_t toMs[4] = {100, 50, 100, 200}; // 0x308..0x30B
+  bool on = PicoLinkOn();
+  bool fresh[4];
+  for (int i = 0; i < 4; i++)
+    fresh[i] = on && pHave[i] && SinceMs(nowMs, pMs[i]) <= toMs[i];
+  if (!fresh[0])
+    Param::SetInt(Param::F11PicoMd, 0);
+  if (!fresh[1]) {
+    Param::SetInt(Param::F11DscAct, 0);
+    Param::SetInt(Param::F11DscNm, 0);
+  }
+  if (!fresh[2]) {
+    Param::SetFloat(Param::F11BrkBar, 0);
+    Param::SetInt(Param::F11BrkPed, 0);
+  }
+  if (!fresh[3]) {
+    Param::SetInt(Param::F11CrsAct, 0);
+    Param::SetInt(Param::F11CrsNm, 0);
+  }
+  Param::SetInt(Param::F11LinkErr, pBad);
+
+  // Pico lost: judged only while the bus is up, from W+120 ms (the
+  // Pico's first 0x308 is due at W+20 ms). Clears when 0x308 is back.
+  if (!on) {
+    picoLost = false;
+  } else if (BusAwake()) {
+    if (fresh[0]) {
+      picoLost = false;
+    } else if (!picoLost && SinceWake() >= 120) {
+      picoLost = true;
+      picoMil = true;
+      next592 = nowMs; // MIL frame now
+      if (eng.phase == 1 || eng.phase == 2)
+        EngineStopNow();
+    }
+  }
+  if (!on || !kl15On)
+    picoMil = false;
+  Param::SetInt(Param::F11Link, !on ? 0 : (picoLost ? 3 : (fresh[0] ? 2 : 1)));
+
+  if (!on || !BusAwake())
+    return;
+  // 0x304 ZV_Status
+  int opmode = Param::GetInt(Param::opmode);
+  bool run = opmode == MOD_RUN;
+  uint8_t z[8] = {0};
+  z[1] = (uint8_t)((opmode & 0x0F) << 4);
+  z[2] = (uint8_t)((run ? 0x01 : 0) | (eng.hasRun ? 0x02 : 0) |
+                   (run && EngineRunning() && !picoLost ? 0x04 : 0) |
+                   (Param::GetInt(Param::F11Fault) ? 0x10 : 0) | 0x20 |
+                   (picoMil ? 0x40 : 0) | (fresh[0] && !picoLost ? 0x80 : 0));
+  z[3] = last3f9[2]; // 0x3F9 bytes 4-5 as last sent (coolant, oil)
+  z[4] = last3f9[3];
+  z[5] = 0x01 | (2 << 1); // BMW_TX_ON, ZV_BUS_STATE Run
+  z[6] = kZvLinkVer;
+  if (SlotDue(s304, z, 0, 8, 20, 0)) {
+    PicoSend(0x304, z, &alive304);
+    SlotSent(s304, z, 20);
+  }
+  if (!s304.started)
+    return;
+  uint8_t f[8], s[8], x[8];
+  PicoEngFrames(f, s, x);
+  bool step = (nowMs % 5) == 0; // EngineStep ran this ms
+  bool cyc = step && (step305++ % 4) == 0;
+  bool ch306 = memcmp(s + 2, last306, 6) != 0;
+  // 0x305 and 0x306 of one engine step go together, 0x305 first
+  if (cyc || (step && ((f[1] & 0x30) != last305 || ch306))) {
+    last305 = f[1] & 0x30;
+    PicoSend(0x305, f, &alive305);
+  }
+  if (cyc || ch306) {
+    memcpy(last306, s + 2, 6);
+    PicoSend(0x306, s, &alive306);
+  }
+  // FB7_MV ramps every step; it is left out of the change check and
+  // goes with the 100 ms frame.
+  uint8_t key[8];
+  memcpy(key, x, 8);
+  key[5] = key[6] = 0;
+  if (SlotDue(s307, key, 1, 8, 23, 5)) {
+    PicoSend(0x307, x, &alive307);
+    SlotSent(s307, key, 100);
   }
 }
