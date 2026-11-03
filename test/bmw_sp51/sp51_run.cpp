@@ -3,9 +3,16 @@
 // and the checks of the chosen scenario on stderr. Nothing touches a bus.
 //
 //   sp51_run v7        the close_v7 timeline (compare.py against the CSV)
-//   sp51_run early     key on 2 s after power up, before the pack settled
-//                      (SP51Settle 20 s): the ZV precharge times out, the
-//                      pack is never asked to close, the key on at 22 s works
+//   sp51_run cold      key on at power up (SP51Settle 20 s): the ZV holds
+//                      its precharge timeout until the CLOSE, then runs
+//   sp51_run otherbms  the same, but the ZV asks a plain BMS (always ready):
+//                      the timeout is not held, PchFail at 7 s as before
+//   sp51_run notready  cold key on, the pack never reports 0x45 (ready):
+//                      the hold gives up after 35 s, then PchFail
+//   sp51_run holdlost  cold key on, 0x112 stops during the hold: PchFail
+//   sp51_run holdpchk  cold key on, pack voltage 150 V: the last check
+//                      before the close fails, PchFail
+//   sp51_run holdoff   cold key on, key off during the hold: Off, as before
 //   sp51_run settle5   SP51Settle 5: key on at 10 s closes
 //   sp51_run keyoff    key off in Run: the pack stays closed for the ZV's
 //                      2.5 s shutdown delay, then opens
@@ -101,9 +108,15 @@ int main(int argc, char **argv) {
   int answers = strcmp(sc, "nopack") != 0;
   // ZV model: the opmode and the prec_out / dcsw_out handling of
   // Ms10Task in stm32_vcu.cpp, rlyDly delays included.
-  bool early = !strcmp(sc, "early");
+  bool other = !strcmp(sc, "otherbms");
+  bool cold =
+      !strcmp(sc, "cold") || !strncmp(sc, "hold", 4) || !strcmp(sc, "notready");
   bool trip = !strcmp(sc, "trip");
-  int keyOn = early ? 2000 : (!strcmp(sc, "settle5") ? 10000 : 24900);
+  int keyOn =
+      other ? 2000 : (cold ? 0 : (!strcmp(sc, "settle5") ? 10000 : 24900));
+  BMS plain; // any other battery: ReadyForPrecharge() is always true
+  BMS *holder = other ? &plain : &bms;
+  int holdOffAt = !strcmp(sc, "holdoff") ? 10000 : -1;
   int answerAt = !strcmp(sc, "late") ? 3500 : 100;
   int firstTxAfterAnswer = -1;
   int lim0At = -1, firstOpenAt = -1; // limits 0, first OPEN after closing
@@ -120,7 +133,8 @@ int main(int argc, char **argv) {
       packAwake = true;
       awakeAt = T;
     }
-    bool stop112 = !strcmp(sc, "lost") && T >= 32000;
+    bool stop112 = (!strcmp(sc, "lost") && T >= 32000) ||
+                   (!strcmp(sc, "holdlost") && T >= 10000);
     int openReq = (!strcmp(sc, "openreq") && T >= 32000) ? 2 : 1;
     uint8_t b6 = (!strcmp(sc, "fastopen") && T >= 32000) ? 0x71 : 0x75;
     bool sentinel = !strcmp(sc, "sentinel") && T == 30010;
@@ -139,11 +153,12 @@ int main(int argc, char **argv) {
         } else
           changeAt = -1;
       }
-      uint8_t b1 = (hv << 4) | 0x05;
+      uint8_t b1 = (hv << 4) | (!strcmp(sc, "notready") ? 0x04 : 0x05);
       if (hv != prev || T % 1000 == 500)
         rx(0x1FA, 0, b1, 0, 0, 0, 0, 72, 74); // cells 22 / 24 C
       if (T % 20 == 10 && !stop112) {
-        uint16_t i = sentinel ? 0xFFFD : 8192, u = 3808; // 0.0 A, 380.8 V
+        uint16_t i = sentinel ? 0xFFFD : 8192;              // 0.0 A
+        uint16_t u = !strcmp(sc, "holdpchk") ? 1500 : 3808; // 150 / 380.8 V
         rx(0x112, i, i >> 8, u, u >> 8, 0, openReq << 6, b6,
            hv == 6 ? 0x5F : 0x00);
       }
@@ -181,8 +196,12 @@ int main(int argc, char **argv) {
         DigIo::prec_out.Set();
       if (minTime)
         minTime--;
-      if (!minTime &&
-          Param::GetFloat(Param::udc) >= Param::GetFloat(Param::udcsw)) {
+      if (!holder->ReadyForPrecharge())
+        pchStart = T; // the ZV holds its precharge timeout
+      if ((int)T == holdOffAt) {
+        op = MOD_OFF; // key off: rlyDly is 0, Off drops the outputs
+      } else if (!minTime &&
+                 Param::GetFloat(Param::udc) >= Param::GetFloat(Param::udcsw)) {
         op = MOD_RUN;
         rlyDly = 25;
         runAt = T;
@@ -194,7 +213,7 @@ int main(int argc, char **argv) {
       break;
     case MOD_PCHFAIL:
       DigIo::prec_out.Clear();
-      if (early && (int)T == 10000) {
+      if (other && (int)T == 10000) {
         op = MOD_OFF; // key off, then on again at 22 s
         keyOn = 22000;
       }
@@ -273,15 +292,48 @@ int main(int argc, char **argv) {
     check(Param::GetFloat(Param::udc2) > 380.7f &&
               Param::GetFloat(Param::udc) == 0,
           "open: udc2 = pack side 380.8 V, udc = link side 0 V");
-  } else if (!strcmp(sc, "early")) {
-    // 0x112 starts at 0.11 s and is settled 5 s later; with 2 s of B the
-    // close would be due after the ZV's 5 s precharge timeout.
-    check(pchFailAt >= 7000 && pchFailAt < 7100, "ZV precharge fails at 7 s");
-    check(firstClose >= 22000, "no CLOSE before the second key on");
-    check(runAt > 22000 && runAt - pchStart <= 5000,
-          "second key on: precharge done within 5 s");
+  } else if (!strcmp(sc, "cold")) {
+    check(pchFailAt < 0, "no PchFail");
+    check(firstClose >= 22000 && firstClose < 23000,
+          "CLOSE after the 20 s settle and 2 s of state B");
+    check(runAt > 0 && runAt - firstClose < 2500,
+          "Run within 2.5 s of the CLOSE (timeout held until then)");
+    check(errors == 0 && fault == BMW_SP51::NONE, "no fault, no error");
     fprintf(stderr, "      first CLOSE %d ms, run at %d ms\n", firstClose,
             runAt);
+  } else if (other) {
+    // A plain BMS never holds: 0x112 is settled 20 s after power up, so
+    // the ZV's 5 s run out first, exactly as without the hook.
+    check(plain.ReadyForPrecharge(), "plain BMS: ReadyForPrecharge() true");
+    check(pchFailAt >= 7000 && pchFailAt < 7100, "ZV precharge fails at 7 s");
+    check(firstClose >= 22000, "no CLOSE before the second key on");
+    check(runAt > 22000, "second key on runs");
+  } else if (!strcmp(sc, "notready")) {
+    check(firstClose < 0, "never CLOSE");
+    check(fault == BMW_SP51::NOT_READY, "fault NotReady");
+    check(pchFailAt >= 40000 && pchFailAt <= 40100,
+          "PchFail 5 s after the 35 s hold limit");
+    check(errors > 0, "ERR_BMSCOMM posted");
+    fprintf(stderr, "      PchFail at %d ms\n", pchFailAt);
+  } else if (!strcmp(sc, "holdlost")) {
+    check(firstClose < 0, "never CLOSE");
+    check(Param::GetInt(Param::SP51State) == BMW_SP51::LOST, "state Lost");
+    check(pchFailAt >= 10500 && pchFailAt <= 10600 + 5000,
+          "PchFail 5 s after the pack is lost");
+    fprintf(stderr, "      PchFail at %d ms\n", pchFailAt);
+  } else if (!strcmp(sc, "holdpchk")) {
+    check(firstClose < 0, "never CLOSE");
+    check(fault == BMW_SP51::PRECHECK_FAIL, "fault PrecheckFail");
+    check(pchFailAt >= 22000 && pchFailAt <= 23000 + 5000,
+          "PchFail 5 s after the failed check");
+    fprintf(stderr, "      PchFail at %d ms\n", pchFailAt);
+  } else if (!strcmp(sc, "holdoff")) {
+    check(firstClose < 0, "never CLOSE");
+    check(pchFailAt < 0 && runAt < 0, "no PchFail, no Run");
+    check(dcswOffAt == 10010 && !DigIo::prec_out.Get(),
+          "key off: outputs off on the next tick (rlyDly already 0)");
+    check(fault == BMW_SP51::NONE, "no fault");
+    check(Param::GetInt(Param::opmode) == MOD_OFF, "opmode Off");
   } else if (!strcmp(sc, "keyoff")) {
     check(dcswOffAt == keyOff + 2500, "ZV outputs off 2.5 s after key off");
     check(lastClose >= keyOff + 2490 && lastClose <= keyOff + 2520,

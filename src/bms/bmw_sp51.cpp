@@ -45,6 +45,7 @@
 #define TICKS_LEFT 100    // allow 1 s out of "closed" before aborting
 #define TICKS_WAKE 300    // no answer after 3 s: go quiet once and retry
 #define TICKS_QUIET 100   // 1 s of silence for that retry
+#define HOLD_EXTRA 15     // s on top of SP51Settle before the hold gives up
 
 // CRC-8 SAE J1850 (poly 0x1D, no final XOR) over bytes 1..len-1, start
 // value depends on the frame id.
@@ -145,8 +146,7 @@ void BMW_SP51::DecodeCAN(int id, uint8_t *data) {
 //   Over voltage trip     open as soon as the ZV drops its outputs
 // Open means 0x10B OPEN and 0x53A A; sending carries on regardless.
 // The precharge opmode is checked too, because the ZV turns prec_out on
-// only 250 ms after entering it and the close needs every moment of the
-// ZV precharge timeout.
+// only 250 ms after entering it and the sequence should start at once.
 // Pack-side faults (0x112 lost, pack asks to open) still open at once,
 // and the pack then stays open until the ZV outputs are off. They post
 // ERR_BMSCOMM and the charge and discharge limits go to 0 at once.
@@ -170,6 +170,23 @@ bool BMW_SP51::PackOpenRequest() {
 // said "open and ready" (0x45).
 bool BMW_SP51::PackSettled() {
   return steady112 >= Param::GetInt(Param::SP51Settle) * 100 && n45 >= 3;
+}
+
+// The ZV holds its precharge timeout while this is false: through the
+// settle, the pre-checks and the 2 s of 0x53A state B, until the CLOSE goes
+// out. Its 5 s then cover only the close and the pack precharge. Fault and
+// Lost are ready, so the ZV times out to PchFail rather than waiting.
+// The hold gives up after SP51Settle + 15 s (35 s by default) of asking:
+// that aborts with NotReady, so the ZV reaches PchFail 5 to 6 s later.
+bool BMW_SP51::ReadyForPrecharge() {
+  if (!can)
+    return true; // no CAN port, nothing to wait for
+  return state == CLOSING || state == CLOSED || state == FAULT ||
+         state == LOST || HoldTooLong();
+}
+
+bool BMW_SP51::HoldTooLong() {
+  return holdTicks > (Param::GetInt(Param::SP51Settle) + HOLD_EXTRA) * 100;
 }
 
 void BMW_SP51::Abort(Fault why) {
@@ -200,6 +217,11 @@ void BMW_SP51::Task10Ms() {
     return;
   if (age112 < 0xFFFF)
     age112 = age112 + 1;
+  // How long the ZV has been asking for a close, for the precharge hold.
+  if (!CloseRequested())
+    holdTicks = 0;
+  else if (!HoldTooLong())
+    holdTicks++;
 
   // Wake retry: only while the pack has never answered. If the pack
   // answers during the silence, talk again at once: a silence of 1.2 s or
@@ -237,6 +259,12 @@ void BMW_SP51::RunStateMachine() {
   bool request = CloseRequested();
   bool valid = PackValid();
   bool slot = (tick % 20) == 0; // the next 0x53A goes out this tick
+
+  // Still not closing long after the ZV asked: give up (see
+  // ReadyForPrecharge).
+  if (HoldTooLong() &&
+      (state == WAKE || state == STANDBY || state == READY || state == REQUEST))
+    Abort(NOT_READY);
 
   // Checked every tick while a close is under way.
   if (state == REQUEST || state == CLOSING || state == CLOSED) {

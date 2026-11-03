@@ -34,6 +34,7 @@ public:
   float MaxChargeCurrent() override;
   void Task10Ms() override;
   void Task100Ms() override;
+  bool ReadyForPrecharge() override;
 
   // Steps of the close sequence, shown as SP51State.
   enum State {
@@ -54,7 +55,8 @@ public:
     OPEN_REQ = 2,      // the pack asked to open (0x112 b5 or b6)
     PRECHECK_FAIL = 3, // pack not ready when the close was due
     CLOSE_TIMEOUT = 4, // no "closed" within 5 s of the close
-    LEFT_CLOSED = 5    // pack left "closed" for more than 1 s
+    LEFT_CLOSED = 5,   // pack left "closed" for more than 1 s
+    NOT_READY = 6      // no close within SP51Settle + 15 s of the request
   };
 
 private:
@@ -62,6 +64,7 @@ private:
   bool PackValid();
   bool PackSettled();
   bool PackClosed();
+  bool HoldTooLong();
   bool LimitsAllowed();
   bool PackOpenRequest();
   void RunStateMachine();
@@ -101,6 +104,7 @@ private:
   uint16_t stepTicks = 0; // 10 ms ticks spent in the current step
   uint16_t notClosedTicks = 0;
   uint16_t silentTicks = 0; // wake retry, counts down while silent
+  uint16_t holdTicks = 0;   // 10 ms ticks the ZV has asked for a close
   bool wakeRetried = false;
 };
 

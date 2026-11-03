@@ -835,6 +835,9 @@ static void Ms10Task(void) {
         !maintainer12V.GetRunMaintainer())
       opmode = MOD_OFF;
 
+    if (!selectedBMS->ReadyForPrecharge())
+      vehicleStartTime = rtc_get_counter_val(); // battery not ready to close
+                                                // yet, hold the timeout
     if (udc < (Param::GetInt(Param::udcsw)) &&
         rtc_get_counter_val() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
       DigIo::prec_out.Clear();

@@ -42,6 +42,9 @@ public:
   virtual void DeInit() {};
   virtual float MaxChargeCurrent() { return 9999.0; };
   virtual void Task10Ms() {};
+  // While this is false the ZV holds its precharge timeout, for a battery
+  // that needs time before it can close. Most batteries are always ready.
+  virtual bool ReadyForPrecharge() { return true; }
   virtual void Task100Ms() {
     Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
     Param::SetFloat(Param::BMS_Vmin, 0);

@@ -108,8 +108,8 @@ separate port.
 
    Open means 0x10B OPEN and 0x53A state A; sending carries on. The
    Precharge opmode is checked as well as `prec_out`, because the ZV
-   turns `prec_out` on 250 ms into Precharge and the close needs all of
-   the precharge timeout.
+   turns `prec_out` on 250 ms into Precharge and the sequence should
+   start at once.
 
    Precharge from Ready starts **Request** (3): 0x53A state B for 2 s.
 4. Last check: 0x112 present, 0x1FA `0x45`, the pack is not asking to
@@ -136,10 +136,12 @@ outputs are off. A fault, or the pack going Lost, posts the ZV error
 acts on it, so the opmode stays Run (or Charge) with the pack open until
 the key goes off or charging ends. The charge and discharge limits drop
 to 0 on the same 10 ms tick as the abort, and are 0 whenever the module
-is not in Closed or 0x1FA does not report state 6. `SP51Fault` says why: 1 PackLost (0x112 missing over 0.5 s while
-closing or closed), 2 OpenReq (the pack asked to open), 3 PrecheckFail,
-4 CloseTimeout (no state 6 within 5 s), 5 LeftClosed (out of state 6 for
-over 1 s). **Lost** (7) means the pack was talking and stopped: check
+is not in Closed or 0x1FA does not report state 6. `SP51Fault` says
+why: 1 PackLost (0x112 missing over 0.5 s while closing or closed),
+2 OpenReq (the pack asked to open), 3 PrecheckFail, 4 CloseTimeout (no
+state 6 within 5 s), 5 LeftClosed (out of state 6 for over 1 s),
+6 NotReady (no CLOSE within `SP51Settle` + 15 s of the ZV asking, see
+the precharge timeout below). **Lost** (7) means the pack was talking and stopped: check
 HVIL and 12 V, then power cycle the pack's 12 V.
 
 ### ZV precharge
@@ -161,28 +163,26 @@ once the pack says closed **and** the link voltage is up. If the 4 V per
 bit guess is wrong low, the ZV will report PchFail rather than run.
 
 **Precharge timeout.** The ZV gives precharge 5 s (`PRECHARGE_TIMEOUT`
-in `stm32_vcu.cpp`, counted on the 1 s RTC, so 5 to 6 s). There is no
-parameter for it. Times from key on to the ZV's Run, with the pack
-already Ready:
+in `stm32_vcu.cpp`, counted on the 1 s RTC, so 5 to 6 s). The module
+holds that timeout through `ReadyForPrecharge()` (a BMS hook, true for
+every other battery): it is false while the module settles, does its
+checks and sends 2 s of 0x53A state B, and true from the CLOSE on. So the
+ZV's 5 s cover only the close and the pack precharge (1.8 to 1.9 s on
+the first close after the pack's 12 V came on, about 0.6 s later,
+possibly longer into a real inverter). The ZV stays in Precharge while
+held; a cold start (pack and ZV powered together, key turned at once)
+reaches Run about `SP51Settle` + 4 s after key on, with no PchFail.
 
-- first close after the pack's 12 V came on: about 4.0 to 4.2 s (wait for
-  the 0x53A slot, 2 s of state B, then 1.8 to 1.9 s pack precharge)
-- later closes: about 2.7 to 3.0 s
+The hook is true again, so the ZV times out to PchFail as before, when:
 
-So there is about 1 s to spare, **only if the pack is already Ready**
-when the key turns. From a cold start (pack and ZV powered together and
-the key turned at once) it is `SP51Settle` (20 s) plus about 4.2 s, so
-the ZV reports PchFail and the pack is never asked to close.
+- the module aborts (Fault, e.g. PrecheckFail) or the pack goes Lost
+- the ZV has been in Precharge for `SP51Settle` + 15 s (35 s by default)
+  without a CLOSE: the module aborts with `SP51Fault` 6 NotReady (and
+  posts `BMSCOMM`), and PchFail follows 5 to 6 s later
+- the battery has no CAN port assigned
 
-Until the timeout can be set: **wait for `SP51State` = 2 (Ready), about
-20 s after power up, before turning the key.** After a PchFail, turn the
-key off and on again once the pack is Ready. The host check covers this.
-
-Proposed (not in this PR, it changes shared code): make the timeout a
-parameter, for example `PrechTime` (s, default 5 so nothing else changes),
-used in place of `PRECHARGE_TIMEOUT` in `stm32_vcu.cpp`. For this pack,
-10 to 12 s covers a key on shortly after power up when `SP51Settle` is
-shortened; with 20 s settle a cold start would need about 25 s.
+Letting go of the key during the hold goes to Off as before; nothing was
+asked of the pack, so it just stays open.
 
 ## Values
 
@@ -250,7 +250,9 @@ model and compares every frame it sends, byte for byte (CRC and alive
 counters included), with Ian's `sp51_close_v7_continuous.csv`, plus abort
 scenarios (key off with the 2.5 s hold, outputs dropped with no delay,
 0x112 lost, pack open request on b5 and on b6, a 0xFFFD current, no
-answer, the pack answering during the wake retry silence, early key on,
-`SP51Settle` 5, `SP51Supp` off, battery on the F11 PT-CAN):
+answer, the pack answering during the wake retry silence, a cold key on
+held until the CLOSE, the same with a plain BMS (not held, PchFail), a
+pack that never gets ready, a lost pack, a failed last check and a key
+off during the hold, `SP51Settle` 5, `SP51Supp` off, battery on the F11 PT-CAN):
 
     SP51_CSV=/path/to/sp51_close_v7_continuous.csv test/bmw_sp51/run.sh
