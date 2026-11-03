@@ -132,8 +132,11 @@ request to open.
 
 **Fault** (6) opens the pack and stays there until the ZV contactor
 outputs are off. A fault, or the pack going Lost, posts the ZV error
-`BMSCOMM`, and the charge and discharge limits are 0 whenever the pack
-is not closed. `SP51Fault` says why: 1 PackLost (0x112 missing over 0.5 s while
+`BMSCOMM`. That only sets `lasterr` and the error log: nothing in the ZV
+acts on it, so the opmode stays Run (or Charge) with the pack open until
+the key goes off or charging ends. The charge and discharge limits drop
+to 0 on the same 10 ms tick as the abort, and are 0 whenever the module
+is not in Closed or 0x1FA does not report state 6. `SP51Fault` says why: 1 PackLost (0x112 missing over 0.5 s while
 closing or closed), 2 OpenReq (the pack asked to open), 3 PrecheckFail,
 4 CloseTimeout (no state 6 within 5 s), 5 LeftClosed (out of state 6 for
 over 1 s). **Lost** (7) means the pack was talking and stopped: check
@@ -200,7 +203,8 @@ The usual battery values are filled the way the Leaf class does:
   read 0xFF in every log, so SOC stays unset in practice.
 - Always: `udcsw`, `BMS_Tmin`, `BMS_Tmax` and `BMS_Tavg` (cell
   temperatures from 0x1FA; the average is the middle of min and max).
-- Only while the pack reports closed (0x1FA state 6), 0 otherwise:
+- Only while the module is in Closed and the pack reports closed (0x1FA
+  state 6), 0 otherwise:
   `BMS_ChargeLim` (A), `BMS_MaxInput` and `BMS_MaxOutput` (kW, from
   0x40D), `SP51IDchg`.
 

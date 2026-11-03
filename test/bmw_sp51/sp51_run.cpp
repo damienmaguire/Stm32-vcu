@@ -106,6 +106,7 @@ int main(int argc, char **argv) {
   int keyOn = early ? 2000 : (!strcmp(sc, "settle5") ? 10000 : 24900);
   int answerAt = !strcmp(sc, "late") ? 3500 : 100;
   int firstTxAfterAnswer = -1;
+  int lim0At = -1, firstOpenAt = -1; // limits 0, first OPEN after closing
   float maxAmps = 0, chgLimOpen = -1, chgLimClosed = -1, outClosed = -1;
   // v7: the playback opens at 40.0 s, so the key goes off 2.5 s before.
   int keyOff = v7 ? 37490 : 45000;
@@ -227,6 +228,15 @@ int main(int argc, char **argv) {
       chgLimOpen = Param::GetFloat(Param::BMS_ChargeLim) +
                    Param::GetFloat(Param::BMS_MaxOutput) +
                    Param::GetFloat(Param::BMS_MaxInput);
+    // Pack-side abort at 32.01 s (lost: 0.5 s later). The limits must be 0
+    // on the next tick, long before 0x1FA reports open.
+    if (lim0At < 0 && T > 31000 && Param::GetFloat(Param::BMS_ChargeLim) == 0 &&
+        Param::GetFloat(Param::BMS_MaxOutput) == 0 &&
+        Param::GetFloat(Param::BMS_MaxInput) == 0 &&
+        Param::GetFloat(Param::SP51IDchg) == 0)
+      lim0At = T;
+    if (packCmd == 0 && firstOpenAt < 0 && lastClose > 0)
+      firstOpenAt = T;
     if (T == 35000) {
       chgLimClosed = Param::GetFloat(Param::BMS_ChargeLim);
       outClosed = Param::GetFloat(Param::BMS_MaxOutput);
@@ -298,6 +308,10 @@ int main(int argc, char **argv) {
     check(lastClose >= 31990 && lastClose <= 32010, "OPEN on the next 0x10B");
     check(fault == BMW_SP51::OPEN_REQ, "fault OpenReq");
     check(errors > 0, "ERR_BMSCOMM posted");
+    check(lim0At >= 0 && lim0At <= firstOpenAt,
+          "limits 0 by the time OPEN goes out (before 0x1FA reports open)");
+    fprintf(stderr, "      OPEN %d ms, limits 0 at %d ms\n", firstOpenAt,
+            lim0At);
   } else if (!strcmp(sc, "fastopen")) {
     check(lastClose >= 31990 && lastClose <= 32010, "OPEN on the next 0x10B");
     check(fault == BMW_SP51::OPEN_REQ, "fault OpenReq");

@@ -62,6 +62,7 @@ private:
   bool PackValid();
   bool PackSettled();
   bool PackClosed();
+  bool LimitsAllowed();
   bool PackOpenRequest();
   void RunStateMachine();
   void SendFrames();

@@ -149,7 +149,10 @@ void BMW_SP51::DecodeCAN(int id, uint8_t *data) {
 // ZV precharge timeout.
 // Pack-side faults (0x112 lost, pack asks to open) still open at once,
 // and the pack then stays open until the ZV outputs are off. They post
-// ERR_BMSCOMM and the charge and discharge limits go to 0.
+// ERR_BMSCOMM and the charge and discharge limits go to 0 at once.
+// ERR_BMSCOMM only shows in lasterr and the error log: nothing in the ZV
+// acts on it, so the opmode stays Run (or Charge) with the pack open until
+// the key goes off or charging ends.
 bool BMW_SP51::CloseRequested() {
   return Param::GetInt(Param::opmode) == MOD_PRECHARGE ||
          DigIo::prec_out.Get() || DigIo::dcsw_out.Get();
@@ -174,7 +177,12 @@ void BMW_SP51::Abort(Fault why) {
   stage53A = STAGE_A;
   state = FAULT;
   fault = why;
-  ErrorMessage::Post(ERR_BMSCOMM);
+  ErrorMessage::Post(ERR_BMSCOMM); // lasterr only, the opmode is unchanged
+  // Limits to 0 now, not at the next Task100Ms.
+  Param::SetFloat(Param::BMS_ChargeLim, 0);
+  Param::SetFloat(Param::BMS_MaxInput, 0);
+  Param::SetFloat(Param::BMS_MaxOutput, 0);
+  Param::SetFloat(Param::SP51IDchg, 0);
 }
 
 // Fresh start after the wake retry: counters and clock from the top.
@@ -254,7 +262,7 @@ void BMW_SP51::RunStateMachine() {
       state = WAKE;
     else if (!valid) {
       if (state != LOST)
-        ErrorMessage::Post(ERR_BMSCOMM);
+        ErrorMessage::Post(ERR_BMSCOMM); // lasterr only
       state = LOST;
     } else if (!PackSettled())
       state = STANDBY;
@@ -430,10 +438,15 @@ void BMW_SP51::SendFrames() {
 // Pack reports its contactors closed (0x1FA state 6) with fresh data.
 bool BMW_SP51::PackClosed() { return PackValid() && (last1FA >> 4) == 6; }
 
+// Limits are only given while we hold the pack closed (state CLOSED) and
+// the pack agrees (0x1FA state 6). After an abort our state changes at
+// once, while 0x1FA takes about 80 ms to report open.
+bool BMW_SP51::LimitsAllowed() { return state == CLOSED && PackClosed(); }
+
 // Charge current limit for the chargers. The current scaling is a
 // FALLBACK, so also cap it by the power limit. 0 unless the pack is closed.
 float BMW_SP51::MaxChargeCurrent() {
-  if (!PackClosed() || packVolts < 200)
+  if (!LimitsAllowed() || packVolts < 200)
     return 0;
   float limit = iChargeMax;
   float fromPower = pChargeKw * 1000 / packVolts;
@@ -445,6 +458,7 @@ float BMW_SP51::MaxChargeCurrent() {
 void BMW_SP51::Task100Ms() {
   bool valid = PackValid();
   bool closed = PackClosed();
+  bool limits = LimitsAllowed();
   int shunt = Param::GetInt(Param::ShuntType);
 
   // 0x112 has two voltages. U_Pack (b2-3) is the cell stack side, before
@@ -483,8 +497,8 @@ void BMW_SP51::Task100Ms() {
   Param::SetFloat(Param::BMS_Tavg, valid ? (tempMin + tempMax) / 2 : 0);
   // FALLBACK: lower of the two 0x40D words for each direction (kW).
   // 0 unless the pack is closed, so nothing draws or charges otherwise.
-  Param::SetFloat(Param::BMS_MaxInput, closed ? pChargeKw : 0);
-  Param::SetFloat(Param::BMS_MaxOutput, closed ? pDischargeKw : 0);
+  Param::SetFloat(Param::BMS_MaxInput, limits ? pChargeKw : 0);
+  Param::SetFloat(Param::BMS_MaxOutput, limits ? pDischargeKw : 0);
 
   Param::SetInt(Param::SP51State, state);
   Param::SetInt(Param::SP51Fault, fault);
@@ -492,5 +506,5 @@ void BMW_SP51::Task100Ms() {
   Param::SetFloat(Param::SP51ULink, valid ? linkVolts : 0);
   Param::SetFloat(Param::SP51UMax, valid ? uChargeMax : 0);
   Param::SetFloat(Param::SP51UMin, valid ? uDischargeMin : 0);
-  Param::SetFloat(Param::SP51IDchg, closed ? iDischargeMax : 0);
+  Param::SetFloat(Param::SP51IDchg, limits ? iDischargeMax : 0);
 }
