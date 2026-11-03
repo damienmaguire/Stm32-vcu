@@ -105,20 +105,18 @@ BMW_F11::BMW_F11()
     : motorRpm(0), coolantC(0), nowMs(0), lastRxMs(0), wakeMs(0), wakeSeq(0),
       wakeSeqSeen(0), rxEver(false), busWasAwake(false), foreignTx(false),
       kl15Ever(false), onMs(0), offMs(0), lastOnEvMs(0), lastFnmMs(0),
-      next592(0),
-      final592(false),
-      startFault(false), stKl(0), stKlMs(0), stKlHave(false), brakeDownMs(0),
-      brakeDownHave(false), eng(), tick200(0), tick10(0), fastTick(0),
-      fastOn(false), tick8F(0), on8F(false), last8F7(0x80), aliveA5(0),
-      aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0), alive3F9(0),
-      gear(), lv197Ms(0), lv197Seq(0), lv197Seen(0), brake173Ms(0),
-      brake173Have(false), alive3FD(0), s3FD(), s39A(), s518(),
-      s381(), s3B3(), s397(), s3FB(), next512(0), pre512(0),
-      seen3f9(false), next3f9(0), last3f9Ms(0), kl15On(false),
-      kl50On(false), brakePressed(false), brakeOneSwitch(false),
-      brakePressure(false), brakeSeen(false), brakeAge10ms(0), brakeTorqueNm(0),
-      brakeTorqueSeen(false), brakeTorqueAge10ms(0), dscLimitFresh(false), dscLimitAge10ms(0), dscLimitNm(0),
-      dscTorqueCanId(0) {
+      next592(0), final592(false), startFault(false), stKl(0), stKlMs(0),
+      stKlHave(false), brakeDownMs(0), brakeDownHave(false), eng(), tick200(0),
+      tick10(0), fastTick(0), fastOn(false), tick8F(0), on8F(false),
+      last8F7(0x80), aliveA5(0), aliveD9(0), aliveDc(0), aliveF3(0), alive8F(0),
+      alive3F9(0), gear(), lv197Ms(0), lv197Seq(0), lv197Seen(0), brake173Ms(0),
+      brake173Have(false), alive3FD(0), s3FD(), s39A(), s518(), s381(), s3B3(),
+      s397(), s3FB(), next512(0), pre512(0), seen3f9(false), next3f9(0),
+      last3f9Ms(0), kl15On(false), kl50On(false), brakePressed(false),
+      brakeOneSwitch(false), brakePressure(false), brakeSeen(false),
+      brakeAge10ms(0), brakeTorqueNm(0), brakeTorqueSeen(false),
+      brakeTorqueAge10ms(0), dscLimitFresh(false), dscLimitAge10ms(0),
+      dscLimitNm(0), dscTorqueCanId(0) {
   for (int i = 0; i < 6; i++)
     last3f9[i] = 0;
   for (int i = 0; i < 4; i++)
@@ -378,7 +376,7 @@ void BMW_F11::Handle12F(uint8_t *bytes) {
   if (kl15On && !wasOn) {
     kl15Ever = true;
     onMs = now;
-    next592 = now + 98; // first 0x592 at ON+98 ms
+    next592 = now + 98;  // first 0x592 at ON+98 ms
     next512 = now + 106; // 0x512 grid from ON+106 ms
     final592 = false;
   } else if (!kl15On && wasOn) {
@@ -659,8 +657,8 @@ void BMW_F11::SendFastFrames() {
   static const uint8_t a5Pre[6] = {0xB8, 0x87, 0x7B, 0x00, 0x00, 0xF1};
   static const uint8_t a5On[6] = {0x1A, 0xAA, 0xA1, 0x00, 0x00, 0xF1};
   static const uint8_t a5Off[6] = {0x19, 0x9A, 0xA1, 0x00, 0x00, 0xF1};
-  const uint8_t *t = kl15On ? (SinceOn() >= 55 ? a5On : a5Pre)
-                            : (kl15Ever ? a5Off : a5Pre);
+  const uint8_t *t =
+      kl15On ? (SinceOn() >= 55 ? a5On : a5Pre) : (kl15Ever ? a5Off : a5Pre);
   uint8_t a5[8];
   a5[1] = 0xF0; // high nibble is fill
   for (int i = 0; i < 6; i++)
@@ -714,11 +712,20 @@ void BMW_F11::SendFastFrames() {
   uint8_t dc[8] = {0};
   dc[1] = 0x10;
   if (w < 502) {
-    dc[2] = 0x80; dc[3] = 0xFF; dc[4] = 0xFF; dc[5] = 0xF0;
+    dc[2] = 0x80;
+    dc[3] = 0xFF;
+    dc[4] = 0xFF;
+    dc[5] = 0xF0;
   } else if (w < 703) {
-    dc[2] = 0x20; dc[3] = 0xD0; dc[4] = 0x07; dc[5] = 0xF1;
+    dc[2] = 0x20;
+    dc[3] = 0xD0;
+    dc[4] = 0x07;
+    dc[5] = 0xF1;
   } else {
-    dc[2] = 0x22; dc[3] = 0xD0; dc[4] = 0x07; dc[5] = 0xFE;
+    dc[2] = 0x22;
+    dc[3] = 0xD0;
+    dc[4] = 0x07;
+    dc[5] = 0xFE;
   }
   GearBytes g;
   if (GearOut(g)) {
@@ -1205,7 +1212,7 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     if (t < kBlipOff)
       e.cntHi = 3; // crank marker
     if (t >= kInj)
-      e.inj = true; // 0x3FB "injecting"
+      e.inj = true;                                    // 0x3FB "injecting"
     uint32_t tr = e.curRun ? SinceMs(now, e.trpm) : 0; // ms since first rpm
     if (e.phase == 1 && e.rpm4 >= 4u * kRpm82) {
       e.phase = 2; // 0x82 from here
@@ -1216,7 +1223,8 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
       e.e6b3 = 0x81;
       e.e6b4 = 0x65;
       e.e6ready = 1;
-      e.torque = t < kFire ? 2560 : (uint16_t)(2560u - (t - kFire) * 420u / kRunup);
+      e.torque =
+          t < kFire ? 2560 : (uint16_t)(2560u - (t - kFire) * 420u / kRunup);
     } else {
       e.e6b3 = 0x82;
       e.e6b4 = 0x26;
@@ -1292,7 +1300,8 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     // 00 from +440 ms
     e.r397Set = true;
     e.r397[0] = SinceMs(now, e.trpm) >= 2800u ? 0xD2 : 0xC2;
-    e.r397[1] = ts < 140u ? 0xDD : (ts < 200u ? 0xA2 : (ts < 260u ? 0x2E : 0x24));
+    e.r397[1] =
+        ts < 140u ? 0xDD : (ts < 200u ? 0xA2 : (ts < 260u ? 0x2E : 0x24));
     e.r397[2] = ts < 440u ? Rand397(now) : 0x00;
     if (e.rpm4 != 0 || ts < 1200u)
       break;
@@ -1317,8 +1326,10 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
     e.r381Run = false;
     // 0x397: D0 24 00, then the walk 29 AF DF DE DD DF E2 from +2.09 s.
     // After E2 (+2.913 s) the normal 0x397 content is back.
-    static const uint16_t walkMs[8] = {0, 2090, 2150, 2210, 2270, 2370, 2854, 2913};
-    static const uint8_t walkV[8] = {0x24, 0x29, 0xAF, 0xDF, 0xDE, 0xDD, 0xDF, 0xE2};
+    static const uint16_t walkMs[8] = {0,    2090, 2150, 2210,
+                                       2270, 2370, 2854, 2913};
+    static const uint8_t walkV[8] = {0x24, 0x29, 0xAF, 0xDF,
+                                     0xDE, 0xDD, 0xDF, 0xE2};
     e.r397Set = true;
     e.r397[0] = 0xD0;
     e.r397[2] = 0x00;
@@ -1359,25 +1370,30 @@ void BMW_F11::EngineOutputs(uint32_t dtMs) {
 // Gears and stages, as dde_gear.h.
 enum { kGearP = 0, kGearR = 1, kGearN = 2, kGearD = 3 };
 enum {
-  kGstPLocked = 0,  // P, pawl confirmed (the fixed v1h templates)
-  kGstLeaveP = 1,   // new gear on 0x3FD, gear code follows
-  kGstSteady = 2,   // R / N / D engaged
-  kGstToP = 3,      // P requested, codes step towards P
+  kGstPLocked = 0,   // P, pawl confirmed (the fixed v1h templates)
+  kGstLeaveP = 1,    // new gear on 0x3FD, gear code follows
+  kGstSteady = 2,    // R / N / D engaged
+  kGstToP = 3,       // P requested, codes step towards P
   kGstPUnlocked = 4, // P shown, pawl not yet confirmed
-  kGstPReleased = 5 // P released by a lever push with the brake on
+  kGstPReleased = 5  // P released by a lever push with the brake on
 };
-static const uint32_t kGearBrakeMs = 250;   // brake "on" if a press came this recently
-static const uint32_t kLeverStaleMs = 90;   // no valid 0x197 this long: lever lost
-static const uint32_t kGearActMs = 40;      // act 40 ms after a notch appears
-static const uint32_t kGearReleaseMs = 20;  // P released 20 ms after the first notch
-static const uint32_t kCodeLagMs = 10;      // gear code 10 ms after 0x3FD
-static const uint32_t kCodeLagNMs = 100;    // N: 100 ms (N bytes are a hypothesis)
-static const uint32_t kPbtn39AMs = 21;      // P button: 0x39A gear 01 at +21 ms
-static const uint32_t kPbtn3F9Ms = 42;      //   0x3F9 gear 1, 0x0DC 22 FC at +42 ms
-static const uint32_t kPbtn39APMs = 881;    //   0x39A 03 at +881 ms
-static const uint32_t kToPMs = 900;         //   0x3FD P at +900 ms
-static const uint32_t kPLockMs = 3000;      // pawl confirmed 3 s after the P request ...
-static const uint32_t kPawlBrakeMs = 340;   // ... or 340 ms after the brake was let go
+static const uint32_t kGearBrakeMs =
+    250; // brake "on" if a press came this recently
+static const uint32_t kLeverStaleMs =
+    90;                                // no valid 0x197 this long: lever lost
+static const uint32_t kGearActMs = 40; // act 40 ms after a notch appears
+static const uint32_t kGearReleaseMs =
+    20;                                // P released 20 ms after the first notch
+static const uint32_t kCodeLagMs = 10; // gear code 10 ms after 0x3FD
+static const uint32_t kCodeLagNMs = 100; // N: 100 ms (N bytes are a hypothesis)
+static const uint32_t kPbtn39AMs = 21;   // P button: 0x39A gear 01 at +21 ms
+static const uint32_t kPbtn3F9Ms = 42; //   0x3F9 gear 1, 0x0DC 22 FC at +42 ms
+static const uint32_t kPbtn39APMs = 881; //   0x39A 03 at +881 ms
+static const uint32_t kToPMs = 900;      //   0x3FD P at +900 ms
+static const uint32_t kPLockMs =
+    3000; // pawl confirmed 3 s after the P request ...
+static const uint32_t kPawlBrakeMs =
+    340; // ... or 340 ms after the brake was let go
 
 // What each gear puts in the frames (dde_gear.c gb_gear):
 //   0x3FD byte 2, 0x39A bytes 3-4, 0x3F9 P lock bits and gear nibble,
@@ -1389,7 +1405,8 @@ static const BMW_F11::GearBytes kGearTab[4] = {
     {0x60, 0x01, 0xE0, 0, 1, 0x22, 0xFE}, // N
     {0x80, 0x05, 0xE0, 0, 5, 0x24, 0xF4}, // D
 };
-static const BMW_F11::GearBytes kGearPUnlocked = {0x20, 0x03, 0xE0, 0, 3, 0x22, 0xFE};
+static const BMW_F11::GearBytes kGearPUnlocked = {0x20, 0x03, 0xE0, 0,
+                                                  3,    0x22, 0xFE};
 
 // Brake pressed (0x173, both switches) within the last 250 ms of ms.
 bool BMW_F11::GearBrake(uint32_t ms) const {
@@ -1465,8 +1482,9 @@ void BMW_F11::GearAct(uint8_t dir, uint8_t depth, uint32_t ms) {
     if (!gear.running)
       return; // refused: engine not running
     bool samePush = gear.stage == kGstLeaveP;
-    bool need = cur == kGearP ||
-                (cur == kGearN && (want == kGearR || want == kGearD) && !samePush);
+    bool need =
+        cur == kGearP ||
+        (cur == kGearN && (want == kGearR || want == kGearD) && !samePush);
     if (need && !GearBrake(ms))
       return; // refused: brake not pressed
   }
@@ -1715,8 +1733,9 @@ void BMW_F11::Send518() {
     return;
   bool kl = !s518.started ||
             (kl15On ? SinceOn() >= 157 : (kl15Ever && SinceOff() < 225));
-  uint8_t b[8] = {0, 0, 0, 0, (uint8_t)(kl ? 0xB0 : 0x44),
-                  (uint8_t)(kl ? 0x30 : 0x2F), 0, 0x18};
+  uint8_t b[8] = {
+      0, 0,   0, 0, (uint8_t)(kl ? 0xB0 : 0x44), (uint8_t)(kl ? 0x30 : 0x2F),
+      0, 0x18};
   if (!SlotDue(s518, b, 0, 8, 543, 0))
     return;
   can->Send(0x518, b, 8);
@@ -1888,8 +1907,10 @@ void BMW_F11::SendSlowDde() {
   else if (Blip397(w))
     d1 = 0xE3;
   if (ever && toff < 4133 && !eng.active) {
-    static const uint16_t walkMs[10] = {93, 153, 273, 373, 434, 513, 634, 713, 773, 4073};
-    static const uint8_t walkV[10] = {0xDF, 0xDE, 0xDD, 0xDE, 0xDD, 0xDE, 0xDD, 0xDE, 0xDD, 0xDF};
+    static const uint16_t walkMs[10] = {93,  153, 273, 373, 434,
+                                        513, 634, 713, 773, 4073};
+    static const uint8_t walkV[10] = {0xDF, 0xDE, 0xDD, 0xDE, 0xDD,
+                                      0xDE, 0xDD, 0xDE, 0xDD, 0xDF};
     for (int i = 0; i < 10; i++)
       if (toff >= walkMs[i])
         d1 = walkV[i];
