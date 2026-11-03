@@ -1,8 +1,8 @@
 // Host stub of libopeninv params.h for the BMW_F11 host check
 // (test/bmw_f11_pico). Parameters are plain floats.
 #pragma once
-#include <stdint.h>
 #include "param_prj.h"
+#include <stdint.h>
 namespace Param {
 #define PARAM_ENTRY(category, name, unit, min, max, def, id) name,
 #define TESTP_ENTRY(category, name, unit, min, max, def, id) name,
