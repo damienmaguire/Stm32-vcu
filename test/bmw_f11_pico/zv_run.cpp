@@ -28,9 +28,7 @@ static void rx(uint16_t id, const uint8_t *d, uint8_t len) {
 int main(int argc, char **argv) {
   int phase = argc > 1 ? atoi(argv[1]) : 3; // ms offset of the task grid
   int trans = argc > 2 ? atoi(argv[2]) : 1;
-  int noRun = argc > 3 && argv[3][0] == 'n'; // VCU never reaches RUN
-  int foreign =
-      argc > 3 && argv[3][0] == 'f';          // a second box sends 0x3F9 at 6 s
+  int noRun = argc > 3 && argv[3][0] == 'n';  // VCU never reaches RUN
   scen_sleep = argc > 3 && argv[3][0] == 's'; // sleep scenario (scenario.h)
   LogCan can;
   Param::SetInt(Param::Transmission, trans);
@@ -44,10 +42,6 @@ int main(int argc, char **argv) {
     int engp = Param::GetInt(Param::F11Eng);
     if (engp == 2 && runAt < 0)
       runAt = (int)T + 300;
-    if (foreign && T == 6000) {
-      uint8_t d[8] = {0};
-      rx(0x3F9, d, 8);
-    }
     if (!noRun && runAt >= 0 && (int)T >= runAt)
       Param::SetInt(Param::opmode, MOD_RUN);
     if (scen_stkl(T) < 0xA || !scen_bus(T)) {

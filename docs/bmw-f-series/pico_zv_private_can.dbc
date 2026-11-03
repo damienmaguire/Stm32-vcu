@@ -1,0 +1,267 @@
+VERSION "pico_zv_private_can draft 2 (ZV owns all BMW PT-CAN frames)"
+
+NS_ :
+
+BS_:
+
+BU_: Pico ZV
+
+BO_ 772 ZV_Status: 8 ZV
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" Pico
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" Pico
+ SG_ OPMODE : 12|4@1+ (1,0) [0|15] "" Pico
+ SG_ HV_READY : 16|1@1+ (1,0) [0|1] "" Pico
+ SG_ START_SEEN : 17|1@1+ (1,0) [0|1] "" Pico
+ SG_ DRIVE_EN : 18|1@1+ (1,0) [0|1] "" Pico
+ SG_ DERATE : 19|1@1+ (1,0) [0|1] "" Pico
+ SG_ FAULT : 20|1@1+ (1,0) [0|1] "" Pico
+ SG_ MIRROR_EN : 21|1@1+ (1,0) [0|1] "" Pico
+ SG_ MIL_ON : 22|1@1+ (1,0) [0|1] "" Pico
+ SG_ PICO_LINK_OK : 23|1@1+ (1,0) [0|1] "" Pico
+ SG_ T3F9_D4 : 24|8@1+ (1,0) [0|255] "" Pico
+ SG_ T3F9_D5 : 32|8@1+ (1,0) [0|255] "" Pico
+ SG_ BMW_TX_ON : 40|1@1+ (1,0) [0|1] "" Pico
+ SG_ ZV_BUS_STATE : 41|3@1+ (1,0) [0|7] "" Pico
+ SG_ FOREIGN_FAULT : 44|1@1+ (1,0) [0|1] "" Pico
+ SG_ FW_VER : 48|8@1+ (1,0) [0|255] "" Pico
+ SG_ TX_LATE : 56|8@1+ (1,0) [0|255] "" Pico
+
+BO_ 773 ZV_EngFast: 8 ZV
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" Pico
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" Pico
+ SG_ ACTIVE : 12|1@1+ (1,0) [0|1] "" Pico
+ SG_ CNT_HI3 : 13|1@1+ (1,0) [0|1] "" Pico
+ SG_ E8_FAST : 14|1@1+ (1,0) [0|1] "" Pico
+ SG_ E8_CRANK : 15|1@1+ (1,0) [0|1] "" Pico
+ SG_ RPM4 : 16|16@1+ (0.25,0) [0|16383.8] "rpm" Pico
+ SG_ TORQUE_RAW : 32|12@1+ (1,0) [0|4095] "" Pico
+ SG_ C3_B34 : 44|2@1+ (1,0) [0|3] "" Pico
+ SG_ C3_B56 : 46|2@1+ (1,0) [0|3] "" Pico
+ SG_ TURBINE : 48|16@1+ (1,0) [0|65535] "" Pico
+
+BO_ 774 ZV_EngState: 8 ZV
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" Pico
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" Pico
+ SG_ G_SET : 12|1@1+ (1,0) [0|1] "" Pico
+ SG_ F97C : 13|1@1+ (1,0) [0|1] "" Pico
+ SG_ E89 : 14|2@1+ (1,0) [0|3] "" Pico
+ SG_ E6_B3 : 16|8@1+ (1,0) [0|255] "" Pico
+ SG_ E6_B4 : 24|8@1+ (1,0) [0|255] "" Pico
+ SG_ E6_READY : 32|4@1+ (1,0) [0|15] "" Pico
+ SG_ G_NIB : 36|4@1+ (1,0) [0|15] "" Pico
+ SG_ G_DC_B2 : 40|8@1+ (1,0) [0|255] "" Pico
+ SG_ G_DC_B5 : 48|8@1+ (1,0) [0|255] "" Pico
+ SG_ G_FR_PARK : 56|2@1+ (1,0) [0|3] "" Pico
+ SG_ PHASE : 58|3@1+ (1,0) [0|7] "" Pico
+ SG_ GEAR : 61|2@1+ (1,0) [0|3] "" Pico
+
+BO_ 775 ZV_EngAux: 8 ZV
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" Pico
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" Pico
+ SG_ FB9_SET : 12|1@1+ (1,0) [0|1] "" Pico
+ SG_ B142_B23 : 13|1@1+ (1,0) [0|1] "" Pico
+ SG_ FB9_B2 : 16|8@1+ (1,0) [0|255] "" Pico
+ SG_ FB9_B3 : 24|8@1+ (1,0) [0|255] "" Pico
+ SG_ FB9_B4 : 32|8@1+ (1,0) [0|255] "" Pico
+ SG_ FB7_MV : 40|16@1+ (1,0) [0|65535] "mV" Pico
+ SG_ E89_B1 : 56|2@1+ (1,0) [0|3] "" Pico
+ SG_ B142_B8 : 58|2@1+ (1,0) [0|3] "" Pico
+ SG_ R29_B5 : 60|2@1+ (1,0) [0|3] "" Pico
+ SG_ R29_B8 : 62|2@1+ (1,0) [0|3] "" Pico
+
+BO_ 776 PICO_Status: 8 Pico
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" ZV
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" ZV
+ SG_ PICO_MODE : 12|4@1+ (1,0) [0|15] "" ZV
+ SG_ FR_STKL : 16|4@1+ (1,0) [0|15] "" ZV
+ SG_ FR_KL15 : 20|1@1+ (1,0) [0|1] "" ZV
+ SG_ FR_SYNC : 21|1@1+ (1,0) [0|1] "" ZV
+ SG_ FR_TX_ON : 22|1@1+ (1,0) [0|1] "" ZV
+ SG_ ZV_SEEN : 23|1@1+ (1,0) [0|1] "" ZV
+ SG_ MIRROR_APPLIED : 24|1@1+ (1,0) [0|1] "" ZV
+ SG_ MIRROR_FALLBACK : 25|1@1+ (1,0) [0|1] "" ZV
+ SG_ FLT_FOREIGN_PRIV : 26|1@1+ (1,0) [0|1] "" ZV
+ SG_ FLT_CAN : 27|1@1+ (1,0) [0|1] "" ZV
+ SG_ FLT_WDT : 28|1@1+ (1,0) [0|1] "" ZV
+ SG_ FLT_FR_E2E : 29|1@1+ (1,0) [0|1] "" ZV
+ SG_ FLT_OVERRIDE : 30|1@1+ (1,0) [0|1] "" ZV
+ SG_ MIRROR_SRC_PTCAN : 31|1@1+ (1,0) [0|1] "" ZV
+ SG_ FW_VER : 32|8@1+ (1,0) [0|255] "" ZV
+ SG_ MIRROR_AGE : 40|8@1+ (1,0) [0|255] "ms" ZV
+ SG_ FR_CYCLE : 48|6@1+ (1,0) [0|63] "" ZV
+ SG_ DSC_ST_RAW : 56|8@1+ (1,0) [0|255] "" ZV
+
+BO_ 777 PICO_Dsc: 8 Pico
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" ZV
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" ZV
+ SG_ DSC_QUAL : 12|4@1+ (1,0) [0|15] "" ZV
+ SG_ DSC_WHL_TRQ : 16|16@1+ (1,-32000) [-32000|33535] "Nm" ZV
+ SG_ CRANK_QUAL : 32|4@1+ (1,0) [0|15] "" ZV
+ SG_ DSC_ACTIVE : 36|1@1+ (1,0) [0|1] "" ZV
+ SG_ CRANK_ACTIVE : 37|1@1+ (1,0) [0|1] "" ZV
+ SG_ DSC_SRC_FRESH : 38|1@1+ (1,0) [0|1] "" ZV
+ SG_ DSC_SRC_E2E_ERR : 39|1@1+ (1,0) [0|1] "" ZV
+ SG_ CRANK_TRQ_LIM : 40|12@1+ (0.5,0) [0|2047.5] "Nm" ZV
+ SG_ FR3A_MODE : 56|8@1+ (1,0) [0|255] "" ZV
+
+BO_ 778 PICO_Brake: 8 Pico
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" ZV
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" ZV
+ SG_ BRK_PRESS : 16|12@1+ (0.0625,0) [0|255.938] "bar" ZV
+ SG_ PEDAL_TRAVEL_RAW : 28|12@1+ (1,0) [0|4095] "" ZV
+ SG_ FR_FRESH : 40|1@1+ (1,0) [0|1] "" ZV
+ SG_ FR_E2E_ERR : 41|1@1+ (1,0) [0|1] "" ZV
+
+BO_ 779 PICO_Cruise: 8 Pico
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" ZV
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" ZV
+ SG_ FAS_QUAL : 12|4@1+ (1,0) [0|15] "" ZV
+ SG_ FAS_WHL_TRQ : 16|16@1+ (1,-32000) [-32000|33535] "Nm" ZV
+ SG_ FAS_AUX_RAW : 32|12@1+ (1,0) [0|4095] "" ZV
+ SG_ FAS_ACTIVE : 44|1@1+ (1,0) [0|1] "" ZV
+ SG_ FAS_SRC_FRESH : 45|1@1+ (1,0) [0|1] "" ZV
+ SG_ FAS_SRC_E2E_ERR : 46|1@1+ (1,0) [0|1] "" ZV
+
+BO_ 780 PICO_FrEcho: 8 Pico
+ SG_ CRC : 0|8@1+ (1,0) [0|255] "" ZV
+ SG_ ALIV : 8|4@1+ (1,0) [0|14] "" ZV
+ SG_ SRC_ALIV : 12|4@1+ (1,0) [0|15] "" ZV
+ SG_ E6_B3_TX : 16|8@1+ (1,0) [0|255] "" ZV
+ SG_ E6_B4_TX : 24|8@1+ (1,0) [0|255] "" ZV
+ SG_ E6_B7_TX : 32|8@1+ (1,0) [0|255] "" ZV
+ SG_ E6_LAT : 40|8@1+ (1,0) [0|255] "ms" ZV
+ SG_ RPM4_28 : 48|16@1+ (0.25,0) [0|16383.8] "rpm" ZV
+
+CM_ "Private Pico<->ZombieVerter frames on BMW F11 PT-CAN (500 kbit/s), block 0x304-0x30F. Draft 2: the ZV sends every BMW PT-CAN frame; the Pico sends only these. DESIGN, not implemented.";
+CM_ SG_ 772 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 772 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 772 OPMODE "ZV opmode";
+CM_ SG_ 772 HV_READY "Precharge done, inverter powered";
+CM_ SG_ 772 START_SEEN "ZV latched a driver start (ST_KL D + brake)";
+CM_ SG_ 772 DRIVE_EN "Torque allowed now (RUN, gear R/D steady)";
+CM_ SG_ 772 FAULT "Any latched ZV fault";
+CM_ SG_ 772 MIRROR_EN "1 = Pico must put the ZV_Eng* values on FlexRay; 0 = Pico uses its own template (engine off, P)";
+CM_ SG_ 772 MIL_ON "ZV requests MIL (ZV sends 0x592 itself)";
+CM_ SG_ 772 PICO_LINK_OK "ZV sees valid PICO_Status";
+CM_ SG_ 772 T3F9_D4 "Coolant byte exactly as the ZV puts it in 0x3F9 d4 (degC+48). 0 = none. Pico copies to FR 0xE6 b5";
+CM_ SG_ 772 T3F9_D5 "Oil byte exactly as in 0x3F9 d5. 0 = none. Pico copies to FR 0xE6 b6";
+CM_ SG_ 772 BMW_TX_ON "ZV is transmitting its BMW PT-CAN set";
+CM_ SG_ 772 ZV_BUS_STATE "ZV copy of the v1h.3 pte_state_t";
+CM_ SG_ 772 FOREIGN_FAULT "ZV received one of its own BMW IDs from another node: BMW TX stopped";
+CM_ SG_ 772 FW_VER "BMW_F11 module version";
+CM_ SG_ 772 TX_LATE "BMW frames sent > 5 ms after their slot in the last second (saturating)";
+CM_ BO_ 772 "ZV heartbeat. Pico: no valid frame for 100 ms -> mirror fallback (own stop story, auto-P on FlexRay).";
+CM_ SG_ 773 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 773 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 773 ACTIVE "eng_out_t.active: engine story running or happened in this wake";
+CM_ SG_ 773 CNT_HI3 "eng_out_t.cnt_hi == 3 (crank marker on all DDE E2E groups)";
+CM_ SG_ 773 E8_FAST "eng_out_t.e8_fast";
+CM_ SG_ 773 E8_CRANK "eng_out_t.e8_crank";
+CM_ SG_ 773 RPM4 "eng_out_t.rpm4 (= 0x0A5 d5..6)";
+CM_ SG_ 773 TORQUE_RAW "eng_out_t.torque, Nm = raw/2 - 1023.5; 0 = no override";
+CM_ SG_ 773 C3_B34 "eng_out_t.c3_b34";
+CM_ SG_ 773 C3_B56 "eng_out_t.c3_b56";
+CM_ SG_ 773 TURBINE "eng_out_t.turbine (FR 0x26 c1 b3..4); 0 = none";
+CM_ BO_ 773 "Fast engine values for FR 0x26/0x28 (= what the ZV puts in 0x0A5). Also sent at once when ACTIVE or CNT_HI3 changes.";
+CM_ SG_ 774 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 774 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 774 G_SET "eng_out_t.g_set (gear bytes valid; 0 = fixed P locked)";
+CM_ SG_ 774 F97C "eng_out_t.f97c";
+CM_ SG_ 774 E89 "eng_out_t.e89";
+CM_ SG_ 774 E6_B3 "eng_out_t.e6_b3 (= 0x3F9 d2: 80/81/82/92); 0 = none";
+CM_ SG_ 774 E6_B4 "eng_out_t.e6_b4 (engine value, BEFORE park bits 4-5)";
+CM_ SG_ 774 E6_READY "eng_out_t.e6_ready (start-ready); 15 = none (0xFF)";
+CM_ SG_ 774 G_NIB "eng_out_t.g_nib (3 P, 2 R, 1 N or P-coming, 5 D)";
+CM_ SG_ 774 G_DC_B2 "eng_out_t.g_dc_b2 (= 0x0DC d2 = FR 0x28 c3 b11)";
+CM_ SG_ 774 G_DC_B5 "eng_out_t.g_dc_b5 (= 0x0DC d5 = FR 0x28 c3 b14)";
+CM_ SG_ 774 G_FR_PARK "eng_out_t.g_fr_park (FR 0xE6 b4 bits 4-5)";
+CM_ SG_ 774 PHASE "ENG_* phase (diagnostic)";
+CM_ SG_ 774 GEAR "Gear target (diagnostic)";
+CM_ BO_ 774 "E6 / gear state. Also sent at once on any change of bytes 2..7 (min gap 1 ms). Pico: send FR 0xE6 as an event in the next even cycle when E6_B3/E6_B4/E6_READY/G_NIB/G_FR_PARK change.";
+CM_ SG_ 775 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 775 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 775 FB9_SET "eng_out_t.fb9_set";
+CM_ SG_ 775 B142_B23 "eng_out_t.b142_b23: 1 = 0x24, 0 = none";
+CM_ SG_ 775 FB9_B2 "eng_out_t.fb9_b2 (= 0x3B3 d1)";
+CM_ SG_ 775 FB9_B3 "eng_out_t.fb9_b3 (= 0x3B3 d2)";
+CM_ SG_ 775 FB9_B4 "eng_out_t.fb9_b4 (= 0x3B3 d3)";
+CM_ SG_ 775 FB7_MV "eng_out_t.fb7_mv; 0 = none";
+CM_ SG_ 775 E89_B1 "eng_out_t.e89_b1 code";
+CM_ SG_ 775 B142_B8 "eng_out_t.b142_b8 code";
+CM_ SG_ 775 R29_B5 "eng_out_t.r29_b5 code (= 0x08F d4)";
+CM_ SG_ 775 R29_B8 "eng_out_t.r29_b8 code";
+CM_ BO_ 775 "Slow engine values for FR 0xFB/0xE8/0x142/0x29. Also sent at once on any change (min gap 5 ms).";
+CM_ SG_ 776 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 776 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 776 FR_STKL "FR 0x74 b3 low nibble (same as 0x12F d2, ~7 ms earlier); 15 = n/a";
+CM_ SG_ 776 FR_KL15 "Pico FR KL15 state (0xF1 timeline)";
+CM_ SG_ 776 FR_TX_ON "DDE/EGS FlexRay emulation transmitting";
+CM_ SG_ 776 ZV_SEEN "Valid ZV_Status within 100 ms";
+CM_ SG_ 776 MIRROR_APPLIED "FR frames currently carry the ZV values";
+CM_ SG_ 776 MIRROR_FALLBACK "ZV lost: Pico plays its own stop story / P";
+CM_ SG_ 776 FLT_FOREIGN_PRIV "Another node sent one of 0x308-0x30F: private TX stopped";
+CM_ SG_ 776 FLT_CAN "Error passive / bus-off";
+CM_ SG_ 776 FLT_WDT "Watchdog reset since power-up";
+CM_ SG_ 776 FLT_FR_E2E "E2E errors on FR DSC/brake inputs";
+CM_ SG_ 776 FLT_OVERRIDE "USB/console override active";
+CM_ SG_ 776 MIRROR_SRC_PTCAN "v1z.1 addition: 1 = the FlexRay engine/gear state is mirrored from the ZV's BMW PT-CAN frames (0x3F9/0x0A5/0x0DC...), 0 = from the private 0x304-0x307 or not mirrored (see MIRROR_APPLIED)";
+CM_ SG_ 776 FW_VER "Pico firmware version (major<<4 | minor)";
+CM_ SG_ 776 MIRROR_AGE "ms since the last valid ZV_EngState; 255 = >= 255";
+CM_ SG_ 776 FR_CYCLE "FlexRay cycle counter when this frame was queued (diagnostic)";
+CM_ SG_ 776 DSC_ST_RAW "ST_STAB_DSC raw (FR 0x2F), pass-through";
+CM_ BO_ 776 "Pico heartbeat + FlexRay-side state. Also sent at once when FR_STKL changes. ZV: lost > 100 ms -> no torque, stop story, auto-P.";
+CM_ SG_ 777 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 777 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 777 DSC_QUAL "FR 0x2B PDU4 qualifier, 15 = no request/SNA";
+CM_ SG_ 777 DSC_WHL_TRQ "FR 0x2B PDU4 wheel-torque stab request; raw 0xFFFF = n/a";
+CM_ SG_ 777 CRANK_QUAL "FR 0x3A qualifier, 15 = idle";
+CM_ SG_ 777 DSC_SRC_FRESH "FlexRay source updated in last 50 ms";
+CM_ SG_ 777 CRANK_TRQ_LIM "Lowest active of the three FR 0x3A crank requests; raw 4095 = none";
+CM_ SG_ 777 FR3A_MODE "FR 0x3A mode byte raw (idle 0x82)";
+CM_ BO_ 777 "DSC/ASR torque requests from FlexRay (not on PT-CAN). Scaling from captures at idle only: log before acting.";
+CM_ SG_ 778 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 778 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 778 BRK_PRESS "FR 0x3F bits 108-119; scaling is a hypothesis (raw/16)";
+CM_ SG_ 778 PEDAL_TRAVEL_RAW "FR 0x3F bits 96-107, unscaled";
+CM_ SG_ 778 FR_FRESH "FR 0x3F seen in last 50 ms";
+CM_ BO_ 778 "FlexRay-only brake values (FR 0x3F). The ZV reads 0x173 / 0x0EF itself.";
+CM_ SG_ 779 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 779 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 779 FAS_QUAL "FR 0x21 PDU2 qualifier";
+CM_ SG_ 779 FAS_WHL_TRQ "FR 0x21 torque request; raw 0xFFFF = n/a";
+CM_ SG_ 779 FAS_AUX_RAW "FR 0x21 companion field raw (idle 0xE00)";
+CM_ BO_ 779 "Cruise/ACC torque request from FlexRay 0x21 (never captured engaged: log only).";
+CM_ SG_ 780 CRC "CRC8 poly 0x1D init 0 over [ID low byte, ID high byte, byte1..byte7] (data ID = CAN ID)";
+CM_ SG_ 780 ALIV "Rolling counter 0..14, +1 every frame (cyclic and event copies), 15 never sent; first frame after a wake = 1";
+CM_ SG_ 780 SRC_ALIV "ALIV of the ZV_EngState the last 0xE6 was built from; 15 = template";
+CM_ SG_ 780 E6_B3_TX "FR 0xE6 b3 as sent";
+CM_ SG_ 780 E6_B4_TX "FR 0xE6 b4 as sent (incl. park bits)";
+CM_ SG_ 780 E6_B7_TX "FR 0xE6 b7 as sent (start-ready | gear nibble)";
+CM_ SG_ 780 E6_LAT "ZV_EngState RX -> 0xE6 on FlexRay; 255 = >= 255";
+CM_ SG_ 780 RPM4_28 "rpm in the last FR 0x28 c1";
+CM_ BO_ 780 "What the Pico actually put on FlexRay. Also sent at once after every FR 0xE6 frame. ZV: compare with its 0x3F9 (consistency monitor).";
+
+BA_DEF_ BO_ "GenMsgCycleTime" INT 0 10000;
+BA_DEF_DEF_ "GenMsgCycleTime" 0;
+BA_ "GenMsgCycleTime" BO_ 772 20;
+BA_ "GenMsgCycleTime" BO_ 773 20;
+BA_ "GenMsgCycleTime" BO_ 774 20;
+BA_ "GenMsgCycleTime" BO_ 775 100;
+BA_ "GenMsgCycleTime" BO_ 776 20;
+BA_ "GenMsgCycleTime" BO_ 777 10;
+BA_ "GenMsgCycleTime" BO_ 778 20;
+BA_ "GenMsgCycleTime" BO_ 779 50;
+BA_ "GenMsgCycleTime" BO_ 780 100;
+
+VAL_ 772 OPMODE 0 "Off" 1 "Run" 2 "Precharge" 3 "PrechargeFail" 4 "Charge" 15 "Unknown" ;
+VAL_ 772 ZV_BUS_STATE 0 "Off" 1 "WaitBus" 2 "Run" 3 "Silent" 4 "PrepSleep" 5 "Fault" ;
+VAL_ 773 C3_B34 0 "None" 1 "3E_7D" 2 "1C_7E" ;
+VAL_ 773 C3_B56 0 "None" 1 "24_20" 2 "20_20" 3 "E0_E0" ;
+VAL_ 774 E89 0 "Template" 1 "Running" 2 "AfterStop" ;
+VAL_ 774 PHASE 0 "Off" 1 "Crank" 2 "Run" 3 "Stop" 4 "Stopped" ;
+VAL_ 774 GEAR 0 "P" 1 "R" 2 "N" 3 "D" ;
+VAL_ 775 E89_B1 0 "12" 1 "18" 2 "1E" 3 "25" ;
+VAL_ 775 B142_B8 0 "None" 1 "84" 2 "A4" ;
+VAL_ 775 R29_B5 0 "None" 1 "72" 2 "7C" ;
+VAL_ 775 R29_B8 0 "None" 1 "10" 2 "C0" ;
+VAL_ 776 PICO_MODE 0 "Off" 1 "LegacyFullEmu" 2 "PrivateWait" 3 "PrivateRun" 4 "MirrorFallback" 5 "Fault" ;

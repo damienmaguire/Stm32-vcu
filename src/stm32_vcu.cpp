@@ -1295,7 +1295,6 @@ static void SetCanFilters() {
 
 void Param::Change(Param::PARAM_NUM paramNum) {
   // This function is called when the user changes a parameter
-  f11Vehicle.ClearFaults(); // BMW F-series: any write clears F11Fault 1
   switch (paramNum) {
   case Param::Inverter:
     UpdateInv();

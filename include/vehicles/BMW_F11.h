@@ -34,8 +34,25 @@
 // gearbox.
 //
 // FlexRay is the car's other fast network. A separate Pico board
-// emulates the DDE there. This class does not speak FlexRay and does
-// not send anything to the Pico.
+// emulates the DDE there. This class does not speak FlexRay. The ZV
+// sends every BMW frame on PT-CAN; the Pico sends no BMW frame at all.
+// With F11Pico = 1 the two also talk over a small private link on the
+// same bus (ids 0x304-0x30C, spec
+// docs/bmw-f-series/pico_zv_private_can.md section 6, as Pico
+// dde-emu v1z.1 implements it):
+//   ZV -> Pico  0x304 status, 0x305 / 0x306 / 0x307 the engine story
+//               and gear, so FlexRay shows exactly what PT-CAN shows.
+//   Pico -> ZV  0x308 status, 0x309 DSC request, 0x30A brake pressure
+//               and pedal travel, 0x30B cruise request, 0x30C FlexRay
+//               echo. Shown as F11 values only; nothing acts on DSC
+//               or cruise yet.
+//   Every frame has a CRC in byte 0 and an alive counter in byte 1
+//   (the same rule as E2E below, with the CAN id as data id).
+//   No valid 0x308 for 100 ms ("Pico lost", F11Fault = 1): direction
+//   neutral (no torque, at the next 100 ms task), the engine story
+//   plays its stop, the gearbox goes to P and 0x592 shows the MIL. It clears by
+//   itself when 0x308 is back; the engine then needs a new start. F11Pico = 0
+//   (the default) turns the link off for cars without a v1z Pico.
 //
 // Words used below:
 //   KL15  ignition on
@@ -56,8 +73,10 @@
 //
 // Timing and bytes copy the Pico emulator v1h.3 (pico-flexray
 // src/ptcan_emu_core.c, dde_engine.c, dde_gear.c) and the spec
-// flexray-re-notes analysis/pico_zv_private_can.md section 5. The Pico
-// keeps FlexRay. Each PT-CAN id must be sent by one box only.
+// docs/bmw-f-series/pico_zv_private_can.md section 5 (notes index:
+// docs/bmw-f-series/README.md). The Pico keeps FlexRay. Each PT-CAN id
+// must be sent by one box only: run a Pico build that sends no BMW
+// frames (v1z or later).
 //
 // When we may transmit (the v1h.3 bus gate):
 //   Nothing either while KL15 is off, no other ECU sent an NM frame
@@ -67,9 +86,6 @@
 //   silence. Every frame starts at its own captured time after W, and
 //   all counters restart. 200 ms with none of those three ids stops all
 //   transmission at once, so a silent car is never woken by us.
-//   If one of our ids (0x3F9, 0x0A5, 0x512; automatic also 0x3FD,
-//   0x518) arrives from another box, we stop for good (F11Fault = 1)
-//   until a parameter is written or the VCU restarts.
 //
 // "Engine running" on the bus follows a short fake engine start, as the
 // Pico v1h.3 SHORT profile: ST_KL D (crank) with the brake down starts
@@ -101,14 +117,12 @@ public:
   // running. Manual: then the normal direction inputs decide. Automatic:
   // R or D only once that gear is engaged.
   bool GetGear(Vehicle::gear &outGear);
-  // A parameter was written: forget the "second sender" fault.
-  void ClearFaults() { foreignTx = false; }
   // Inverter rpm. While driving, the dash is shown at least 750 rpm.
   void SetRevCounter(int s) { motorRpm = s; }
   // Inverter coolant temperature, degrees C. Shown on 0x3F9.
   void SetTemperatureGauge(float temp) { coolantC = temp; }
-  // Incoming PT-CAN: ignition (0x12F), brake pedal (0x173) and, for an
-  // automatic, the gear lever (0x197).
+  // Incoming PT-CAN: ignition (0x12F), brake pedal (0x173), for an
+  // automatic the gear lever (0x197), and the Pico (0x308-0x30C).
   void DecodeCAN(int id, uint32_t *data);
   // True when KL15 (ignition) is on. The rest of the VCU treats this
   // the way an E46 treats the terminal-15 pin.
@@ -142,7 +156,7 @@ private:
   void OnBusWake();
   void OnBusSleep();
   // True while we may transmit: a 0x12F, 0x173 or 0x0EF in the last
-  // 200 ms, and no second sender seen (v1h.3 gate).
+  // 200 ms, and not preparing to sleep (v1h.3 gate).
   bool BusAwake() const;
   // Note one PT-CAN frame from the car. Starts a new wake after >= 1 s
   // of silence.
@@ -218,8 +232,18 @@ private:
   bool SlotDue(TxSlot &s, const uint8_t *d, uint8_t from, uint8_t dlc,
                uint32_t firstMs, uint32_t gapMs);
   void SlotSent(TxSlot &s, const uint8_t *d, uint32_t periodMs);
-  // TODO: Pico frame that carries the DSC torque ceiling. No id yet.
+  // DSC torque ceiling. Not used yet: the Pico's request is only shown
+  // (F11DscAct / F11DscNm, from 0x309), never acted on.
   void HandleDscTorqueCeiling(uint32_t *data);
+  // Private Pico link (F11Pico = 1). PicoRx checks and decodes one
+  // 0x308-0x30C frame; PicoTask runs the 100 ms "Pico lost" check and
+  // sends 0x304-0x307; PicoSend adds the CRC and alive counter;
+  // PicoEngFrames builds 0x305-0x307 from the engine story.
+  bool PicoLinkOn() const { return Param::GetInt(Param::F11Pico) == 1; }
+  void PicoRx(int id, const uint8_t *b);
+  void PicoTask();
+  void PicoSend(uint16_t id, uint8_t *b, uint8_t *alive);
+  void PicoEngFrames(uint8_t *f, uint8_t *s, uint8_t *x);
 
   static uint8_t Crc8_1d(const uint8_t *data, int len, uint8_t crc);
   static void E2ESeal(uint8_t *frame, int dlc, uint16_t dataId, uint8_t *alive);
@@ -234,7 +258,6 @@ private:
   uint16_t wakeSeqSeen;
   bool rxEver;
   bool busWasAwake;
-  bool foreignTx; // another box sends 0x3F9 / 0x0A5: we stay silent
   // KL15 history in this wake, for the frame timelines.
   bool kl15Ever;
   uint32_t onMs, offMs;
@@ -275,6 +298,12 @@ private:
     // 0x397 bytes 0-2, and the end of the 0x397 stop walk
     bool inj, r381Run, fb9Set, r397Set, stopWalkDone;
     uint8_t fb9[3], r397[3];
+    // FlexRay-only bytes, sent to the Pico on 0x305 / 0x307
+    // (dde_engine.c c3_b34, c3_b56, r29_b8, b142_b8, b142_b23, e89,
+    // e89_b1 as code 0..3, e8_fast, e8_crank, turbine, fb7_mv)
+    uint8_t c3b34, c3b56, r29b8, b142b8, b142b23, e89, e89b1;
+    bool e8fast, e8crank;
+    uint16_t turbine, fb7mv;
   } eng;
   // 1 s frames on the 200 ms task: ticks since W.
   uint8_t tick200;
@@ -323,6 +352,18 @@ private:
   uint32_t next512;
   uint8_t pre512;
 
+  // Private Pico link. Per Pico id 0x308..0x30C: last accepted alive
+  // (0xFF = none in this wake) and when it came.
+  volatile uint8_t pAlive[5];
+  volatile uint32_t pMs[5];
+  volatile bool pHave[5];
+  volatile uint16_t pBad; // frames dropped: bad CRC, length or repeat
+  bool picoLost;          // no valid 0x308 for 100 ms while the bus is up
+  bool picoMil;           // MIL on 0x592 since the loss, until KL15 off
+  uint8_t alive304, alive305, alive306, alive307, step305, last305;
+  uint8_t last306[6];
+  TxSlot s304, s307;
+
   bool seen3f9;
   uint32_t next3f9, last3f9Ms;
   uint8_t last3f9[6];
@@ -348,9 +389,9 @@ private:
   bool brakeTorqueSeen;
   uint8_t brakeTorqueAge10ms;
 
-  // DSC torque ceiling. The DSC talks to the DDE on FlexRay only. The
-  // pico will forward that limit on CAN. The ID and the byte layout are
-  // not defined, so dscTorqueCanId stays 0 and no filter is registered.
+  // DSC torque ceiling. The DSC talks to the DDE on FlexRay only; the
+  // Pico forwards its request on 0x309 (private link). It is shown as
+  // F11DscAct / F11DscNm but not acted on yet, so dscTorqueCanId stays 0.
   bool dscLimitFresh;
   uint8_t dscLimitAge10ms;
   float dscLimitNm;

@@ -12,6 +12,9 @@
 # Automatic: lever 0x197 and brake shifts (scenario.h) through
 # dde_gear.c on the Pico side and the class's gear logic on the ZV side.
 # 0x281 is left out on purpose: the ZV sends the real 12 V.
+# Then the private link (F11Pico = 1) against the Pico v1z.1 zv_link.c
+# (link_sim.cpp + link_pico.c): start, P-R-D, stop, Pico lost, ZV lost,
+# link off; the Pico may send 0x308-0x30C only.
 set -e
 cd "$(dirname "$0")"
 : "${PICO:?set PICO to the pico-flexray checkout}"
@@ -55,6 +58,21 @@ for m in a m; do
     python3 compare.py "$OUT/zv_s$m.log" "$OUT/pico_s$m.log" $sk > "$OUT/cmps$m$ph.txt" || true
     printf 'sleep %s, grid phase %s ms: ' $m $ph; tail -n 1 "$OUT/cmps$m$ph.txt"
     tail -n 1 "$OUT/cmps$m$ph.txt" | grep -q PASS || fail=1
+  done
+done
+# Private link (needs the Pico v1z.1 or later: src/zv_link.c).
+for f in link_pico.c "$PICO/src/zv_link.c" "$PICO/src/dde_engine.c" "$PICO/src/dde_gear.c"; do
+  $CC -std=c11 -Wall -Wextra -Werror -DEMU_ZV_LINK=1 -I"$PICO/tests/host/stubs" \
+    -I"$PICO/src" -c "$f" -o "$OUT/l_$(basename "$f" .c).o"
+done
+$CXX -std=c++14 -Wall -Wextra -Werror -Istub -I../../include -I. \
+  -o "$OUT/link_sim" link_sim.cpp ../../src/vehicles/BMW_F11.cpp "$OUT"/l_*.o -lm
+for tr in 1 0; do
+  for ph in 0 5; do
+    for m in on o p9000 p4300 l9000 l4300; do
+      "$OUT/link_sim" $ph $tr $m > "$OUT/link_$tr$ph$m.log" 2> "$OUT/link_$tr$ph$m.txt" || fail=1
+      head -n 1 "$OUT/link_$tr$ph$m.txt"; tail -n +2 "$OUT/link_$tr$ph$m.txt"
+    done
   done
 done
 exit $fail

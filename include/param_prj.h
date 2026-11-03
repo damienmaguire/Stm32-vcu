@@ -124,6 +124,7 @@
   PARAM_ENTRY(CAT_THROTTLE, BrkRegen, ONOFF, 0, 1, 0, 162)                     \
   PARAM_ENTRY(CAT_THROTTLE, BrkRegenNm, "Nm", 200, 20000, 7000, 163)           \
   PARAM_ENTRY(CAT_THROTTLE, F11Pedal, ONOFF, 0, 1, 0, 164)                     \
+  PARAM_ENTRY(CAT_THROTTLE, F11Pico, ONOFF, 0, 1, 0, 165)                      \
   PARAM_ENTRY(CAT_AIRCON, Compressor, COMPRESSMODES, 0, 1, 0, 153)             \
   PARAM_ENTRY(CAT_AIRCON, AirConCtrl, ONOFF, 0, 1, 0, 154)                     \
   PARAM_ENTRY(CAT_CLOCK, Set_Day, DOW, 0, 6, 0, 46)                            \
@@ -293,6 +294,15 @@
   VALUE_ENTRY(F11Eng, F11ENG, 2130)                                            \
   VALUE_ENTRY(F11Fault, F11FLT, 2131)                                          \
   VALUE_ENTRY(F11Gear, F11GEAR, 2132)                                          \
+  VALUE_ENTRY(F11Link, F11LINK, 2133)                                          \
+  VALUE_ENTRY(F11PicoMd, F11PMODE, 2134)                                       \
+  VALUE_ENTRY(F11LinkErr, "", 2135)                                            \
+  VALUE_ENTRY(F11BrkBar, "bar", 2136)                                          \
+  VALUE_ENTRY(F11BrkPed, "dig", 2137)                                          \
+  VALUE_ENTRY(F11DscAct, ONOFF, 2138)                                          \
+  VALUE_ENTRY(F11DscNm, "Nm", 2139)                                            \
+  VALUE_ENTRY(F11CrsAct, ONOFF, 2140)                                          \
+  VALUE_ENTRY(F11CrsNm, "Nm", 2141)                                            \
   VALUE_ENTRY(SP51State, SP51STATE, 2142)                                      \
   VALUE_ENTRY(SP51Fault, SP51FLT, 2143)                                        \
   VALUE_ENTRY(SP51HvSt, SP51HV, 2144)                                          \
@@ -389,7 +399,10 @@
 #define CAN3SPD "0=k33.3, 1=k500, 2=k100"
 #define TRNMODES "0=Manual, 1=Auto"
 #define F11ENG "0=Off, 1=Crank, 2=Run, 3=Stop, 4=Stopped"
-#define F11FLT "0=None, 1=SecondSender, 2=StartWatchdog"
+#define F11FLT "0=None, 1=PicoLost, 2=StartWatchdog"
+#define F11LINK "0=Off, 1=Wait, 2=Ok, 3=Lost"
+#define F11PMODE                                                               \
+  "0=Off, 1=Legacy, 2=PrivateWait, 3=PrivateRun, 4=MirrorFallback, 5=Fault"
 #define F11GEAR "0=P, 1=R, 2=N, 3=D, 4=Manual"
 #define SP51STATE                                                              \
   "0=Wake, 1=Standby, 2=Ready, 3=Request, 4=Closing, 5=Closed, 6=Fault, "      \
