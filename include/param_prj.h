@@ -396,7 +396,7 @@
   "7=Lost"
 #define SP51FLT                                                                \
   "0=None, 1=PackLost, 2=OpenReq, 3=PrecheckFail, 4=CloseTimeout, "            \
-  "5=LeftClosed, 6=NotReady"
+  "5=LeftClosed, 6=NotReady, 7=PchBlocked"
 #define SP51HV "0=NoData, 4=Open, 5=Precharge, 6=Closed"
 #define CAT_AIRCON "Air Conditioning"
 #define CAN_DEV "0=CAN1, 1=CAN2"
