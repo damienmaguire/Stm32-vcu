@@ -33,6 +33,7 @@
  * charge current.
  * The function Task100Ms() will be called every 100ms and should
  * be used to implement a timeout for receiving fata from the BMS.
+ * Task10Ms() is called every 10ms for a BMS that has to send cyclic frames.
  */
 
 class BMS {
@@ -40,6 +41,7 @@ public:
   virtual void DecodeCAN(int, uint8_t *) {};
   virtual void DeInit() {};
   virtual float MaxChargeCurrent() { return 9999.0; };
+  virtual void Task10Ms() {};
   virtual void Task100Ms() {
     Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
     Param::SetFloat(Param::BMS_Vmin, 0);
