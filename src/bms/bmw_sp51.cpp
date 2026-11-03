@@ -29,6 +29,7 @@
  */
 
 #include "bms/bmw_sp51.h"
+#include "digio.h"
 
 // 0x53A close sequence states (bytes 5 and 6 change).
 #define STAGE_A 0 // idle
@@ -121,25 +122,27 @@ void BMW_SP51::DecodeCAN(int id, uint8_t *data) {
   seenPack = true;
 }
 
-// The pack follows the ZV opmode, the same way the S-Box contactors do:
-//   Off, PchFail         open (0x10B OPEN, 0x53A A); sending carries on
-//   Precharge            run the close sequence. The ZV sees the precharge
-//                        as done when udc reaches udcsw, which is only
-//                        allowed once the pack reports closed (Task100Ms).
-//   Run, Charge,         stay closed
+// The pack's contactors follow the ZV's own contactor outputs, so they
+// open exactly when external contactors would, delays included:
+//   Off, from Run/Charge  stay closed for the ZV's 2.5 s shutdown delay
+//                         (rlyDly) so the inverter, DC-DC, heater etc.
+//                         are off before the contactors open, then open
+//   Precharge             run the close sequence. The ZV sees the precharge
+//                         as done when udc reaches udcsw, which is only
+//                         allowed once the pack reports closed (Task100Ms).
+//   Run, Charge,          stay closed (prec_out / dcsw_out are on)
 //   Preheat, Maintain
-// A fault opens the pack and it stays open until the ZV goes back to Off.
+//   PchFail               open (the ZV clears prec_out)
+//   Over voltage trip     open as soon as the ZV drops its outputs
+// Open means 0x10B OPEN and 0x53A A; sending carries on regardless.
+// The precharge opmode is checked too, because the ZV turns prec_out on
+// only 250 ms after entering it and the close needs every moment of the
+// 5 s precharge timeout.
+// Pack-side faults (0x112 lost, pack asks to open) still open at once,
+// and the pack then stays open until the ZV outputs are off.
 bool BMW_SP51::CloseRequested() {
-  switch (Param::GetInt(Param::opmode)) {
-  case MOD_PRECHARGE:
-  case MOD_RUN:
-  case MOD_CHARGE:
-  case MOD_PREHEAT:
-  case MOD_MAINTAIN:
-    return true;
-  default:
-    return false;
-  }
+  return Param::GetInt(Param::opmode) == MOD_PRECHARGE ||
+         DigIo::prec_out.Get() || DigIo::dcsw_out.Get();
 }
 
 bool BMW_SP51::PackValid() { return seen112 && age112 <= TICKS_LOST; }
@@ -266,7 +269,7 @@ void BMW_SP51::RunStateMachine() {
     break;
 
   case FAULT:
-    // Stay open until the ZV leaves Precharge/Run/Charge, then start again.
+    // Stay open until the ZV contactor outputs are off, then start again.
     if (!request)
       state = STANDBY;
     break;

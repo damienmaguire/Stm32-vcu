@@ -6,17 +6,24 @@
 //   sp51_run early     key on 2 s after power up, before the pack settled:
 //                      the ZV precharge times out, the pack is never asked
 //                      to close, and the next key on works
+//   sp51_run keyoff    key off in Run: the pack stays closed for the ZV's
+//                      2.5 s shutdown delay, then opens
+//   sp51_run trip      the ZV drops its contactor outputs with no delay
+//                      (as its over voltage trip does when stationary)
 //   sp51_run lost      0x112 stops while closed
 //   sp51_run openreq   the pack asks to open while closed
 //   sp51_run nopack    the pack never answers (one 1 s wake retry)
 //   sp51_run suppoff   SP51Supp off: only 0x10B and 0x53A
 //   sp51_run ptcan     battery on the F11 PT-CAN: only 0x10B and 0x53A
 #include "bms/bmw_sp51.h"
+#include "digio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 float Param::g[Param::PARAM_LAST];
+DigIo DigIo::prec_out;
+DigIo DigIo::dcsw_out;
 
 static uint32_t T;          // ms
 static uint32_t lastTx = 0; // ms of the last frame we sent
@@ -84,13 +91,15 @@ int main(int argc, char **argv) {
   // extra frame on every change, as the real pack does.
   int hv = 4, target = 4, changeAt = -1, seenCmd = 0;
   int answers = strcmp(sc, "nopack") != 0;
-  // ZV model: just the opmode (Off, Precharge, Run, PchFail). The pack
-  // follows the opmode, so key off opens it at once.
+  // ZV model: the opmode and the prec_out / dcsw_out handling of
+  // Ms10Task in stm32_vcu.cpp, rlyDly delays included.
   bool early = !strcmp(sc, "early");
+  bool trip = !strcmp(sc, "trip");
   int keyOn = v7 ? 24900 : (early ? 2000 : 10000);
-  int keyOff = v7 ? 40000 : 45000;
-  int minTime = 0, pchStart = -1, runAt = -1;
-  int pchFailAt = -1;
+  // v7: the playback opens at 40.0 s, so the key goes off 2.5 s before.
+  int keyOff = v7 ? 37490 : 45000;
+  int minTime = 0, pchStart = -1, runAt = -1, rlyDly = 0;
+  int pchFailAt = -1, dcswOffAt = -1;
   const int end = v7 ? 50000 : 60000;
 
   for (T = 0; T < (uint32_t)end; T += 10) {
@@ -130,34 +139,68 @@ int main(int argc, char **argv) {
         rx(0x432, 0, 0, 0, 0, 0xFF, 0, 0, 0);
     }
 
-    // --- the ZV (just the opmode and contactor outputs) ---
+    // --- the ZV: Ms10Task runs the BMS first, then the mode control ---
+    bms.Task10Ms();
     int op = Param::GetInt(Param::opmode);
-    if (early && (int)T == 10000 && op == MOD_PCHFAIL) {
-      op = MOD_OFF; // key off, then on again at 12 s
-      keyOn = 12000;
-    }
-    if ((int)T == keyOn) {
-      op = MOD_PRECHARGE;
-      minTime = 100;
-      pchStart = T;
-    }
-    if (op == MOD_PRECHARGE) {
+    switch (op) {
+    case MOD_OFF:
+      if (rlyDly)
+        rlyDly--; // shutdown delay before opening the contactors
+      if (!rlyDly && (DigIo::dcsw_out.Get() || DigIo::prec_out.Get())) {
+        DigIo::dcsw_out.Clear();
+        DigIo::prec_out.Clear();
+        dcswOffAt = T;
+      }
+      if ((int)T == keyOn) {
+        op = MOD_PRECHARGE;
+        rlyDly = 25;
+        minTime = 100;
+        pchStart = T;
+      }
+      break;
+    case MOD_PRECHARGE:
+      if (rlyDly)
+        rlyDly--;
+      if (!rlyDly)
+        DigIo::prec_out.Set();
       if (minTime)
         minTime--;
       if (!minTime &&
           Param::GetFloat(Param::udc) >= Param::GetFloat(Param::udcsw)) {
         op = MOD_RUN;
+        rlyDly = 25;
         runAt = T;
       } else if ((int)T - pchStart > 5000) {
+        DigIo::prec_out.Clear();
         op = MOD_PCHFAIL;
         pchFailAt = T;
       }
+      break;
+    case MOD_PCHFAIL:
+      DigIo::prec_out.Clear();
+      if (early && (int)T == 10000) {
+        op = MOD_OFF; // key off, then on again at 12 s
+        keyOn = 12000;
+      }
+      break;
+    case MOD_RUN:
+      if (rlyDly)
+        rlyDly--;
+      if (!rlyDly)
+        DigIo::dcsw_out.Set();
+      if (trip && T == 32000) {
+        DigIo::dcsw_out.Clear(); // outputs off, no delay
+        DigIo::prec_out.Clear();
+        op = MOD_OFF;
+        dcswOffAt = T;
+      } else if ((int)T == keyOff) {
+        op = MOD_OFF;
+        rlyDly = 250; // the ZV's 2.5 s delayed shutdown
+      }
+      break;
     }
-    if ((int)T == keyOff)
-      op = MOD_OFF;
     Param::SetInt(Param::opmode, op);
 
-    bms.Task10Ms();
     if (T % 100 == 0)
       bms.Task100Ms();
     if (T % 500 == 0)
@@ -197,6 +240,19 @@ int main(int argc, char **argv) {
           "second key on: precharge done within 5 s");
     fprintf(stderr, "      first CLOSE %d ms, run at %d ms\n", firstClose,
             runAt);
+  } else if (!strcmp(sc, "keyoff")) {
+    check(dcswOffAt == keyOff + 2500, "ZV outputs off 2.5 s after key off");
+    check(lastClose >= keyOff + 2490 && lastClose <= keyOff + 2520,
+          "pack held closed for the 2.5 s delay, then OPEN");
+    check(fault == BMW_SP51::NONE, "no fault");
+    check(Param::GetInt(Param::SP51State) == BMW_SP51::READY, "ready again");
+    fprintf(stderr,
+            "      key off %d ms, outputs off %d ms, last CLOSE %d ms\n",
+            keyOff, dcswOffAt, lastClose);
+  } else if (trip) {
+    check(lastClose >= 31990 && lastClose <= 32020,
+          "OPEN on the next 0x10B after the outputs drop");
+    check(fault == BMW_SP51::NONE, "no fault");
   } else if (!strcmp(sc, "lost")) {
     check(lastClose >= 32400 && lastClose <= 32540,
           "OPEN within 0.55 s of 0x112 stopping");

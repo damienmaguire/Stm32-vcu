@@ -72,13 +72,22 @@ sends them. 0x10B and 0x53A (the EME's close request) are always sent.
 2. **Standby** (1) until 0x112 has run for 5 s without a gap over 0.1 s
    and the last three 0x1FA frames said `0x45` (open, ready). Then
    **Ready** (2).
-3. The pack follows the ZV opmode:
+3. The pack follows the ZV's own contactor outputs (`prec_out` and
+   `dcsw_out`), so it opens exactly when external contactors would,
+   delays included:
 
-   | ZV opmode | Pack |
+   | ZV | Pack |
    |---|---|
-   | Off, PchFail | open (0x10B OPEN, 0x53A A). Sending carries on. |
    | Precharge | run the close sequence below |
    | Run, Charge (and Preheat, 12VMaintain) | stay closed |
+   | Key off / charge end (Off) | stay closed for the ZV's 2.5 s shutdown delay, then open |
+   | PchFail | open |
+   | Outputs dropped with no delay (e.g. a stationary over voltage trip during the shutdown delay) | open on the next 10 ms tick |
+
+   Open means 0x10B OPEN and 0x53A state A; sending carries on. The
+   Precharge opmode is checked as well as `prec_out`, because the ZV
+   turns `prec_out` on 250 ms into Precharge and the close needs all of
+   the 5 s precharge timeout.
 
    Precharge from Ready starts **Request** (3): 0x53A state B for 2 s.
 4. Last check: 0x112 present, 0x1FA `0x45`, the pack is not asking to
@@ -87,13 +96,16 @@ sends them. 0x10B and 0x53A (the EME's close request) are always sent.
 5. The pack goes to state 5 (precharge) within about 80 ms and state 6
    (closed) about 1.8 to 1.9 s later on the first close after power up,
    about 0.6 s on later ones. That is **Closed** (5).
-6. When the ZV goes to Off or PchFail the module sends OPEN and state A
-   at once, and goes back to Standby. The ZV's 2.5 s delayed release of
-   its own contactor output does not apply to the pack, and an over
-   voltage trip that only drops the ZV outputs does not open the pack.
+6. On key off the ZV goes to Off and keeps its contactor outputs on for
+   2.5 s while the inverter, DC-DC, charger and heater shut down, so no
+   current is flowing when the contactors open. Then the module sends
+   OPEN and state A and goes back to Standby.
 
-**Fault** (6) opens the pack and stays there until the ZV goes back to
-Off (or PchFail). `SP51Fault` says why: 1 PackLost (0x112 missing over 0.5 s while
+Only faults on the pack side open it at once, under load if need be:
+0x112 missing for 0.5 s, or the pack asking to open.
+
+**Fault** (6) opens the pack and stays there until the ZV contactor
+outputs are off. `SP51Fault` says why: 1 PackLost (0x112 missing over 0.5 s while
 closing or closed), 2 OpenReq (the pack asked to open), 3 PrecheckFail,
 4 CloseTimeout (no state 6 within 5 s), 5 LeftClosed (out of state 6 for
 over 1 s). **Lost** (7) means the pack was talking and stopped: check
@@ -162,6 +174,12 @@ limit (there is no generic one; the pack's is shown as `SP51IDchg`).
 - 0x432 SOC reads 0xFF (invalid) on the bench.
 - The sign of the 0x112 current (charge or discharge positive) is not
   confirmed.
+- ZV over voltage trip (`udc` over `udclim`, in `utils::ProcessUdc`):
+  in Run, Charge and Precharge the mode control later in the same 10 ms
+  task turns the outputs straight back on and restores the opmode. So
+  the trip does not open external contactors or this pack; only during
+  the Off shutdown delay does it open them early. This is existing ZV
+  behaviour and is not changed here.
 - What the pack does if 0x10B stops while closed is not tested. Always
   power the pack's 12 V from the same switched supply as the ZV.
 
@@ -170,7 +188,8 @@ limit (there is no generic one; the pack's is shown as `SP51IDchg`).
 `test/bmw_sp51/run.sh` builds the module on the PC with a simple pack
 model and compares every frame it sends, byte for byte (CRC and alive
 counters included), with Ian's `sp51_close_v7_continuous.csv`, plus abort
-scenarios (0x112 lost, pack open request, no answer, early key on,
+scenarios (key off with the 2.5 s hold, outputs dropped with no delay,
+0x112 lost, pack open request, no answer, early key on,
 `SP51Supp` off, battery on the F11 PT-CAN):
 
     SP51_CSV=/path/to/sp51_close_v7_continuous.csv test/bmw_sp51/run.sh
