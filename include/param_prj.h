@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 165
+// Next param id (increase when adding new parameter!): 168
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -36,7 +36,7 @@
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
   PARAM_ENTRY(CAT_SETUP, chargemodes, CHGMODS, 0, 8, 0, 37)                    \
-  PARAM_ENTRY(CAT_SETUP, BMS_Mode, BMSMODES, 0, 7, 0, 90)                      \
+  PARAM_ENTRY(CAT_SETUP, BMS_Mode, BMSMODES, 0, 8, 0, 90)                      \
   PARAM_ENTRY(CAT_SETUP, ShuntType, SHNTYPE, 0, 4, 0, 88)                      \
   PARAM_ENTRY(CAT_SETUP, InverterCan, CAN_DEV, 0, 1, 0, 70)                    \
   PARAM_ENTRY(CAT_SETUP, VehicleCan, CAN_DEV, 0, 1, 1, 71)                     \
@@ -111,6 +111,8 @@
   PARAM_ENTRY(CAT_BMS, BMS_VmaxLimit, "V", 0, 10, 4.2, 93)                     \
   PARAM_ENTRY(CAT_BMS, BMS_TminLimit, "°C", -100, 100, 5, 94)                  \
   PARAM_ENTRY(CAT_BMS, BMS_TmaxLimit, "°C", -100, 100, 50, 95)                 \
+  PARAM_ENTRY(CAT_BMS, SP51Supp, ONOFF, 0, 1, 1, 166)                          \
+  PARAM_ENTRY(CAT_BMS, SP51Settle, "s", 5, 60, 20, 167)                        \
   PARAM_ENTRY(CAT_HEATER, Heater, HTTYPE, 0, 8, 0, 57)                         \
   PARAM_ENTRY(CAT_HEATER, Control, HTCTRL, 0, 2, 0, 58)                        \
   PARAM_ENTRY(CAT_HEATER, HeatPwr, "W", 0, 6500, 0, 59)                        \
@@ -290,9 +292,16 @@
   VALUE_ENTRY(BrkRegenPct, "%", 2129)                                          \
   VALUE_ENTRY(F11Eng, F11ENG, 2130)                                            \
   VALUE_ENTRY(F11Fault, F11FLT, 2131)                                          \
-  VALUE_ENTRY(F11Gear, F11GEAR, 2132)
+  VALUE_ENTRY(F11Gear, F11GEAR, 2132)                                          \
+  VALUE_ENTRY(SP51State, SP51STATE, 2142)                                      \
+  VALUE_ENTRY(SP51Fault, SP51FLT, 2143)                                        \
+  VALUE_ENTRY(SP51HvSt, SP51HV, 2144)                                          \
+  VALUE_ENTRY(SP51ULink, "V", 2145)                                            \
+  VALUE_ENTRY(SP51UMax, "V", 2146)                                             \
+  VALUE_ENTRY(SP51UMin, "V", 2147)                                             \
+  VALUE_ENTRY(SP51IDchg, "A", 2148)
 
-// Next value Id: 2133
+// Next value Id: 2149
 
 // Dead params
 /*
@@ -342,7 +351,7 @@
   "8=BMW_E31, 9=BMW_F11"
 #define BMSMODES                                                               \
   "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual, 4=LeafBms, "    \
-  "5=RenaultKangoo33, 6=STW, 7=OIFlyingAdc"
+  "5=RenaultKangoo33, 6=STW, 7=OIFlyingAdc, 8=BMW_SP51"
 #define OPMODES                                                                \
   "0=Off, 1=Run, 2=Precharge, 3=PchFail, 4=Charge, 5=12VMaintain, 6=Preheat"
 #define DOW "0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat"
@@ -382,6 +391,13 @@
 #define F11ENG "0=Off, 1=Crank, 2=Run, 3=Stop, 4=Stopped"
 #define F11FLT "0=None, 1=SecondSender, 2=StartWatchdog"
 #define F11GEAR "0=P, 1=R, 2=N, 3=D, 4=Manual"
+#define SP51STATE                                                              \
+  "0=Wake, 1=Standby, 2=Ready, 3=Request, 4=Closing, 5=Closed, 6=Fault, "      \
+  "7=Lost"
+#define SP51FLT                                                                \
+  "0=None, 1=PackLost, 2=OpenReq, 3=PrecheckFail, 4=CloseTimeout, "            \
+  "5=LeftClosed, 6=NotReady"
+#define SP51HV "0=NoData, 4=Open, 5=Precharge, 6=Closed"
 #define CAT_AIRCON "Air Conditioning"
 #define CAN_DEV "0=CAN1, 1=CAN2"
 #define CAT_THROTTLE "Throttle"
@@ -490,7 +506,8 @@ enum BMSModes {
   BMSModeLeafBMS = 4,
   BMSRenaultKangoo33BMS = 5,
   BMSSTW = 6,
-  BMSOIFlyingAdc = 7
+  BMSOIFlyingAdc = 7,
+  BMSBMW_SP51 = 8
 };
 
 enum DCDCModes {

@@ -36,6 +36,7 @@
 #include "HVAC/preheater.h"
 #include "anain.h"
 #include "bms/bms.h"
+#include "bms/bmw_sp51.h"
 #include "bms/daisychainbms.h"
 #include "bms/kangoobms.h"
 #include "bms/leafbms.h"
@@ -205,6 +206,7 @@ static LeafBMS BMSleaf;
 static DaisychainBMS BMSdaisychain;
 static KangooBMS BMSRenaultKangoo33;
 static STWmBMS stwBms;
+static BMW_SP51 sp51Bms;
 static DCDC DCDCnone;
 static TeslaDCDC DCDCTesla;
 static ElconDCDC ElconDC;
@@ -628,6 +630,7 @@ static void Ms10Task(void) {
   ErrorMessage::SetTime(rtc_get_counter_val());
 
   selectedChargeInt->Task10Ms();
+  selectedBMS->Task10Ms();
 
   if (Param::GetInt(Param::opmode) == MOD_RUN) //!!!THROTTLE CODE HERE//
   {
@@ -832,6 +835,9 @@ static void Ms10Task(void) {
         !maintainer12V.GetRunMaintainer())
       opmode = MOD_OFF;
 
+    if (!selectedBMS->ReadyForPrecharge())
+      vehicleStartTime = rtc_get_counter_val(); // battery not ready to close
+                                                // yet, hold the timeout
     if (udc < (Param::GetInt(Param::udcsw)) &&
         rtc_get_counter_val() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
       DigIo::prec_out.Clear();
@@ -1148,6 +1154,9 @@ static void UpdateBMS() {
     break;
   case BMSModes::BMSOIFlyingAdc:
     selectedBMS = &flyingAdcBms;
+    break;
+  case BMSModes::BMSBMW_SP51:
+    selectedBMS = &sp51Bms;
     break;
   default:
     // Default to no BMS
