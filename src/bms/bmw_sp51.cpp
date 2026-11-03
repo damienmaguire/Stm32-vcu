@@ -41,7 +41,7 @@
 #define TICKS_LOST 50     // 0x112 missing this long = pack gone (0.5 s)
 #define TICKS_GAP 10      // a gap longer than this restarts the settle
 #define TICKS_REQUEST 200 // 0x53A state B for 2 s before the close
-#define TICKS_CLOSE 500   // give the pack 5 s to report closed
+#define TICKS_CLOSE 1000  // give the pack 10 s to report closed
 #define TICKS_LEFT 100    // allow 1 s out of "closed" before aborting
 #define TICKS_WAKE 300    // no answer after 3 s: go quiet once and retry
 #define TICKS_QUIET 100   // 1 s of silence for that retry
@@ -173,16 +173,20 @@ bool BMW_SP51::PackSettled() {
 }
 
 // The ZV holds its precharge timeout while this is false: through the
-// settle, the pre-checks and the 2 s of 0x53A state B, until the CLOSE goes
-// out. Its 5 s then cover only the close and the pack precharge. Fault and
-// Lost are ready, so the ZV times out to PchFail rather than waiting.
-// The hold gives up after SP51Settle + 15 s (35 s by default) of asking:
-// that aborts with NotReady, so the ZV reaches PchFail 5 to 6 s later.
+// settle, the pre-checks, the 2 s of 0x53A state B and the pack's own
+// precharge, until 0x1FA reports closed (state 6). The pack's precharge is
+// watched by the module (10 s, TICKS_CLOSE), and the ZV's 5 s then only
+// cover the step from udc to udcsw, which passes within about 0.1 s.
+// Fault and Lost are ready, so the ZV times out to PchFail rather than
+// waiting. Before the CLOSE the hold gives up after SP51Settle + 15 s
+// (35 s by default) of asking: that aborts with NotReady, so the ZV
+// reaches PchFail 5 to 6 s later. Once Closing, only TICKS_CLOSE applies.
 bool BMW_SP51::ReadyForPrecharge() {
   if (!can)
     return true; // no CAN port, nothing to wait for
-  return state == CLOSING || state == CLOSED || state == FAULT ||
-         state == LOST || HoldTooLong();
+  if (state == CLOSING)
+    return false;
+  return state == CLOSED || state == FAULT || state == LOST || HoldTooLong();
 }
 
 bool BMW_SP51::HoldTooLong() {
@@ -322,6 +326,10 @@ void BMW_SP51::RunStateMachine() {
     if ((last1FA >> 4) == 6) {
       state = CLOSED;
       notClosedTicks = 0;
+    } else if (((last1FA >> 2) & 3) == 2) {
+      // 0x1FA b1 bits 2-3: 1 = precharge not blocked (every log), 2 = the
+      // pack blocked its precharge (FALLBACK, from the BE i3 code).
+      Abort(PCH_BLOCKED);
     } else if (stepTicks > TICKS_CLOSE) {
       Abort(CLOSE_TIMEOUT);
     }
@@ -487,14 +495,15 @@ void BMW_SP51::Task100Ms() {
   bool valid = PackValid();
   bool closed = PackClosed();
   bool limits = LimitsAllowed();
-  int shunt = Param::GetInt(Param::ShuntType);
+  int shunt = Param::GetInt(Param::ShuntType); // must be 0 (None)
 
   // 0x112 has two voltages. U_Pack (b2-3) is the cell stack side, before
   // the contactors: it reads the full pack voltage even when open. b7 is
   // the link (output) side after the contactors, 0 when open, about 4 V
   // per bit (ANALYSIS). As in the Leaf class, udc2 is the battery side.
   // udc is the bus side, the one the ZV compares with udcsw to finish
-  // precharge.
+  // precharge. As with the Leaf, the battery is the data source: ShuntType
+  // must be None (0), and this module owns udc, idc and udcsw.
   if (shunt == 0) // Only populate if no shunt is used
   {
     Param::SetFloat(Param::udc, valid ? linkVolts : 0);
@@ -506,16 +515,13 @@ void BMW_SP51::Task100Ms() {
         Param::SetFloat(Param::SOC, soc);
     }
   }
-  if (shunt != 4) // ISA_udcsw sets udcsw itself
-  {
-    // Precharge is done when the pack reports closed and the link is within
-    // 30 V of the pack. Until then (or without pack data) udcsw is held at
-    // 500 V, as STW does, so the ZV keeps waiting or times out.
-    if (closed && packVolts > 200)
-      Param::SetFloat(Param::udcsw, packVolts - 30);
-    else
-      Param::SetFloat(Param::udcsw, 500);
-  }
+  // Precharge is done when the pack reports closed and the link is within
+  // 30 V of the pack. Until then (or without pack data) udcsw is held at
+  // 500 V, as STW does, so the ZV keeps waiting or times out.
+  if (closed && packVolts > 200)
+    Param::SetFloat(Param::udcsw, packVolts - 30);
+  else
+    Param::SetFloat(Param::udcsw, 500);
 
   Param::SetFloat(Param::BMS_ChargeLim, MaxChargeCurrent());
   // Cell voltages (BMS_Vmin, BMS_Vmax) are only on UDS: left unset.

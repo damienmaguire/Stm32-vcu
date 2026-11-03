@@ -51,10 +51,15 @@ ZV is running.
   0x432, 0x4AD, 0x4B0, 0x587 and more) don't clash with the inverter's. A
   bus-off is a silence and latches the pack.
 - **Contactor outputs:** the pack does its own precharge and main
-  contactors. Do not wire ZV precharge or main contactor relays into the
-  pack's HV path. The ZV outputs still switch as normal (the module
-  follows them, see below), so they can stay unconnected or drive an
-  indicator.
+  contactors, and its HV output goes **straight to the HV junction**
+  (inverter, DC-DC, charger, heater). Do not put any ZV-driven contactor
+  (precharge, main, negative, S-box or VW box) in series between the pack
+  and the loads. The pack would precharge an open output, report closed
+  at once, and the ZV would then close that contactor (`dcsw_out`, 250 ms
+  into Run) onto uncharged inverter capacitors. `prec_out`, `dcsw_out`
+  and the NEGCONTACTOR output still switch as normal (the module follows
+  them, see below), so leave them unconnected or use them for an
+  indicator only.
 - 12 V supply: the contactor coils draw more than the idle current, allow
   3 A or more (from our guide, untested).
 
@@ -65,7 +70,7 @@ ZV is running.
 | `BMS_Mode` | 8 = BMW_SP51 | Selects this module |
 | `BMSCan` | the CAN port the pack is on | All pack frames go out on this port only |
 | `SP51Supp` | On (default) when the pack has its own bus; Off when it shares a bus with a car that already sends 0x12F, 0x1A1, 0x328 and friends | See below |
-| `ShuntType` | 0 = None (or 1 = ISA if you fit one) | With 0 the module fills in `udc`, `udc2`, `idc`, `power` and `SOC` from the pack |
+| `ShuntType` | 0 = None (required) | As with the Leaf, the battery is the data source: the module owns `udc`, `udc2`, `idc`, `power`, `SOC` and `udcsw`. Do not use a shunt with the SP51 |
 | `SP51Settle` | 20 s (default) | How long 0x112 must run without a gap before a close may start. 20 s is what every proven bench close had; 5 s is untested (5 to 60 s) |
 | `udcsw` | leave it | Managed by this module, overwritten 10 times a second: pack voltage minus 30 V once the pack is closed, 500 V otherwise |
 
@@ -139,10 +144,14 @@ to 0 on the same 10 ms tick as the abort, and are 0 whenever the module
 is not in Closed or 0x1FA does not report state 6. `SP51Fault` says
 why: 1 PackLost (0x112 missing over 0.5 s while closing or closed),
 2 OpenReq (the pack asked to open), 3 PrecheckFail, 4 CloseTimeout (no
-state 6 within 5 s), 5 LeftClosed (out of state 6 for over 1 s),
+state 6 within 10 s), 5 LeftClosed (out of state 6 for over 1 s),
 6 NotReady (no CLOSE within `SP51Settle` + 15 s of the ZV asking, see
-the precharge timeout below). **Lost** (7) means the pack was talking and stopped: check
-HVIL and 12 V, then power cycle the pack's 12 V.
+the precharge timeout below), 7 PchBlocked (while closing, 0x1FA b1
+bits 2-3 read 2, "precharge blocked"; FALLBACK from the BE i3 code, it
+reads 1 in every log we have, and the BE i3 code needs a wake pulse to
+clear it, so cycle the pack's 12 V). **Lost** (7) means the pack was
+talking and stopped: check HVIL and 12 V, then power cycle the pack's
+12 V.
 
 ### ZV precharge
 
@@ -153,9 +162,10 @@ The ZV's own precharge logic is used as is: it waits for `udc` to reach
   the contactors. It reads the full 380 V even with the pack open. This
   goes to `udc2` (battery voltage, as in the Leaf class).
 - **U_Link** (byte 7, about 4 V per bit, analysis): the output side after
-  the contactors, 0 V when open, about 380 V when closed. With
-  `ShuntType 0` this goes to `udc` (the bus side voltage the precharge
-  check uses). With an ISA shunt the shunt sets `udc`.
+  the contactors, 0 V when open, about 380 V when closed. This goes to
+  `udc` (the bus side voltage the precharge check uses). `ShuntType`
+  must be 0 (None), as with the Leaf, so nothing else writes `udc`, `idc`
+  or `udcsw`.
 
 `udcsw` is held at 500 V until the pack reports state 6 (closed), then
 set to pack voltage minus 30 V. So the ZV only moves on to Run or Charge
@@ -165,24 +175,68 @@ bit guess is wrong low, the ZV will report PchFail rather than run.
 **Precharge timeout.** The ZV gives precharge 5 s (`PRECHARGE_TIMEOUT`
 in `stm32_vcu.cpp`, counted on the 1 s RTC, so 5 to 6 s). The module
 holds that timeout through `ReadyForPrecharge()` (a BMS hook, true for
-every other battery): it is false while the module settles, does its
-checks and sends 2 s of 0x53A state B, and true from the CLOSE on. So the
-ZV's 5 s cover only the close and the pack precharge (1.8 to 1.9 s on
-the first close after the pack's 12 V came on, about 0.6 s later,
-possibly longer into a real inverter). The ZV stays in Precharge while
-held; a cold start (pack and ZV powered together, key turned at once)
-reaches Run about `SP51Settle` + 4 s after key on, with no PchFail.
+every other battery). It is false while the module settles, does its
+checks, sends 2 s of 0x53A state B and while the pack precharges, until
+0x1FA reports state 6 (closed). The ZV stays in Precharge while held.
+The pack's own precharge is watched by the module: 10 s from the CLOSE
+(`TICKS_CLOSE`) before CloseTimeout. Once the pack is closed the ZV's
+5 s only cover the step from `udc` to `udcsw`, which passes within about
+0.13 s (0x1FA event frame, then the next 100 ms update).
 
-The hook is true again, so the ZV times out to PchFail as before, when:
+A cold start (pack and ZV powered together, key turned at once) reaches
+Run about `SP51Settle` + 4 s after key on (24 s by default), with no
+PchFail. Turning the key once `SP51State` is Ready (2) takes about 4 s
+(2.7 to 3 s on later closes).
 
-- the module aborts (Fault, e.g. PrecheckFail) or the pack goes Lost
+The hook is true again, so the ZV times out to PchFail 5 to 6 s later,
+when:
+
+- the module aborts (Fault: PrecheckFail, CloseTimeout, PchBlocked and
+  so on) or the pack goes Lost
 - the ZV has been in Precharge for `SP51Settle` + 15 s (35 s by default)
-  without a CLOSE: the module aborts with `SP51Fault` 6 NotReady (and
-  posts `BMSCOMM`), and PchFail follows 5 to 6 s later
+  and the CLOSE has not gone out yet: the module aborts with `SP51Fault`
+  6 NotReady (and posts `BMSCOMM`). A legitimate close needs at most
+  `SP51Settle` + about 6.5 s before the CLOSE (3 s wake, 1 s retry, the
+  0x53A slot, 2 s of state B). Once the CLOSE is out only the 10 s close
+  timeout applies, so a slow pack precharge is never cut short.
 - the battery has no CAN port assigned
 
-Letting go of the key during the hold goes to Off as before; nothing was
-asked of the pack, so it just stays open.
+Worst case from key on to PchFail: about 41 s (default settle) before
+the CLOSE, or CLOSE + 10 s + 5 to 6 s after it.
+
+Letting go of the key during the hold goes to Off as before; if the
+CLOSE was already out, the module sends OPEN at once (only precharge
+current is flowing then).
+
+**Charge, preheat and 12 V maintainer starts** go through the same
+Precharge opmode, so they are held too (up to about 24 s on a cold
+start). A charger handshake (CCS through i3LIM or Foccci, for example)
+could time out during that wait [HYPOTHESIS, untested]. The inverter
+enable (`inv_out`), NEGCONTACTOR and coolant pump outputs are on for the
+whole of Precharge, so the inverter has 12 V with no HV for that time.
+
+### Before the car: precharge into the real inverter
+
+Every close so far was into the bench output with almost no capacitance,
+so the 1.8 s (first close) and 0.6 s (re-close) times say nothing about
+the pack's precharge resistor. Estimated from typical parts (20 to 100
+Ohm, 0.5 to 1.3 mF of DC link) the real close takes about 1.9 to 2.5 s,
+up to about 3.3 s pessimistic [ANALYSIS]. The pack also sends a short
+test pulse (b7 to about 220 V, back to 0) before the real rise; with
+real capacitors the link keeps that charge, and it is not known whether
+the pack minds [HYPOTHESIS]. Ian's test plan (Addendum 2 of the PR #278
+review, `sam_pr278_review.md`):
+
+1. Real inverter on the pack output, 12 V to the inverter off, its DC
+   link the only HV load.
+2. After a pack 12 V cycle run `sp51ctl.py close --hold-seconds 5`, then
+   two re-closes.
+3. Log CLOSE, state 5, the test pulse, b7 reaching (U_Pack - 30) / 4 and
+   state 6, plus 0x1FA b1 bits 2-3 and the DTCs (read only, UDS 0x19).
+4. DMM or scope on the DC link. Discharge the link afterwards.
+5. **Pass: CLOSE to state 6 within 3 s and no new DTCs.** The same trace
+   is the first in-car measurement, with DC-DC, heater and compressor
+   off until Run.
 
 ## Values
 
@@ -198,7 +252,7 @@ asked of the pack, so it just stays open.
 
 The usual battery values are filled the way the Leaf class does:
 
-- With `ShuntType 0`: `udc` (link side), `udc2` (pack side), `idc`,
+- With `ShuntType 0` (required): `udc` (link side), `udc2` (pack side), `idc`,
   `power`, and `SOC` from 0x432 only when it is a valid 0 to 100. It has
   read 0xFF in every log, so SOC stays unset in practice.
 - Always: `udcsw`, `BMS_Tmin`, `BMS_Tmax` and `BMS_Tavg` (cell
@@ -251,8 +305,10 @@ counters included), with Ian's `sp51_close_v7_continuous.csv`, plus abort
 scenarios (key off with the 2.5 s hold, outputs dropped with no delay,
 0x112 lost, pack open request on b5 and on b6, a 0xFFFD current, no
 answer, the pack answering during the wake retry silence, a cold key on
-held until the CLOSE, the same with a plain BMS (not held, PchFail), a
-pack that never gets ready, a lost pack, a failed last check and a key
-off during the hold, `SP51Settle` 5, `SP51Supp` off, battery on the F11 PT-CAN):
+held until the pack reports closed, the same with a plain BMS (not held, PchFail), a
+pack that never gets ready, a lost pack, a failed last check, a key off
+during the hold, a 7 s pack precharge (still Run), a pack that never
+reports closed (CloseTimeout at 10 s), precharge blocked in 0x1FA, and
+Run never before state 6, `SP51Settle` 5, `SP51Supp` off, battery on the F11 PT-CAN):
 
     SP51_CSV=/path/to/sp51_close_v7_continuous.csv test/bmw_sp51/run.sh

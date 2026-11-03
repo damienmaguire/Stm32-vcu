@@ -4,7 +4,7 @@
 //
 //   sp51_run v7        the close_v7 timeline (compare.py against the CSV)
 //   sp51_run cold      key on at power up (SP51Settle 20 s): the ZV holds
-//                      its precharge timeout until the CLOSE, then runs
+//                      its precharge timeout until closed, then runs
 //   sp51_run otherbms  the same, but the ZV asks a plain BMS (always ready):
 //                      the timeout is not held, PchFail at 7 s as before
 //   sp51_run notready  cold key on, the pack never reports 0x45 (ready):
@@ -13,6 +13,12 @@
 //   sp51_run holdpchk  cold key on, pack voltage 150 V: the last check
 //                      before the close fails, PchFail
 //   sp51_run holdoff   cold key on, key off during the hold: Off, as before
+//   sp51_run slowpch   the pack takes 7 s from CLOSE to closed: still Run
+//                      (the ZV timeout is held until 0x1FA state 6)
+//   sp51_run closetmo  the pack never reports closed: CloseTimeout after
+//                      10 s, then PchFail
+//   sp51_run pchblock  the pack reports its precharge blocked (0x1FA b1
+//                      bits 2-3 = 2) while precharging: PchBlocked, PchFail
 //   sp51_run settle5   SP51Settle 5: key on at 10 s closes
 //   sp51_run keyoff    key off in Run: the pack stays closed for the ZV's
 //                      2.5 s shutdown delay, then opens
@@ -104,7 +110,7 @@ int main(int argc, char **argv) {
   // (open), 5 (precharge, 80 ms after CLOSE), 6 (closed, 1.86 s after
   // CLOSE), back to 4 70 ms after OPEN. 0x1FA once a second plus an
   // extra frame on every change, as the real pack does.
-  int hv = 4, target = 4, changeAt = -1, seenCmd = 0;
+  int hv = 4, target = 4, changeAt = -1, seenCmd = 0, lastB1 = 0x45;
   int answers = strcmp(sc, "nopack") != 0;
   // ZV model: the opmode and the prec_out / dcsw_out handling of
   // Ms10Task in stm32_vcu.cpp, rlyDly delays included.
@@ -124,7 +130,9 @@ int main(int argc, char **argv) {
   // v7: the playback opens at 40.0 s, so the key goes off 2.5 s before.
   int keyOff = v7 ? 37490 : 45000;
   int minTime = 0, pchStart = -1, runAt = -1, rlyDly = 0;
-  int pchFailAt = -1, dcswOffAt = -1;
+  int pchFailAt = -1, dcswOffAt = -1, hv6At = -1;
+  bool slow = !strcmp(sc, "slowpch"), never6 = !strcmp(sc, "closetmo");
+  bool blocked = !strcmp(sc, "pchblock");
   const int end = v7 ? 50000 : 60000;
 
   for (T = 0; T < (uint32_t)end; T += 10) {
@@ -144,18 +152,22 @@ int main(int argc, char **argv) {
         target = packCmd ? 5 : 4;
         changeAt = T + (packCmd ? 80 : 70);
       }
-      int prev = hv;
       if (changeAt >= 0 && (int)T >= changeAt) {
         hv = target;
-        if (hv == 5) {
+        if (hv == 5 && !never6 && !blocked) {
           target = 6;
-          changeAt = T + 1780;
+          changeAt = T + (slow ? 6920 : 1780);
         } else
           changeAt = -1;
       }
       uint8_t b1 = (hv << 4) | (!strcmp(sc, "notready") ? 0x04 : 0x05);
-      if (hv != prev || T % 1000 == 500)
+      if (blocked && hv == 5 && (int)T >= firstClose + 580)
+        b1 = 0x59; // precharge blocked, 0.5 s into the pack's precharge
+      if (hv == 6 && hv6At < 0)
+        hv6At = T;
+      if (b1 != lastB1 || T % 1000 == 500)    // plus an event frame
         rx(0x1FA, 0, b1, 0, 0, 0, 0, 72, 74); // cells 22 / 24 C
+      lastB1 = b1;
       if (T % 20 == 10 && !stop112) {
         uint16_t i = sentinel ? 0xFFFD : 8192;              // 0.0 A
         uint16_t u = !strcmp(sc, "holdpchk") ? 1500 : 3808; // 150 / 380.8 V
@@ -205,7 +217,8 @@ int main(int argc, char **argv) {
         op = MOD_RUN;
         rlyDly = 25;
         runAt = T;
-      } else if ((int)T - pchStart > 5000) {
+      } else if (Param::GetFloat(Param::udc) < Param::GetFloat(Param::udcsw) &&
+                 (int)T - pchStart > 5000) {
         DigIo::prec_out.Clear();
         op = MOD_PCHFAIL;
         pchFailAt = T;
@@ -273,13 +286,14 @@ int main(int argc, char **argv) {
   check(!answers || maxGap <= 20,
         "no TX gap over 20 ms once the pack answered");
   check(ids[0x380] == 0, "0x380 never sent");
+  check(runAt < 0 || (hv6At >= 0 && runAt > hv6At),
+        "Run only after 0x1FA state 6 (the module owns udcsw)");
   if (v7) {
     check(firstClose == 27000 && lastClose == 39980,
           "CLOSE from 27.0 s to 39.98 s");
-    check(runAt > 0 && runAt - pchStart <= 5000,
-          "ZV precharge done within 5 s");
-    fprintf(stderr, "      precharge took %d ms, run at %d ms\n",
-            runAt - pchStart, runAt);
+    check(runAt > 0 && runAt - hv6At <= 200,
+          "Run within 0.2 s of 0x1FA state 6");
+    fprintf(stderr, "      state 6 at %d ms, run at %d ms\n", hv6At, runAt);
     check(chgLimClosed > 120 && chgLimClosed < 121,
           "closed: charge limit capped by power (46 kW / 380.8 V)");
     check(outClosed > 59.9f, "closed: discharge power 60 kW");
@@ -297,7 +311,7 @@ int main(int argc, char **argv) {
     check(firstClose >= 22000 && firstClose < 23000,
           "CLOSE after the 20 s settle and 2 s of state B");
     check(runAt > 0 && runAt - firstClose < 2500,
-          "Run within 2.5 s of the CLOSE (timeout held until then)");
+          "Run within 2.5 s of the CLOSE (timeout held until closed)");
     check(errors == 0 && fault == BMW_SP51::NONE, "no fault, no error");
     fprintf(stderr, "      first CLOSE %d ms, run at %d ms\n", firstClose,
             runAt);
@@ -327,6 +341,31 @@ int main(int argc, char **argv) {
     check(pchFailAt >= 22000 && pchFailAt <= 23000 + 5000,
           "PchFail 5 s after the failed check");
     fprintf(stderr, "      PchFail at %d ms\n", pchFailAt);
+  } else if (slow) {
+    check(pchFailAt < 0 && fault == BMW_SP51::NONE, "no PchFail, no fault");
+    check(hv6At - firstClose > 6900, "state 6 about 7 s after the CLOSE");
+    check(runAt > 0 && runAt - hv6At <= 200,
+          "Run within 0.2 s of 0x1FA state 6");
+    fprintf(stderr, "      CLOSE %d ms, state 6 %d ms, run at %d ms\n",
+            firstClose, hv6At, runAt);
+  } else if (never6) {
+    check(fault == BMW_SP51::CLOSE_TIMEOUT, "fault CloseTimeout");
+    check(lastClose - firstClose >= 9990 && lastClose - firstClose <= 10050,
+          "OPEN 10 s after the CLOSE");
+    check(pchFailAt - lastClose >= 5000 && pchFailAt - lastClose <= 5100,
+          "PchFail 5 s after the abort");
+    check(runAt < 0, "never Run");
+    fprintf(stderr, "      CLOSE %d ms, last CLOSE %d ms, PchFail %d ms\n",
+            firstClose, lastClose, pchFailAt);
+  } else if (blocked) {
+    check(fault == BMW_SP51::PCH_BLOCKED, "fault PchBlocked");
+    check(lastClose - firstClose >= 560 && lastClose - firstClose <= 620,
+          "OPEN on the first blocked 0x1FA");
+    check(pchFailAt - lastClose >= 5000 && pchFailAt - lastClose <= 5100,
+          "PchFail 5 s after the abort");
+    check(runAt < 0 && errors > 0, "never Run, ERR_BMSCOMM posted");
+    fprintf(stderr, "      CLOSE %d ms, last CLOSE %d ms, PchFail %d ms\n",
+            firstClose, lastClose, pchFailAt);
   } else if (!strcmp(sc, "holdoff")) {
     check(firstClose < 0, "never CLOSE");
     check(pchFailAt < 0 && runAt < 0, "no PchFail, no Run");

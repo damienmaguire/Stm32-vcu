@@ -54,9 +54,10 @@ public:
     PACK_LOST = 1,     // 0x112 stopped while closing or closed
     OPEN_REQ = 2,      // the pack asked to open (0x112 b5 or b6)
     PRECHECK_FAIL = 3, // pack not ready when the close was due
-    CLOSE_TIMEOUT = 4, // no "closed" within 5 s of the close
+    CLOSE_TIMEOUT = 4, // no "closed" within 10 s of the close
     LEFT_CLOSED = 5,   // pack left "closed" for more than 1 s
-    NOT_READY = 6      // no close within SP51Settle + 15 s of the request
+    NOT_READY = 6,     // no close within SP51Settle + 15 s of the request
+    PCH_BLOCKED = 7    // the pack reported its precharge blocked (0x1FA)
   };
 
 private:
