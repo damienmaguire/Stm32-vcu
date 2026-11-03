@@ -43,7 +43,7 @@ public:
     REQUEST = 3, // 0x53A state B for 2 s before the close
     CLOSING = 4, // close sent, waiting for the pack to report closed
     CLOSED = 5,  // pack reports closed (HV ready)
-    FAULT = 6,   // close aborted, open sent, waiting for ZV Off
+    FAULT = 6,   // aborted, open sent, waiting for the ZV outputs off
     LOST = 7     // the pack was awake but 0x112 has stopped
   };
 
@@ -51,7 +51,7 @@ public:
   enum Fault {
     NONE = 0,
     PACK_LOST = 1,     // 0x112 stopped while closing or closed
-    OPEN_REQ = 2,      // the pack asked to open
+    OPEN_REQ = 2,      // the pack asked to open (0x112 b5 or b6)
     PRECHECK_FAIL = 3, // pack not ready when the close was due
     CLOSE_TIMEOUT = 4, // no "closed" within 5 s of the close
     LEFT_CLOSED = 5    // pack left "closed" for more than 1 s
@@ -61,6 +61,8 @@ private:
   bool CloseRequested();
   bool PackValid();
   bool PackSettled();
+  bool PackClosed();
+  bool PackOpenRequest();
   void RunStateMachine();
   void SendFrames();
   void Abort(Fault why);
@@ -69,10 +71,12 @@ private:
   // Received from the pack (written in the CAN interrupt).
   volatile uint16_t age112 = 0xFFFF; // 10 ms ticks since the last 0x112
   volatile bool seen112 = false;
-  volatile bool seenPack = false; // any pack frame since start up
-  volatile uint8_t n45 = 0;       // 0x1FA b1 == 0x45 in a row
-  volatile uint8_t last1FA = 0;   // 0x1FA b1, high nibble = HV state
-  volatile uint8_t openReq = 0;   // 0x112 b5 top two bits, 1 = normal
+  volatile bool seenPack = false;   // any pack frame since start up
+  volatile uint8_t n45 = 0;         // 0x1FA b1 == 0x45 in a row
+  volatile uint8_t last1FA = 0;     // 0x1FA b1, high nibble = HV state
+  volatile uint8_t openReq = 0;     // 0x112 b5 top two bits, 1 = normal
+  volatile uint8_t openInstant = 0; // 0x112 b6 bits 0-1, 1 = normal
+  volatile uint8_t openFast = 0;    // 0x112 b6 bits 2-3, 1 = normal
   volatile float packVolts = 0;
   volatile float packAmps = 0;
   volatile float linkVolts = 0;

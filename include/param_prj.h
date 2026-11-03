@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 167
+// Next param id (increase when adding new parameter!): 168
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
@@ -112,6 +112,7 @@
   PARAM_ENTRY(CAT_BMS, BMS_TminLimit, "°C", -100, 100, 5, 94)                  \
   PARAM_ENTRY(CAT_BMS, BMS_TmaxLimit, "°C", -100, 100, 50, 95)                 \
   PARAM_ENTRY(CAT_BMS, SP51Supp, ONOFF, 0, 1, 1, 166)                          \
+  PARAM_ENTRY(CAT_BMS, SP51Settle, "s", 5, 60, 20, 167)                        \
   PARAM_ENTRY(CAT_HEATER, Heater, HTTYPE, 0, 8, 0, 57)                         \
   PARAM_ENTRY(CAT_HEATER, Control, HTCTRL, 0, 2, 0, 58)                        \
   PARAM_ENTRY(CAT_HEATER, HeatPwr, "W", 0, 6500, 0, 59)                        \

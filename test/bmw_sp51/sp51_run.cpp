@@ -3,20 +3,25 @@
 // and the checks of the chosen scenario on stderr. Nothing touches a bus.
 //
 //   sp51_run v7        the close_v7 timeline (compare.py against the CSV)
-//   sp51_run early     key on 2 s after power up, before the pack settled:
-//                      the ZV precharge times out, the pack is never asked
-//                      to close, and the next key on works
+//   sp51_run early     key on 2 s after power up, before the pack settled
+//                      (SP51Settle 20 s): the ZV precharge times out, the
+//                      pack is never asked to close, the key on at 22 s works
+//   sp51_run settle5   SP51Settle 5: key on at 10 s closes
 //   sp51_run keyoff    key off in Run: the pack stays closed for the ZV's
 //                      2.5 s shutdown delay, then opens
 //   sp51_run trip      the ZV drops its contactor outputs with no delay
 //                      (as its over voltage trip does when stationary)
 //   sp51_run lost      0x112 stops while closed
-//   sp51_run openreq   the pack asks to open while closed
+//   sp51_run openreq   the pack asks to open while closed (0x112 b5)
+//   sp51_run fastopen  the pack asks for a fast open (0x112 b6)
+//   sp51_run sentinel  one 0x112 current of 0xFFFD (not valid) while closed
+//   sp51_run late      the pack answers during the 1 s wake retry silence
 //   sp51_run nopack    the pack never answers (one 1 s wake retry)
 //   sp51_run suppoff   SP51Supp off: only 0x10B and 0x53A
 //   sp51_run ptcan     battery on the F11 PT-CAN: only 0x10B and 0x53A
 #include "bms/bmw_sp51.h"
 #include "digio.h"
+#include "errormessage.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +29,7 @@
 float Param::g[Param::PARAM_LAST];
 DigIo DigIo::prec_out;
 DigIo DigIo::dcsw_out;
+int ErrorMessage::posted[ERROR_MESSAGE_LAST];
 
 static uint32_t T;          // ms
 static uint32_t lastTx = 0; // ms of the last frame we sent
@@ -33,6 +39,7 @@ static int ids[0x800];      // frames sent per id
 static int firstClose = -1; // ms of the first 0x10B CLOSE
 static int lastClose = -1;  // ms of the last 0x10B CLOSE
 static bool packAwake = false;
+static uint32_t awakeAt = 0; // ms the pack first answered
 
 class LogCan : public CanHardware {
 public:
@@ -42,7 +49,7 @@ public:
     for (int i = 0; i < len; i++)
       printf(" %02X", b[i]);
     printf("\n");
-    if (packAwake && T - lastTx > maxGap)
+    if (packAwake && lastTx >= awakeAt && T - lastTx > maxGap)
       maxGap = T - lastTx;
     lastTx = T;
     ids[id & 0x7FF]++;
@@ -82,6 +89,7 @@ int main(int argc, char **argv) {
   Param::SetInt(Param::VehicleCan, !strcmp(sc, "ptcan") ? 1 : 0);
   Param::SetInt(Param::Vehicle, vBMW_F11);
   Param::SetInt(Param::ShuntType, 0);
+  Param::SetInt(Param::SP51Settle, strcmp(sc, "settle5") ? 20 : 5);
   Param::SetInt(Param::opmode, MOD_OFF);
   bms.SetCanInterface(&can);
 
@@ -95,7 +103,10 @@ int main(int argc, char **argv) {
   // Ms10Task in stm32_vcu.cpp, rlyDly delays included.
   bool early = !strcmp(sc, "early");
   bool trip = !strcmp(sc, "trip");
-  int keyOn = v7 ? 24900 : (early ? 2000 : 10000);
+  int keyOn = early ? 2000 : (!strcmp(sc, "settle5") ? 10000 : 24900);
+  int answerAt = !strcmp(sc, "late") ? 3500 : 100;
+  int firstTxAfterAnswer = -1;
+  float maxAmps = 0, chgLimOpen = -1, chgLimClosed = -1, outClosed = -1;
   // v7: the playback opens at 40.0 s, so the key goes off 2.5 s before.
   int keyOff = v7 ? 37490 : 45000;
   int minTime = 0, pchStart = -1, runAt = -1, rlyDly = 0;
@@ -104,10 +115,14 @@ int main(int argc, char **argv) {
 
   for (T = 0; T < (uint32_t)end; T += 10) {
     // --- the pack ---
-    if (answers && T >= 100)
+    if (answers && (int)T >= answerAt && !packAwake) {
       packAwake = true;
+      awakeAt = T;
+    }
     bool stop112 = !strcmp(sc, "lost") && T >= 32000;
     int openReq = (!strcmp(sc, "openreq") && T >= 32000) ? 2 : 1;
+    uint8_t b6 = (!strcmp(sc, "fastopen") && T >= 32000) ? 0x71 : 0x75;
+    bool sentinel = !strcmp(sc, "sentinel") && T == 30010;
     if (packAwake) {
       if (packCmd != seenCmd) {
         seenCmd = packCmd;
@@ -127,8 +142,8 @@ int main(int argc, char **argv) {
       if (hv != prev || T % 1000 == 500)
         rx(0x1FA, 0, b1, 0, 0, 0, 0, 72, 74); // cells 22 / 24 C
       if (T % 20 == 10 && !stop112) {
-        uint16_t i = 8192, u = 3808; // 0.0 A, 380.8 V
-        rx(0x112, i, i >> 8, u, u >> 8, 0, openReq << 6, 0,
+        uint16_t i = sentinel ? 0xFFFD : 8192, u = 3808; // 0.0 A, 380.8 V
+        rx(0x112, i, i >> 8, u, u >> 8, 0, openReq << 6, b6,
            hv == 6 ? 0x5F : 0x00);
       }
       if (T % 100 == 30)
@@ -179,8 +194,8 @@ int main(int argc, char **argv) {
     case MOD_PCHFAIL:
       DigIo::prec_out.Clear();
       if (early && (int)T == 10000) {
-        op = MOD_OFF; // key off, then on again at 12 s
-        keyOn = 12000;
+        op = MOD_OFF; // key off, then on again at 22 s
+        keyOn = 22000;
       }
       break;
     case MOD_RUN:
@@ -203,6 +218,19 @@ int main(int argc, char **argv) {
 
     if (T % 100 == 0)
       bms.Task100Ms();
+    if (packAwake && firstTxAfterAnswer < 0 && lastTx >= awakeAt)
+      firstTxAfterAnswer = lastTx;
+    float a = Param::GetFloat(Param::idc);
+    if ((a < 0 ? -a : a) > maxAmps)
+      maxAmps = a < 0 ? -a : a;
+    if (T == 20000)
+      chgLimOpen = Param::GetFloat(Param::BMS_ChargeLim) +
+                   Param::GetFloat(Param::BMS_MaxOutput) +
+                   Param::GetFloat(Param::BMS_MaxInput);
+    if (T == 35000) {
+      chgLimClosed = Param::GetFloat(Param::BMS_ChargeLim);
+      outClosed = Param::GetFloat(Param::BMS_MaxOutput);
+    }
     if (T % 500 == 0)
       fprintf(stderr, "%6u op %d state %d fault %d hv %d udc %.1f udcsw %.1f\n",
               T, op, Param::GetInt(Param::SP51State),
@@ -212,6 +240,7 @@ int main(int argc, char **argv) {
 
   // --- checks per scenario ---
   int fault = Param::GetInt(Param::SP51Fault);
+  int errors = ErrorMessage::posted[ERR_BMSCOMM];
   check(!answers || maxGap <= 20,
         "no TX gap over 20 ms once the pack answered");
   check(ids[0x380] == 0, "0x380 never sent");
@@ -222,11 +251,14 @@ int main(int argc, char **argv) {
           "ZV precharge done within 5 s");
     fprintf(stderr, "      precharge took %d ms, run at %d ms\n",
             runAt - pchStart, runAt);
-    check(Param::GetFloat(Param::BMS_ChargeLim) > 120 &&
-              Param::GetFloat(Param::BMS_ChargeLim) < 121,
-          "charge limit capped by power (46 kW / 380.8 V)");
-    check(Param::GetFloat(Param::BMS_MaxOutput) > 59.9f,
-          "discharge power 60 kW");
+    check(chgLimClosed > 120 && chgLimClosed < 121,
+          "closed: charge limit capped by power (46 kW / 380.8 V)");
+    check(outClosed > 59.9f, "closed: discharge power 60 kW");
+    check(chgLimOpen == 0, "open (20 s): all limits 0");
+    check(Param::GetFloat(Param::BMS_ChargeLim) == 0 &&
+              Param::GetFloat(Param::BMS_MaxOutput) == 0,
+          "open again: all limits 0");
+    check(errors == 0, "no error posted");
     check(Param::GetInt(Param::SP51State) == BMW_SP51::READY, "ready again");
     check(Param::GetFloat(Param::udc2) > 380.7f &&
               Param::GetFloat(Param::udc) == 0,
@@ -235,8 +267,8 @@ int main(int argc, char **argv) {
     // 0x112 starts at 0.11 s and is settled 5 s later; with 2 s of B the
     // close would be due after the ZV's 5 s precharge timeout.
     check(pchFailAt >= 7000 && pchFailAt < 7100, "ZV precharge fails at 7 s");
-    check(firstClose >= 12000, "no CLOSE before the second key on");
-    check(runAt > 12000 && runAt - pchStart <= 5000,
+    check(firstClose >= 22000, "no CLOSE before the second key on");
+    check(runAt > 22000 && runAt - pchStart <= 5000,
           "second key on: precharge done within 5 s");
     fprintf(stderr, "      first CLOSE %d ms, run at %d ms\n", firstClose,
             runAt);
@@ -258,9 +290,30 @@ int main(int argc, char **argv) {
           "OPEN within 0.55 s of 0x112 stopping");
     check(fault == BMW_SP51::PACK_LOST, "fault PackLost");
     check(Param::GetFloat(Param::udcsw) == 500, "udcsw held at 500");
+    check(errors > 0, "ERR_BMSCOMM posted");
+    check(Param::GetFloat(Param::BMS_ChargeLim) == 0 &&
+              Param::GetFloat(Param::BMS_MaxOutput) == 0,
+          "limits 0");
   } else if (!strcmp(sc, "openreq")) {
     check(lastClose >= 31990 && lastClose <= 32010, "OPEN on the next 0x10B");
     check(fault == BMW_SP51::OPEN_REQ, "fault OpenReq");
+    check(errors > 0, "ERR_BMSCOMM posted");
+  } else if (!strcmp(sc, "fastopen")) {
+    check(lastClose >= 31990 && lastClose <= 32010, "OPEN on the next 0x10B");
+    check(fault == BMW_SP51::OPEN_REQ, "fault OpenReq");
+    check(errors > 0, "ERR_BMSCOMM posted");
+  } else if (!strcmp(sc, "sentinel")) {
+    check(maxAmps < 1, "0xFFFD current ignored (idc stays near 0 A)");
+    check(lastClose >= 47490 && lastClose <= 47520 && fault == BMW_SP51::NONE,
+          "stays closed until the key off");
+  } else if (!strcmp(sc, "settle5")) {
+    check(firstClose >= 12000 && firstClose < 13000 && runAt > 0 &&
+              runAt - pchStart <= 5000,
+          "SP51Settle 5: CLOSE about 2 s after key on at 10 s");
+  } else if (!strcmp(sc, "late")) {
+    check(firstTxAfterAnswer >= 3500 && firstTxAfterAnswer <= 3510,
+          "TX resumes within 10 ms of the pack answering");
+    check(runAt > 0, "then closes");
   } else if (!strcmp(sc, "nopack")) {
     check(firstClose < 0, "never CLOSE");
     check(ids[0x10B] == (end - 1000) / 20, "one 1 s wake silence only");

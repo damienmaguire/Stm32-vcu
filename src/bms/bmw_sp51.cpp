@@ -30,6 +30,7 @@
 
 #include "bms/bmw_sp51.h"
 #include "digio.h"
+#include "errormessage.h"
 
 // 0x53A close sequence states (bytes 5 and 6 change).
 #define STAGE_A 0 // idle
@@ -38,8 +39,7 @@
 #define STAGE_D 3 // closed
 
 #define TICKS_LOST 50     // 0x112 missing this long = pack gone (0.5 s)
-#define TICKS_GAP 10      // a gap longer than this restarts the 5 s settle
-#define TICKS_SETTLE 500  // 0x112 must run 5 s without a gap
+#define TICKS_GAP 10      // a gap longer than this restarts the settle
 #define TICKS_REQUEST 200 // 0x53A state B for 2 s before the close
 #define TICKS_CLOSE 500   // give the pack 5 s to report closed
 #define TICKS_LEFT 100    // allow 1 s out of "closed" before aborting
@@ -79,10 +79,19 @@ void BMW_SP51::DecodeCAN(int id, uint8_t *data) {
 
   switch (id) {
   case 0x112:
-    packAmps = U16(bytes, 0) * 0.1f - 819.2f;
-    packVolts = U16(bytes, 2) * 0.1f;
-    openReq = bytes[5] >> 6;     // 1 = normal, anything else = pack wants open
-    linkVolts = bytes[7] * 4.0f; // ANALYSIS, about 4 V per bit
+    // 0xFFF0 and up is "not valid" (0xFFFD shows up once at most closes,
+    // which would read as 5734 A): keep the last good value.
+    if (U16(bytes, 0) < 0xFFF0)
+      packAmps = U16(bytes, 0) * 0.1f - 819.2f;
+    if (U16(bytes, 2) != 0xFFFF)
+      packVolts = U16(bytes, 2) * 0.1f;
+    if (bytes[7] != 0xFF)
+      linkVolts = bytes[7] * 4.0f; // ANALYSIS, about 4 V per bit
+    // Open requests, 2 bits each, 1 = no request (always 1 in our logs,
+    // b6 reads 0x75). Anything else, 0 included, is treated as "open".
+    openReq = bytes[5] >> 6;           // b5 bits 6-7, normal open
+    openInstant = bytes[6] & 0x03;     // b6 bits 0-1, FALLBACK
+    openFast = (bytes[6] >> 2) & 0x03; // b6 bits 2-3, FALLBACK
     age112 = 0;
     seen112 = true;
     break;
@@ -137,9 +146,10 @@ void BMW_SP51::DecodeCAN(int id, uint8_t *data) {
 // Open means 0x10B OPEN and 0x53A A; sending carries on regardless.
 // The precharge opmode is checked too, because the ZV turns prec_out on
 // only 250 ms after entering it and the close needs every moment of the
-// 5 s precharge timeout.
+// ZV precharge timeout.
 // Pack-side faults (0x112 lost, pack asks to open) still open at once,
-// and the pack then stays open until the ZV outputs are off.
+// and the pack then stays open until the ZV outputs are off. They post
+// ERR_BMSCOMM and the charge and discharge limits go to 0.
 bool BMW_SP51::CloseRequested() {
   return Param::GetInt(Param::opmode) == MOD_PRECHARGE ||
          DigIo::prec_out.Get() || DigIo::dcsw_out.Get();
@@ -147,15 +157,24 @@ bool BMW_SP51::CloseRequested() {
 
 bool BMW_SP51::PackValid() { return seen112 && age112 <= TICKS_LOST; }
 
-// Close only when 0x112 has run 5 s without a gap and the last three
-// 0x1FA frames said "open and ready" (0x45).
-bool BMW_SP51::PackSettled() { return steady112 >= TICKS_SETTLE && n45 >= 3; }
+// The pack asks to open with any of its three open request fields.
+bool BMW_SP51::PackOpenRequest() {
+  return openReq != 1 || openInstant != 1 || openFast != 1;
+}
+
+// Close only when 0x112 has run SP51Settle seconds (default 20, as every
+// proven bench close had) without a gap, and the last three 0x1FA frames
+// said "open and ready" (0x45).
+bool BMW_SP51::PackSettled() {
+  return steady112 >= Param::GetInt(Param::SP51Settle) * 100 && n45 >= 3;
+}
 
 void BMW_SP51::Abort(Fault why) {
   closeCmd = 0;
   stage53A = STAGE_A;
   state = FAULT;
   fault = why;
+  ErrorMessage::Post(ERR_BMSCOMM);
 }
 
 // Fresh start after the wake retry: counters and clock from the top.
@@ -169,15 +188,24 @@ void BMW_SP51::Restart() {
 }
 
 void BMW_SP51::Task10Ms() {
+  if (!can)
+    return;
   if (age112 < 0xFFFF)
     age112 = age112 + 1;
 
-  // Wake retry: only while the pack has never answered.
+  // Wake retry: only while the pack has never answered. If the pack
+  // answers during the silence, talk again at once: a silence of 1.2 s or
+  // more after it has answered latches it.
   if (silentTicks > 0) {
-    silentTicks--;
-    if (silentTicks == 0)
+    if (seenPack) {
+      silentTicks = 0;
       Restart();
-    return;
+    } else {
+      silentTicks--;
+      if (silentTicks == 0)
+        Restart();
+      return;
+    }
   }
   if (!seenPack && !wakeRetried && tick >= TICKS_WAKE) {
     wakeRetried = true;
@@ -206,7 +234,7 @@ void BMW_SP51::RunStateMachine() {
   if (state == REQUEST || state == CLOSING || state == CLOSED) {
     if (!valid) {
       Abort(PACK_LOST);
-    } else if (openReq != 1) {
+    } else if (PackOpenRequest()) {
       Abort(OPEN_REQ);
     } else if (!request) {
       closeCmd = 0; // normal open
@@ -224,9 +252,11 @@ void BMW_SP51::RunStateMachine() {
   case LOST:
     if (!seenPack)
       state = WAKE;
-    else if (!valid)
+    else if (!valid) {
+      if (state != LOST)
+        ErrorMessage::Post(ERR_BMSCOMM);
       state = LOST;
-    else if (!PackSettled())
+    } else if (!PackSettled())
       state = STANDBY;
     else if (request && slot) {
       state = REQUEST;
@@ -240,7 +270,7 @@ void BMW_SP51::RunStateMachine() {
   case REQUEST:
     if (stepTicks >= TICKS_REQUEST && slot) {
       // Last look before the close, as sp51ctl.py does.
-      if (last1FA == 0x45 && openReq == 1 && packVolts > 200) {
+      if (last1FA == 0x45 && !PackOpenRequest() && packVolts > 200) {
         state = CLOSING;
         closeCmd = 1;
         stage53A = STAGE_C; // SendFrames moves on to D after two frames
@@ -286,7 +316,8 @@ void BMW_SP51::SendFrames() {
       !(Param::GetInt(Param::BMSCan) == Param::GetInt(Param::VehicleCan) &&
         Param::GetInt(Param::Vehicle) == vBMW_F11);
 
-  // 0x12F terminal status, KL15 on, every 100 ms.
+  // 0x12F terminal status, a static KL15 on, every 100 ms. The pack does
+  // not decode it (it may only be the wake), so it does not follow the key.
   if (support && tick % 10 == 0) {
     bytes[1] = 0x20 | alive12F;
     bytes[2] = 0x8A;
@@ -382,7 +413,9 @@ void BMW_SP51::SendFrames() {
     }
   }
 
-  // 0x1A1 vehicle speed (standing still), every 20 ms.
+  // 0x1A1 vehicle speed, a static standstill (b4 0x81), every 20 ms. Real
+  // speed would also need the moving qualifier (0xA1): untested, so not
+  // sent.
   if (support && tick % 2 == 0) {
     bytes[1] = 0xC0 | alive1A1;
     bytes[2] = 0x00;
@@ -394,10 +427,13 @@ void BMW_SP51::SendFrames() {
   }
 }
 
+// Pack reports its contactors closed (0x1FA state 6) with fresh data.
+bool BMW_SP51::PackClosed() { return PackValid() && (last1FA >> 4) == 6; }
+
 // Charge current limit for the chargers. The current scaling is a
-// FALLBACK, so also cap it by the power limit and stop on missing data.
+// FALLBACK, so also cap it by the power limit. 0 unless the pack is closed.
 float BMW_SP51::MaxChargeCurrent() {
-  if (!PackValid() || packVolts < 200)
+  if (!PackClosed() || packVolts < 200)
     return 0;
   float limit = iChargeMax;
   float fromPower = pChargeKw * 1000 / packVolts;
@@ -408,7 +444,7 @@ float BMW_SP51::MaxChargeCurrent() {
 
 void BMW_SP51::Task100Ms() {
   bool valid = PackValid();
-  bool closed = valid && (last1FA >> 4) == 6;
+  bool closed = PackClosed();
   int shunt = Param::GetInt(Param::ShuntType);
 
   // 0x112 has two voltages. U_Pack (b2-3) is the cell stack side, before
@@ -446,8 +482,9 @@ void BMW_SP51::Task100Ms() {
   // No average on CAN: use the middle of the coldest and warmest cell.
   Param::SetFloat(Param::BMS_Tavg, valid ? (tempMin + tempMax) / 2 : 0);
   // FALLBACK: lower of the two 0x40D words for each direction (kW).
-  Param::SetFloat(Param::BMS_MaxInput, valid ? pChargeKw : 0);
-  Param::SetFloat(Param::BMS_MaxOutput, valid ? pDischargeKw : 0);
+  // 0 unless the pack is closed, so nothing draws or charges otherwise.
+  Param::SetFloat(Param::BMS_MaxInput, closed ? pChargeKw : 0);
+  Param::SetFloat(Param::BMS_MaxOutput, closed ? pDischargeKw : 0);
 
   Param::SetInt(Param::SP51State, state);
   Param::SetInt(Param::SP51Fault, fault);
@@ -455,5 +492,5 @@ void BMW_SP51::Task100Ms() {
   Param::SetFloat(Param::SP51ULink, valid ? linkVolts : 0);
   Param::SetFloat(Param::SP51UMax, valid ? uChargeMax : 0);
   Param::SetFloat(Param::SP51UMin, valid ? uDischargeMin : 0);
-  Param::SetFloat(Param::SP51IDchg, valid ? iDischargeMax : 0);
+  Param::SetFloat(Param::SP51IDchg, closed ? iDischargeMax : 0);
 }
