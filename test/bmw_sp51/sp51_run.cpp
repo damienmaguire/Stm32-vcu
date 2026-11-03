@@ -12,14 +12,11 @@
 //   sp51_run suppoff   SP51Supp off: only 0x10B and 0x53A
 //   sp51_run ptcan     battery on the F11 PT-CAN: only 0x10B and 0x53A
 #include "bms/bmw_sp51.h"
-#include "digio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 float Param::g[Param::PARAM_LAST];
-DigIo DigIo::prec_out;
-DigIo DigIo::dcsw_out;
 
 static uint32_t T;          // ms
 static uint32_t lastTx = 0; // ms of the last frame we sent
@@ -87,11 +84,12 @@ int main(int argc, char **argv) {
   // extra frame on every change, as the real pack does.
   int hv = 4, target = 4, changeAt = -1, seenCmd = 0;
   int answers = strcmp(sc, "nopack") != 0;
-  // ZV model: precharge, run, key off with the 2.5 s delayed shutdown.
+  // ZV model: just the opmode (Off, Precharge, Run, PchFail). The pack
+  // follows the opmode, so key off opens it at once.
   bool early = !strcmp(sc, "early");
   int keyOn = v7 ? 24900 : (early ? 2000 : 10000);
-  int keyOff = v7 ? 37500 : 45000;
-  int rly = 0, minTime = 0, pchStart = -1, runAt = -1, offAt = -1;
+  int keyOff = v7 ? 40000 : 45000;
+  int minTime = 0, pchStart = -1, runAt = -1;
   int pchFailAt = -1;
   const int end = v7 ? 50000 : 60000;
 
@@ -140,36 +138,23 @@ int main(int argc, char **argv) {
     }
     if ((int)T == keyOn) {
       op = MOD_PRECHARGE;
-      rly = 25;
       minTime = 100;
       pchStart = T;
     }
     if (op == MOD_PRECHARGE) {
-      if (rly && !--rly)
-        DigIo::prec_out.Set();
       if (minTime)
         minTime--;
       if (!minTime &&
           Param::GetFloat(Param::udc) >= Param::GetFloat(Param::udcsw)) {
         op = MOD_RUN;
         runAt = T;
-        rly = 25;
       } else if ((int)T - pchStart > 5000) {
         op = MOD_PCHFAIL;
         pchFailAt = T;
-        DigIo::prec_out.Clear();
       }
     }
-    if (op == MOD_RUN && rly && !--rly)
-      DigIo::dcsw_out.Set();
-    if ((int)T == keyOff) {
+    if ((int)T == keyOff)
       op = MOD_OFF;
-      offAt = T;
-    }
-    if (op == MOD_OFF && offAt >= 0 && (int)T >= offAt + 2490) {
-      DigIo::dcsw_out.Clear();
-      DigIo::prec_out.Clear();
-    }
     Param::SetInt(Param::opmode, op);
 
     bms.Task10Ms();
@@ -200,6 +185,9 @@ int main(int argc, char **argv) {
     check(Param::GetFloat(Param::BMS_MaxOutput) > 59.9f,
           "discharge power 60 kW");
     check(Param::GetInt(Param::SP51State) == BMW_SP51::READY, "ready again");
+    check(Param::GetFloat(Param::udc2) > 380.7f &&
+              Param::GetFloat(Param::udc) == 0,
+          "open: udc2 = pack side 380.8 V, udc = link side 0 V");
   } else if (!strcmp(sc, "early")) {
     // 0x112 starts at 0.11 s and is settled 5 s later; with 2 s of B the
     // close would be due after the ZV's 5 s precharge timeout.

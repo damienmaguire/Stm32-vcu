@@ -29,7 +29,6 @@
  */
 
 #include "bms/bmw_sp51.h"
-#include "digio.h"
 
 // 0x53A close sequence states (bytes 5 and 6 change).
 #define STAGE_A 0 // idle
@@ -122,12 +121,25 @@ void BMW_SP51::DecodeCAN(int id, uint8_t *data) {
   seenPack = true;
 }
 
-// The ZV wants HV when it is precharging or holding its contactors in.
-// Following the outputs means precharge fail, the delayed shutdown and an
-// over voltage trip all open the pack as well.
+// The pack follows the ZV opmode, the same way the S-Box contactors do:
+//   Off, PchFail         open (0x10B OPEN, 0x53A A); sending carries on
+//   Precharge            run the close sequence. The ZV sees the precharge
+//                        as done when udc reaches udcsw, which is only
+//                        allowed once the pack reports closed (Task100Ms).
+//   Run, Charge,         stay closed
+//   Preheat, Maintain
+// A fault opens the pack and it stays open until the ZV goes back to Off.
 bool BMW_SP51::CloseRequested() {
-  return Param::GetInt(Param::opmode) == MOD_PRECHARGE ||
-         DigIo::prec_out.Get() || DigIo::dcsw_out.Get();
+  switch (Param::GetInt(Param::opmode)) {
+  case MOD_PRECHARGE:
+  case MOD_RUN:
+  case MOD_CHARGE:
+  case MOD_PREHEAT:
+  case MOD_MAINTAIN:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool BMW_SP51::PackValid() { return seen112 && age112 <= TICKS_LOST; }
@@ -254,7 +266,7 @@ void BMW_SP51::RunStateMachine() {
     break;
 
   case FAULT:
-    // Stay open until the ZV drops its request, then start again.
+    // Stay open until the ZV leaves Precharge/Run/Charge, then start again.
     if (!request)
       state = STANDBY;
     break;
@@ -396,11 +408,15 @@ void BMW_SP51::Task100Ms() {
   bool closed = valid && (last1FA >> 4) == 6;
   int shunt = Param::GetInt(Param::ShuntType);
 
+  // 0x112 has two voltages. U_Pack (b2-3) is the cell stack side, before
+  // the contactors: it reads the full pack voltage even when open. b7 is
+  // the link (output) side after the contactors, 0 when open, about 4 V
+  // per bit (ANALYSIS). As in the Leaf class, udc2 is the battery side.
+  // udc is the bus side, the one the ZV compares with udcsw to finish
+  // precharge.
   if (shunt == 0) // Only populate if no shunt is used
   {
-    // The ZV precharge waits for udc to reach udcsw, so udc only shows the
-    // pack voltage once the pack itself reports closed.
-    Param::SetFloat(Param::udc, closed ? packVolts : 0);
+    Param::SetFloat(Param::udc, valid ? linkVolts : 0);
     if (valid) {
       Param::SetFloat(Param::udc2, packVolts);
       Param::SetFloat(Param::idc, packAmps);
@@ -411,18 +427,22 @@ void BMW_SP51::Task100Ms() {
   }
   if (shunt != 4) // ISA_udcsw sets udcsw itself
   {
-    // No pack data: hold precharge off (it will time out) as STW does.
-    if (valid && packVolts > 200)
+    // Precharge is done when the pack reports closed and the link is within
+    // 30 V of the pack. Until then (or without pack data) udcsw is held at
+    // 500 V, as STW does, so the ZV keeps waiting or times out.
+    if (closed && packVolts > 200)
       Param::SetFloat(Param::udcsw, packVolts - 30);
     else
       Param::SetFloat(Param::udcsw, 500);
   }
 
   Param::SetFloat(Param::BMS_ChargeLim, MaxChargeCurrent());
-  Param::SetFloat(Param::BMS_Vmin, 0); // cell voltages are only on UDS
-  Param::SetFloat(Param::BMS_Vmax, 0);
+  // Cell voltages (BMS_Vmin, BMS_Vmax) are only on UDS: left unset.
   Param::SetFloat(Param::BMS_Tmin, valid ? tempMin : 0);
   Param::SetFloat(Param::BMS_Tmax, valid ? tempMax : 0);
+  // No average on CAN: use the middle of the coldest and warmest cell.
+  Param::SetFloat(Param::BMS_Tavg, valid ? (tempMin + tempMax) / 2 : 0);
+  // FALLBACK: lower of the two 0x40D words for each direction (kW).
   Param::SetFloat(Param::BMS_MaxInput, valid ? pChargeKw : 0);
   Param::SetFloat(Param::BMS_MaxOutput, valid ? pDischargeKw : 0);
 

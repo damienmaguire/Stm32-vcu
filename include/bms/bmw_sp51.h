@@ -43,7 +43,7 @@ public:
     REQUEST = 3, // 0x53A state B for 2 s before the close
     CLOSING = 4, // close sent, waiting for the pack to report closed
     CLOSED = 5,  // pack reports closed (HV ready)
-    FAULT = 6,   // close aborted, open sent, waiting for the request to drop
+    FAULT = 6,   // close aborted, open sent, waiting for ZV Off
     LOST = 7     // the pack was awake but 0x112 has stopped
   };
 

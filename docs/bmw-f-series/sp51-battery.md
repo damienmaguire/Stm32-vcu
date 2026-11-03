@@ -52,7 +52,7 @@ ZV is running.
 | `BMSCan` | the CAN port the pack is on | All pack frames go out on this port only |
 | `SP51Supp` | On (default) when the pack has its own bus; Off when it shares a bus with a car that already sends 0x12F, 0x1A1, 0x328 and friends | See below |
 | `ShuntType` | 0 = None (or 1 = ISA if you fit one) | With 0 the module fills in `udc`, `udc2`, `idc`, `power` and `SOC` from the pack |
-| `udcsw` | leave it | The module writes it: pack voltage minus 30 V, or 500 V when there is no pack data |
+| `udcsw` | leave it | The module writes it: pack voltage minus 30 V once the pack is closed, 500 V otherwise |
 
 `SP51Supp` (id 166) switches the support frames: 0x12F (terminal status,
 KL15 on), 0x1A1 (speed, standing still), 0x328 (car clock), 0x330, and
@@ -72,21 +72,28 @@ sends them. 0x10B and 0x53A (the EME's close request) are always sent.
 2. **Standby** (1) until 0x112 has run for 5 s without a gap over 0.1 s
    and the last three 0x1FA frames said `0x45` (open, ready). Then
    **Ready** (2).
-3. The ZV asks for HV when it is in precharge or holds its precharge or
-   main contactor output on (`prec_out` or `dcsw_out`). From Ready that
-   starts **Request** (3): 0x53A state B for 2 s.
+3. The pack follows the ZV opmode:
+
+   | ZV opmode | Pack |
+   |---|---|
+   | Off, PchFail | open (0x10B OPEN, 0x53A A). Sending carries on. |
+   | Precharge | run the close sequence below |
+   | Run, Charge (and Preheat, 12VMaintain) | stay closed |
+
+   Precharge from Ready starts **Request** (3): 0x53A state B for 2 s.
 4. Last check: 0x112 present, 0x1FA `0x45`, the pack is not asking to
    open, pack voltage over 200 V. Then **Closing** (4): 0x10B CLOSE with
    0x53A state C for two frames, then D.
 5. The pack goes to state 5 (precharge) within about 80 ms and state 6
    (closed) about 1.8 to 1.9 s later on the first close after power up,
    about 0.6 s on later ones. That is **Closed** (5).
-6. When the ZV drops its request (key off, after its usual 2.5 s delay;
-   precharge fail; over voltage) the module sends OPEN and state A, and
-   goes back to Standby.
+6. When the ZV goes to Off or PchFail the module sends OPEN and state A
+   at once, and goes back to Standby. The ZV's 2.5 s delayed release of
+   its own contactor output does not apply to the pack, and an over
+   voltage trip that only drops the ZV outputs does not open the pack.
 
-**Fault** (6) opens the pack and stays there until the ZV drops its
-request. `SP51Fault` says why: 1 PackLost (0x112 missing over 0.5 s while
+**Fault** (6) opens the pack and stays there until the ZV goes back to
+Off (or PchFail). `SP51Fault` says why: 1 PackLost (0x112 missing over 0.5 s while
 closing or closed), 2 OpenReq (the pack asked to open), 3 PrecheckFail,
 4 CloseTimeout (no state 6 within 5 s), 5 LeftClosed (out of state 6 for
 over 1 s). **Lost** (7) means the pack was talking and stopped: check
@@ -94,10 +101,21 @@ HVIL and 12 V, then power cycle the pack's 12 V.
 
 ### ZV precharge
 
-The ZV's own precharge logic is used as is. While the pack is not closed
-the module reports `udc = 0`, so the ZV stays in precharge. Once the pack
-reports state 6 it reports `udc` = pack voltage, which is above `udcsw`,
-and the ZV moves on to Run or Charge.
+The ZV's own precharge logic is used as is: it waits for `udc` to reach
+`udcsw`. 0x112 carries two voltages:
+
+- **U_Pack** (bytes 2-3, 0.1 V, confirmed): the cell stack side, before
+  the contactors. It reads the full 380 V even with the pack open. This
+  goes to `udc2` (battery voltage, as in the Leaf class).
+- **U_Link** (byte 7, about 4 V per bit, analysis): the output side after
+  the contactors, 0 V when open, about 380 V when closed. With
+  `ShuntType 0` this goes to `udc` (the bus side voltage the precharge
+  check uses). With an ISA shunt the shunt sets `udc`.
+
+`udcsw` is held at 500 V until the pack reports state 6 (closed), then
+set to pack voltage minus 30 V. So the ZV only moves on to Run or Charge
+once the pack says closed **and** the link voltage is up. If the 4 V per
+bit guess is wrong low, the ZV will report PchFail rather than run.
 
 The ZV gives precharge 5 s. With the 2 s of state B and the pack's own
 1.9 s first precharge, a close takes about 4 s from key on, which leaves
@@ -118,11 +136,18 @@ on again. The host check covers this case.
 | `SP51UMin` | 2147 | Pack minimum discharge voltage, 0x2F5 |
 | `SP51IDchg` | 2148 | Pack discharge current limit, 0x2F5 |
 
-The usual battery values are filled too: `udc2`, `idc`, `power` (from
-0x112), `BMS_Tmin` and `BMS_Tmax` (cell temperatures from 0x1FA),
-`BMS_ChargeLim`, `BMS_MaxInput` and `BMS_MaxOutput` (kW, from 0x40D),
-and `SOC` from 0x432 only when it is a valid 0 to 100. Cell voltages are
-only available over UDS, so `BMS_Vmin` and `BMS_Vmax` stay 0.
+The usual battery values are filled the way the Leaf class does:
+
+- With `ShuntType 0`: `udc` (link side), `udc2` (pack side), `idc`,
+  `power`, and `SOC` from 0x432 only when it is a valid 0 to 100.
+- Always: `udcsw`, `BMS_Tmin`, `BMS_Tmax` and `BMS_Tavg` (cell
+  temperatures from 0x1FA; the average is the middle of min and max),
+  `BMS_ChargeLim` (A), and `BMS_MaxInput` and `BMS_MaxOutput` (kW, from
+  0x40D).
+
+Left unset (not on CAN, or not decoded): `BMS_Vmin` and `BMS_Vmax` (cell
+voltages are only on UDS), `BMS_IsoMeas`, SOH, and a ZV discharge current
+limit (there is no generic one; the pack's is shown as `SP51IDchg`).
 
 ## What is not certain yet
 
