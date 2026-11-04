@@ -39,8 +39,8 @@ public:
   // Steps of the close sequence, shown as SP51State.
   enum State {
     WAKE = 0,    // sending, the pack has not answered yet
-    STANDBY = 1, // pack awake, waiting for it to settle
-    READY = 2,   // pack settled and open, a close may start
+    STANDBY = 1, // pack awake, waiting for 5 s of steady 0x112 and 0x45
+    READY = 2,   // pack stable and open, a close may start
     REQUEST = 3, // 0x53A state B for 2 s before the close
     CLOSING = 4, // close sent, waiting for the pack to report closed
     CLOSED = 5,  // pack reports closed (HV ready)
@@ -64,6 +64,7 @@ private:
   bool CloseRequested();
   bool PackValid();
   bool PackSettled();
+  bool IdleDone();
   bool PackClosed();
   bool HoldTooLong();
   bool LimitsAllowed();

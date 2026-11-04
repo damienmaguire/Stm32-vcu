@@ -17,7 +17,7 @@ fail=0
 grep -E '^(ok|FAIL)' "$OUT/v7.err" | sed 's/^/v7: /'
 python3 compare.py "$OUT/v7.log" "$SP51_CSV" > "$OUT/cmp.txt" || fail=1
 cat "$OUT/cmp.txt"
-for sc in cold otherbms notready holdlost holdpchk holdoff slowpch closetmo pchblock settle5 keyoff trip lost openreq fastopen sentinel late nopack suppoff ptcan; do
+for sc in fast cold otherbms notready holdlost holdpchk holdoff slowpch closetmo pchblock idle20 keyoff trip lost openreq fastopen sentinel late nopack suppoff ptcan; do
   "$OUT/sp51_run" $sc > "$OUT/$sc.log" 2> "$OUT/$sc.err" || fail=1
   grep -E '^(ok|FAIL)' "$OUT/$sc.err" | sed "s/^/$sc: /"
 done

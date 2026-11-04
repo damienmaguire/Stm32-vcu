@@ -23,6 +23,14 @@
  * close_v4 / close_v7 playbacks, which closed a real pack. Signals marked
  * FALLBACK below have a guessed scaling; treat them with care.
  *
+ * The close, as Ian's bench tool now does it (no long idle first):
+ *   1. 0x112 has run for 5 s without a gap and the last three 0x1FA
+ *      frames said "open and ready" (b1 = 0x45).
+ *   2. The ZV asks for a close: 0x53A goes from state A to state B at once.
+ *   3. After 2 s of state B, a last check, then CLOSE on 0x10B together
+ *      with 0x53A state C (two frames), then state D.
+ *   4. The pack reports closed (0x1FA state 6) about 1.9 s after the CLOSE.
+ *
  * The pack must never hear silence once it is awake: about 1.2-1.8 s
  * without our frames latches its CAN off until the 12 V is cycled. So
  * everything here is sent every tick from power up, whatever the state.
@@ -39,7 +47,8 @@
 #define STAGE_D 3 // closed
 
 #define TICKS_LOST 50     // 0x112 missing this long = pack gone (0.5 s)
-#define TICKS_GAP 10      // a gap longer than this restarts the settle
+#define TICKS_GAP 10      // a gap longer than this restarts TICKS_STABLE
+#define TICKS_STABLE 500  // 0x112 must run 5 s without a gap before a close
 #define TICKS_REQUEST 200 // 0x53A state B for 2 s before the close
 #define TICKS_CLOSE 1000  // give the pack 10 s to report closed
 #define TICKS_LEFT 100    // allow 1 s out of "closed" before aborting
@@ -165,22 +174,32 @@ bool BMW_SP51::PackOpenRequest() {
   return openReq != 1 || openInstant != 1 || openFast != 1;
 }
 
-// Close only when 0x112 has run SP51Settle seconds (default 20, as every
-// proven bench close had) without a gap, and the last three 0x1FA frames
-// said "open and ready" (0x45).
-bool BMW_SP51::PackSettled() {
-  return steady112 >= Param::GetInt(Param::SP51Settle) * 100 && n45 >= 3;
+// The pack is ready for a close once 0x112 has run for 5 s without a gap
+// and the last three 0x1FA frames said "open and ready" (0x45). This is
+// the same gate as the bench tool's (--stable-seconds 5). The pack is
+// usually awake long before the key goes on, so it is normally met already.
+bool BMW_SP51::PackSettled() { return steady112 >= TICKS_STABLE && n45 >= 3; }
+
+// Optional extra wait in OPEN / state A before state B starts, counted from
+// when the ZV asks for the close. SP51Settle is 0 by default: Ian's bench
+// closes showed that the old 20 s idle is not needed. It is kept as a
+// tunable (0 to 60 s) in case a pack turns out to want it after all.
+bool BMW_SP51::IdleDone() {
+  return holdTicks >= Param::GetInt(Param::SP51Settle) * 100;
 }
 
-// The ZV holds its precharge timeout while this is false: through the
-// settle, the pre-checks, the 2 s of 0x53A state B and the pack's own
-// precharge, until 0x1FA reports closed (state 6). The pack's precharge is
-// watched by the module (10 s, TICKS_CLOSE), and the ZV's 5 s then only
-// cover the step from udc to udcsw, which passes within about 0.1 s.
-// Fault and Lost are ready, so the ZV times out to PchFail rather than
-// waiting. Before the CLOSE the hold gives up after SP51Settle + 15 s
-// (35 s by default) of asking: that aborts with NotReady, so the ZV
+// The ZV holds its precharge timeout while this is false: while the pack
+// becomes stable, through the pre-checks, the 2 s of 0x53A state B and the
+// pack's own precharge, until 0x1FA reports closed (state 6). The pack's
+// precharge is watched by the module (10 s, TICKS_CLOSE), and the ZV's 5 s
+// then only cover the step from udc to udcsw, which passes within about
+// 0.1 s. Fault and Lost are ready, so the ZV times out to PchFail rather
+// than waiting. Before the CLOSE the hold gives up after SP51Settle + 15 s
+// (15 s by default) of asking: that aborts with NotReady, so the ZV
 // reaches PchFail 5 to 6 s later. Once Closing, only TICKS_CLOSE applies.
+// A normal close needs about 2 s of asking, about 7 s from a cold start
+// (the pack first has to wake and run 5 s) and at most about 11.5 s if the
+// wake has to be retried, so 15 s is enough.
 bool BMW_SP51::ReadyForPrecharge() {
   if (!can)
     return true; // no CAN port, nothing to wait for
@@ -298,7 +317,8 @@ void BMW_SP51::RunStateMachine() {
       state = LOST;
     } else if (!PackSettled())
       state = STANDBY;
-    else if (request && slot) {
+    else if (request && slot && IdleDone()) {
+      // No long idle: state B starts on the next 0x53A frame.
       state = REQUEST;
       stage53A = STAGE_B;
       fault = NONE;
@@ -309,7 +329,8 @@ void BMW_SP51::RunStateMachine() {
 
   case REQUEST:
     if (stepTicks >= TICKS_REQUEST && slot) {
-      // Last look before the close, as sp51ctl.py does.
+      // 2 s of state B are up (every proven close had them). Last look
+      // before the close, as sp51ctl.py does, then CLOSE at once.
       if (last1FA == 0x45 && !PackOpenRequest() && packVolts > 200) {
         state = CLOSING;
         closeCmd = 1;
