@@ -24,9 +24,13 @@ jobs:
           echo "Number of processors:" `nproc`
           make get-deps -j `nproc`
 
-      - name: Build Stm32-vcu firmware
+      - name: Build Stm32-vcu firmware (STM32F107)
         run: |
           make
+
+      - name: Build Stm32-vcu firmware (STM32F407)
+        run: |
+          make f4
 
       - uses: actions/upload-artifact@v4
         with:
@@ -37,6 +41,16 @@ jobs:
         with:
           name: Stm32-vcu firmware hex
           path: stm32_vcu.hex
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Stm32-vcu F407 firmware binary
+          path: stm32_vcu_f407.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Stm32-vcu F407 firmware hex
+          path: stm32_vcu_f407.hex
 
       - name: Build unit tests on host
         run: |

@@ -44,10 +44,21 @@ void SubaruVehicle::SetCanInterface(CanHardware *c) {
   c = c;
   utils::SpeedoStart(); // kick start speedo timer if selected
   // Connect PWM outputs to timer hardware
+#if defined(STM32F4)
+  /* TIM3 CH1/CH2/CH3 are AF2 on PA6, PA7 and PB0. */
+  gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7);
+  gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ,
+                          GPIO6 | GPIO7);
+  gpio_set_af(GPIOA, GPIO_AF2, GPIO6 | GPIO7);
+  gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO0);
+  gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, GPIO0);
+  gpio_set_af(GPIOB, GPIO_AF2, GPIO0);
+#else
   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
                 GPIO6 | GPIO7);
   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
                 GPIO0);
+#endif
 }
 
 void SubaruVehicle::SetRevCounter(int speed) {

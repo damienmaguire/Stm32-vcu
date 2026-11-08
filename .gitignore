@@ -35,17 +35,22 @@
 
 # All the compiled objects go in the obj subdir
 /obj
+/obj-f4
 
 # Codeblocks window layout
 stm32-vcu.layout
 
 # Linker
 linker.map
+linker-f4.map
 
 # executable and bin
 stm32_vcu
 stm32_vcu.bin
+stm32_vcu_f407
+stm32_vcu_f407.bin
 test_vcu
 
 # hex output - only keep for releases
 stm32_vcu.hex
+stm32_vcu_f407.hex

@@ -23,7 +23,15 @@
 #include "hwdefs.h"
 
 #define NUM_SAMPLES 12
+#if defined(STM32F4)
+/* The F407 has no 7.5-cycle ADC sample. 15 cycles at 21 MHz
+ * (PCLK2 84 MHz divided by 4) is about 0.7 us, close to the F107
+ * sample of 7.5 cycles at 12 MHz. Slow this down if a divider reads low.
+ */
+#define SAMPLE_TIME ADC_SMPR_SMP_15CYC
+#else
 #define SAMPLE_TIME ADC_SMPR_SMP_7DOT5CYC
+#endif
 
 #define ANA_IN_LIST                                                            \
   ANA_IN_ENTRY(throttle1, GPIOC, 0)                                            \
