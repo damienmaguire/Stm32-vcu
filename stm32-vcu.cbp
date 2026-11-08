@@ -34,6 +34,25 @@
 					<SilentBuild command="make &gt; $(CMD_NULL)" />
 				</MakeCommands>
 			</Target>
+			<Target title="STM32F407">
+				<Option output="stm32_vcu_f407" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj-f4/" />
+				<Option type="1" />
+				<Option compiler="armelfgcc" />
+				<Compiler>
+					<Add directory="include/project" />
+					<Add directory="include" />
+					<Add directory="libopeninv/include" />
+				</Compiler>
+				<MakeCommands>
+					<Build command="make f4" />
+					<CompileFile command="$make -f  $file " />
+					<Clean command="make clean " />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q f4" />
+					<SilentBuild command="make f4 &gt; $(CMD_NULL)" />
+				</MakeCommands>
+			</Target>
 			<Target title="Test">
 				<Option output="test/test_sine" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="test" />
@@ -48,6 +67,9 @@
 		</Build>
 		<Unit filename="Makefile">
 			<Option target="STM32F107" />
+		</Unit>
+		<Unit filename="stm32_vcu_f407.ld">
+			<Option target="STM32F407" />
 		</Unit>
 		<Unit filename="include/CANSPI.h" />
 		<Unit filename="include/Can_OBD2.h" />
@@ -250,6 +272,9 @@
 					<options conn_type="0" ip_address="localhost" ip_port="3333" />
 				</remote_debugging>
 				<remote_debugging target="STM32F107">
+					<options conn_type="0" additional_cmds="load&#x0A;r" />
+				</remote_debugging>
+				<remote_debugging target="STM32F407">
 					<options conn_type="0" additional_cmds="load&#x0A;r" />
 				</remote_debugging>
 			</debugger>
