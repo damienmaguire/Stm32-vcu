@@ -18,6 +18,7 @@
  */
 
 #include "chargers/chademo.h"
+#include "hwinit.h"
 
 bool FCChademo::chargeEnabled = false;
 bool FCChademo::parkingPosition = false;
@@ -181,12 +182,12 @@ void FCChademo::Task200Ms() {
   static int32_t controlledCurrent = 0;
   if (chademoStartTime == 0) // && Param::GetInt(Param::opmode) != MOD_CHARGE)
   {
-    chademoStartTime = rtc_get_counter_val();
+    chademoStartTime = libopeninv_get_seconds();
     FCChademo::SetChargeCurrent(0);
   }
 
-  if ((rtc_get_counter_val() - chademoStartTime) > 4 &&
-      (rtc_get_counter_val() - chademoStartTime) < 8) {
+  if ((libopeninv_get_seconds() - chademoStartTime) > 4 &&
+      (libopeninv_get_seconds() - chademoStartTime) < 8) {
     FCChademo::SetEnabled(true);
     IOMatrix::GetPin(IOMatrix::CHADEMOALLOW)->Set(); // never gets here ...
   }

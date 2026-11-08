@@ -251,7 +251,7 @@ static void Ms200Task(void) {
   Param::SetInt(Param::Hour, hours);
   Param::SetInt(Param::Min, minutes);
   Param::SetInt(Param::Sec, seconds);
-  Param::SetInt(Param::uptime, rtc_get_counter_val());
+  Param::SetInt(Param::uptime, libopeninv_get_seconds());
   Param::SetInt(Param::ChgT, ChgDur_tmp);
 
   // Setting of RunChg - main okay to charge param
@@ -627,7 +627,7 @@ static void Ms10Task(void) {
   int requestedDirection = Param::GetInt(Param::dir);
   int rollingDirection = 0;
 
-  ErrorMessage::SetTime(rtc_get_counter_val());
+  ErrorMessage::SetTime(libopeninv_get_seconds());
 
   selectedChargeInt->Task10Ms();
   selectedBMS->Task10Ms();
@@ -753,26 +753,26 @@ static void Ms10Task(void) {
                                 // pressed , 2)ign on , 3)start signal rx, 4) HV
                                 // IL input is grounded if selected.
         rlyDly = 25;            // Recharge sequence timer
-        vehicleStartTime = rtc_get_counter_val();
+        vehicleStartTime = libopeninv_get_seconds();
         initbyStart = true;
       }
     }
     if (chargeMode) {
       opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
       rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
+      vehicleStartTime = libopeninv_get_seconds();
       initbyCharge = true;
     }
     if (preheater.GetRunPreHeat()) {
       opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
       rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
+      vehicleStartTime = libopeninv_get_seconds();
       preheater.SetInitByPreHeat(true);
     }
     if (maintainer12V.GetRunMaintainer()) {
       opmode = MOD_PRECHARGE; // proceed to precharge if charge requested.
       rlyDly = 25;            // Recharge sequence timer
-      vehicleStartTime = rtc_get_counter_val();
+      vehicleStartTime = libopeninv_get_seconds();
       maintainer12V.SetInitByMaintainer(true);
     }
     Param::SetInt(Param::opmode, opmode);
@@ -836,10 +836,10 @@ static void Ms10Task(void) {
       opmode = MOD_OFF;
 
     if (!selectedBMS->ReadyForPrecharge())
-      vehicleStartTime = rtc_get_counter_val(); // battery not ready to close
+      vehicleStartTime = libopeninv_get_seconds(); // battery not ready to close
                                                 // yet, hold the timeout
     if (udc < (Param::GetInt(Param::udcsw)) &&
-        rtc_get_counter_val() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
+        libopeninv_get_seconds() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
       DigIo::prec_out.Clear();
       ErrorMessage::Post(ERR_PRECHARGE);
       opmode = MOD_PCHFAIL;
@@ -1470,10 +1470,7 @@ extern "C" void exti15_10_isr(void) // CAN3 MCP25625 interruppt
     selectedChargeInt->DecodeCAN(rxMessage.frame.id, canData);
 }
 
-extern "C" void rtc_isr(void) {
-  /* The interrupt flag isn't cleared by hardware, we have to do it. */
-  rtc_clear_flag(RTC_SEC);
-
+static void vcu_calendar_tick(void) {
   if (++seconds >= 60) {
     ++minutes;
     seconds -= 60;
@@ -1488,15 +1485,40 @@ extern "C" void rtc_isr(void) {
   }
 }
 
+#if defined(STM32F4)
+/* Total seconds, not the clock face above. tim5_isr runs at 1 Hz. */
+static volatile uint32_t vcu_seconds;
+
+extern "C" uint32_t libopeninv_get_seconds(void) { return vcu_seconds; }
+
+extern "C" void tim5_isr(void) {
+  timer_clear_flag(TIM5, TIM_SR_UIF);
+  vcu_seconds++;
+  vcu_calendar_tick();
+}
+#else
+extern "C" void rtc_isr(void) {
+  /* The interrupt flag isn't cleared by hardware, we have to do it. */
+  rtc_clear_flag(RTC_SEC);
+  vcu_calendar_tick();
+}
+#endif
+
 int main(void) {
   extern const TERM_CMD TermCmds[];
 
   clock_setup();
   rtc_setup();
   ConfigureVariantIO();
+#if !defined(STM32F4)
   gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON,
                      AFIO_MAPR_CAN2_REMAP |
                          AFIO_MAPR_TIM1_REMAP_FULL_REMAP); // 32f107
+#endif
+  /* On the F407 the CAN pins, including CAN2 on PB5/PB6, are set by
+   * libopeninv from the remap flag below. TIM1 CH1 on PE9 is set in
+   * tim_setup. PA15, PB3 and PB4 leave JTAG when DigIo configures them.
+   */
   usart2_setup(); // TOYOTA HYBRID INVERTER INTERFACE
   nvic_setup();
   parm_load();

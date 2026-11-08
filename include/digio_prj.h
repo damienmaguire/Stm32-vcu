@@ -60,5 +60,8 @@
 
 // dummypin is used by IOMatrix class for unused functions. Must be set to a pin
 // that has no effect
+//
+// LQFP100 pins 49 and 73 are not in this table. On the F407 they are
+// VCAP_1 and VCAP_2, regulator pins with no GPIO number. Do not drive them.
 
 #endif // PinMode_PRJ_H_INCLUDED

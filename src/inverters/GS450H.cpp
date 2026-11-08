@@ -27,6 +27,31 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/usart.h>
+
+#if defined(STM32F4)
+/* USART2 on the F407 (RM0090 Table 42): TX is DMA1 stream 6, RX is
+ * DMA1 stream 5, both request channel 4. Stream numbers are not the
+ * F1 channel numbers. Stream 5 on this request is RX, not TX.
+ */
+#define GS450_DMA_TX DMA_STREAM6
+#define GS450_DMA_RX DMA_STREAM5
+#define GS450_DMA_IRQ_TX NVIC_DMA1_STREAM6_IRQ
+#define GS450_DMA_IRQ_RX NVIC_DMA1_STREAM5_IRQ
+#define GS450_PSIZE DMA_SxCR_PSIZE_8BIT
+#define GS450_MSIZE DMA_SxCR_MSIZE_8BIT
+#define GS450_PRI_TX DMA_SxCR_PL_MEDIUM
+#define GS450_PRI_RX DMA_SxCR_PL_LOW
+#else
+#define GS450_DMA_TX DMA_CHANNEL7
+#define GS450_DMA_RX DMA_CHANNEL6
+#define GS450_DMA_IRQ_TX NVIC_DMA1_CHANNEL7_IRQ
+#define GS450_DMA_IRQ_RX NVIC_DMA1_CHANNEL6_IRQ
+#define GS450_PSIZE DMA_CCR_PSIZE_8BIT
+#define GS450_MSIZE DMA_CCR_MSIZE_8BIT
+#define GS450_PRI_TX DMA_CCR_PL_MEDIUM
+#define GS450_PRI_RX DMA_CCR_PL_LOW
+#endif
 
 // DMA completion flags - must be volatile for ISR access
 static volatile bool tx_complete_flag = false;
@@ -75,10 +100,15 @@ static void dma_read(uint8_t *data, int size);
 static void dma_write(const uint8_t *data, int size);
 
 // DMA interrupt service routines
-extern "C" void dma1_channel6_isr(void) {
+#if defined(STM32F4)
+extern "C" void dma1_stream5_isr(void)
+#else
+extern "C" void dma1_channel6_isr(void)
+#endif
+{
   // RX DMA complete interrupt
-  if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL6, DMA_TCIF)) {
-    dma_clear_interrupt_flags(DMA1, DMA_CHANNEL6, DMA_TCIF);
+  if (dma_get_interrupt_flag(DMA1, GS450_DMA_RX, DMA_TCIF)) {
+    dma_clear_interrupt_flags(DMA1, GS450_DMA_RX, DMA_TCIF);
     rx_complete_flag = true;
 
     // Swap buffers to prevent corruption while processing
@@ -88,17 +118,26 @@ extern "C" void dma1_channel6_isr(void) {
   }
 }
 
-extern "C" void dma1_channel7_isr(void) {
+#if defined(STM32F4)
+extern "C" void dma1_stream6_isr(void)
+#else
+extern "C" void dma1_channel7_isr(void)
+#endif
+{
   // TX DMA complete interrupt
-  if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL7, DMA_TCIF)) {
-    dma_clear_interrupt_flags(DMA1, DMA_CHANNEL7, DMA_TCIF);
+  if (dma_get_interrupt_flag(DMA1, GS450_DMA_TX, DMA_TCIF)) {
+    dma_clear_interrupt_flags(DMA1, GS450_DMA_TX, DMA_TCIF);
     tx_complete_flag = true;
   }
 }
 
-// Helper function to check if DMA channel is busy
-static bool dma_channel_is_enabled(uint32_t dma, uint8_t channel) {
-  return (DMA_CCR(dma, channel) & DMA_CCR_EN) != 0;
+// Helper function to check if the USART2 TX DMA is busy
+static bool gs450_tx_dma_busy(void) {
+#if defined(STM32F4)
+  return (DMA_SCR(DMA1, GS450_DMA_TX) & DMA_SxCR_EN) != 0;
+#else
+  return (DMA_CCR(DMA1, GS450_DMA_TX) & DMA_CCR_EN) != 0;
+#endif
 }
 
 // Helper function to verify MTH frame checksum
@@ -564,7 +603,7 @@ void GS450HClass::Task1Ms() {
     // Only transmit if previous TX completed (checked via flag or channel not
     // busy)
     if (inv_status == 0) {
-      if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
+      if (tx_complete_flag || !gs450_tx_dma_busy()) {
         tx_complete_flag = false;
         dma_write(htm_data, 80);
       }
@@ -708,7 +747,7 @@ void GS450HClass::Task1Ms() {
 
     // Now start DMA synchronized to the rising edge of CLK
     if (inv_status > 5) {
-      if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
+      if (tx_complete_flag || !gs450_tx_dma_busy()) {
         tx_complete_flag = false;
         dma_write(htm_data, 100);
       }
@@ -880,7 +919,7 @@ void GS450HClass::Task1Ms() {
 
     // Now start DMA synchronized to the rising edge of CLK
     if (inv_status > 6) {
-      if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
+      if (tx_complete_flag || !gs450_tx_dma_busy()) {
         tx_complete_flag = false;
         dma_write(htm_data, 105);
       }
@@ -1001,60 +1040,85 @@ int GS450HClass::GetInverterState() { return statusInv; }
 // Usart 2 DMA Transmitt and Receive Section
 //////////////////////////////////////////////////////////////////////////
 
+static void gs450_dma_stop(uint8_t stream) {
+#if defined(STM32F4)
+  /* The stream ignores new settings until the enable bit reads zero. */
+  dma_disable_stream(DMA1, stream);
+  while (DMA_SCR(DMA1, stream) & DMA_SxCR_EN) {
+  }
+  dma_stream_reset(DMA1, stream);
+  dma_channel_select(DMA1, stream, DMA_SxCR_CHSEL_4);
+#else
+  dma_channel_reset(DMA1, stream);
+#endif
+}
+
 static void dma_write(const uint8_t *data, int size) {
   /*
-   * Using channel 7 for USART2_TX
+   * USART2 TX. F1 uses DMA1 channel 7. F4 uses DMA1 stream 6.
    */
 
-  /* Reset DMA channel*/
-  dma_channel_reset(DMA1, DMA_CHANNEL7);
+  gs450_dma_stop(GS450_DMA_TX);
+#if defined(STM32F4)
+  dma_set_transfer_mode(DMA1, GS450_DMA_TX, DMA_SxCR_DIR_MEM_TO_PERIPHERAL);
+#else
+  dma_set_read_from_memory(DMA1, GS450_DMA_TX);
+#endif
 
-  dma_set_peripheral_address(DMA1, DMA_CHANNEL7, (uint32_t)&USART2_DR);
-  dma_set_memory_address(DMA1, DMA_CHANNEL7, (uint32_t)data);
-  dma_set_number_of_data(DMA1, DMA_CHANNEL7, size);
-  dma_set_read_from_memory(DMA1, DMA_CHANNEL7);
-  dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL7);
-  dma_set_peripheral_size(DMA1, DMA_CHANNEL7, DMA_CCR_PSIZE_8BIT);
-  dma_set_memory_size(DMA1, DMA_CHANNEL7, DMA_CCR_MSIZE_8BIT);
-  dma_set_priority(DMA1, DMA_CHANNEL7, DMA_CCR_PL_MEDIUM);
+  dma_set_peripheral_address(DMA1, GS450_DMA_TX, (uint32_t)&USART2_DR);
+  dma_set_memory_address(DMA1, GS450_DMA_TX, (uint32_t)data);
+  dma_set_number_of_data(DMA1, GS450_DMA_TX, size);
+  dma_enable_memory_increment_mode(DMA1, GS450_DMA_TX);
+  dma_set_peripheral_size(DMA1, GS450_DMA_TX, GS450_PSIZE);
+  dma_set_memory_size(DMA1, GS450_DMA_TX, GS450_MSIZE);
+  dma_set_priority(DMA1, GS450_DMA_TX, GS450_PRI_TX);
 
   // Enable DMA transfer complete interrupt
-  dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNEL7);
+  dma_enable_transfer_complete_interrupt(DMA1, GS450_DMA_TX);
 
-  // Enable NVIC for DMA channel 7
-  nvic_enable_irq(NVIC_DMA1_CHANNEL7_IRQ);
-  nvic_set_priority(NVIC_DMA1_CHANNEL7_IRQ, 0x40);
+  nvic_enable_irq(GS450_DMA_IRQ_TX);
+  nvic_set_priority(GS450_DMA_IRQ_TX, 0x40);
 
-  dma_enable_channel(DMA1, DMA_CHANNEL7);
+#if defined(STM32F4)
+  dma_enable_stream(DMA1, GS450_DMA_TX);
+#else
+  dma_enable_channel(DMA1, GS450_DMA_TX);
+#endif
 
   usart_enable_tx_dma(USART2);
 }
 
 static void dma_read(uint8_t *data, int size) {
   /*
-   * Using channel 6 for USART2_RX
+   * USART2 RX. F1 uses DMA1 channel 6. F4 uses DMA1 stream 5.
    */
 
-  /* Reset DMA channel*/
-  dma_channel_reset(DMA1, DMA_CHANNEL6);
+  gs450_dma_stop(GS450_DMA_RX);
+#if defined(STM32F4)
+  dma_set_transfer_mode(DMA1, GS450_DMA_RX, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
+#else
+  dma_set_read_from_peripheral(DMA1, GS450_DMA_RX);
+#endif
 
-  dma_set_peripheral_address(DMA1, DMA_CHANNEL6, (uint32_t)&USART2_DR);
-  dma_set_memory_address(DMA1, DMA_CHANNEL6, (uint32_t)data);
-  dma_set_number_of_data(DMA1, DMA_CHANNEL6, size);
-  dma_set_read_from_peripheral(DMA1, DMA_CHANNEL6);
-  dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL6);
-  dma_set_peripheral_size(DMA1, DMA_CHANNEL6, DMA_CCR_PSIZE_8BIT);
-  dma_set_memory_size(DMA1, DMA_CHANNEL6, DMA_CCR_MSIZE_8BIT);
-  dma_set_priority(DMA1, DMA_CHANNEL6, DMA_CCR_PL_LOW);
+  dma_set_peripheral_address(DMA1, GS450_DMA_RX, (uint32_t)&USART2_DR);
+  dma_set_memory_address(DMA1, GS450_DMA_RX, (uint32_t)data);
+  dma_set_number_of_data(DMA1, GS450_DMA_RX, size);
+  dma_enable_memory_increment_mode(DMA1, GS450_DMA_RX);
+  dma_set_peripheral_size(DMA1, GS450_DMA_RX, GS450_PSIZE);
+  dma_set_memory_size(DMA1, GS450_DMA_RX, GS450_MSIZE);
+  dma_set_priority(DMA1, GS450_DMA_RX, GS450_PRI_RX);
 
   // Enable DMA transfer complete interrupt
-  dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNEL6);
+  dma_enable_transfer_complete_interrupt(DMA1, GS450_DMA_RX);
 
-  // Enable NVIC for DMA channel 6
-  nvic_enable_irq(NVIC_DMA1_CHANNEL6_IRQ);
-  nvic_set_priority(NVIC_DMA1_CHANNEL6_IRQ, 0x40);
+  nvic_enable_irq(GS450_DMA_IRQ_RX);
+  nvic_set_priority(GS450_DMA_IRQ_RX, 0x40);
 
-  dma_enable_channel(DMA1, DMA_CHANNEL6);
+#if defined(STM32F4)
+  dma_enable_stream(DMA1, GS450_DMA_RX);
+#else
+  dma_enable_channel(DMA1, GS450_DMA_RX);
+#endif
 
   usart_enable_rx_dma(USART2);
 }

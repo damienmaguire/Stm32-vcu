@@ -17,8 +17,39 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-BINARY		= stm32_vcu
-OUT_DIR     = obj
+# FAMILY=f1 is the STM32F107 build and the default. `make f4` builds the
+# STM32F407 image into stm32_vcu_f407, with its own objects and linker script.
+# VCU_HSE_HZ is only used by the F4 clock. 8000000 matches the F107
+# assumption. Use 25000000 only when that crystal has been measured.
+# Make will not rebuild objects when only this value changes on the
+# command line, so run `make clean` before switching it.
+FAMILY ?= f1
+VCU_HSE_HZ ?= 8000000
+
+ifeq ($(FAMILY),f4)
+CPUFLAGS        = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+ARCHDEF         = -DSTM32F4 -DVCU_HSE_HZ=$(VCU_HSE_HZ)
+BINARY          = stm32_vcu_f407
+OUT_DIR         = obj-f4
+LDSCRIPT        = stm32_vcu_f407.ld
+OPENCM3_LIB     = opencm3_stm32f4
+OPENCM3_TARGETS = stm32/f4
+MAPFILE         = linker-f4.map
+LDFLAGS_ARCH    = $(CPUFLAGS)
+else ifeq ($(FAMILY),f1)
+CPUFLAGS        = -mcpu=cortex-m3 -mthumb
+ARCHDEF         = -DSTM32F1
+BINARY          = stm32_vcu
+OUT_DIR         = obj
+LDSCRIPT        = stm32_vcu.ld
+OPENCM3_LIB     = opencm3_stm32f1
+OPENCM3_TARGETS = stm32/f1
+MAPFILE         = linker.map
+LDFLAGS_ARCH    = -march=armv7
+else
+$(error FAMILY must be f1 or f4)
+endif
+
 PREFIX	  ?= arm-none-eabi
 SIZE  = $(PREFIX)-size
 CC		= $(PREFIX)-gcc
@@ -29,15 +60,14 @@ OBJDUMP		= $(PREFIX)-objdump
 MKDIR_P     = mkdir -p
 TERMINAL_DEBUG ?= 0
 CFLAGS		= -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
-              -fno-common -fno-builtin -pedantic -DSTM32F1 -DMAX_USER_MESSAGES=30 \
-				  -mcpu=cortex-m3 -mthumb -std=gnu99 -ffunction-sections -fdata-sections -ggdb3
+              -fno-common -fno-builtin -pedantic $(ARCHDEF) -DMAX_USER_MESSAGES=30 \
+				  $(CPUFLAGS) -std=gnu99 -ffunction-sections -fdata-sections -ggdb3
 CPPFLAGS    = -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/include \
-              -fno-common -std=c++17 -pedantic -DSTM32F1 -DMAX_USER_MESSAGES=30  \
+              -fno-common -std=c++17 -pedantic $(ARCHDEF) -DMAX_USER_MESSAGES=30  \
 				  -ffunction-sections -fdata-sections -fno-builtin -fno-rtti -fno-exceptions \
-              -fno-unwind-tables -mcpu=cortex-m3 -mthumb -ggdb3
-LDSCRIPT	= $(BINARY).ld
-LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) -march=armv7 -nostartfiles -Wl,--gc-sections,-Map,linker.map
-OBJSL		= $(BINARY).o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
+              -fno-unwind-tables $(CPUFLAGS) -ggdb3
+LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) $(LDFLAGS_ARCH) -nostartfiles -Wl,--gc-sections,-Map,$(MAPFILE)
+OBJSL		= stm32_vcu.o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
            my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o BMW_E65.o GS450H.o temp_meas.o \
            BMW_E39.o BMW_F11.o Can_VAG.o Can_OI.o MCP2515.o CANSPI.o outlanderinverter.o canhardware.o canmap.o \
            param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o i3LIM.o \
@@ -102,7 +132,7 @@ ${OUT_DIR}:
 
 $(BINARY): $(OBJS) $(LDSCRIPT)
 	@printf "  LD      $(subst $(shell pwd)/,,$(@))\n"
-	$(Q)$(LD) $(LDFLAGS) -o $(BINARY) $(OBJS) -lopencm3_stm32f1 -lm
+	$(Q)$(LD) $(LDFLAGS) -o $(BINARY) $(OBJS) -l$(OPENCM3_LIB) -lm
 
 $(OUT_DIR)/%.o: %.c Makefile
 	@printf "  CC      $(subst $(shell pwd)/,,$(@))\n"
@@ -116,18 +146,11 @@ DEP = $(OBJS:%.o=%.d)
 -include $(DEP)
 
 clean:
-	@printf "  CLEAN   ${OUT_DIR}\n"
-	$(Q)rm -rf ${OUT_DIR}
-	@printf "  CLEAN   $(BINARY)\n"
-	$(Q)rm -f $(BINARY)
-	@printf "  CLEAN   $(BINARY).bin\n"
-	$(Q)rm -f $(BINARY).bin
-	@printf "  CLEAN   $(BINARY).hex\n"
-	$(Q)rm -f $(BINARY).hex
-	@printf "  CLEAN   $(BINARY).srec\n"
-	$(Q)rm -f $(BINARY).srec
-	@printf "  CLEAN   $(BINARY).list\n"
-	$(Q)rm -f $(BINARY).list
+	@printf "  CLEAN   obj obj-f4\n"
+	$(Q)rm -rf obj obj-f4
+	@printf "  CLEAN   firmware images\n"
+	$(Q)rm -f stm32_vcu stm32_vcu.bin stm32_vcu.hex stm32_vcu.srec stm32_vcu.list linker.map
+	$(Q)rm -f stm32_vcu_f407 stm32_vcu_f407.bin stm32_vcu_f407.hex stm32_vcu_f407.srec stm32_vcu_f407.list linker-f4.map
 
 flash: images
 	@printf "  FLASH   $(BINARY).bin\n"
@@ -140,14 +163,20 @@ flash: images
 		       -c "reset" \
 		       -c "shutdown" $(NULL)
 
-.PHONY: directories get-deps images clean
+.PHONY: directories get-deps images clean f4
+
+# Build the F407 image without touching the F107 objects.
+ifneq ($(FAMILY),f4)
+f4:
+	$(MAKE) FAMILY=f4 all
+endif
 
 get-deps:
-ifneq ($(shell test -s libopencm3/lib/libopencm3_stm32f1.a && echo -n yes),yes)
+ifneq ($(shell test -s libopencm3/lib/lib$(OPENCM3_LIB).a && echo -n yes),yes)
 	@printf "  GIT SUBMODULE\n"
 	$(Q)git submodule update --init
-	@printf "  MAKE libopencm3\n"
-	$(Q)${MAKE} -C libopencm3 TARGETS=stm32/f1
+	@printf "  MAKE libopencm3 $(OPENCM3_TARGETS)\n"
+	$(Q)${MAKE} -C libopencm3 TARGETS=$(OPENCM3_TARGETS)
 endif
 
 Test:

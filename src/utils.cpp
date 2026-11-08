@@ -28,7 +28,6 @@
 #include "my_math.h"
 #include "throttle.h"
 #include "vag_sbox.h"
-#include <libopencm3/stm32/rtc.h>
 #include <libopencm3/stm32/timer.h>
 
 namespace utils {
@@ -52,7 +51,7 @@ void GetDigInputs(CanHardware *can) {
 
   canIoActive |= canio != 0;
 
-  if ((rtc_get_counter_val() - can->GetLastRxTimestamp()) >= CAN_TIMEOUT &&
+  if ((libopeninv_get_seconds() - can->GetLastRxTimestamp()) >= CAN_TIMEOUT &&
       canIoActive) {
     canio = 0;
     Param::SetInt(Param::canio, 0);

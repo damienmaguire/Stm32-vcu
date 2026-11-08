@@ -22,9 +22,17 @@
 #ifndef HWINIT_H_INCLUDED
 #define HWINIT_H_INCLUDED
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Seconds since the timebase was started. On F1 this is the weak
+ * libopeninv definition, which reads the RTC counter. On F4 the VCU
+ * defines it from the 1 Hz tick. Timeouts and CAN stamps share it.
+ */
+uint32_t libopeninv_get_seconds(void);
 
 void clock_setup(void);
 void usart_setup(void);
