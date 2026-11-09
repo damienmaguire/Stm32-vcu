@@ -335,6 +335,88 @@ void Can_OI::ConfigCan() {
     }
   } else if (ConfigStep == 3) // Config RX CAN frames
   {
+    /* //NO RX FRAMES needed
+    if(xarr < 7)
+    {
+        if(IntStep == 0)
+        {
+            if(ActionSuccess == true)
+            {
+                IntStep= 1;
+                ActionSuccess = false;
+            }
+            else if(RespondReq == 0)
+            {
+                bytes[0] = 0x23; //write request general
+                bytes[1] = 0x01; //write request can rx
+                bytes[2] = 0x30; //write request can rx
+                bytes[3] = 0x00; //write request can rx index
+                bytes[4] = CanConfigRxArr[xarr][0]; //CAN ID
+                bytes[5] = CanConfigRxArr[xarr][1];  //CAN ID
+                bytes[6] = CanConfigRxArr[xarr][2];  //CAN ID
+                bytes[7] = CanConfigRxArr[xarr][3];  //CAN ID
+
+                can->Send(0x600 + NODEIDCANOI, (uint32_t*)bytes,8); //
+                RespondReq = 1;
+            }
+        }
+
+        if(IntStep == 1)
+        {
+            if(ActionSuccess == true)
+            {
+                IntStep= 2;
+                ActionSuccess = false;
+            }
+            else if(RespondReq == 0)
+            {
+                bytes[0] = 0x23; //write request general
+                bytes[1] = 0x01; //write request can rx
+                bytes[2] = 0x30; //write request can rx
+                bytes[3] = 0x01; //write request can tx index
+                bytes[4] = CanConfigRxArr[xarr][4];  //Param ID
+                bytes[5] = CanConfigRxArr[xarr][5];  //Param ID
+                bytes[6] = CanConfigRxArr[xarr][6];  //Start Bit
+                bytes[7] = CanConfigRxArr[xarr][7];  //Length in Bit
+
+                can->Send(0x600 + NODEIDCANOI, (uint32_t*)bytes,8); //
+                RespondReq = 1;
+            }
+        }
+
+        if(IntStep == 2)
+        {
+            if(ActionSuccess == true)
+            {
+                IntStep= 0;
+                ActionSuccess = false;
+                xarr++;
+            }
+            else if(RespondReq == 0)
+            {
+                bytes[0] = 0x23; //write request general
+                bytes[1] = 0x01; //write request can rx
+                bytes[2] = 0x30; //write request can rx
+                bytes[3] = 0x02; //write request can tx index
+                bytes[4] = 0xE8; //Gain LSB - No change for mapping
+                bytes[5] = 0x03; //Gain MSB - No change for mapping
+                bytes[6] = 0x00; //Offset LSB - No change for mapping
+                bytes[7] = 0x00; //Offset MSB - No change for mapping
+
+                can->Send(0x600 + NODEIDCANOI, (uint32_t*)bytes,8); //
+                RespondReq = 1;
+            }
+        }
+    }
+    else
+    {
+        RespondReq = 0;
+        IntStep = 0;
+        xarr = 0;
+        ActionSuccess = false;
+        ConfigStep++;
+    }
+    */
     RespondReq = 0;
     IntStep = 0;
     xarr = 0;
