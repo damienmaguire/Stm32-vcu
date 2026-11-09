@@ -1,10 +1,15 @@
-# This GithHub Action runs the pre-commit defined in the .pre-commit-config.yaml file
+# This GitHub Action runs the pre-commit defined in the .pre-commit-config.yaml file
 
 name: 📝 Run pre-commit
 
 on:
-  - push
-  - pull_request
+  push:
+    branches: [Vehicle_Testing]
+  pull_request:
+
+concurrency:
+  group: precommit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   pre-commit:
@@ -15,4 +20,3 @@ jobs:
 
     - name: Run pre-commit
       uses: pre-commit/action@v3.0.1
-      
