@@ -54,6 +54,7 @@ public: // order of these matters!
     PWMTEMPGAUGE,
     PWMSOCGAUGE,
     PWMHEATER,
+    PTOENABLE,
     LAST
   };
   // order of these matters!
