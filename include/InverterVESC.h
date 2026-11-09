@@ -24,7 +24,7 @@
 #define INVERTERVESC_H
 
 #include "canhardware.h"
-#include "inverter.h"
+#include "inverters/inverter.h"
 #include <stdint.h>
 
 #define NODEIDCANOI 1
