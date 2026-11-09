@@ -60,7 +60,7 @@ void RearOutlanderInverter::DecodeCAN(int id, uint32_t data[2]) {
 
 void RearOutlanderInverter::SetTorque(float torquePercent) {
 
-  if (Param::GetInt(Param::reversemotor) == 0) {
+  if (Param::GetInt(reverseParam) == 0) {
 
     final_torque_request =
         10000 + (torquePercent *
@@ -69,7 +69,7 @@ void RearOutlanderInverter::SetTorque(float torquePercent) {
     final_torque_request = 10000 - (torquePercent * 20);
   }
 
-  Param::SetInt(Param::torque,
+  Param::SetInt(torqueParam,
                 final_torque_request); // post processed final torque value sent
                                        // to inv to web interface
 }
