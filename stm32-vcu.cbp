@@ -62,6 +62,8 @@
 		<Unit filename="include/HVAC/compressor.h" />
 		<Unit filename="include/HVAC/heater.h" />
 		<Unit filename="include/HVAC/preheater.h" />
+		<Unit filename="include/InverterVESC.h" />
+		<Unit filename="include/ptocontrol.h" />
 		<Unit filename="include/MCP2515.h" />
 		<Unit filename="include/anain_prj.h" />
 		<Unit filename="include/bms/bms.h" />
@@ -181,6 +183,8 @@
 		<Unit filename="src/HVAC/WebastoHVH.cpp" />
 		<Unit filename="src/HVAC/amperaheater.cpp" />
 		<Unit filename="src/HVAC/preheater.cpp" />
+		<Unit filename="src/InverterVESC.cpp" />
+		<Unit filename="src/ptocontrol.cpp" />
 		<Unit filename="src/MCP2515.cpp" />
 		<Unit filename="src/bms/daisychainbms.cpp" />
 		<Unit filename="src/bms/kangoobms.cpp" />

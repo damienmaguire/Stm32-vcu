@@ -120,7 +120,7 @@ void Can_OI::SetTorque(float torquePercent) {
   // Not used
   final_torque_request = torquePercent * 10;
   Param::SetInt(
-      Param::torque,
+      torqueParam,
       final_torque_request); //!!! NOT USED BY IO inverter post processed final
                              //! torue value sent to inv to web interface
   ////

@@ -87,11 +87,11 @@ void LeafINV::DecodeCAN(int id, uint32_t data[2]) {
 void LeafINV::SetTorque(float torquePercent) {
   final_torque_request = (torquePercent * 2047) / 100.0f;
 
-  if (Param::GetInt(Param::reversemotor) == 1) {
+  if (Param::GetInt(reverseParam) == 1) {
     final_torque_request *= -1; // reverse torque request to flip motor rotation
   }
 
-  Param::SetInt(Param::torque,
+  Param::SetInt(torqueParam,
                 final_torque_request); // post processed final torque value sent
                                        // to inv to web interface
 }
