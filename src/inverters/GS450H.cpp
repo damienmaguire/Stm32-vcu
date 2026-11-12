@@ -21,12 +21,14 @@
 #include "inverters/GS450H.h"
 #include "anain.h"
 #include "hwinit.h"
+#include "inverters/ToyotaFrames.h"
 #include "my_math.h"
 #include "temp_meas.h"
 #include "utils.h"
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/timer.h>
+#include <string.h>
 
 // DMA completion flags - must be volatile for ISR access
 static volatile bool tx_complete_flag = false;
@@ -35,8 +37,10 @@ static volatile bool rx_complete_flag = false;
 // Timeout and error tracking
 static uint16_t rx_timeout = 0;
 static const uint16_t RX_TIMEOUT_MS = 20; // 20ms timeout for inverter response
-static uint16_t consecutive_failures = 0;
-static const uint16_t MAX_FAILURES = 10; // Enter safe mode after 10 failures
+static const uint16_t MAX_FAILURES = 10;  // Enter safe mode after 10 failures
+static ToyotaFrames::CommMonitor comm(MAX_FAILURES);
+static ToyotaFrames::OverspeedCut overspeed;
+static uint8_t mth_status = 0; // MTH byte 1 of the last good GS450h frame
 
 // Double buffering for DMA to prevent data corruption
 static uint8_t rx_buffer_a[140];
@@ -64,11 +68,10 @@ uint16_t counter;
 // static uint16_t htm_checksum; //superseded by Checksum function
 static uint8_t frame_count;
 static uint8_t GearSW;
-static int16_t mg1_torque, mg2_torque, speedSum;
+static int16_t mg1_torque, mg2_torque;
 static bool statusInv = 0;
 static bool TorqueCut, ShiftInit = 0;
 static int8_t TorqueShiftRamp = 0;
-static uint8_t speedSum2;
 static uint8_t gearAct, gearReq, gearStep = 0;
 
 static void dma_read(uint8_t *data, int size);
@@ -101,26 +104,38 @@ static bool dma_channel_is_enabled(uint32_t dma, uint8_t channel) {
   return (DMA_CCR(dma, channel) & DMA_CCR_EN) != 0;
 }
 
-// Helper function to verify MTH frame checksum
-static int VerifyMTHChecksumNew(uint8_t *data, int length) {
-  uint8_t checksum = 0;
-  for (int i = 0; i < length - 1; i++)
-    checksum += data[i];
-  return (checksum == data[length - 1]);
+// TIM2 period is 2 us; this many polls is roughly 100-150 us at 72 MHz
+static const uint16_t CLOCK_EDGE_MAX_POLLS = 1000;
+
+// Wait for the TIM2 update flag (start of a new CLK period) before starting TX.
+// Runs in the 1 ms task, so it must never hang: skip the wait if TIM2 is not
+// running and give up after CLOCK_EDGE_MAX_POLLS.
+static void WaitForClockEdge() {
+  if (!(TIM_CR1(TIM2) & TIM_CR1_CEN))
+    return;
+
+  for (uint16_t i = 0; i < CLOCK_EDGE_MAX_POLLS; i++) {
+    if (TIM_SR(TIM2) & TIM_SR_UIF)
+      break;
+  }
+  // Writes ~UIF: flags are rc_w0, so only UIF clears (no read-modify-write
+  // that could clear other flags set in between)
+  timer_clear_flag(TIM2, TIM_SR_UIF);
 }
 
 // 80 bytes out and 100 bytes back in (with offset of 8 bytes.
-static uint8_t mth_data[140];
 static const uint8_t htm_data_setup[100] = {
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 4, 0, 0,  0,
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 4, 0,  0,
     0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0,
     4, 0, 25, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 128, 0, 0, 0, 37, 1};
-static uint8_t htm_data[105] = {
+static const uint8_t htm_data_GS450H[80] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+// HTM frame being sent, loaded from the variant's template in StartVariant()
+static uint8_t htm_data[105];
 static const uint8_t htm_data_GS300H[105] = {
     0,   14, 0,   2,  0,  0,   0,   0,  0,   0,   0,  0, 0, 23, 0, 97, 0, 0,
     0,   0,  0,   0,  0,  248, 254, 8,  1,   0,   0,  0, 0, 0,  0, 22, 0, 0,
@@ -227,6 +242,8 @@ uint8_t htm_data_Init_GS300H[6][105] = {
      0,   0,  0, 0, 0,   0,  0,  0,   0,   0,   0,  0, 0, 0,   0, 4,  0, 0,
      0,   0,  0, 0, 4,   75, 25, 212, 254, 190, 15, 0, 0, 0,   0, 0,  0, 0,
      137, 0,  0, 0, 168, 0,  0,  0,   2,   0,   0,  0, 0, 203, 4}};
+static const uint8_t GS300H_INIT_FRAMES =
+    sizeof(htm_data_Init_GS300H) / sizeof(htm_data_Init_GS300H[0]);
 
 void GS450HClass::SetTorque(float torquePercent) {
   uint8_t MotorActive = Param::GetInt(Param::MotActive);
@@ -350,6 +367,34 @@ void GS450HClass::SetTorque(float torquePercent) {
       mg2_torque = 0;
       mg1_torque = 0;
     }
+  }
+
+  // No torque while the inverter link is lost, and no MG2 torque while MG2 is
+  // over its speed limit (MG2 only, like the v7 Arduino, so MG1 blending is
+  // left alone). Torque ramps back in at throtramp.
+  float rampStep = Param::GetFloat(Param::throtramp);
+  float commScale = comm.UpdateTorqueScale(rampStep) * 0.01f;
+  float mg2Scale =
+      overspeed.Update(mg2_speed, Mg2SpeedLimit(), rampStep) * 0.01f;
+  mg1_torque *= commScale;
+  mg2_torque *= commScale * mg2Scale;
+}
+
+// MG2MaxSpeed param, or the drivetrain default when it is 0
+int GS450HClass::Mg2SpeedLimit() {
+  int limit = Param::GetInt(Param::MG2MaxSpeed);
+  if (limit > 0)
+    return limit;
+
+  // Only the GS450h value comes from working code (v7 Arduino and the gateway
+  // controller); the others use it too until there is data for them.
+  switch (DriveType) {
+  case PRIUS:
+    return MG2MAXSPEED;
+  case IS300H:
+    return MG2MAXSPEED;
+  default:
+    return MG2MAXSPEED;
   }
 }
 
@@ -478,57 +523,43 @@ void GS450HClass::GS450Houtput() //!!! should be ran every 10ms
 // Dilbert's code here
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/* Start a drivetrain from scratch: its own HTM template, the first state of
+ * its state machine and a fresh link, whatever ran before. The Set functions
+ * only run at start-up and when the Inverter param is set, after DeInit(). */
+static void StartVariant(uint8_t firstState, uint8_t invStatus,
+                         const uint8_t *htmTemplate, int templateLen) {
+  memset(htm_data, 0, sizeof(htm_data));
+  memcpy(htm_data, htmTemplate, templateLen);
+  htm_state = firstState;
+  inv_status = invStatus;
+  frame_count = 0;
+  inverter_delay_counter = 0;
+  mth_status = 0;
+  mg1_torque = 0;
+  mg2_torque = 0;
+  statusInv = 0;
+  comm = ToyotaFrames::CommMonitor(MAX_FAILURES);
+}
+
 void GS450HClass::SetPrius() {
   setTimerState(true); // start toyota timers
-  if (htm_state < 5) {
-    htm_state = 5;
-    inv_status = 0; // must be 0 for prius
-  }
-  for (int i = 0; i < 100; i++)
-    htm_data[i] = htm_data_Prius[i];
+  // inv_status must be 0 for prius
+  StartVariant(5, 0, htm_data_Prius, sizeof(htm_data_Prius));
   DriveType = PRIUS;
 }
 
 void GS450HClass::SetGS450H() {
   setTimerState(true); // start toyota timers
-  if (htm_state > 4) {
-    htm_state = 0;
-    inv_status = 1; // must be 1 for gs450h
-  }
+  // inv_status must be 1 for gs450h
+  StartVariant(0, 1, htm_data_GS450H, sizeof(htm_data_GS450H));
   DriveType = GS450H;
 }
 
 void GS450HClass::SetGS300H() {
   setTimerState(true); // start toyota timers
-  if (htm_state < 10) {
-    htm_state = 10;
-  }
-  inv_status = 0; // must be 0 for gs300h
-  for (int i = 0; i < 105; i++)
-    htm_data[i] = htm_data_GS300H[i];
+  // inv_status must be 0 for gs300h
+  StartVariant(10, 0, htm_data_GS300H, sizeof(htm_data_GS300H));
   DriveType = IS300H;
-}
-
-uint8_t GS450HClass::VerifyMTHChecksum(uint16_t len) {
-
-  uint16_t mth_checksum = 0;
-
-  for (int i = 0; i < (len - 2); i++)
-    mth_checksum += mth_data[i];
-
-  if (mth_checksum == (mth_data[len - 2] | (mth_data[len - 1] << 8)))
-    return 1;
-  else
-    return 0;
-}
-
-void GS450HClass::CalcHTMChecksum(uint16_t len) {
-  uint16_t htm_checksum = 0;
-
-  for (int i = 0; i < (len - 2); i++)
-    htm_checksum += htm_data[i];
-  htm_data[len - 2] = htm_checksum & 0xFF;
-  htm_data[len - 1] = htm_checksum >> 8;
 }
 
 void GS450HClass::Task1Ms() {
@@ -536,7 +567,7 @@ void GS450HClass::Task1Ms() {
   Param::SetInt(Param::DMA_RxComplete, rx_complete_flag ? 1 : 0);
   Param::SetInt(Param::DMA_TxComplete, tx_complete_flag ? 1 : 0);
   Param::SetInt(Param::DMA_RxTimeout, rx_timeout);
-  Param::SetInt(Param::DMA_ConsecFail, consecutive_failures);
+  Param::SetInt(Param::DMA_ConsecFail, comm.Failures());
   Param::SetInt(Param::HTM_State, htm_state);
 
   switch (htm_state) {
@@ -555,10 +586,7 @@ void GS450HClass::Task1Ms() {
         .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
 
     // Wait for next TIM2 update event (start of new clock period = rising edge)
-    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-      // Wait for TIM2 update flag - indicates start of new CLK period
-    }
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+    WaitForClockEdge();
 
     // Now start DMA synchronized to the rising edge of CLK
     // Only transmit if previous TX completed (checked via flag or channel not
@@ -571,9 +599,9 @@ void GS450HClass::Task1Ms() {
     } else {
       tx_complete_flag = false;
       dma_write(htm_data_setup, 80);
-      if (processing_rx_buffer[1] != 0)
-        inv_status--; // Use processing buffer
-      if (processing_rx_buffer[1] == 0)
+      if (mth_status != 0)
+        inv_status--; // byte 1 of the last good MTH frame
+      if (mth_status == 0)
         inv_status = 1;
     }
     htm_state++;
@@ -588,92 +616,20 @@ void GS450HClass::Task1Ms() {
     break;
   case 3:
     // Wait for RX completion with timeout
-    if (rx_complete_flag) {
-      rx_complete_flag = false;
-      // Check buffer integrity - processing_rx_buffer was swapped by ISR
-      if (VerifyMTHChecksum(100) == 0 &&
-          VerifyMTHChecksumNew(processing_rx_buffer, 100) == 0) {
-        consecutive_failures++;
-        if (consecutive_failures > MAX_FAILURES) {
-          statusInv = 0;
-          mg1_speed = 0;
-          mg2_speed = 0;
-          Param::SetInt(Param::cruisespeed, 0);
-        }
-      } else {
-        // exchange data and prepare next HTM frame using processing buffer
-        consecutive_failures = 0;
-        statusInv = 1;
-        dc_bus_voltage =
-            ((processing_rx_buffer[84] | processing_rx_buffer[85] << 8) / 2);
-        temp_inv_water = int8_t(processing_rx_buffer[42]);
-        temp_inv_inductor = int8_t(processing_rx_buffer[86]);
-        mg1_speed = processing_rx_buffer[6] | processing_rx_buffer[7] << 8;
-        mg2_speed = processing_rx_buffer[31] | processing_rx_buffer[32] << 8;
-
-        // Copy to mth_data for compatibility with existing code
-        for (int i = 0; i < 100; i++)
-          mth_data[i] = processing_rx_buffer[i];
-      }
+    if (ReceiveMth(ToyotaFrames::ReadMthGs450h))
       htm_state++;
-    } else {
-      // Handle timeout
-      rx_timeout++;
-      if (rx_timeout > RX_TIMEOUT_MS) {
-        consecutive_failures++;
-        statusInv = 0;
-        mg1_speed = 0;
-        mg2_speed = 0;
-        Param::SetInt(Param::cruisespeed, 0);
-        htm_state++; // Move on despite timeout
-      }
-    }
     break;
   case 4:
-    // -3500 (reverse) to 3500 (forward)
+    Param::SetInt(Param::torque,
+                  mg2_torque); // post processed final torue value sent to inv
+                               // to web interface
 
-    // speed feedback
-    speedSum = mg2_speed + mg1_speed;
-    speedSum /= 113;
-    speedSum2 = speedSum;
-
-    htm_data[0] = speedSum2;
-    htm_data[75] = (mg1_torque * 4) & 0xFF;
-    htm_data[76] = ((mg1_torque * 4) >> 8) & 0xFF;
-
-    // mg1
-    htm_data[5] = (-mg1_torque) & 0xFF; // negative is forward
-    htm_data[6] = ((-mg1_torque) >> 8);
-    htm_data[11] = htm_data[5];
-    htm_data[12] = htm_data[6];
-
-    // mg2
-    htm_data[26] = (mg2_torque) & 0xFF; // positive is forward
-    htm_data[27] = ((mg2_torque) >> 8) & 0xFF;
-    htm_data[32] = htm_data[26];
-    htm_data[33] = htm_data[27];
-
-    htm_data[63] = (-5000) & 0xFF; // regen ability of battery
-    htm_data[64] = ((-5000) >> 8);
-
-    htm_data[65] = (27500) & 0xFF; // discharge ability of battery
-    htm_data[66] = ((27500) >> 8);
+    ToyotaFrames::BuildHtmGs450h(htm_data, mg1_torque, mg2_torque, mg1_speed,
+                                 mg2_speed);
 
     Param::SetInt(Param::MG1Raw, htm_data[5] | (htm_data[6] << 8));
     Param::SetInt(Param::MG1Raw2, htm_data[75] | (htm_data[76] << 8));
     Param::SetInt(Param::MG2Raw, htm_data[26] | (htm_data[27] << 8));
-
-    //!!moved to checksum function.
-    /*
-    htm_checksum=0;
-
-    for (int i = 0; i < 78; i++)
-        htm_checksum += htm_data[i];
-
-    htm_data[78]=htm_checksum&0xFF;
-    htm_data[79]=htm_checksum>>8;
-    */
-    CalcHTMChecksum(80);
 
     if (counter > 100) {
       // HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin );
@@ -701,10 +657,7 @@ void GS450HClass::Task1Ms() {
         .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
 
     // Wait for next TIM2 update event (start of new clock period = rising edge)
-    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-      // Wait for TIM2 update flag - indicates start of new CLK period
-    }
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+    WaitForClockEdge();
 
     // Now start DMA synchronized to the rising edge of CLK
     if (inv_status > 5) {
@@ -733,124 +686,16 @@ void GS450HClass::Task1Ms() {
     break;
   case 8:
     // Wait for RX completion with timeout
-    if (rx_complete_flag) {
-      rx_complete_flag = false;
-      // Check buffer integrity - processing_rx_buffer was swapped by ISR
-      if (VerifyMTHChecksum(120) == 0 &&
-          VerifyMTHChecksumNew(processing_rx_buffer, 120) == 0) {
-        consecutive_failures++;
-        if (consecutive_failures > MAX_FAILURES) {
-          statusInv = 0;
-          mg1_speed = 0;
-          mg2_speed = 0;
-          Param::SetInt(Param::cruisespeed, 0);
-        }
-      } else {
-        // exchange data and prepare next HTM frame using processing buffer
-        consecutive_failures = 0;
-        statusInv = 1;
-        dc_bus_voltage =
-            (((processing_rx_buffer[100] | processing_rx_buffer[101] << 8) -
-              5) /
-             2);
-        temp_inv_water = int8_t(processing_rx_buffer[20]); // from 300h
-        temp_inv_inductor =
-            (processing_rx_buffer[86] | processing_rx_buffer[87] << 8);
-        mg1_speed = processing_rx_buffer[6] | processing_rx_buffer[7] << 8;
-        mg2_speed = processing_rx_buffer[38] | processing_rx_buffer[39] << 8;
-
-        // Copy to mth_data for compatibility with existing code
-        for (int i = 0; i < 120; i++)
-          mth_data[i] = processing_rx_buffer[i];
-      }
+    if (ReceiveMth(ToyotaFrames::ReadMthPrius))
       htm_state++;
-    } else {
-      // Handle timeout
-      rx_timeout++;
-      if (rx_timeout > RX_TIMEOUT_MS) {
-        consecutive_failures++;
-        statusInv = 0;
-        mg1_speed = 0;
-        mg2_speed = 0;
-        Param::SetInt(Param::cruisespeed, 0);
-        htm_state++; // Move on despite timeout
-      }
-    }
     break;
   case 9:
     Param::SetInt(Param::torque,
                   mg2_torque); // post processed final torue value sent to inv
                                // to web interface
 
-    // speed feedback
-    speedSum = mg2_speed + mg1_speed;
-    speedSum /= 113;
-    // Possibly not needed
-    // uint8_t speedSum2=speedSum;
-    // htm_data[0]=speedSum2;
-
-    // these bytes are used, and seem to be MG1 for startup, but can't work out
-    // the relatino to the bytes earlier in the stream, possibly the byte order
-    // has been flipped on these 2 bytes could be a software bug ?
-    // htm_data[76]=(mg1_torque*4) & 0xFF; //Possibly wrong
-    // htm_data[75]=((mg1_torque*4)>>8) & 0xFF; //Possibly wrong
-
-    // mg1
-    htm_data[5] = (mg1_torque) & 0xFF; // negative is forward
-    htm_data[6] = ((mg1_torque) >> 8);
-    htm_data[11] = htm_data[5];
-    htm_data[12] = htm_data[6];
-
-    // mg2 the MG2 values are now beside each other!
-    htm_data[30] = (mg2_torque) & 0xFF; // positive is forward
-    htm_data[31] = ((mg2_torque) >> 8) & 0xFF;
-
-    if (scaledTorqueTarget > 0) {
-      // forward direction these bytes should match
-      htm_data[26] = htm_data[30];
-      htm_data[27] = htm_data[31];
-      htm_data[28] = (mg2_torque / 2) & 0xFF; // positive is forward
-      htm_data[29] = ((mg2_torque / 2) >> 8) & 0xFF;
-    }
-
-    if (scaledTorqueTarget < 0) {
-      // reverse direction these bytes should match
-      htm_data[28] = htm_data[30];
-      htm_data[29] = htm_data[31];
-      htm_data[26] = (mg2_torque / 2) & 0xFF; // positive is forward
-      htm_data[27] = ((mg2_torque / 2) >> 8) & 0xFF;
-    }
-
-    // Battery Limits
-    /*
-            htm_data[85]=(-5000)&0xFF;  // regen ability of battery !!!increased
-            htm_data[86]=((-5000)>>8);
-
-            htm_data[87]=(-10000)&0xFF;  // discharge ability of battery
-       !!!Remove negative and increased htm_data[88]=((-10000)>>8);
-    */
-    // Battery Limits = forced zero
-    // 40	4	75	12	60	251	52	4
-
-    htm_data[72] = 0x40;
-    htm_data[73] = 0x04;
-    htm_data[74] = 0x75;
-    htm_data[75] = 0x12;
-    htm_data[76] = 0x60;
-    htm_data[77] = 0x25;
-    htm_data[78] = 0x52;
-    htm_data[79] = 0x04;
-
-    htm_data[86] = 137; // from start up
-    htm_data[88] = 137; // 221 on start
-
-    // checksum
-    if (++frame_count & 0x01) {
-      // b94_count++;
-      htm_data[94]++;
-    }
-
-    CalcHTMChecksum(100);
+    ToyotaFrames::BuildHtmPrius(htm_data, mg1_torque, mg2_torque,
+                                scaledTorqueTarget, frame_count);
 
     htm_state = 5;
     break;
@@ -873,13 +718,11 @@ void GS450HClass::Task1Ms() {
         .Set(); // HAL_GPIO_WritePin(HTM_SYNC_GPIO_Port, HTM_SYNC_Pin, 1);
 
     // Wait for next TIM2 update event (start of new clock period = rising edge)
-    while (!(TIM_SR(TIM2) & TIM_SR_UIF)) {
-      // Wait for TIM2 update flag - indicates start of new CLK period
-    }
-    TIM_SR(TIM2) &= ~TIM_SR_UIF; // Clear the flag
+    WaitForClockEdge();
 
     // Now start DMA synchronized to the rising edge of CLK
-    if (inv_status > 6) {
+    // send each init frame once, then normal frames
+    if (inv_status >= GS300H_INIT_FRAMES) {
       if (tx_complete_flag || !dma_channel_is_enabled(DMA1, DMA_CHANNEL7)) {
         tx_complete_flag = false;
         dma_write(htm_data, 105);
@@ -902,74 +745,15 @@ void GS450HClass::Task1Ms() {
     break;
   case 13:
     // Wait for RX completion with timeout
-    if (rx_complete_flag) {
-      rx_complete_flag = false;
-      // Check buffer integrity - processing_rx_buffer was swapped by ISR
-      if (VerifyMTHChecksum(140) == 0 &&
-          VerifyMTHChecksumNew(processing_rx_buffer, 140) == 0) {
-        consecutive_failures++;
-        if (consecutive_failures > MAX_FAILURES) {
-          statusInv = 0;
-          // Optionally reset inv_status if needed
-          // inv_status=0;
-        }
-      } else {
-        // exchange data and prepare next HTM frame using processing buffer
-        consecutive_failures = 0;
-        statusInv = 1;
-        dc_bus_voltage =
-            (((processing_rx_buffer[117] | processing_rx_buffer[118] << 8)) /
-             2);
-        temp_inv_water = int8_t(processing_rx_buffer[20]);
-        temp_inv_inductor =
-            (processing_rx_buffer[25] | processing_rx_buffer[26] << 8);
-        mg1_speed = processing_rx_buffer[10] | processing_rx_buffer[11] << 8;
-        mg2_speed = processing_rx_buffer[43] | processing_rx_buffer[44] << 8;
-
-        // Copy to mth_data for compatibility with existing code
-        for (int i = 0; i < 140; i++)
-          mth_data[i] = processing_rx_buffer[i];
-      }
+    if (ReceiveMth(ToyotaFrames::ReadMthGs300h))
       htm_state++;
-    } else {
-      // Handle timeout
-      rx_timeout++;
-      if (rx_timeout > RX_TIMEOUT_MS) {
-        consecutive_failures++;
-        statusInv = 0;
-        htm_state++; // Move on despite timeout
-      }
-    }
     break;
   case 14:
     Param::SetInt(Param::torque,
                   mg2_torque); // post processed final torue value sent to inv
                                // to web interface
 
-    // speed feedback
-    speedSum = mg2_speed + mg1_speed;
-    speedSum /= 113;
-
-    // mg1
-    htm_data[5] = (mg1_torque * -1) & 0xFF; // negative is forward
-    htm_data[6] = ((mg1_torque * -1) >> 8);
-    htm_data[11] = htm_data[5];
-    htm_data[12] = htm_data[6];
-
-    // mg2
-    htm_data[31] = (mg2_torque) & 0xFF; // positive is forward
-    htm_data[32] = ((mg2_torque) >> 8);
-    htm_data[37] = htm_data[26];
-    htm_data[38] = htm_data[27];
-
-    // Battery Limits
-
-    htm_data[79] = (-5000) & 0xFF; // regen ability of battery
-    htm_data[80] = ((-5000) >> 8);
-
-    htm_data[81] = (10000) & 0xFF; // discharge ability of battery
-    htm_data[82] = ((10000) >> 8);
-    CalcHTMChecksum(105);
+    ToyotaFrames::BuildHtmGs300h(htm_data, mg1_torque, mg2_torque);
 
     htm_state = 10;
     break;
@@ -995,6 +779,45 @@ void GS450HClass::setTimerState(bool desiredTimerState) {
 }
 
 int GS450HClass::GetInverterState() { return statusInv; }
+
+// End of an MTH receive attempt, the same for all variants: a good frame, a
+// bad checksum or a timeout. Returns false while still waiting for the frame.
+bool GS450HClass::ReceiveMth(bool (*readMth)(const uint8_t *,
+                                             ToyotaFrames::MthData &)) {
+  if (rx_complete_flag) {
+    rx_complete_flag = false;
+    // Check the frame just received - processing_rx_buffer was swapped by ISR
+    ToyotaFrames::MthData mth;
+    if (readMth(processing_rx_buffer, mth)) {
+      comm.FrameOk();
+      statusInv = 1;
+      dc_bus_voltage = mth.dcBusVoltage;
+      temp_inv_water = mth.tempInvWater;
+      temp_inv_inductor = mth.tempInvInductor;
+      mg1_speed = mth.mg1Speed;
+      mg2_speed = mth.mg2Speed;
+      mth_status = processing_rx_buffer[1];
+    } else {
+      comm.FrameBad();
+    }
+  } else if (++rx_timeout > RX_TIMEOUT_MS) {
+    comm.FrameBad(); // Move on despite timeout
+  } else {
+    return false;
+  }
+
+  if (comm.Lost()) {
+    // safe state until good frames come back, torque ramps in after that
+    statusInv = 0;
+    mg1_speed = 0;
+    mg2_speed = 0;
+    mg1_torque = 0;
+    mg2_torque = 0;
+    mth_status = 0;
+    Param::SetInt(Param::cruisespeed, 0);
+  }
+  return true;
+}
 //////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1037,6 +860,13 @@ static void dma_read(uint8_t *data, int size) {
 
   /* Reset DMA channel*/
   dma_channel_reset(DMA1, DMA_CHANNEL6);
+
+  // Drop any byte that arrived while the channel was off (end of a late or
+  // partial frame), so it does not become byte 0 of the new frame. Reading SR
+  // then DR also clears the overrun, framing and noise error flags.
+  volatile uint32_t status = USART_SR(USART2);
+  (void)status;
+  (void)usart_recv(USART2);
 
   dma_set_peripheral_address(DMA1, DMA_CHANNEL6, (uint32_t)&USART2_DR);
   dma_set_memory_address(DMA1, DMA_CHANNEL6, (uint32_t)data);
