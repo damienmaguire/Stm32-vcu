@@ -52,6 +52,9 @@ void GetDigInputs(CanHardware *can) {
 
   canIoActive |= canio != 0;
 
+  // can must be the bus the CanMap receives canio on. Note this is a bus-level
+  // timeout: it detects a silent bus, not a missing canio frame on a bus that
+  // still carries other traffic.
   if ((rtc_get_counter_val() - can->GetLastRxTimestamp()) >= CAN_TIMEOUT &&
       canIoActive) {
     canio = 0;
@@ -187,170 +190,18 @@ float GetUserThrottleCommand() {
     return 0.0;
 }
 
-void SelectDirection(Vehicle *vehicle, Shifter *shifter) {
-  Vehicle::gear gear;
-  Shifter::Sgear gearS;
-  int8_t selectedDir = Param::GetInt(Param::dir);
-  int8_t userDirSelection = 0;
-  static int8_t prevValidDir = 0;
-  int8_t dirSign = (Param::GetInt(Param::dirmode) & DIR_REVERSED) ? -1 : 1;
-  uint8_t ChangeLim =
-      Param::GetInt(Param::DirChange); //"0=None, 1=Speed Thres, 2=Speed+Brake"
-
-  // Collecting Inputs//
-  if (vehicle->GetGear(gear)) {
-    // if the vehicle class supplies gear selection then use that
-    switch (gear) {
-    case Vehicle::PARK:
-      userDirSelection = 2; // Park
-      break;
-    case Vehicle::REVERSE:
-      userDirSelection = -1; // Reverse
-      break;
-    case Vehicle::NEUTRAL:
-      userDirSelection = 0; // Neutral
-      break;
-    case Vehicle::DRIVE:
-      userDirSelection = 1; // Drive
-      break;
-    }
-  } else if (shifter->GetGear(gearS)) {
-    // if the shifter class supplies gear selection then use that
-    switch (gearS) {
-    case Shifter::PARK:
-      userDirSelection = 2; // Park
-      break;
-    case Shifter::REVERSE:
-      userDirSelection = -1; // Reverse
-      break;
-    case Shifter::NEUTRAL:
-      userDirSelection = 0; // Neutral
-      break;
-    case Shifter::DRIVE:
-      userDirSelection = 1; // Drive
-      break;
-    }
-  } else {
-    // otherwise use the traditional inputs
-    if (Param::GetInt(Param::dirmode) == DIR_DEFAULTFORWARD) {
-      if (Param::GetBool(Param::din_forward) &&
-          Param::GetBool(Param::din_reverse))
-        selectedDir = 0;
-      else if (Param::GetBool(Param::din_reverse))
-        userDirSelection = -1;
-      else
-        userDirSelection = 1;
-    } else if ((Param::GetInt(Param::dirmode) & 1) == DIR_BUTTON) {
-      /* if forward AND reverse selected, force neutral, because it's charge
-       * mode */
-      if (Param::GetBool(Param::din_forward) &&
-          Param::GetBool(Param::din_reverse))
-        selectedDir = 0;
-      else if (Param::GetBool(Param::din_forward))
-        userDirSelection = 1 * dirSign;
-      else if (Param::GetBool(Param::din_reverse))
-        userDirSelection = -1 * dirSign;
-      else
-        userDirSelection = selectedDir;
-    } else {
-      /* neither forward nor reverse or both forward and reverse -> neutral */
-      if (!(Param::GetBool(Param::din_forward) ^
-            Param::GetBool(Param::din_reverse)))
-        selectedDir = 0;
-      else if (Param::GetBool(Param::din_forward))
-        userDirSelection = 1 * dirSign;
-      else if (Param::GetBool(Param::din_reverse))
-        userDirSelection = -1 * dirSign;
-    }
-    if (Param::GetInt(Param::DriveInhibit) ==
-        1) // drive inhibit selected, check for plug
-    {
-      if (Param::GetInt(Param::PlugDet) ==
-          1) // If charge socket is not empty. Force Neutral
-      {
-        userDirSelection = 0;
-      }
-    }
-  }
-  // Change Allowed Logic//
-
-  if (selectedDir != userDirSelection) // only run if requested change
-  {
-    if (ChangeLim == 0) // No limits on requesting new direction
-    {
-      selectedDir = userDirSelection; // direct pass through
-    } else if (ChangeLim == 1 ||
-               ChangeLim == 2) // speed limit only when changing F to R or R to
-                               // F, note last selected direction is valid,
-                               // ignore neutral
-    {
-      if (userDirSelection != 0 &&
-          userDirSelection !=
-              prevValidDir) // neutral changes always allowed, check if we are
-                            // not going back into same mode as before neutral
-      {
-        if (Param::GetInt(Param::DirChangeRpm) >
-            (ABS(Param::GetInt(Param::speed)))) {
-          if (Param::GetBool(Param::din_brake) && ChangeLim == 2) {
-            selectedDir = userDirSelection;
-            prevValidDir =
-                selectedDir; // update only when its a valid forward or
-                             // reverse action under speed threshold
-          } else if (ChangeLim == 1) {
-            selectedDir = userDirSelection;
-            prevValidDir =
-                selectedDir; // update only when its a valid forward or
-                             // reverse action under speed threshold
-          }
-        }
-      } else {
-        selectedDir = userDirSelection; // direct pass through
-      }
-    }
-  }
-
-  // Shiftlock out control
-  if (ChangeLim == 0) // No limits on requesting new direction
-  {
-    SetInt(Param::ShiftLock, 0); // No shift lock out ever
-  } else if (Param::GetInt(Param::DirChangeRpm) >
-             (ABS(Param::GetInt(Param::speed)))) // speed based limit
-  {
-    if (Param::GetBool(Param::din_brake) &&
-        ChangeLim == 2) // brake input required
-    {
-      SetInt(Param::ShiftLock,
-             1);               // Solenoid pull out brake pressed and speed low
-    } else if (ChangeLim == 1) // if only speed
-    {
-      SetInt(Param::ShiftLock, 1); // Solenoid pull out speed low
-    } else {
-      SetInt(Param::ShiftLock, 0); // No shift lock out speed too high
-    }
-  } else {
-    SetInt(Param::ShiftLock, 0); // No shift lock out speed too high
-  }
-
-  // Always off outside of run
-  if (Param::GetInt(Param::opmode) != MOD_RUN) {
-    SetInt(Param::ShiftLock, 0); // No shift lock out speed too high
-  }
-
-  Param::SetInt(Param::dir, selectedDir); // final writing of DIR
-}
-
-float ProcessUdc(int motorSpeed) {
+float ProcessUdc() {
   float udc = Param::GetFloat(Param::udc);
 
-  if (Param::GetInt(Param::ShuntType) == 0 &&
+  if (Param::GetInt(Param::ShuntType) == ShuntNone &&
       Param::GetInt(Param::BMS_Mode) != BMSSTW) {
     // This way we can have ShuntType 0 and still pull latests info
     if (Param::GetInt(Param::opmode) == MOD_OFF) {
       udc = 0; // ensure we reset udc during off state to keep precharge working
       Param::SetFloat(Param::udc, udc);
     }
-  } else if (Param::GetInt(Param::ShuntType) == 1 ||
-             Param::GetInt(Param::ShuntType) == 4) // ISA shunt
+  } else if (Param::GetInt(Param::ShuntType) == ShuntISA ||
+             Param::GetInt(Param::ShuntType) == ShuntISAudcsw) // ISA shunt
   {
     float udc =
         ((float)ISA::Voltage) /
@@ -379,7 +230,8 @@ float ProcessUdc(int motorSpeed) {
     Param::SetFloat(Param::AMPh, Amph);
     float deltaVolts1 = (udc2 / 2) - udc3;
     Param::SetFloat(Param::deltaV, deltaVolts1);
-    if (Param::GetInt(Param::ShuntType) == 4) // ISA Shunt with udcsw update
+    if (Param::GetInt(Param::ShuntType) ==
+        ShuntISAudcsw) // ISA Shunt with udcsw update
     {
       if (udc2 >
           Param::GetFloat(
@@ -389,7 +241,7 @@ float ProcessUdc(int motorSpeed) {
                         udc2 - 20); // Set udcsw to 20V under battery voltage
       }
     }
-  } else if (Param::GetInt(Param::ShuntType) == 2) // BMS Sbox
+  } else if (Param::GetInt(Param::ShuntType) == ShuntSBOX) // BMS Sbox
   {
     if (Param::GetInt(Param::opmode) != MOD_OFF) {
       float udc =
@@ -421,7 +273,7 @@ float ProcessUdc(int motorSpeed) {
     float kw = (udc * idc) /
                1000; // get power from isa sensor and post to parameter database
     Param::SetFloat(Param::power, kw);
-  } else if (Param::GetInt(Param::ShuntType) == 3) // VW
+  } else if (Param::GetInt(Param::ShuntType) == ShuntVAG) // VW
   {
     if (Param::GetInt(Param::opmode) != MOD_OFF) {
       float udc =
@@ -458,19 +310,7 @@ float ProcessUdc(int motorSpeed) {
   int uauxGain = 210; //!! hard coded AUX gain
   Param::SetFloat(Param::uaux, ((float)AnaIn::uaux.Get()) / uauxGain);
 
-  float udclim = Param::GetFloat(Param::udclim);
-
-  if (udc > udclim) {
-    if (ABS(motorSpeed) <
-        50) // If motor is stationary, over voltage comes from outside
-    {
-      DigIo::dcsw_out.Clear(); // In this case, open DC switch
-      DigIo::prec_out.Clear(); // and
-    }
-
-    Param::SetInt(Param::opmode, MOD_OFF);
-    ErrorMessage::Post(ERR_OVERVOLTAGE);
-  }
+  // Overvoltage (udc > udclim) is handled by the mode control in Ms10Task
   /*
      if(opmode == MOD_PRECHARGE)
      {
