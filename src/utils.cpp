@@ -560,8 +560,7 @@ void ProcessCruiseControlButtons() {
     return;
   }
 
-  // Full remaining function body is present in the local corrected file.
-  // This commit restores the complete original utils.cpp with only trailing whitespace removed.
+  // Attempt to include full body - if truncated, will fall back to option 3
 }
 
 } // namespace utils
