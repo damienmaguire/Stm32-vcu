@@ -20,7 +20,7 @@
  */
 
 #include <Foccci.h>
-static uint8_t ChargePort_IsoStop = 0;
+static uint8_t ChargePort_LimitReason = 0;
 static uint16_t ChargePort_ACLimit = 0;
 static uint8_t ChargePort_Status = 0;
 static uint8_t ChargePort_Plug = 0;
@@ -54,12 +54,29 @@ static bool CanField = 0;
 static uint8_t ConfigStep = 0;
 static uint8_t IntStep = 0;
 static uint8_t EmptyCount = 0;
+static uint8_t ReplyTimer = 0;   // 10ms ticks spent waiting for an SDO reply
+static uint8_t TimeoutCount = 0; // consecutive SDO reply timeouts
+static bool ConfigActive = false;
+
+// Foccci firmware v0.44 (ccs32clara 78712caf, fixed in b5de511a) executes the
+// save command (0x5002) but never sends the SDO reply, so never wait forever.
+#define SDO_REPLY_TIMEOUT 50 // 50 x 10ms = 500ms
+#define SDO_MAX_RETRIES 3
 
 static uint16_t xarr = 0;
 
 static bool FoccciCANalive = 0; // CAN awake for Foccci comms
 static uint16_t CANaliveCnt = 0;
 
+// Each row: CAN ID (4 bytes LE), ccs32clara param/value ID (2 bytes LE),
+// start bit, length in bits. IDs from ccs32clara include/param_prj.h
+//
+// 0x109 Foccci -> VCU (DC charging)
+//   2006 EvsePresentVoltage  2010 EvseCurrent
+//   2008 EvseMaxCurrent      2009 EvseMaxVoltage
+// 0x357 Foccci -> VCU (charge port)
+//   2028 LimitationReason    2021 EvseAcCurrentLimit  2030 PortState
+//   2034 PlugPresent         2014 LockState           2020 CableCurrentLimit
 static uint8_t CanConfigTxArr[10][8] = {
     {0x09, 0x01, 0x00, 0x00, 0xD6, 0x07, 0x0, 0x10},
     {0x09, 0x01, 0x00, 0x00, 0xDA, 0x07, 0x10, 0x10},
@@ -68,10 +85,13 @@ static uint8_t CanConfigTxArr[10][8] = {
     {0x57, 0x03, 0x00, 0x00, 0xEC, 0x07, 0x0, 0x8},
     {0x57, 0x03, 0x00, 0x00, 0xE5, 0x07, 0x8, 0x10},
     {0x57, 0x03, 0x00, 0x00, 0xEE, 0x07, 0x18, 0x8},
-    {0x57, 0x03, 0x00, 0x00, 0xE8, 0x07, 0x20, 0x8},
+    {0x57, 0x03, 0x00, 0x00, 0xF2, 0x07, 0x20, 0x8},
     {0x57, 0x03, 0x00, 0x00, 0xDE, 0x07, 0x28, 0x8},
     {0x57, 0x03, 0x00, 0x00, 0xE4, 0x07, 0x30, 0x8}};
 
+// 0x358 VCU -> Foccci
+//   23 enable  29 AcObcState  5 soc  6 BatteryVoltage
+//   3 TargetVoltage  4 ChargeCurrent  32 AllowUnlock
 static uint8_t CanConfigRxArr[7][8] = {
     {0x58, 0x03, 0x00, 0x00, 0x17, 0x00, 0x0, 0x1},
     {0x58, 0x03, 0x00, 0x00, 0x1D, 0x00, 0x2, 0x4},
@@ -125,13 +145,11 @@ void FoccciClass::handle357(uint32_t data[2]) // FOCCCI Charge Port Info
       (uint8_t *)data; // arrgghhh this converts the two 32bit array into bytes.
                        // See comments are useful:)
 
-  ChargePort_IsoStop = bytes[0];
+  ChargePort_LimitReason = bytes[0]; // 0=None, 1=Charger, 2=Battery, 3=InletHot
   ChargePort_ACLimit = bytes[2] * 256 + bytes[1];
-  ChargePort_Status = bytes[3];
-  ChargePort_Plug = bytes[4];
+  ChargePort_Status = bytes[3]; // PortState
+  ChargePort_Plug = bytes[4];   // PlugPresent 0/1
   ChargePort_Lock = bytes[5];
-
-  // IsoMonStop = ChargePort_IsoStop;
 
   RX_357Pres = true;
 
@@ -147,7 +165,7 @@ void FoccciClass::handle357(uint32_t data[2]) // FOCCCI Charge Port Info
 
   Param::SetInt(Param::Pwrspnt, ACpow); // write limit to parameter
 
-  if (ChargePort_Plug == 2 || ChargePort_Plug == 3 ||
+  if (ChargePort_Plug == 1 ||
       ChargePort_Status != 0x00) // Check Plug is inserted
   {
     ChargePortStatus = PluggedIn;
@@ -186,7 +204,8 @@ void FoccciClass::handle357(uint32_t data[2]) // FOCCCI Charge Port Info
     CP_Mode = 2;
   }
 
-  if (ChargePort_Status == 0x07 || ChargePort_Plug == 0x03) {
+  if (ChargePort_Status == 0x07) // PortError
+  {
     ChargePortStatus = PlugError;
     CP_Mode = 3;
     ChargePort_ReadyCharge = false;
@@ -222,6 +241,8 @@ void FoccciClass::handle596(uint32_t data[2]) // FOCCCI SDO responses
       EmptyCount = 0;
     }
     RespondReq = 0; // recieved message so clear respond request
+    ReplyTimer = 0;
+    TimeoutCount = 0;
 
     if (EmptyCount > 4) // 4 empty fields/Aborts recieved stop configuring
     {
@@ -233,7 +254,23 @@ void FoccciClass::handle596(uint32_t data[2]) // FOCCCI SDO responses
 void FoccciClass::Task10Ms() {
   if (Param::GetInt(Param::ConfigFoccci) == 1) // do the config shit
   {
+    if (!ConfigActive) // fresh request, start the sequence from the top
+    {
+      ConfigStep = 0;
+      IntStep = 0;
+      xarr = 0;
+      EmptyCount = 0;
+      RespondReq = 0;
+      EmptyField = 0;
+      ActionSuccess = 0;
+      CanField = 0;
+      ReplyTimer = 0;
+      TimeoutCount = 0;
+      ConfigActive = true;
+    }
     ConfigCan();
+  } else {
+    ConfigActive = false;
   }
 }
 
@@ -265,7 +302,7 @@ void FoccciClass::Task100Ms() {
       AcOBCReq = 0x08; // Charge AC
     } else {
       bytes[0] = 0x00; // stop charge
-      AcOBCReq = 0x08; // Idle
+      AcOBCReq = 0x00; // Idle
     }
     bytes[0] = bytes[0] | AcOBCReq | UnlockAllow; //
     bytes[1] = Param::GetInt(Param::SOC) & 0xFF;
@@ -281,7 +318,7 @@ void FoccciClass::Task100Ms() {
   }
 
   if (opmode == MOD_OFF) {
-    if (CANaliveCnt < 1000) // wait 1 minute for valid charge session to start
+    if (CANaliveCnt < 1000) // wait 100s for valid charge session to start
     {
       if (FoccciCANalive) // only run count if Foccci been on
       {
@@ -291,7 +328,7 @@ void FoccciClass::Task100Ms() {
                                    // sending CAN to sleep Foccci
     {
       CANaliveCnt = 0;
-    } else // triggers after 1 min
+    } else // triggers after 100s
     {
       FoccciCANalive = 0;
       CANaliveCnt++;
@@ -361,6 +398,24 @@ void FoccciClass::ConfigCan() {
 
   // CAN sending//
   uint8_t bytes[8];
+
+  if (RespondReq) // waiting for an SDO reply from Foccci
+  {
+    if (++ReplyTimer < SDO_REPLY_TIMEOUT)
+      return;
+
+    // No reply, allow the request to be sent again
+    ReplyTimer = 0;
+    RespondReq = 0;
+
+    if (ConfigStep == 4) {
+      // Foccci v0.44 saves but never replies to the save command, so treat
+      // the timeout as done
+      ConfigStep = 5;
+    } else if (++TimeoutCount > SDO_MAX_RETRIES) {
+      ConfigStep = 5; // Foccci not answering, give up without saving
+    }
+  }
 
   if (ConfigStep == 0) // Clear all TX CAN configs
   {
