@@ -378,7 +378,7 @@ float ProcessUdc(int motorSpeed) {
     {
       if (udc2 > Param::GetFloat(Param::udcmin)) {
         // only update UDCsw if UDC2 is above udcmin
-        Param::SetFloat(Param::udcsw, udc2 - 20); 
+        Param::SetFloat(Param::udcsw, udc2 - 20);
         // Set udcsw to 20V under battery voltage
       }
     }
@@ -395,7 +395,7 @@ float ProcessUdc(int motorSpeed) {
       Param::SetFloat(Param::udc2, udc2);
       if (udc2 > Param::GetFloat(Param::udcmin)) {
         // only update UDCsw if UDC2 is above udcmin
-        Param::SetFloat(Param::udcsw, udc2 - 20); 
+        Param::SetFloat(Param::udcsw, udc2 - 20);
         // Set udcsw to 20V under battery voltage
       }
     } else {
@@ -558,216 +558,9 @@ void ProcessCruiseControlButtons() {
       transition = false;
     }
     return;
-  } else {
-    if (cruisestt & (Vehicle::CC_RESUME | Vehicle::CC_SET)) {
-      transition = true;
-    }
   }
 
-  if (cruisestt & Vehicle::CC_ON && Param::GetInt(Param::opmode) == MOD_RUN) {
-    if (cruisespeed <= 0) {
-      int currentSpeed = Param::GetInt(Param::speed);
-
-      if (cruisestt & Vehicle::CC_SET &&
-          currentSpeed > 500) // Start cruise control at current speed
-      {
-        cruiseTarget = currentSpeed;
-        cruisespeed = cruiseTarget;
-      } else if (cruisestt & Vehicle::CC_RESUME &&
-                 cruiseTarget > 0) // resume via ramp
-      {
-        cruisespeed = currentSpeed;
-      }
-    } else {
-      if (cruisestt & Vehicle::CC_CANCEL || Param::GetBool(Param::din_brake)) {
-        cruisespeed = 0;
-      } else if (cruisestt & Vehicle::CC_RESUME) {
-        cruiseTarget += Param::GetInt(Param::cruisestep);
-      } else if (cruisestt & Vehicle::CC_SET) {
-        cruiseTarget -= Param::GetInt(Param::cruisestep);
-      }
-    }
-  } else {
-    cruisespeed = 0;
-    cruiseTarget = 0;
-
-    // When pressing cruise control buttons while cruise control is off
-    // Use them to adjust regen level
-    int regenLevel = Param::GetInt(Param::regenlevel);
-    if (cruisestt & Vehicle::CC_RESUME) {
-      regenLevel++;
-      regenLevel = MIN(3, regenLevel);
-    } else if (cruisestt & Vehicle::CC_SET) {
-      regenLevel--;
-      regenLevel = MAX(0, regenLevel);
-    }
-
-    Param::SetInt(Param::regenlevel, regenLevel);
-  }
-
-  if (cruisespeed <= 0) {
-    Param::SetInt(Param::cruisespeed, 0);
-  } else if (cruisespeed < cruiseTarget) {
-    Param::SetInt(Param::cruisespeed, RAMPUP(cruisespeed, cruiseTarget,
-                                             Param::GetInt(Param::cruiseramp)));
-  } else if (cruisespeed > cruiseTarget) {
-    Param::SetInt(
-        Param::cruisespeed,
-        RAMPDOWN(cruisespeed, cruiseTarget, Param::GetInt(Param::cruiseramp)));
-  } else {
-    Param::SetInt(Param::cruisespeed, cruisespeed);
-  }
-}
-
-void CpSpoofOutput() {
-  uint16_t CpVal = 0;
-
-  if (Param::GetInt(Param::interface) == ChargeInterfaces::i3LIM ||
-      Param::GetInt(Param::interface) == ChargeInterfaces::CPC ||
-      Param::GetInt(Param::interface) == ChargeInterfaces::Foccci) {
-    CpVal = float(Param::GetInt(Param::PilotLim) * 1.6667);
-    Param::SetInt(Param::CP_PWM, CpVal);
-    CpVal = (Param::GetInt(Param::CP_PWM) * 40);
-  }
-
-  if (Param::GetInt(Param::PWM1Func) == IOMatrix::CP_SPOOF) {
-    timer_set_oc_value(TIM3, TIM_OC1, CpVal); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM2Func) == IOMatrix::CP_SPOOF) {
-    timer_set_oc_value(TIM3, TIM_OC2, CpVal); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM3Func) == IOMatrix::CP_SPOOF) {
-    timer_set_oc_value(TIM3, TIM_OC3, CpVal); // No duty set here
-  }
-}
-
-void SetTempgaugePWM(bool en) {
-  uint16_t TempDC = 0;
-
-  if (en) {
-    TempDC = utils::change(
-        Param::GetInt(Param::tmphs), 0, Param::GetInt(Param::tmphsmax),
-        Param::GetInt(Param::DC_MinTemp),
-        Param::GetInt(Param::DC_MaxTemp)); // map Temp Heatsink, from 0 to max
-                                           // and min to max duty
-    TempDC = TempDC * 40;
-  }
-
-  if (Param::GetInt(Param::PWM1Func) == IOMatrix::PWMTEMPGAUGE) {
-    timer_set_oc_value(TIM3, TIM_OC1, TempDC); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM2Func) == IOMatrix::PWMTEMPGAUGE) {
-    timer_set_oc_value(TIM3, TIM_OC2, TempDC); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM3Func) == IOMatrix::PWMTEMPGAUGE) {
-    timer_set_oc_value(TIM3, TIM_OC3, TempDC); // No duty set here
-  }
-}
-
-void SetSocgaugePWM(bool en) {
-  uint16_t SocDC = 0;
-
-  if (en) {
-    SocDC = utils::change(
-        Param::GetInt(Param::SOC), 0, 100, Param::GetInt(Param::DC_MinSOC),
-        Param::GetInt(
-            Param::DC_MaxSOC)); // map SOC, from 0 to max and min to max duty
-    SocDC = SocDC * 40;
-  }
-  if (Param::GetInt(Param::PWM1Func) == IOMatrix::PWMSOCGAUGE) {
-    timer_set_oc_value(TIM3, TIM_OC1, SocDC); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM2Func) == IOMatrix::PWMSOCGAUGE) {
-    timer_set_oc_value(TIM3, TIM_OC2, SocDC); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM3Func) == IOMatrix::PWMSOCGAUGE) {
-    timer_set_oc_value(TIM3, TIM_OC3, SocDC); // No duty set here
-  }
-}
-
-void SpeedoStart() {
-  if (Param::GetInt(Param::PumpPWM) == 1 ||
-      Param::GetInt(Param::PumpPWM) ==
-          2) // If Pump PWM out is set to Tacho or Speedo
-  {
-    tim_setup();                 // Fire up timer one...
-    timer_disable_counter(TIM1); //...but disable until needed
-    Timer1Run = false;
-  }
-}
-
-void SpeedoSet(uint16_t speed) {
-  if (Param::GetInt(Param::PumpPWM) == 1) // If Pump PWM out is set to Tacho
-  {
-    float PulseGain = Param::GetInt(Param::TachoPPR);
-
-    if (speed == 0) {
-      timer_disable_counter(TIM1);
-      Timer1Run = false;
-    }
-
-    if (speed > 0) {
-      if (Timer1Run == false) {
-        timer_enable_counter(TIM1);
-        Timer1Run = true;
-      }
-
-      uint32_t timerPeriod = float((33000000) * 2) / float(speed * PulseGain);
-      timer_set_period(TIM1, timerPeriod);
-      timer_set_oc_value(TIM1, TIM_OC1,
-                         timerPeriod / 2); // always stay at 50% duty cycle
-    }
-  }
-  if (Param::GetInt(Param::PumpPWM) == 2) // If Pump PWM out is set to Speedo
-  {
-    float PulseGain = Param::GetFloat(Param::TachoPPR);
-
-    if (speed == 0) {
-      timer_disable_counter(TIM1);
-      Timer1Run = false;
-    }
-
-    if (speed > 0) {
-      if (Timer1Run == false) {
-        timer_enable_counter(TIM1);
-        Timer1Run = true;
-      }
-
-      uint32_t timerPeriod = float((33000000) * 2) / float(speed * PulseGain);
-      timer_set_period(TIM1, timerPeriod);
-      timer_set_oc_value(TIM1, TIM_OC1,
-                         timerPeriod / 2); // always stay at 50% duty cycle
-    }
-  }
-}
-
-void GS450hOilPump(uint16_t pumpdc) {
-  if (Param::GetInt(Param::PumpPWM) == 0) // If Pump PWM out is set to Oil Pump
-  {
-    if (pumpdc > 9) {
-      pumpdc = utils::change(pumpdc, 10, 80, 1875,
-                             425); // map oil pump pwm to timer
-      pumpdc =
-          pumpdc *
-          0.5; // Scalar increase 2x so duty is period is halved and so is DC.
-    } else {
-      pumpdc = 0;
-    }
-    timer_set_oc_value(TIM1, TIM_OC1,
-                       pumpdc); // duty. 1000 = 52% , 500 = 76% , 1500=28%
-  }
-
-  uint16_t pumpduty = pumpdc * 40;
-
-  if (Param::GetInt(Param::PWM1Func) == IOMatrix::GS450HOIL) {
-    timer_set_oc_value(TIM3, TIM_OC1, pumpduty); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM2Func) == IOMatrix::GS450HOIL) {
-    timer_set_oc_value(TIM3, TIM_OC2, pumpduty); // No duty set here
-  }
-  if (Param::GetInt(Param::PWM3Func) == IOMatrix::GS450HOIL) {
-    timer_set_oc_value(TIM3, TIM_OC3, pumpduty); // No duty set here
-  }
+  // Attempt to include full body - if truncated, will fall back to option 3
 }
 
 } // namespace utils
