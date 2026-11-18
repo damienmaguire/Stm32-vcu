@@ -839,7 +839,7 @@ static void Ms10Task(void) {
 
     if (!selectedBMS->ReadyForPrecharge())
       vehicleStartTime = libopeninv_get_seconds(); // battery not ready to close
-                                                // yet, hold the timeout
+                                                   // yet, hold the timeout
     if (udc < (Param::GetInt(Param::udcsw)) &&
         libopeninv_get_seconds() > (vehicleStartTime + PRECHARGE_TIMEOUT)) {
       DigIo::prec_out.Clear();

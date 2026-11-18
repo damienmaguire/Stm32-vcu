@@ -52,8 +52,9 @@ static void vcu_relocate_vector_table(void) {
 }
 
 using VcuInitFn = void (*)(void);
-__attribute__((section(".preinit_array"), used)) static const VcuInitFn
-    vcu_preinit_vtor = vcu_relocate_vector_table;
+__attribute__((section(".preinit_array"),
+               used)) static const VcuInitFn vcu_preinit_vtor =
+    vcu_relocate_vector_table;
 
 /* Alternate function, push-pull. speed is a GPIO_OSPEED_* value.
  * F4 inputs of a peripheral are alternate-function pins as well.

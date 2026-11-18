@@ -94,7 +94,7 @@
 #define FLASH_APP_START 0x08010000u
 #define FLASH_APP_END 0x08080000u
 
-#if (PINDEF_SECTOR == PARAM_SECTOR) || (PINDEF_SECTOR == CANMAP_SECTOR) ||    \
+#if (PINDEF_SECTOR == PARAM_SECTOR) || (PINDEF_SECTOR == CANMAP_SECTOR) ||     \
     (PARAM_SECTOR == CANMAP_SECTOR)
 #error Each F407 flash store needs its own sector.
 #endif

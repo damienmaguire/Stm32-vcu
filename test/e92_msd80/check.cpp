@@ -1,7 +1,8 @@
 // Host check for the E92 MSD80 checksum, alive counter and the worked
 // examples in the firmware notes.
 //
-//   g++ -std=c++17 -Wall -Wextra -pedantic -I../../include -o e92_check check.cpp && ./e92_check
+//   g++ -std=c++17 -Wall -Wextra -pedantic -I../../include -o e92_check
+//   check.cpp && ./e92_check
 //
 // The analysis verified byte0 = ((s >> 8) + (s & 0xFF)) & 0xFF, with
 // s = CAN id + the other data bytes, on every logged 0x0A8 / 0x0A9 /
@@ -170,7 +171,8 @@ int main() {
              pic.torque == -114,
          "ignition off is the engine-off picture");
   pic = E92EnginePicture(400, -100.0f, true);
-  expect(pic.state == 8 && pic.pedal == 0 && pic.rpm == 750 && pic.torque == -68,
+  expect(pic.state == 8 && pic.pedal == 0 && pic.rpm == 750 &&
+             pic.torque == -68,
          "full regen is overrun -68, not a pedal");
   expect(E92TorqueRaw(true, 0.0f) == 16, "idle torque +16");
   expect(E92TorqueRaw(true, -30.0f) == -49, "part overrun");
@@ -187,17 +189,18 @@ int main() {
   uint8_t bat[8];
   E92Build3B4(bat, 13.8f);
   expect(bat[0] == 0x98 && (bat[1] & 0x0F) == 0x03, "13.8 V -> raw 920");
-  expect(bat[1] == 0xF3 && bat[2] == 0x00 && bat[3] == 0xFC, "0x3B4 logged tail");
+  expect(bat[1] == 0xF3 && bat[2] == 0x00 && bat[3] == 0xFC,
+         "0x3B4 logged tail");
   expect(bat[4] == 0xFF && bat[5] == 0xFF && bat[6] == 0xFF && bat[7] == 0xFF,
          "0x3B4 bytes 4-7 are FF");
   expect(E92BatteryRaw(0.0f) == 920, "unwired 12 V pin sends 13.8 V");
   // Logged idle frame C8 F3 is 968 counts. 968 * 0.015 = 14.52 V,
   // which the notes round to 14.5 V. The constant bytes around it match.
   const uint8_t logged3B4[8] = {0xC8, 0xF3, 0x00, 0xFC, 0xFF, 0xFF, 0xFF, 0xFF};
-  uint16_t loggedRaw =
-      (uint16_t)(logged3B4[0] | ((logged3B4[1] & 0x0F) << 8));
+  uint16_t loggedRaw = (uint16_t)(logged3B4[0] | ((logged3B4[1] & 0x0F) << 8));
   expect(loggedRaw == 0x3C8, "logged 0x3B4 is 968 counts");
-  expect(logged3B4[1] == 0xF3 && logged3B4[3] == 0xFC, "logged 0x3B4 constants");
+  expect(logged3B4[1] == 0xF3 && logged3B4[3] == 0xFC,
+         "logged 0x3B4 constants");
 
   uint8_t d0[8];
   E92Build1D0(d0, 4, 90.0f, 0x3C, 0xC6, 0x1234);
@@ -217,13 +220,15 @@ int main() {
   const uint8_t loggedAA[8] = {0x52, 0x9E, 0x01, 0x00, 0xF8, 0x0D, 0x80, 0x81};
   const uint8_t logged2F3[3] = {0x0C, 0xFC, 0xFE};
   const uint8_t logged1D0[8] = {0x44, 0x3C, 0x66, 0xC6, 0x62, 0x93, 0x8D, 0xAC};
-  expect(E92Checksum(0x0A8, loggedA8, 8, 0) == loggedA8[0], "logged 0x0A8 checksum");
+  expect(E92Checksum(0x0A8, loggedA8, 8, 0) == loggedA8[0],
+         "logged 0x0A8 checksum");
   expect(refChecksum(0x0A8, loggedA8, 8, 0) == 0x39, "logged 0x0A8 ref");
   expect(loggedA8[6] == 0xCF, "logged 0x0A8 byte 6");
   expect(E92Checksum(0x0A9, loggedA9, 8, 0) == 0x7D, "logged 0x0A9 checksum");
   expect(E92Checksum(0x0AA, loggedAA, 8, 0) == 0x52, "logged 0x0AA checksum");
   expect(E92Checksum(0x2F3, logged2F3, 3, 2) == 0xFE, "logged 0x2F3 checksum");
-  expect(logged1D0[1] == 0x3C && logged1D0[3] == 0xC6, "logged 0x1D0 constants");
+  expect(logged1D0[1] == 0x3C && logged1D0[3] == 0xC6,
+         "logged 0x1D0 constants");
   expect(E92AmbientHpa(logged1D0[3]) == 994, "logged ambient is 994 hPa");
 
   uint8_t m200[8];
@@ -252,7 +257,8 @@ int main() {
   }
   expect(matchRun, "0x1B6 running bytes");
   expect(matchOff, "0x1B6 off bytes");
-  expect((run1b6[5] >> 4) == 0xA && (off1b6[5] >> 4) == 0xA, "0x1B6 nibble 0xA");
+  expect((run1b6[5] >> 4) == 0xA && (off1b6[5] >> 4) == 0xA,
+         "0x1B6 nibble 0xA");
   expect(((off1b6[5] >> 2) & 0x3) == 3, "0x1B6 bits 3:2 are 3 when off");
   expect(((run1b6[5] >> 2) & 0x3) == 0, "0x1B6 bits 3:2 are 0 when running");
 

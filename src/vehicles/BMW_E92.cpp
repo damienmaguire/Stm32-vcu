@@ -46,9 +46,7 @@ void BMW_E92::SetCanInterface(CanHardware *c) {
 
 bool BMW_E92::Ready() { return DigIo::t15_digi.Get() || kl15; }
 
-bool BMW_E92::Start() {
-  return Param::GetBool(Param::din_start) || kl50;
-}
+bool BMW_E92::Start() { return Param::GetBool(Param::din_start) || kl50; }
 
 bool BMW_E92::MotorRunning() {
   return Ready() && Param::GetInt(Param::opmode) == MOD_RUN;
