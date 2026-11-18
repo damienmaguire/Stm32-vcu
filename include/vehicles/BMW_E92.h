@@ -30,11 +30,11 @@
 
     Frames sent (rates from the MSD80 logs):
       0x0A8, 0x0A9, 0x0AA   10 ms    torque, rpm, pedal, engine state
-      0x1B6                 60 ms    heat / load, mostly undecoded
-      0x1D0                100 ms    coolant, ambient pressure
-      0x200                200 ms    cruise-side status, undecoded
-      0x3B3                200 ms    slow status, undecoded (log median 201 ms)
-      0x492                460 ms    network management, node 0x12
+      0x1B6                 60 ms    heat / load, logged running and off bytes
+      0x1D0                100 ms    coolant, intake/ambient, pressure
+      0x200                200 ms    constant 00 80 C0 00 00 00 00 00
+      0x3B3                200 ms    power-available ramp (log median 201 ms)
+      0x492                460 ms    network management, wake then 17 52
       0x2F3               1000 ms    slow alive frame
       0x3B4               1800 ms    12 V battery voltage
     The log median for 0x3B4 is 1799.9 ms. A "~200 ms" note in the
@@ -81,6 +81,8 @@ private:
   void Send3B4();
   void Send492();
   E92Engine Picture();
+  // Ignition on and the VCU actually in RUN. KL15 alone is not enough.
+  bool MotorRunning();
 
   int motorRpm;
   float coolantC;
@@ -98,6 +100,14 @@ private:
   uint8_t alive1D0;
   uint8_t alive2F3;
   uint16_t fuel;
+  // 0x492 sequence. Restarts each time we begin transmitting.
+  bool busLive;
+  int nmPhase;
+  int nmStatusFrames;
+  uint8_t nmWait;
+  // Milliseconds the motor has been in RUN, for the 0x3B3 ramp.
+  bool motorWasRun;
+  uint32_t runMs;
 };
 
 #endif /* BMW_E92_h */

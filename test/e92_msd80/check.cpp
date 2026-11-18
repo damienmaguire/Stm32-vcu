@@ -126,7 +126,7 @@ int main() {
   E92Build0A8(a8, 1, 17);
   expect(read12(a8, 12) == 17 && read12(a8, 28) == 17, "0x0A8 both torques");
   expect((a8[1] & 0x0F) == 1, "0x0A8 alive");
-  expect(a8[6] == 0xBA, "0x0A8 path status");
+  expect(a8[6] == 0xCF, "0x0A8 path status is constant 0xCF");
   expect(a8[0] == refChecksum(0x0A8, a8, 8, 0), "0x0A8 checksum");
   expect(a8[0] == E92Checksum(0x0A8, a8, 8, 0), "0x0A8 codec checksum");
 
@@ -138,13 +138,17 @@ int main() {
   expect(read12(a9, 40) == -114 && read12(a9, 52) == -114, "0x0A9 torques 2");
   expect(a9[0] == refChecksum(0x0A9, a9, 8, 0), "0x0A9 checksum");
 
-  // 0x2F3 keeps the checksum in byte 2. Alive 3, other bits 0.
-  // s = 0x2F3 + 0x03 = 0x2F6, fold = 0xF8.
+  // 0x2F3 keeps the checksum in byte 2. Alive 3, byte 1 is the
+  // logged 0xFC. s = 0x2F3 + 0x03 + 0xFC = 0x3F2, fold = 0xF5.
   uint8_t f3[3];
   E92Build2F3(f3, 3);
   expect(f3[0] == 0x03, "0x2F3 alive in byte 0");
-  expect(f3[2] == 0xF8, "0x2F3 checksum literal 0xF8");
+  expect(f3[1] == 0xFC, "0x2F3 byte 1 is the logged constant");
+  expect(f3[2] == 0xF5, "0x2F3 checksum literal 0xF5");
   expect(f3[2] == refChecksum(0x2F3, f3, 3, 2), "0x2F3 checksum vs ref");
+  E92Build2F3(f3, 12);
+  expect(f3[0] == 0x0C && f3[1] == 0xFC && f3[2] == 0xFE,
+         "logged idle 0x2F3 is 0C FC FE");
 
   // The written formula masks once. A full second fold would turn
   // 0x106 into 0x07. Logged frames never reach this sum; the literal
@@ -155,19 +159,25 @@ int main() {
 
   // Signal pictures, same policy as the E39 tach floor.
   E92Engine pic = E92EnginePicture(100, 0.0f, true);
-  expect(pic.rpm == 750 && pic.state == 8 && pic.pedal == 0 && pic.torque == 17,
+  expect(pic.rpm == 750 && pic.state == 8 && pic.pedal == 0 && pic.torque == 16,
          "ignition on, pedal up, rpm floored at 750");
   pic = E92EnginePicture(-2000, 50.0f, true);
   expect(pic.rpm == 2000 && pic.state == 9 && pic.pedal == 127 &&
-             pic.torque == 117,
+             pic.torque == 164,
          "50% pedal, reverse rpm taken as positive");
   pic = E92EnginePicture(3000, 40.0f, false);
   expect(pic.rpm == 0 && pic.state == 0xF && pic.pedal == 0 &&
              pic.torque == -114,
          "ignition off is the engine-off picture");
-  pic = E92EnginePicture(400, -30.0f, true);
-  expect(pic.state == 8 && pic.pedal == 0 && pic.rpm == 750,
-         "regen is not an accelerator pedal");
+  pic = E92EnginePicture(400, -100.0f, true);
+  expect(pic.state == 8 && pic.pedal == 0 && pic.rpm == 750 && pic.torque == -68,
+         "full regen is overrun -68, not a pedal");
+  expect(E92TorqueRaw(true, 0.0f) == 16, "idle torque +16");
+  expect(E92TorqueRaw(true, -30.0f) == -49, "part overrun");
+  expect(E92TorqueRaw(true, 100.0f) == 312, "full pedal is +312 counts");
+  expect(E92NmToCounts(156.0f) == 312, "0.5 Nm/bit: 156 Nm -> 312");
+  expect(E92NmToCounts(2000.0f) == 2047, "torque clamps at +2047");
+  expect(E92NmToCounts(-2000.0f) == -2048, "torque clamps at -2048");
 
   expect(E92CoolantByte(90.0f) == 138, "90 C -> byte 138");
   expect(E92CoolantByte(-80.0f) == 0, "cold clamp");
@@ -176,15 +186,122 @@ int main() {
 
   uint8_t bat[8];
   E92Build3B4(bat, 13.8f);
-  expect(bat[0] == 0x98 && bat[1] == 0x03, "13.8 V -> raw 920");
+  expect(bat[0] == 0x98 && (bat[1] & 0x0F) == 0x03, "13.8 V -> raw 920");
+  expect(bat[1] == 0xF3 && bat[2] == 0x00 && bat[3] == 0xFC, "0x3B4 logged tail");
+  expect(bat[4] == 0xFF && bat[5] == 0xFF && bat[6] == 0xFF && bat[7] == 0xFF,
+         "0x3B4 bytes 4-7 are FF");
   expect(E92BatteryRaw(0.0f) == 920, "unwired 12 V pin sends 13.8 V");
+  // Logged idle frame C8 F3 is 968 counts. 968 * 0.015 = 14.52 V,
+  // which the notes round to 14.5 V. The constant bytes around it match.
+  const uint8_t logged3B4[8] = {0xC8, 0xF3, 0x00, 0xFC, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint16_t loggedRaw =
+      (uint16_t)(logged3B4[0] | ((logged3B4[1] & 0x0F) << 8));
+  expect(loggedRaw == 0x3C8, "logged 0x3B4 is 968 counts");
+  expect(logged3B4[1] == 0xF3 && logged3B4[3] == 0xFC, "logged 0x3B4 constants");
 
   uint8_t d0[8];
-  E92Build1D0(d0, 4, 90.0f, 0xC6, 0x1234);
-  expect(d0[0] == 138 && d0[1] == 138, "coolant and second temp");
+  E92Build1D0(d0, 4, 90.0f, 0x3C, 0xC6, 0x1234);
+  expect(d0[0] == 138 && d0[1] == 0x3C, "coolant stays off the air byte");
+  expect(d0[1] != d0[0], "byte 1 is not a copy of coolant");
   expect(d0[2] == 4, "0x1D0 alive in byte 2");
   expect(d0[3] == 0xC6, "ambient byte");
   expect(d0[4] == 0x34 && d0[5] == 0x12, "fuel counter little-endian");
+  E92Build1D0(d0, 0, 20.0f, 0x08, 0xC6, 0);
+  expect(d0[1] == 0x08, "air byte is 0x08 before running");
+
+  // Logged idle frames. The checksum byte has to fall out of the
+  // same fold the codec uses. Variable fields (rpm, torque, alive)
+  // are whatever the car sent; the constant bytes are checked too.
+  const uint8_t loggedA8[8] = {0x39, 0x40, 0x01, 0x70, 0x01, 0x0C, 0xCF, 0x02};
+  const uint8_t loggedA9[8] = {0x7D, 0x00, 0x97, 0xDF, 0x12, 0xC9, 0x7F, 0x01};
+  const uint8_t loggedAA[8] = {0x52, 0x9E, 0x01, 0x00, 0xF8, 0x0D, 0x80, 0x81};
+  const uint8_t logged2F3[3] = {0x0C, 0xFC, 0xFE};
+  const uint8_t logged1D0[8] = {0x44, 0x3C, 0x66, 0xC6, 0x62, 0x93, 0x8D, 0xAC};
+  expect(E92Checksum(0x0A8, loggedA8, 8, 0) == loggedA8[0], "logged 0x0A8 checksum");
+  expect(refChecksum(0x0A8, loggedA8, 8, 0) == 0x39, "logged 0x0A8 ref");
+  expect(loggedA8[6] == 0xCF, "logged 0x0A8 byte 6");
+  expect(E92Checksum(0x0A9, loggedA9, 8, 0) == 0x7D, "logged 0x0A9 checksum");
+  expect(E92Checksum(0x0AA, loggedAA, 8, 0) == 0x52, "logged 0x0AA checksum");
+  expect(E92Checksum(0x2F3, logged2F3, 3, 2) == 0xFE, "logged 0x2F3 checksum");
+  expect(logged1D0[1] == 0x3C && logged1D0[3] == 0xC6, "logged 0x1D0 constants");
+  expect(E92AmbientHpa(logged1D0[3]) == 994, "logged ambient is 994 hPa");
+
+  uint8_t m200[8];
+  E92Build200(m200);
+  const uint8_t want200[8] = {0x00, 0x80, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00};
+  bool match200 = true;
+  for (int i = 0; i < 8; i++)
+    if (m200[i] != want200[i])
+      match200 = false;
+  expect(match200, "0x200 is 00 80 C0 00 00 00 00 00");
+
+  uint8_t m1b6[7];
+  E92Build1B6(m1b6, true);
+  const uint8_t run1b6[7] = {0xFF, 0x35, 0x00, 0x00, 0x26, 0xA0, 0x15};
+  const uint8_t off1b6[7] = {0xFF, 0x00, 0x00, 0x00, 0x00, 0xAC, 0x00};
+  bool matchRun = true;
+  bool matchOff = true;
+  for (int i = 0; i < 7; i++) {
+    if (m1b6[i] != run1b6[i])
+      matchRun = false;
+  }
+  E92Build1B6(m1b6, false);
+  for (int i = 0; i < 7; i++) {
+    if (m1b6[i] != off1b6[i])
+      matchOff = false;
+  }
+  expect(matchRun, "0x1B6 running bytes");
+  expect(matchOff, "0x1B6 off bytes");
+  expect((run1b6[5] >> 4) == 0xA && (off1b6[5] >> 4) == 0xA, "0x1B6 nibble 0xA");
+  expect(((off1b6[5] >> 2) & 0x3) == 3, "0x1B6 bits 3:2 are 3 when off");
+  expect(((run1b6[5] >> 2) & 0x3) == 0, "0x1B6 bits 3:2 are 0 when running");
+
+  uint8_t m3b3[6];
+  E92Build3B3(m3b3, false, 0);
+  const uint8_t off3b3[6] = {0x1F, 0x00, 0xFF, 0x7F, 0x00, 0xF1};
+  const uint8_t run3b3[6] = {0x1F, 0xC8, 0x00, 0x00, 0x00, 0xF0};
+  bool match3off = true;
+  bool match3run = true;
+  for (int i = 0; i < 6; i++)
+    if (m3b3[i] != off3b3[i])
+      match3off = false;
+  E92Build3B3(m3b3, true, E92PowerByte(3000));
+  for (int i = 0; i < 6; i++)
+    if (m3b3[i] != run3b3[i])
+      match3run = false;
+  expect(match3off, "0x3B3 off / KL15 only");
+  expect(match3run, "0x3B3 running at full power");
+  expect(E92PowerByte(0) == 0, "power ramp starts at 0");
+  expect(E92PowerByte(1500) == 0x64, "power ramp is halfway at 1.5 s");
+  expect(E92PowerByte(3000) == 0xC8, "power ramp finishes at 0xC8");
+
+  uint8_t nm[8];
+  E92Build492(nm, E92NmWake);
+  expect(nm[0] == 0x12 && nm[1] == 0x01, "NM wake is 12 01");
+  E92Build492(nm, E92NmRing);
+  expect(nm[0] == 0x17 && nm[1] == 0x02, "NM ring is 17 02");
+  E92Build492(nm, E92NmStatus);
+  expect(nm[0] == 0x17 && nm[1] == 0x42, "NM status is 17 42");
+  E92Build492(nm, E92NmSteady);
+  expect(nm[0] == 0x17 && nm[1] == 0x52, "NM steady is 17 52");
+  bool nmTail = true;
+  for (int i = 2; i < 8; i++)
+    if (nm[i] != 0xFF)
+      nmTail = false;
+  expect(nmTail, "NM bytes 2-7 are FF");
+  int phase = E92NmWake;
+  int nStatus = 0;
+  phase = E92NmNext(phase, &nStatus);
+  expect(phase == E92NmRing, "wake is followed by the ring frame");
+  phase = E92NmNext(phase, &nStatus);
+  expect(phase == E92NmStatus, "ring is followed by 17 42");
+  int statusCount = 0;
+  while (phase == E92NmStatus && statusCount < 40) {
+    phase = E92NmNext(phase, &nStatus);
+    statusCount++;
+  }
+  expect(statusCount == E92NmStatusFrames, "17 42 lasts about 10 s");
+  expect(phase == E92NmSteady, "then 17 52 for good");
 
   if (fails != 0) {
     std::printf("%d checks failed\n", fails);

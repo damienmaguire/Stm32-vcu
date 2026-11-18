@@ -27,7 +27,9 @@ static const uint8_t kAmbientByte = 0xC6;
 BMW_E92::BMW_E92()
     : motorRpm(0), coolantC(0.0f), sendOn(false), sawCar(false), saw130(false),
       kl15(false), kl50(false), awakeHold(0), lost130(0), tick(0), aliveA8(0),
-      aliveA9(0), aliveAA(0), alive1D0(0), alive2F3(0), fuel(0) {}
+      aliveA9(0), aliveAA(0), alive1D0(0), alive2F3(0), fuel(0), busLive(false),
+      nmPhase(E92NmWake), nmStatusFrames(0), nmWait(0), motorWasRun(false),
+      runMs(0) {}
 
 void BMW_E92::SetCanInterface(CanHardware *c) {
   can = c;
@@ -48,6 +50,10 @@ bool BMW_E92::Start() {
   return Param::GetBool(Param::din_start) || kl50;
 }
 
+bool BMW_E92::MotorRunning() {
+  return Ready() && Param::GetInt(Param::opmode) == MOD_RUN;
+}
+
 E92Engine BMW_E92::Picture() {
   // Motor rpm comes from SetRevCounter (Param::speed). Throttle is
   // potnom, the same pedal the rest of the VCU already uses. Regen
@@ -56,8 +62,29 @@ E92Engine BMW_E92::Picture() {
 }
 
 void BMW_E92::Task10Ms() {
-  if (!sendOn)
+  if (!sendOn) {
+    // Next time the bus comes up, 0x492 starts again at 12 01.
+    busLive = false;
+    motorWasRun = false;
+    runMs = 0;
     return;
+  }
+  if (!busLive) {
+    busLive = true;
+    nmPhase = E92NmWake;
+    nmStatusFrames = 0;
+    nmWait = 0;
+  }
+  if (MotorRunning()) {
+    if (!motorWasRun)
+      runMs = 0;
+    motorWasRun = true;
+    if (runMs < 60000u)
+      runMs += 10;
+  } else {
+    motorWasRun = false;
+    runMs = 0;
+  }
 
   // 10 ms engine trio, every pass.
   Send0A8();
@@ -65,7 +92,8 @@ void BMW_E92::Task10Ms() {
   Send0AA();
 
   // Slower frames counted off the same 10 ms tick, so the rates stay
-  // on the log medians: 60, 100, 200, 460, 1000 and 1800 ms.
+  // on the log medians: 60, 100, 200, 1000 and 1800 ms.
+  // 0x492 has its own counter so the wake frame goes out immediately.
   if ((tick % 6u) == 0u)
     Send1B6();
   if ((tick % 10u) == 0u)
@@ -74,8 +102,11 @@ void BMW_E92::Task10Ms() {
     Send200();
     Send3B3();
   }
-  if ((tick % 46u) == 0u)
+  if (nmWait == 0)
     Send492();
+  nmWait++;
+  if (nmWait >= 46)
+    nmWait = 0;
   if ((tick % 100u) == 0u)
     Send2F3();
   if ((tick % 180u) == 0u)
@@ -133,21 +164,21 @@ void BMW_E92::Send0AA() {
 }
 
 void BMW_E92::Send1B6() {
-  // 0x1B6 every 60 ms, DLC 7. The bytes are internal RAM mirrors.
-  // The one decoded constant is the high nibble of byte 5, which the
-  // packer always writes as 0xA. Everything else stays 0 rather than
-  // a guessed temperature or load.
+  // 0x1B6 every 60 ms, DLC 7. Running and off bytes are the logged
+  // constants. "Running" is KL15 (or the T15 pin) and the VCU in RUN.
   uint8_t bytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-  bytes[5] = 0xA0;
+  E92Build1B6(bytes, MotorRunning());
   can->Send(0x1B6, bytes, 7);
 }
 
 void BMW_E92::Send1D0() {
-  // Coolant is the inverter heatsink temperature, the same value the
-  // E39 class maps onto its gauge. Here the byte is real degrees
-  // (byte - 48) rather than a gauge code.
+  // Coolant (byte 0) is the inverter heatsink temperature, the same
+  // value the E39 class maps onto its gauge. Byte 1 is a different
+  // sensor (intake air or ambient, same -48 scale). The logs show
+  // 0x08 before the motor is running and about 12 C after that.
   uint8_t bytes[8];
-  E92Build1D0(bytes, alive1D0, coolantC, kAmbientByte, fuel);
+  uint8_t air = MotorRunning() ? 0x3C : 0x08;
+  E92Build1D0(bytes, alive1D0, coolantC, air, kAmbientByte, fuel);
   alive1D0 = E92NextAlive(alive1D0);
   if (Ready())
     fuel++;
@@ -155,10 +186,9 @@ void BMW_E92::Send1D0() {
 }
 
 void BMW_E92::Send200() {
-  // 0x200 every 200 ms, DLC 8. Cruise and other slow status. Every
-  // field in the firmware map is an undecoded RAM value, so the frame
-  // is present at the right length and rate with zeros in it.
-  uint8_t bytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  // 0x200 every 200 ms, DLC 8. Constant on the logged car.
+  uint8_t bytes[8];
+  E92Build200(bytes);
   can->Send(0x200, bytes, 8);
 }
 
@@ -170,9 +200,10 @@ void BMW_E92::Send2F3() {
 }
 
 void BMW_E92::Send3B3() {
-  // 0x3B3 every 200 ms (log median 201 ms), DLC 6. Same story as
-  // 0x200: the fields are undecoded, the frame still has to be there.
+  // 0x3B3 every 200 ms (log median 201 ms), DLC 6.
+  // Byte 1 ramps to 0xC8 over about 3 s once the motor is running.
   uint8_t bytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  E92Build3B3(bytes, MotorRunning(), E92PowerByte(runMs));
   can->Send(0x3B3, bytes, 6);
 }
 
@@ -186,18 +217,16 @@ void BMW_E92::Send3B4() {
 }
 
 void BMW_E92::Send492() {
-  // 0x492 every 460 ms, DLC 8. Network management for node 0x12,
-  // because the id is 0x480 + 0x12. The MSD80 COM table does not
-  // pack this frame (the CAN controller's NM block does), so the
-  // bytes are not in the signal map.
-  //   byte 0   this node's address, 0x12
-  //   byte 1   0x42, the "awake" code already used for DME-alive on
-  //            the E65. 0x32 is the value that class treats as sleep,
-  //            and it is not sent here.
-  //   byte 2..7  0xFF padding, same as that E65 frame
-  // We stop sending altogether once the car goes quiet and terminal
-  // 15 is off, so this frame cannot hold the bus awake by itself.
-  uint8_t bytes[8] = {0x12, 0x42, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  // 0x492 every 460 ms, DLC 8. Logged sequence, bytes 2-7 always FF:
+  //   12 01 once at wake (addressed to itself, opcode alive)
+  //   17 02 once (opcode ring, next node 0x17)
+  //   17 42 for about 10 s
+  //   17 52 from then on (KL15 on, engine off or running)
+  // 12 42 does not appear in the logs. We stop sending when the bus
+  // goes quiet and terminal 15 is off, so this cannot hold the car awake.
+  uint8_t bytes[8];
+  E92Build492(bytes, nmPhase);
+  nmPhase = E92NmNext(nmPhase, &nmStatusFrames);
   can->Send(0x492, bytes, 8);
 }
 

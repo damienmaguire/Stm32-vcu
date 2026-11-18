@@ -70,18 +70,67 @@ inline void E92Put12(uint8_t *b, int lsb, int value) {
   }
 }
 
+// Signed 12-bit torque counts. Hypothesis, marked because the logs
+// fix the counts but not the unit: 0.5 Nm per bit, so counts = Nm * 2.
+// 1 Nm/bit is ruled out. 312 counts would then be 312 Nm, and the N43
+// stops at about 210 Nm. Clamp to the signed 12-bit range, -2048..2047.
+inline int E92ClampTorque(int raw) {
+  if (raw > 2047)
+    raw = 2047;
+  if (raw < -2048)
+    raw = -2048;
+  return raw;
+}
+
+inline int E92NmToCounts(float nm) {
+  float counts = nm * 2.0f;
+  if (counts >= 0.0f)
+    counts += 0.5f;
+  else
+    counts -= 0.5f;
+  return E92ClampTorque((int)counts);
+}
+
+// Logged raw counts, not a shaft measurement: off -114, idle +15..+17,
+// overrun -41..-68, part load up to +312. potnom drives that range.
+// Full pedal is +312 counts, about 156 Nm at the 0.5 Nm/bit hypothesis.
+inline int E92TorqueRaw(bool ignitionOn, float potPercent) {
+  if (!ignitionOn)
+    return -114;
+
+  float pot = potPercent;
+  if (pot > 100.0f)
+    pot = 100.0f;
+  if (pot < -100.0f)
+    pot = -100.0f;
+
+  if (pot > 0.0f) {
+    int raw = 16 + (int)(pot * 296.0f / 100.0f + 0.5f);
+    return E92ClampTorque(raw);
+  }
+  if (pot < 0.0f) {
+    int regen = (int)(-pot + 0.5f);
+    if (regen > 100)
+      regen = 100;
+    // Just into overrun is -41. Full regen is -68.
+    return E92ClampTorque(-41 - (regen * 27) / 100);
+  }
+  return 16;
+}
+
 // What the engine trio should say, built the same way the E46/E39
 // class fills its DME frames: motor rpm for the tach, throttle for
 // the pedal, and a torque word that follows that pedal.
 //
 // Ignition off is the logged "engine off" picture: state 0xF, rpm 0,
-// pedal 0, torque about -114.
+// pedal 0, torque -114.
 // Ignition on with the pedal up is idle: state 8, at least 750 rpm
 // (the E39 tach floor, so the car believes the engine is alive),
-// torque +17.
+// torque +16 (the middle of the logged +15..+17 idle band).
 // Pedal down is state 9. On the logs the pedal byte is non-zero only
-// in that state. Pedal 0..254 stands for 0..100 % (the scale is the
-// public hypothesis; 254 is the clamp the packer uses).
+// in that state. Pedal 0..254 stands for 0..100 %.
+// A negative potnom is regen, not a pedal. State stays 8 and the
+// torque word moves through the logged overrun band.
 struct E92Engine {
   int rpm;
   int pedal;
@@ -95,17 +144,18 @@ inline E92Engine E92EnginePicture(int motorRpm, float potPercent,
   p.rpm = 0;
   p.pedal = 0;
   p.state = 0xF;
-  p.torque = -114;
+  p.torque = E92TorqueRaw(false, 0.0f);
   if (!ignitionOn)
     return p;
 
   float pot = potPercent;
-  if (pot < 0.0f)
-    pot = 0.0f;
   if (pot > 100.0f)
     pot = 100.0f;
+  if (pot < -100.0f)
+    pot = -100.0f;
 
-  int pedal = (int)(pot * 254.0f / 100.0f + 0.5f);
+  float pedalPot = pot > 0.0f ? pot : 0.0f;
+  int pedal = (int)(pedalPot * 254.0f / 100.0f + 0.5f);
   if (pedal < 0)
     pedal = 0;
   if (pedal > 254)
@@ -114,15 +164,11 @@ inline E92Engine E92EnginePicture(int motorRpm, float potPercent,
   if (pedal > 0) {
     p.state = 9;
     p.pedal = pedal;
-    // +17 at idle, then about 2 counts per percent of pedal. The
-    // 0.5 Nm/bit scale is not confirmed, so this only has to move
-    // with the throttle. It is not a calibrated torque.
-    p.torque = 17 + (int)(pot * 2.0f + 0.5f);
   } else {
     p.state = 8;
     p.pedal = 0;
-    p.torque = 17;
   }
+  p.torque = E92TorqueRaw(true, pot);
 
   int rpm = motorRpm;
   if (rpm < 0)
@@ -183,25 +229,25 @@ inline void E92Build0AA(uint8_t b[8], uint8_t alive, const E92Engine &e) {
 //   byte 2      rest of the first torque
 //   byte 3      low nibble undecoded (sent 0), high nibble second torque
 //   byte 4      rest of the second torque
-//   byte 5      undecoded status, sent as 0
-//   byte 6      one 2-bit field per torque-request path
-//   byte 7      undecoded, sent as 0
+//   byte 5      not a logged constant, sent as 0
+//   byte 6      0xCF, four torque-interface status fields
+//   byte 7      not a logged constant, sent as 0
 inline void E92Build0A8(uint8_t b[8], uint8_t alive, int torque) {
   for (int i = 0; i < 8; i++)
     b[i] = 0;
   b[1] = (uint8_t)(alive & 0x0Fu);
   E92Put12(b, 12, torque);
   E92Put12(b, 28, torque);
-  // The packer writes 2 when a path is flagged and 3 when it is not.
-  // 0x0B7, 0x1AC and 0x0B5/0x0BD/0x0B8 are not on this car, so those
-  // fields stay at 2 (the value the real DME reports for a missing
-  // path). 0x0B6 is on the bus and is not flagged here, so that field
-  // is 3.
-  //   bits 1:0   0x0B7
-  //   bits 3:2   0x1AC
-  //   bits 5:4   0x0B6
-  //   bits 7:6   0x0B5 / 0x0BD / 0x0B8
-  b[6] = (uint8_t)((2u << 0) | (2u << 2) | (3u << 4) | (2u << 6));
+  // Byte 6 is constant 0xCF in every logged frame, every state.
+  // Four 2-bit torque-interface fields:
+  //   bits 1:0   0x0B7            3 = unconfigured
+  //   bits 3:2   0x1AC            3 = unconfigured
+  //   bits 5:4   0x0B6            0 = configured and OK
+  //   bits 7:6   0x0B5/0x0BD/0x0B8  3 = unconfigured
+  // 3 means the path is not configured. 0 means configured and OK.
+  // 1 or 2 would be a timeout or an error. 0x0B6 is the only one of
+  // these on this car, and it is always "no request".
+  b[6] = 0xCF;
   b[0] = E92Checksum(0x0A8, b, 8, 0);
 }
 
@@ -241,19 +287,19 @@ inline int E92AmbientHpa(uint8_t raw) { return 2 * (int)raw + 598; }
 // 0x1D0 every 100 ms. Temperatures and ambient pressure. No checksum.
 // The alive counter is the low nibble of byte 2, not byte 1.
 //   byte 0      coolant, degrees C = byte - 48
-//   byte 1      second temperature (intake / oil). Same stand-in
-//               value as coolant; 0xFF would mean "sensor failed"
+//   byte 1      a different temperature, same -48 encoding. The logs
+//               show 0x08 (invalid) before the motor is running, then
+//               about 12 C (byte 0x3C). It is not the coolant.
 //   byte 2      low nibble alive 0..14
 //   byte 3      ambient pressure, hPa = 2 * byte + 598
-//   byte 4..5   fuel counter, little-endian, counts up while running
-//   byte 6..7   undecoded, sent as 0
+//   byte 4..5   fuel counter, little-endian, counts up while ignition is on
+//   byte 6..7   not constant in the logs, sent as 0
 inline void E92Build1D0(uint8_t b[8], uint8_t alive, float coolantC,
-                        uint8_t ambientByte, uint16_t fuel) {
+                        uint8_t airByte, uint8_t ambientByte, uint16_t fuel) {
   for (int i = 0; i < 8; i++)
     b[i] = 0;
-  uint8_t temp = E92CoolantByte(coolantC);
-  b[0] = temp;
-  b[1] = temp;
+  b[0] = E92CoolantByte(coolantC);
+  b[1] = airByte;
   b[2] = (uint8_t)(alive & 0x0Fu);
   b[3] = ambientByte;
   b[4] = (uint8_t)(fuel & 0xFFu);
@@ -278,19 +324,146 @@ inline void E92Build3B4(uint8_t b[8], float volts) {
   for (int i = 0; i < 8; i++)
     b[i] = 0;
   uint16_t raw = E92BatteryRaw(volts);
+  // The logged idle frame is C8 F3 00 FC FF FF FF FF (968 counts,
+  // 14.52 V, written up as 14.5 V). The 12-bit value moves. The
+  // rest of that frame does not: high nibble of byte 1 is 0xF,
+  // byte 2 is 0, byte 3 is 0xFC, bytes 4-7 are 0xFF.
   b[0] = (uint8_t)(raw & 0xFFu);
-  b[1] = (uint8_t)((raw >> 8) & 0x0Fu);
+  b[1] = (uint8_t)(((raw >> 8) & 0x0Fu) | 0xF0u);
+  b[2] = 0x00;
+  b[3] = 0xFC;
+  b[4] = 0xFF;
+  b[5] = 0xFF;
+  b[6] = 0xFF;
+  b[7] = 0xFF;
 }
 
 // 0x2F3 every 1 s. DLC 3. Checksum is byte 2, not byte 0.
-//   byte 0      low nibble alive, high nibble undecoded (sent 0)
-//   byte 1      undecoded status, sent as 0
+//   byte 0      low nibble alive. The logged example 0C FC FE has
+//               alive 12 in this nibble.
+//   byte 1      0xFC in the logged frames
 //   byte 2      checksum over the id and the other two bytes
 inline void E92Build2F3(uint8_t b[3], uint8_t alive) {
   b[0] = (uint8_t)(alive & 0x0Fu);
-  b[1] = 0;
+  b[1] = 0xFC;
   b[2] = 0;
   b[2] = E92Checksum(0x2F3, b, 3, 2);
+}
+
+// 0x200 every 200 ms. Constant on this car: 00 80 C0 00 00 00 00 00.
+inline void E92Build200(uint8_t b[8]) {
+  b[0] = 0x00;
+  b[1] = 0x80;
+  b[2] = 0xC0;
+  b[3] = 0x00;
+  b[4] = 0x00;
+  b[5] = 0x00;
+  b[6] = 0x00;
+  b[7] = 0x00;
+}
+
+// 0x1B6 every 60 ms, DLC 7.
+// Running: FF 35 00 00 26 A0 15
+// Off, including KL15 with the motor not running: FF 00 00 00 00 AC 00
+// Byte 0 is always FF. Byte 3 is always 00. Byte 5 high nibble is
+// always 0xA. Bits 3:2 of byte 5 are 0 when running and 3 when off.
+inline void E92Build1B6(uint8_t b[7], bool running) {
+  b[0] = 0xFF;
+  b[3] = 0x00;
+  if (running) {
+    b[1] = 0x35;
+    b[2] = 0x00;
+    b[4] = 0x26;
+    b[5] = 0xA0;
+    b[6] = 0x15;
+  } else {
+    b[1] = 0x00;
+    b[2] = 0x00;
+    b[4] = 0x00;
+    b[5] = 0xAC;
+    b[6] = 0x00;
+  }
+}
+
+// 0x3B3 every 200 ms, DLC 6.
+// Running, once byte 1 has finished its ramp: 1F C8 00 00 00 F0
+// Off / KL15 only: 1F 00 FF 7F 00 F1
+// Byte 1 is power available, about 0.5 % per bit. 0xC8 is 100%.
+// It ramps 0 → 0xC8 over a few seconds after the motor starts.
+inline uint8_t E92PowerByte(uint32_t runMs) {
+  if (runMs >= 3000u)
+    return 0xC8;
+  return (uint8_t)((runMs * 0xC8u) / 3000u);
+}
+
+inline void E92Build3B3(uint8_t b[6], bool running, uint8_t power) {
+  b[0] = 0x1F;
+  if (!running) {
+    b[1] = 0x00;
+    b[2] = 0xFF;
+    b[3] = 0x7F;
+    b[4] = 0x00;
+    b[5] = 0xF1;
+    return;
+  }
+  if (power > 0xC8)
+    power = 0xC8;
+  b[1] = power;
+  b[2] = 0x00;
+  b[3] = 0x00;
+  b[4] = 0x00;
+  b[5] = 0xF0;
+}
+
+// 0x492 every 460 ms. Network management. Bytes 2-7 are always FF.
+// Byte 0 is the next node in the ring. Byte 1 is the opcode:
+// 0x01 alive, 0x02 ring, and 0x40 / 0x10 added for the status phases.
+//   wake, once:     12 01   addressed to itself
+//   ring, once:     17 02
+//   about 10 s:     17 42
+//   steady:         17 52   KL15 on, engine off or running
+enum E92NmPhase {
+  E92NmWake = 0,
+  E92NmRing = 1,
+  E92NmStatus = 2,
+  E92NmSteady = 3
+};
+
+// 22 frames * 460 ms = 10.1 s of 17 42 after the ring frame.
+static const int E92NmStatusFrames = 22;
+
+inline void E92Build492(uint8_t b[8], int phase) {
+  uint8_t dest = 0x17;
+  uint8_t op = 0x52;
+  if (phase == E92NmWake) {
+    dest = 0x12;
+    op = 0x01;
+  } else if (phase == E92NmRing) {
+    op = 0x02;
+  } else if (phase == E92NmStatus) {
+    op = 0x42;
+  }
+  b[0] = dest;
+  b[1] = op;
+  for (int i = 2; i < 8; i++)
+    b[i] = 0xFF;
+}
+
+// Call after a 0x492 has been sent. statusFrames counts 17 42 frames.
+inline int E92NmNext(int phase, int *statusFrames) {
+  if (phase == E92NmWake)
+    return E92NmRing;
+  if (phase == E92NmRing) {
+    *statusFrames = 0;
+    return E92NmStatus;
+  }
+  if (phase == E92NmStatus) {
+    *statusFrames += 1;
+    if (*statusFrames >= E92NmStatusFrames)
+      return E92NmSteady;
+    return E92NmStatus;
+  }
+  return E92NmSteady;
 }
 
 #endif /* BMW_E92_CODEC_H */
