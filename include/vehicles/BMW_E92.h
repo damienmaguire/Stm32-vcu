@@ -29,13 +29,14 @@
     and reading ignition and road speed back.
 
     Frames sent (rates from the MSD80 logs):
-      0x0A8, 0x0A9, 0x0AA   10 ms    torque, rpm, pedal, engine state
+      0x0A8, 0x0A9, 0x0AA   10 ms    four torques, rpm, pedal, engine state
       0x1B6                 60 ms    heat / load, logged running and off bytes
       0x1D0                100 ms    coolant, intake/ambient, pressure
       0x200                200 ms    constant 00 80 C0 00 00 00 00 00
       0x3B3                200 ms    power-available ramp (log median 201 ms)
       0x492                460 ms    network management, wake then 17 52
       0x2F3               1000 ms    slow alive frame
+      0x308                500 ms    alive and nibble checksum, KL15 or RUN
       0x3B4               1800 ms    12 V battery voltage
     The log median for 0x3B4 is 1799.9 ms. A "~200 ms" note in the
     task summary loses to that measurement.
@@ -46,7 +47,7 @@
       0x592, 0x612, 0x7E8 and every other 0x6xx id (diagnostic, OBD,
         and the 0x612 network frame that sits in that range).
       0x0AC, 0x0B4, 0x175, 0x38E: in the firmware, never seen on the car.
-      0x308, 0x332, 0x337, 0x381, 0x383, 0x38B, 0x3EF: real DME frames
+      0x332, 0x337, 0x381, 0x383, 0x38B, 0x3EF: real DME frames
         whose bytes are undecoded RAM mirrors. They are outside the
         set the dash needs, and a made-up value could look like a fault.
 */
@@ -79,6 +80,7 @@ private:
   void Send2F3();
   void Send3B3();
   void Send3B4();
+  void Send308();
   void Send492();
   E92Engine Picture();
   // Ignition on and the VCU actually in RUN. KL15 alone is not enough.
@@ -99,7 +101,10 @@ private:
   uint8_t aliveAA;
   uint8_t alive1D0;
   uint8_t alive2F3;
+  uint8_t alive308;
   uint16_t fuel;
+  // Set once the motor has been in RUN this wake. Cleared at sleep.
+  bool engineEverRun;
   // 0x492 sequence. Restarts each time we begin transmitting.
   bool busLive;
   int nmPhase;

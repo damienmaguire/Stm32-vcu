@@ -118,6 +118,45 @@ inline int E92TorqueRaw(bool ignitionOn, float potPercent) {
   return 16;
 }
 
+// The four different torque words in 0x0A9. Same 0.5 Nm/bit hypothesis
+// as the single word on 0x0AA. "Off" is ignition off. "On" is the
+// engine picture we show whenever the key is on, including idle.
+//   loss   drag. Off -114, idle -104, load toward about -83.
+//   avail  maximum available. Off +200, idle +305, load toward +443.
+//   tmin   minimum available. Off -114, idle -55, load toward +18.
+//   actual the torque also copied into 0x0A8 and 0x0AA.
+// The load ends are the middle of the logged bands. Pedal interpolation
+// is only a stand-in.
+struct E92TorqueSet {
+  int loss;
+  int avail;
+  int tmin;
+  int actual;
+};
+
+inline E92TorqueSet E92TorqueSetFrom(bool ignitionOn, float potPercent) {
+  E92TorqueSet t;
+  t.actual = E92TorqueRaw(ignitionOn, potPercent);
+  if (!ignitionOn) {
+    t.loss = -114;
+    t.avail = 200;
+    t.tmin = -114;
+    return t;
+  }
+  float pot = potPercent;
+  if (pot < 0.0f)
+    pot = 0.0f;
+  if (pot > 100.0f)
+    pot = 100.0f;
+  int pct = (int)(pot + 0.5f);
+  if (pct > 100)
+    pct = 100;
+  t.loss = -104 + (pct * 21) / 100;
+  t.avail = 305 + (pct * 138) / 100;
+  t.tmin = -55 + (pct * 73) / 100;
+  return t;
+}
+
 // What the engine trio should say, built the same way the E46/E39
 // class fills its DME frames: motor rpm for the tach, throttle for
 // the pedal, and a torque word that follows that pedal.
@@ -136,6 +175,9 @@ struct E92Engine {
   int pedal;
   int state;
   int torque;
+  int loss;
+  int avail;
+  int tmin;
 };
 
 inline E92Engine E92EnginePicture(int motorRpm, float potPercent,
@@ -144,7 +186,11 @@ inline E92Engine E92EnginePicture(int motorRpm, float potPercent,
   p.rpm = 0;
   p.pedal = 0;
   p.state = 0xF;
-  p.torque = E92TorqueRaw(false, 0.0f);
+  E92TorqueSet off = E92TorqueSetFrom(false, 0.0f);
+  p.torque = off.actual;
+  p.loss = off.loss;
+  p.avail = off.avail;
+  p.tmin = off.tmin;
   if (!ignitionOn)
     return p;
 
@@ -168,7 +214,11 @@ inline E92Engine E92EnginePicture(int motorRpm, float potPercent,
     p.state = 8;
     p.pedal = 0;
   }
-  p.torque = E92TorqueRaw(true, pot);
+  E92TorqueSet on = E92TorqueSetFrom(true, pot);
+  p.torque = on.actual;
+  p.loss = on.loss;
+  p.avail = on.avail;
+  p.tmin = on.tmin;
 
   int rpm = motorRpm;
   if (rpm < 0)
@@ -189,8 +239,10 @@ inline E92Engine E92EnginePicture(int motorRpm, float potPercent,
 //   byte 3      accelerator pedal, 0..254
 //   byte 4..5   rpm / 0.25, little-endian (so the raw word is rpm * 4)
 //   byte 6      high nibble engine state (0xF off, 8 idle, 9 pedal)
-//   byte 7      undecoded status, sent as 0
-inline void E92Build0AA(uint8_t b[8], uint8_t alive, const E92Engine &e) {
+//   byte 7      data, probably a pressure (hypothesis). 0x88 while the
+//               motor is in RUN, 0x00 otherwise. Not a checksum.
+inline void E92Build0AA(uint8_t b[8], uint8_t alive, const E92Engine &e,
+                        uint8_t byte7 = 0) {
   for (int i = 0; i < 8; i++)
     b[i] = 0;
 
@@ -219,6 +271,7 @@ inline void E92Build0AA(uint8_t b[8], uint8_t alive, const E92Engine &e) {
   b[4] = (uint8_t)(raw & 0xFFu);
   b[5] = (uint8_t)(raw >> 8);
   b[6] = (uint8_t)(state << 4);
+  b[7] = byte7;
   b[0] = E92Checksum(0x0AA, b, 8, 0);
 }
 
@@ -229,10 +282,13 @@ inline void E92Build0AA(uint8_t b[8], uint8_t alive, const E92Engine &e) {
 //   byte 2      rest of the first torque
 //   byte 3      low nibble undecoded (sent 0), high nibble second torque
 //   byte 4      rest of the second torque
-//   byte 5      not a logged constant, sent as 0
+//   byte 5      0x0D while cranking, for the first ~2 s after the engine
+//               catches, and at KL15 / sleep. 0x0C once running is steady.
 //   byte 6      0xCF, four torque-interface status fields
-//   byte 7      not a logged constant, sent as 0
-inline void E92Build0A8(uint8_t b[8], uint8_t alive, int torque) {
+//   byte 7      0x00 with KL15 on before the engine has run. 0x02 once
+//               it has, and that stays until the bus goes to sleep.
+inline void E92Build0A8(uint8_t b[8], uint8_t alive, int torque,
+                        uint8_t byte5 = 0, uint8_t byte7 = 0) {
   for (int i = 0; i < 8; i++)
     b[i] = 0;
   b[1] = (uint8_t)(alive & 0x0Fu);
@@ -247,24 +303,29 @@ inline void E92Build0A8(uint8_t b[8], uint8_t alive, int torque) {
   // 3 means the path is not configured. 0 means configured and OK.
   // 1 or 2 would be a timeout or an error. 0x0B6 is the only one of
   // these on this car, and it is always "no request".
+  b[5] = byte5;
   b[6] = 0xCF;
+  b[7] = byte7;
   b[0] = E92Checksum(0x0A8, b, 8, 0);
 }
 
-// 0x0A9 every 10 ms. Four more copies of the torque word. The real
-// DME sends four different internal torques; we only have one
-// stand-in, so all four carry it. DLC 8.
+// 0x0A9 every 10 ms. Four different signed 12-bit torques. DLC 8.
 //   byte 0      checksum
-//   byte 1      low nibble alive, high nibble undecoded flags (sent 0)
-//   byte 2..7   four signed 12-bit torques, packed back to back
-inline void E92Build0A9(uint8_t b[8], uint8_t alive, int torque) {
+//   byte 1      low nibble alive, high nibble left 0
+//   W1 loss     byte 2 plus the low nibble of byte 3
+//   W2 max      high nibble of byte 3 plus byte 4 (same packing as 0x0A8)
+//   W3 min      byte 5 plus the low nibble of byte 6
+//   W4 actual   high nibble of byte 6 plus byte 7 (same packing as 0x0A8)
+// W4 is the same count as the torque on 0x0A8 and 0x0AA.
+inline void E92Build0A9(uint8_t b[8], uint8_t alive, int loss, int avail,
+                        int tmin, int actual) {
   for (int i = 0; i < 8; i++)
     b[i] = 0;
   b[1] = (uint8_t)(alive & 0x0Fu);
-  E92Put12(b, 16, torque);
-  E92Put12(b, 28, torque);
-  E92Put12(b, 40, torque);
-  E92Put12(b, 52, torque);
+  E92Put12(b, 16, loss);
+  E92Put12(b, 28, avail);
+  E92Put12(b, 40, tmin);
+  E92Put12(b, 52, actual);
   b[0] = E92Checksum(0x0A9, b, 8, 0);
 }
 
@@ -290,20 +351,79 @@ inline int E92AmbientHpa(uint8_t raw) { return 2 * (int)raw + 598; }
 //   byte 1      a different temperature, same -48 encoding. The logs
 //               show 0x08 (invalid) before the motor is running, then
 //               about 12 C (byte 0x3C). It is not the coolant.
-//   byte 2      low nibble alive 0..14
+//   byte 2      low nibble alive 0..14. High nibble: bits 5:4 are 0 off,
+//               2 while the motor is in RUN. Bits 7:6 (set about 30 s
+//               after start) are left 0.
 //   byte 3      ambient pressure, hPa = 2 * byte + 598
 //   byte 4..5   fuel counter, little-endian, counts up while ignition is on
-//   byte 6..7   not constant in the logs, sent as 0
+//   byte 6      0x0D before the first start this wake, then 0x8D and it
+//               stays 0x8D after a stop until sleep
+//   byte 7      slowly varying in the logs; we send a constant 0xAA
 inline void E92Build1D0(uint8_t b[8], uint8_t alive, float coolantC,
-                        uint8_t airByte, uint8_t ambientByte, uint16_t fuel) {
+                        uint8_t airByte, uint8_t ambientByte, uint16_t fuel,
+                        uint8_t stateNibble = 0, uint8_t byte6 = 0,
+                        uint8_t byte7 = 0) {
   for (int i = 0; i < 8; i++)
     b[i] = 0;
   b[0] = E92CoolantByte(coolantC);
   b[1] = airByte;
-  b[2] = (uint8_t)(alive & 0x0Fu);
+  b[2] = (uint8_t)((alive & 0x0Fu) | ((stateNibble & 0x0Fu) << 4));
   b[3] = ambientByte;
   b[4] = (uint8_t)(fuel & 0xFFu);
   b[5] = (uint8_t)(fuel >> 8);
+  b[6] = byte6;
+  b[7] = byte7;
+}
+
+// Bytes that change with crank, run time and "has the engine run yet".
+// Cleared when we stop transmitting (the bus has gone to sleep).
+struct E92PhaseBytes {
+  uint8_t a8b5;
+  uint8_t a8b7;
+  uint8_t aab7;
+  uint8_t d0State;
+  uint8_t d0b6;
+  uint8_t d0b7;
+};
+
+inline E92PhaseBytes E92Phase(bool running, bool everRun, uint32_t runMs) {
+  E92PhaseBytes p;
+  // 0x0C only after the engine has been running for about 2 s.
+  // Cranking, the first 2 s, KL15-only and sleep all stay at 0x0D.
+  bool steady = running && runMs >= 2000u;
+  p.a8b5 = steady ? 0x0C : 0x0D;
+  p.a8b7 = everRun ? 0x02 : 0x00;
+  p.aab7 = running ? 0x88 : 0x00;
+  p.d0State = running ? 0x2 : 0x0;
+  p.d0b6 = everRun ? 0x8D : 0x0D;
+  p.d0b7 = 0xAA;
+  return p;
+}
+
+// 0x308 every 500 ms, DLC 3, while KL15 is on or the VCU is in RUN.
+//   byte 0  high nibble alive 0..14, low nibble a 4-bit checksum
+//   byte 1  0xD2
+//   byte 2  0xF1
+// Checksum: treat the low nibble as 0, fold the id plus the three
+// bytes the usual way, then fold that byte down to a nibble.
+inline uint8_t E92NibbleChecksum(uint16_t id, const uint8_t *data, uint8_t dlc,
+                                 int csumIndex) {
+  unsigned sum = id;
+  for (uint8_t i = 0; i < dlc; i++) {
+    uint8_t byte = data[i];
+    if ((int)i == csumIndex)
+      byte = (uint8_t)(byte & 0xF0u);
+    sum += byte;
+  }
+  unsigned fold = ((sum >> 8) + (sum & 0xFFu)) & 0xFFu;
+  return (uint8_t)(((fold >> 4) + (fold & 0x0Fu)) & 0x0Fu);
+}
+
+inline void E92Build308(uint8_t b[3], uint8_t alive) {
+  b[0] = (uint8_t)((alive & 0x0Fu) << 4);
+  b[1] = 0xD2;
+  b[2] = 0xF1;
+  b[0] = (uint8_t)(b[0] | E92NibbleChecksum(0x308, b, 3, 0));
 }
 
 // 0x3B4 battery voltage, 12-bit, about 0.015 V per bit (the scale is

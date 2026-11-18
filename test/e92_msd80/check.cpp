@@ -131,12 +131,14 @@ int main() {
   expect(a8[0] == refChecksum(0x0A8, a8, 8, 0), "0x0A8 checksum");
   expect(a8[0] == E92Checksum(0x0A8, a8, 8, 0), "0x0A8 codec checksum");
 
-  // 0x0A9: four torques, alive in byte 1, its own counter.
+  // 0x0A9: four different torques. Off is -114 / +200 / -114 / -114.
   uint8_t a9[8];
-  E92Build0A9(a9, 14, -114);
+  E92Build0A9(a9, 14, -114, 200, -114, -114);
   expect((a9[1] & 0x0F) == 14, "0x0A9 alive 14");
-  expect(read12(a9, 16) == -114 && read12(a9, 28) == -114, "0x0A9 torques 1");
-  expect(read12(a9, 40) == -114 && read12(a9, 52) == -114, "0x0A9 torques 2");
+  expect(read12(a9, 16) == -114, "0x0A9 loss torque");
+  expect(read12(a9, 28) == 200, "0x0A9 max torque");
+  expect(read12(a9, 40) == -114, "0x0A9 min torque");
+  expect(read12(a9, 52) == -114, "0x0A9 actual torque");
   expect(a9[0] == refChecksum(0x0A9, a9, 8, 0), "0x0A9 checksum");
 
   // 0x2F3 keeps the checksum in byte 2. Alive 3, byte 1 is the
@@ -308,6 +310,102 @@ int main() {
   }
   expect(statusCount == E92NmStatusFrames, "17 42 lasts about 10 s");
   expect(phase == E92NmSteady, "then 17 52 for good");
+
+  // Logged idle 0x0A9 = 7D 00 97 DF 12 C9 7F 01.
+  // W1/W2/W3/W4 decode near -104 / +305 / -55 / +16, and 0x7D is the
+  // checksum of those exact words.
+  int logW1 = read12(loggedA9, 16);
+  int logW2 = read12(loggedA9, 28);
+  int logW3 = read12(loggedA9, 40);
+  int logW4 = read12(loggedA9, 52);
+  expect(logW1 == -105, "logged W1 is -105, near -104");
+  expect(logW2 == 301, "logged W2 is 301, near +305");
+  expect(logW3 == -55, "logged W3 is -55");
+  expect(logW4 == 23, "logged W4 is 23, near +16");
+  uint8_t rebuiltA9[8];
+  E92Build0A9(rebuiltA9, 0, logW1, logW2, logW3, logW4);
+  bool a9match = true;
+  for (int i = 0; i < 8; i++)
+    if (rebuiltA9[i] != loggedA9[i])
+      a9match = false;
+  expect(a9match, "repacked logged 0x0A9 is byte-identical");
+  expect(rebuiltA9[0] == 0x7D, "logged 0x0A9 checksum is 0x7D");
+
+  E92Engine idlePic = E92EnginePicture(800, 0.0f, true);
+  expect(idlePic.loss == -104 && idlePic.avail == 305 && idlePic.tmin == -55 &&
+             idlePic.torque == 16,
+         "idle 0x0A9 words");
+  E92Engine offPic = E92EnginePicture(1000, 40.0f, false);
+  expect(offPic.loss == -114 && offPic.avail == 200 && offPic.tmin == -114 &&
+             offPic.torque == -114,
+         "off 0x0A9 words, W4 matches 0x0AA");
+  E92Engine fullPic = E92EnginePicture(2000, 100.0f, true);
+  expect(fullPic.loss == -83 && fullPic.avail == 443 && fullPic.tmin == 18 &&
+             fullPic.torque == 312,
+         "full pedal walks the load bands");
+  uint8_t runA9[8];
+  E92Build0A9(runA9, 0, idlePic.loss, idlePic.avail, idlePic.tmin,
+              idlePic.torque);
+  expect(read12(runA9, 52) == idlePic.torque, "W4 is the actual torque");
+  expect(runA9[0] == refChecksum(0x0A9, runA9, 8, 0), "idle 0x0A9 checksum");
+
+  // 0x0A8 byte 5 / byte 7 and 0x0AA byte 7 follow the run story.
+  E92PhaseBytes before = E92Phase(false, false, 0);
+  expect(before.a8b5 == 0x0D && before.a8b7 == 0x00, "KL15 before start");
+  expect(before.aab7 == 0x00 && before.d0State == 0 && before.d0b6 == 0x0D,
+         "0x0AA and 0x1D0 before start");
+  E92PhaseBytes catching = E92Phase(true, true, 500);
+  expect(catching.a8b5 == 0x0D && catching.a8b7 == 0x02, "first 2 s");
+  expect(catching.aab7 == 0x88 && catching.d0State == 0x2 &&
+             catching.d0b6 == 0x8D,
+         "running air and 0x1D0 state");
+  E92PhaseBytes steady = E92Phase(true, true, 2000);
+  expect(steady.a8b5 == 0x0C, "steady running byte 5 is 0x0C");
+  E92PhaseBytes stopped = E92Phase(false, true, 0);
+  expect(stopped.a8b5 == 0x0D && stopped.a8b7 == 0x02 && stopped.d0b6 == 0x8D,
+         "after a stop the latches stay until sleep");
+  expect(stopped.aab7 == 0x00 && stopped.d0State == 0,
+         "stopped is not running");
+  expect(before.d0b7 == 0xAA && steady.d0b7 == 0xAA, "0x1D0 byte 7 is 0xAA");
+
+  uint8_t phased[8];
+  E92Build0A8(phased, 3, 16, steady.a8b5, steady.a8b7);
+  expect(phased[5] == 0x0C && phased[6] == 0xCF && phased[7] == 0x02,
+         "steady 0x0A8 status bytes");
+  expect(phased[0] == refChecksum(0x0A8, phased, 8, 0),
+         "phased 0x0A8 checksum");
+  E92Engine aaPic = idlePic;
+  E92Build0AA(aa, 0, aaPic, steady.aab7);
+  expect(aa[7] == 0x88, "0x0AA byte 7 is 0x88 while running");
+  expect(aa[0] == refChecksum(0x0AA, aa, 8, 0), "running 0x0AA checksum");
+  E92Build0AA(aa, 0, aaPic, before.aab7);
+  expect(aa[7] == 0x00, "0x0AA byte 7 is 0 when not running");
+
+  uint8_t d1[8];
+  E92Build1D0(d1, 6, 20.0f, 0x3C, 0xC6, 0, steady.d0State, steady.d0b6,
+              steady.d0b7);
+  expect(d1[2] == 0x26, "running 0x1D0 byte 2 is state 2 plus alive 6");
+  expect(d1[6] == 0x8D && d1[7] == 0xAA, "0x1D0 bytes 6 and 7");
+
+  // 0x308. Alive 0: low nibble of byte 0 is 0 while summing.
+  // s = 0x308 + 0x00 + 0xD2 + 0xF1 = 0x4CB, fold 0xCF, nibble 0xB.
+  uint8_t m308[3];
+  E92Build308(m308, 0);
+  expect(m308[0] == 0x0B && m308[1] == 0xD2 && m308[2] == 0xF1,
+         "0x308 alive 0 is 0B D2 F1");
+  auto nibbleRef = [](uint8_t alive) {
+    unsigned s = 0x308u + ((alive & 0x0Fu) << 4) + 0xD2u + 0xF1u;
+    unsigned f = ((s >> 8) + (s & 0xFFu)) & 0xFFu;
+    return (uint8_t)(((f >> 4) + (f & 0x0Fu)) & 0x0Fu);
+  };
+  for (uint8_t alive = 0; alive < 15; alive++) {
+    E92Build308(m308, alive);
+    expect((m308[0] >> 4) == alive, "0x308 alive nibble");
+    expect((m308[0] & 0x0F) == nibbleRef(alive), "0x308 nibble checksum");
+    expect((m308[0] & 0x0F) == E92NibbleChecksum(0x308, m308, 3, 0),
+           "0x308 checksum agrees with the codec");
+    expect(m308[1] == 0xD2 && m308[2] == 0xF1, "0x308 payload bytes");
+  }
 
   if (fails != 0) {
     std::printf("%d checks failed\n", fails);

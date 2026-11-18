@@ -27,9 +27,9 @@ static const uint8_t kAmbientByte = 0xC6;
 BMW_E92::BMW_E92()
     : motorRpm(0), coolantC(0.0f), sendOn(false), sawCar(false), saw130(false),
       kl15(false), kl50(false), awakeHold(0), lost130(0), tick(0), aliveA8(0),
-      aliveA9(0), aliveAA(0), alive1D0(0), alive2F3(0), fuel(0), busLive(false),
-      nmPhase(E92NmWake), nmStatusFrames(0), nmWait(0), motorWasRun(false),
-      runMs(0) {}
+      aliveA9(0), aliveAA(0), alive1D0(0), alive2F3(0), alive308(0), fuel(0),
+      engineEverRun(false), busLive(false), nmPhase(E92NmWake),
+      nmStatusFrames(0), nmWait(0), motorWasRun(false), runMs(0) {}
 
 void BMW_E92::SetCanInterface(CanHardware *c) {
   can = c;
@@ -61,9 +61,12 @@ E92Engine BMW_E92::Picture() {
 
 void BMW_E92::Task10Ms() {
   if (!sendOn) {
-    // Next time the bus comes up, 0x492 starts again at 12 01.
+    // Sleep: the next wake starts 0x492 at 12 01, and the "engine has
+    // run" latches (0x0A8 byte 7, 0x1D0 byte 6) go back to the
+    // before-start values.
     busLive = false;
     motorWasRun = false;
+    engineEverRun = false;
     runMs = 0;
     return;
   }
@@ -77,6 +80,7 @@ void BMW_E92::Task10Ms() {
     if (!motorWasRun)
       runMs = 0;
     motorWasRun = true;
+    engineEverRun = true;
     if (runMs < 60000u)
       runMs += 10;
   } else {
@@ -105,6 +109,8 @@ void BMW_E92::Task10Ms() {
   nmWait++;
   if (nmWait >= 46)
     nmWait = 0;
+  if ((tick % 50u) == 0u)
+    Send308();
   if ((tick % 100u) == 0u)
     Send2F3();
   if ((tick % 180u) == 0u)
@@ -141,22 +147,29 @@ void BMW_E92::Task100Ms() {
 }
 
 void BMW_E92::Send0A8() {
+  E92Engine pic = Picture();
+  E92PhaseBytes phase = E92Phase(MotorRunning(), engineEverRun, runMs);
   uint8_t bytes[8];
-  E92Build0A8(bytes, aliveA8, Picture().torque);
+  // Both torque words here are the actual torque, same as 0x0AA and
+  // word 4 of 0x0A9.
+  E92Build0A8(bytes, aliveA8, pic.torque, phase.a8b5, phase.a8b7);
   aliveA8 = E92NextAlive(aliveA8);
   can->Send(0x0A8, bytes, 8);
 }
 
 void BMW_E92::Send0A9() {
+  E92Engine pic = Picture();
   uint8_t bytes[8];
-  E92Build0A9(bytes, aliveA9, Picture().torque);
+  E92Build0A9(bytes, aliveA9, pic.loss, pic.avail, pic.tmin, pic.torque);
   aliveA9 = E92NextAlive(aliveA9);
   can->Send(0x0A9, bytes, 8);
 }
 
 void BMW_E92::Send0AA() {
+  E92Engine pic = Picture();
+  E92PhaseBytes phase = E92Phase(MotorRunning(), engineEverRun, runMs);
   uint8_t bytes[8];
-  E92Build0AA(bytes, aliveAA, Picture());
+  E92Build0AA(bytes, aliveAA, pic, phase.aab7);
   aliveAA = E92NextAlive(aliveAA);
   can->Send(0x0AA, bytes, 8);
 }
@@ -176,7 +189,9 @@ void BMW_E92::Send1D0() {
   // 0x08 before the motor is running and about 12 C after that.
   uint8_t bytes[8];
   uint8_t air = MotorRunning() ? 0x3C : 0x08;
-  E92Build1D0(bytes, alive1D0, coolantC, air, kAmbientByte, fuel);
+  E92PhaseBytes phase = E92Phase(MotorRunning(), engineEverRun, runMs);
+  E92Build1D0(bytes, alive1D0, coolantC, air, kAmbientByte, fuel, phase.d0State,
+              phase.d0b6, phase.d0b7);
   alive1D0 = E92NextAlive(alive1D0);
   if (Ready())
     fuel++;
@@ -212,6 +227,17 @@ void BMW_E92::Send3B4() {
   uint8_t bytes[8];
   E92Build3B4(bytes, Param::GetFloat(Param::uaux));
   can->Send(0x3B4, bytes, 8);
+}
+
+void BMW_E92::Send308() {
+  // 0x308 every 500 ms, DLC 3, only with the key on or the VCU in RUN.
+  bool inRun = Param::GetInt(Param::opmode) == MOD_RUN;
+  if (!Ready() && !inRun)
+    return;
+  uint8_t bytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  E92Build308(bytes, alive308);
+  alive308 = E92NextAlive(alive308);
+  can->Send(0x308, bytes, 3);
 }
 
 void BMW_E92::Send492() {
