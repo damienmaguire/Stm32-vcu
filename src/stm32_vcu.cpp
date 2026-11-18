@@ -103,6 +103,7 @@
 #include "vehicles/BMW_E31.h"
 #include "vehicles/BMW_E39.h"
 #include "vehicles/BMW_E65.h"
+#include "vehicles/BMW_E92.h"
 #include "vehicles/BMW_F11.h"
 #include "vehicles/Can_VAG.h"
 #include "vehicles/V_Classic.h"
@@ -161,6 +162,7 @@ static uint16_t prechargeMinTime = 100;
 static BMW_E31 e31Vehicle;
 static BMW_E65 e65Vehicle;
 static BMW_E39 e39Vehicle;
+static BMW_E92 e92Vehicle;
 static BMW_F11 f11Vehicle;
 static Can_VAG vagVehicle;
 static SubaruVehicle subaruVehicle;
@@ -1018,6 +1020,10 @@ static void UpdateVehicle() {
   case vehicles::vBMW_F11:
     // F11: pretend to be the removed diesel ECU on PT-CAN.
     selectedVehicle = &f11Vehicle;
+    break;
+  case vehicles::vBMW_E92:
+    // E92: pretend to be the removed N43 MSD80 DME on PT-CAN.
+    selectedVehicle = &e92Vehicle;
     break;
   case vehicles::Classic:
     selectedVehicle = &classVehicle;
