@@ -145,6 +145,8 @@
 		<Unit filename="include/vehicles/BMW_E31.h" />
 		<Unit filename="include/vehicles/BMW_E39.h" />
 		<Unit filename="include/vehicles/BMW_E65.h" />
+		<Unit filename="include/vehicles/BMW_E92.h" />
+		<Unit filename="include/vehicles/BMW_E92_codec.h" />
 		<Unit filename="include/vehicles/Can_VAG.h" />
 		<Unit filename="include/vehicles/NissLeafMng.h" />
 		<Unit filename="include/vehicles/V_Classic.h" />
@@ -253,6 +255,7 @@
 		<Unit filename="src/vehicles/BMW_E31.cpp" />
 		<Unit filename="src/vehicles/BMW_E39.cpp" />
 		<Unit filename="src/vehicles/BMW_E65.cpp" />
+		<Unit filename="src/vehicles/BMW_E92.cpp" />
 		<Unit filename="src/vehicles/Can_VAG.cpp" />
 		<Unit filename="src/vehicles/NissLeafMng.cpp" />
 		<Unit filename="src/vehicles/V_Classic.cpp" />
