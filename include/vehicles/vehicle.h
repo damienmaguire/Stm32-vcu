@@ -51,6 +51,7 @@ public:
     return 50;
   } // 100% - all front, 0% all rear
   virtual bool EnableTractionControl() { return false; }
+  virtual float AdjustThrottle(float throttle) { return throttle; }
   virtual bool Ready() = 0;
   virtual bool Start() { return Param::GetBool(Param::din_start); }
   virtual void SetCanInterface(CanHardware *c) { can = c; }
