@@ -34,7 +34,7 @@
 #define VALUE_ENTRY_HW(name, unit, id, minHWVer) VALUE_ENTRY(name, unit, id)
 #endif
 
-// Next param id (increase when adding new parameter!): 157
+// Next param id (increase when adding new parameter!): 163
 /*              category     name         unit       min     max     default id
  * [minHWVer]
  */
@@ -120,6 +120,7 @@
   PARAM_ENTRY(CAT_BMS, BMS_VmaxLimit, "V", 0, 10, 4.2, 93)                     \
   PARAM_ENTRY(CAT_BMS, BMS_TminLimit, "°C", -100, 100, 5, 94)                  \
   PARAM_ENTRY(CAT_BMS, BMS_TmaxLimit, "°C", -100, 100, 50, 95)                 \
+  PARAM_ENTRY(CAT_BMS, BMS_IgnoreMaxRate, ONOFF, 0, 1, 0, 162)                 \
   PARAM_ENTRY(CAT_HEATER, Heater, HTTYPE, 0, 8, 0, 57)                         \
   PARAM_ENTRY(CAT_HEATER, Control, HTCTRL, 0, 2, 0, 58)                        \
   PARAM_ENTRY(CAT_HEATER, HeatPwr, "W", 0, 6500, 0, 59)                        \
