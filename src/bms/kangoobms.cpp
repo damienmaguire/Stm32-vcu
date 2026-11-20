@@ -133,7 +133,11 @@ void KangooBMS::Task100Ms() {
   Param::SetInt(Param::BMS_MaxInput, maxInput);
   Param::SetInt(Param::BMS_MaxOutput, maxOutput);
   Param::SetInt(Param::BMS_Isolation, isolationResistance);
-  Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
+  if (Param::GetInt(Param::BMS_IgnoreMaxRate)) {
+    Param::SetInt(Param::BMS_ChargeLim, 999);
+  } else {
+    Param::SetInt(Param::BMS_ChargeLim, MaxChargeCurrent());
+  }
 
   // On the Kangoo charging is positive current, discharge is negative
   if (BMSDataValid()) {
