@@ -142,13 +142,13 @@ void BMW_E65::handle480(uint32_t data[2]) {
 }
 
 void BMW_E65::Task10Ms() {
-  if (CANWake) {
+  if (CANWake && terminal15On) {
     SendAbsDscMessages(Param::GetBool(Param::din_brake));
   }
 }
 
 void BMW_E65::Task100Ms() {
-  if (CANWake) {
+  if (CANWake && terminal15On) {
     uint32_t data[2];
 
     data[0] = 0x8261; // sets max rpm on tach (temp thing)
@@ -174,7 +174,7 @@ void BMW_E65::Task100Ms() {
 void BMW_E65::Task200Ms() {
   uint8_t bytes[8];
 
-  if (CANWake) {
+  if (CANWake && terminal15On) {
     // update shitPos over CAN
     int selectedDir = Param::GetInt(Param::dir);
 
@@ -236,7 +236,12 @@ void BMW_E65::Task200Ms() {
   }
 }
 
-void BMW_E65::DashOff() { this->dashInit = false; }
+void BMW_E65::DashOff() {
+  this->dashInit = false;
+  if (!terminal15On) {
+    CANWake = false;
+  }
+}
 
 void BMW_E65::SendAbsDscMessages(bool Brake_In) {
 
