@@ -319,9 +319,16 @@
   VALUE_ENTRY(SP51UMin, "V", 2147)                                             \
   VALUE_ENTRY(SP51IDchg, "A", 2148)                                            \
   VALUE_ENTRY(MthChkErr, "", 2149)                                             \
-  VALUE_ENTRY(MthGateErr, "", 2150)
+  VALUE_ENTRY(MthGateErr, "", 2150)                                            \
+  VALUE_ENTRY(GsFrA, "kph", 2151)                                              \
+  VALUE_ENTRY(GsFrB, "kph", 2152)                                              \
+  VALUE_ENTRY(GsRrA, "kph", 2153)                                              \
+  VALUE_ENTRY(GsRrB, "kph", 2154)                                              \
+  VALUE_ENTRY(GsBrkAmt, "dig", 2155)                                           \
+  VALUE_ENTRY(GsSteer, "dig", 2156)                                            \
+  VALUE_ENTRY(GsGear, GSGEAR, 2157)
 
-// Next value Id: 2151
+// Next value Id: 2158
 
 // Dead params
 /*
@@ -447,6 +454,7 @@
 #define DIRLIM "0=None, 1=SpeedThres, 2=SpeedBrake"
 #define ABOVEBELOW "0=BelowOF,1=BelowScale, 2=AboveOF, 3=AboveScale"
 #define DRIVEINHIBITMODES "0=Off,1=Plug detect"
+#define GSGEAR "0=P, 1=R, 2=N, 3=D"
 
 #define CAN_PERIOD_100MS 0
 #define CAN_PERIOD_10MS 1
