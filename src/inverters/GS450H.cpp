@@ -72,8 +72,9 @@ static uint8_t *processing_rx_buffer = rx_buffer_b; // CPU reads here
 // Inverter processing delay counter
 static uint8_t inverter_delay_counter = 0;
 // Prius (case 7) and GS300H (case 12) still wait this long. The GS450H
-// path does not: OEM exchanges about every 4 ms (0x02FC2E, phase = tick
-// & 3) and the RX-complete flag is the real gate.
+// path does not. OEM exchange 0x02FC2E is a 4-tick machine on the
+// FA20/FA22 port with DMAC channels 0 and 4. CSIB1 is a separate 66+66
+// on-board link and is not this frame.
 static const uint8_t INVERTER_PROCESSING_TIME_MS =
     3; // Give inverter time to process
 
@@ -104,6 +105,8 @@ static int16_t mg1_final = 0;
 static int16_t mg2_final = 0;
 // GS450H frames rejected by the uint16 checksum. Saturates at 65535.
 static uint16_t mth_csum_errors = 0;
+// Checksum-good GS450H frames whose MTH[81] bit 0 was clear. Saturates.
+static uint16_t mth_gate_errors = 0;
 
 static void dma_read(uint8_t *data, int size);
 static void dma_write(const uint8_t *data, int size);
@@ -582,9 +585,10 @@ void GS450HClass::CalcHTMChecksum(uint16_t len) {
   htm_data[len - 1] = htm_checksum >> 8;
 }
 
-// OEM MTH check at 0x02FD0E: uint16 little-endian sum of [0 .. len-3].
-// The old helper summed mth_data, which is only filled after a frame is
-// accepted, so it was scoring the previous good frame.
+// OEM MTH checksum at 0x02FD0E, same uint16 little-endian sum the HTM
+// writer uses at 0x02FEDA: bytes [0 .. len-3]. The old helper summed
+// mth_data, which is only filled after a frame is accepted, so it was
+// scoring the previous good frame.
 static bool Gs450hMthChecksumOk(const uint8_t *data, uint16_t len) {
   uint16_t sum = 0;
 
@@ -738,6 +742,7 @@ void GS450HClass::Task1Ms() {
   Param::SetInt(Param::DMA_ConsecFail, consecutive_failures);
   Param::SetInt(Param::HTM_State, htm_state);
   Param::SetInt(Param::MthChkErr, mth_csum_errors);
+  Param::SetInt(Param::MthGateErr, mth_gate_errors);
 
   switch (htm_state) {
   case 0:
@@ -777,10 +782,11 @@ void GS450HClass::Task1Ms() {
         inv_status = 1;
     }
     // Skip the 3 ms pause. Case 3 waits on the DMA flag, so the
-    // exchange lands near the OEM 4 ms (arm, send, RX done + build).
-    // TIM2 and the USART stay at the existing 500 kHz. The OEM CSIB1
-    // bit clock is not proven (the 500 kHz figure was CSIB0), and the
-    // bit order is not changed either.
+    // exchange lands near the OEM 4 ms at 0x02FC2E (arm, send, RX done
+    // + build). Lengths stay 80 out / 100 in and REQ polarity is
+    // unchanged. TIM2 and the USART stay at the existing 500 kHz, and
+    // the bit order is unchanged. The OEM clock is the FA20/FA22 port,
+    // not CSIB1, and it has not been measured on this harness.
     htm_state = 3;
     break;
   case 2:
@@ -793,13 +799,23 @@ void GS450HClass::Task1Ms() {
     // Wait for RX completion with timeout
     if (rx_complete_flag) {
       rx_complete_flag = false;
-      // Score the buffer the DMA just filled. OEM accepts only the
-      // uint16 sum. The 8-bit alternative is not used on this path.
-      // A reject keeps the last good speeds, temps and voltage.
-      if (!Gs450hMthChecksumOk(processing_rx_buffer, 100)) {
+      // Score the buffer the DMA just filled. OEM accepts the uint16
+      // sum (0x02FD0E) and then MTH[81] bit 0 (0x02FD42). The 8-bit
+      // alternative is not used on this path. A reject keeps the last
+      // good speeds, temps and voltage.
+      bool accept = Gs450hMthChecksumOk(processing_rx_buffer, 100);
+      if (!accept) {
         if (mth_csum_errors < 65535)
           mth_csum_errors++;
-      } else {
+      } else if ((processing_rx_buffer[81] & 0x01) == 0) {
+        // Count every checksum-good frame the OEM would still drop.
+        // MthGateEn defaults off, so the first car test only counts.
+        if (mth_gate_errors < 65535)
+          mth_gate_errors++;
+        if (Param::GetBool(Param::MthGateEn))
+          accept = false;
+      }
+      if (accept) {
         consecutive_failures = 0;
         statusInv = 1;
         dc_bus_voltage =

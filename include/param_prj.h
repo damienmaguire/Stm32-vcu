@@ -26,7 +26,7 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 172
+// Next param id (increase when adding new parameter!): 173
 // Gs2Slew, Gs1Slew, GsFlagStep and GsTqBand shape GS450H inverter torque.
 // The OEM addresses are in GS450H.cpp. The GS450h vehicle class uses
 // VehicleCan only.
@@ -92,6 +92,7 @@
   PARAM_ENTRY(CAT_LEXUS, Gs1Slew, "dig", 1, 4000, 64, 169)                     \
   PARAM_ENTRY(CAT_LEXUS, GsFlagStep, "dig", 1, 4000, 128, 170)                 \
   PARAM_ENTRY(CAT_LEXUS, GsTqBand, "dig", 0, 1000, 0, 171)                     \
+  PARAM_ENTRY(CAT_LEXUS, MthGateEn, ONOFF, 0, 1, 0, 172)                       \
   PARAM_ENTRY(CAT_CRUISE, cruisestep, "rpm", 1, 1000, 200, 29)                 \
   PARAM_ENTRY(CAT_CRUISE, cruiseramp, "rpm/100ms", 1, 1000, 20, 30)            \
   PARAM_ENTRY(CAT_CRUISE, regenlevel, "", 0, 3, 2, 31)                         \
@@ -317,9 +318,10 @@
   VALUE_ENTRY(SP51UMax, "V", 2146)                                             \
   VALUE_ENTRY(SP51UMin, "V", 2147)                                             \
   VALUE_ENTRY(SP51IDchg, "A", 2148)                                            \
-  VALUE_ENTRY(MthChkErr, "", 2149)
+  VALUE_ENTRY(MthChkErr, "", 2149)                                             \
+  VALUE_ENTRY(MthGateErr, "", 2150)
 
-// Next value Id: 2150
+// Next value Id: 2151
 
 // Dead params
 /*
