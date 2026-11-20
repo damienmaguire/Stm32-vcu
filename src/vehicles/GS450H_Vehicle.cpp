@@ -21,8 +21,14 @@
 #include "digio.h"
 
 /* One bus: VehicleCan, the chassis bus (firmware bus 2 / logger bus 0).
- * Periods below are the firmware tick counts at ROM 0x8654 (1 tick =
- * 1.024 ms), used as milliseconds.
+ * The OEM period unit is 1.024 ms. The logged periods are 16.39, 23.57,
+ * 31.76 and 1000.7 ms. Task1Ms steps by 1 ms, and each step adds 1000 us
+ * to a clock so those periods stay exact on average.
+ *
+ * TX starts 280 ms after the chassis bus is seen, or 280 ms after
+ * ignition if no frame has arrived. The six frames then start together,
+ * in the logged order relative to 0x2C6, rounded to this 1 ms tick.
+ * Ignition off stops all six in the same tick.
  *
  * Toyota checksum, where the OEM checks it:
  *   last = (ID>>8) + (ID&0xFF) + DLC + sum(data[0 .. DLC-2])
@@ -31,13 +37,20 @@
  * SelectDirection already chose (2 park, -1 reverse, 0 neutral,
  * 1 drive). That is published as:
  *   0x540 byte 1 high nibble, one-hot: 0x80 P, 0x40 R, 0x20 N, 0x10 D.
- *     P/R/D are [C] in the creep log. N is [I] (firmware shift logic,
- *     not seen in a log).
- *   0x120 byte 5 low nibble: 0 P, 1 R, 2 N, 3 D. N is [I].
- * Byte 0 of 0x540 stays the logged header 0x25. The other bits of
- * byte 1, and the high nibble of 0x120 byte 5, stay as logged.
+ *   0x120 byte 5 low nibble: 0 P, 1 R, 2 N, 3 D.
+ * P, R, N and D are in the creep log. Neutral is 0x540 `A5 20 00 00`
+ * and 0x120 byte 5 `0x22`.
+ * The other bits of 0x540 byte 1, and the high nibble of 0x120 byte 5,
+ * stay as logged. A gear change sends 0x540 at once with header 0xA5
+ * and restarts its 1 s period; the frames after that use header 0x25.
+ * The first 0x540 after TX starts also uses 0xA5.
  * Neutral while the car is not in RUN and is stopped is sent as Park,
  * so a setup with no park switch does not sit in N on the dash.
+ *
+ * 0x120 byte 6 is 0x24 while opmode is RUN and 0x20 otherwise. The OEM
+ * raises bit 2 about 30 ms before the dash Ready lamp. This class sets
+ * it for the whole time ZV is ready to drive, which is as close as the
+ * 16 ms frame can get.
  *
  * 0x244 byte 6 follows the accelerator in creep, 0x00-0x0D [I]. Those
  * counts are not a known fraction of potnom, so the logged byte stays.
@@ -52,10 +65,12 @@
  * the backup.
  */
 
+enum { TX_2C6 = 0, TX_244, TX_120, TX_124, TX_126, TX_540, TX_N };
+
 struct GsTx {
   uint16_t id;
-  uint16_t periodMs;
-  uint16_t phase;
+  uint32_t periodUs;
+  uint32_t offsetUs;
   uint8_t dlc;
   uint8_t checksum;
   const uint8_t *idle;
@@ -68,11 +83,16 @@ static const uint8_t k244[8] = {0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5E};
 static const uint8_t k2C6[8] = {0x00, 0x00, 0x10, 0x19, 0x00, 0x00, 0x00, 0xF9};
 static const uint8_t k540[4] = {0x25, 0x80, 0x00, 0x00};
 
-static const GsTx kTx[] = {
-    {0x120, 16, 1, 8, 1, k120}, {0x124, 16, 2, 6, 1, k124},
-    {0x126, 16, 3, 8, 1, k126}, {0x244, 23, 4, 8, 1, k244},
-    {0x2C6, 31, 5, 8, 1, k2C6}, {0x540, 977, 10, 4, 0, k540},
+// Offsets are the logged gaps after 0x2C6, rounded to the 1 ms tick:
+// 1.9, 5.1, 7.2, 9.4 and 27.7 ms.
+static const GsTx kTx[TX_N] = {
+    {0x2C6, 31760, 0, 8, 1, k2C6},    {0x244, 23570, 2000, 8, 1, k244},
+    {0x120, 16390, 5000, 8, 1, k120}, {0x124, 16390, 7000, 6, 1, k124},
+    {0x126, 16390, 9000, 8, 1, k126}, {0x540, 1000700, 28000, 4, 0, k540},
 };
+
+static const uint32_t kTxWaitUs = 280000;
+static const uint32_t k2C6QuietUs = 140000;
 
 // 0x0B0 / 0x0B2: firmware uses the speed only when these b4 bits are
 // clear (b4.1, b4.2, b4.5, b4.6). b6 is the per-wheel flag byte; 0x88
@@ -148,25 +168,92 @@ void GS450H_Vehicle::SetCanInterface(CanHardware *c) {
 
 bool GS450H_Vehicle::Ready() { return DigIo::t15_digi.Get(); }
 
+void GS450H_Vehicle::NoteBus() {
+  if (!DigIo::t15_digi.Get() || busSeen)
+    return;
+  busSeen = true;
+  busAt = nowUs;
+}
+
+void GS450H_Vehicle::ResetTx() {
+  ignWas = false;
+  busSeen = false;
+  txOn = false;
+  haveGear = false;
+  next540A5 = true;
+}
+
+void GS450H_Vehicle::SendFrame(int slot, bool event540) {
+  const GsTx *f = &kTx[slot];
+  uint8_t b[8];
+
+  for (uint8_t n = 0; n < f->dlc && n < 8; n++)
+    b[n] = f->idle[n];
+  ApplyGear(f->id, b);
+  if (f->id == 0x540)
+    b[0] = event540 ? 0xA5 : 0x25;
+  // Byte 2 stays 0 for the first 140 ms of transmission, then 0x10.
+  if (f->id == 0x2C6 && (int32_t)(nowUs - txOrigin) < (int32_t)k2C6QuietUs)
+    b[2] = 0x00;
+  // Bit 2 of byte 6 is the Ready flag: 0x24 in RUN, 0x20 otherwise.
+  if (f->id == 0x120)
+    b[6] = (Param::GetInt(Param::opmode) == MOD_RUN) ? 0x24 : 0x20;
+  if (f->checksum)
+    b[f->dlc - 1] = ToyotaSum(f->id, b, f->dlc);
+  can->Send(f->id, b, f->dlc);
+}
+
 void GS450H_Vehicle::Task1Ms() {
-  tick++;
+  nowUs += 1000;
   Age(&age230);
   Age(&age320);
-  if (!DigIo::t15_digi.Get() || can == 0)
+  if (!DigIo::t15_digi.Get() || can == 0) {
+    if (!DigIo::t15_digi.Get())
+      ResetTx();
+    return;
+  }
+  if (!ignWas) {
+    ignWas = true;
+    ignAt = nowUs;
+  }
+  if (!txOn) {
+    // Bus wake after ignition wins. Otherwise count from ignition.
+    uint32_t ref = ignAt;
+    if (busSeen && (int32_t)(busAt - ignAt) >= 0)
+      ref = busAt;
+    if ((int32_t)(nowUs - (ref + kTxWaitUs)) >= 0) {
+      txOn = true;
+      txOrigin = nowUs;
+      next540A5 = true;
+      haveGear = false;
+      for (int i = 0; i < TX_N; i++)
+        dueUs[i] = nowUs + kTx[i].offsetUs;
+    }
+  }
+  if (!txOn)
     return;
 
-  for (unsigned i = 0; i < sizeof(kTx) / sizeof(kTx[0]); i++) {
-    const GsTx *f = &kTx[i];
-    uint8_t b[8];
+  int gear = GearCode();
+  if (!haveGear) {
+    lastGear = gear;
+    haveGear = true;
+  } else if (gear != lastGear) {
+    lastGear = gear;
+    SendFrame(TX_540, true);
+    dueUs[TX_540] = nowUs + kTx[TX_540].periodUs;
+    next540A5 = false;
+  }
 
-    if ((tick % f->periodMs) != f->phase)
+  for (int i = 0; i < TX_N; i++) {
+    if ((int32_t)(nowUs - dueUs[i]) < 0)
       continue;
-    for (uint8_t n = 0; n < f->dlc && n < 8; n++)
-      b[n] = f->idle[n];
-    ApplyGear(f->id, b);
-    if (f->checksum)
-      b[f->dlc - 1] = ToyotaSum(f->id, b, f->dlc);
-    can->Send(f->id, b, f->dlc);
+    bool event540 = (i == TX_540) && next540A5;
+    SendFrame(i, event540);
+    if (i == TX_540)
+      next540A5 = false;
+    do {
+      dueUs[i] += kTx[i].periodUs;
+    } while ((int32_t)(nowUs - dueUs[i]) >= 0);
   }
   (void)motorRpm;
 }
@@ -210,6 +297,7 @@ static void PublishWheels(const uint8_t *b, Param::PARAM_NUM a,
 
 void GS450H_Vehicle::DecodeCAN(int id, uint32_t *data) {
   uint8_t *b = (uint8_t *)data;
+  NoteBus();
 
   if (id == 0x0B0 || id == 0x0B2) {
     if (!ToyotaOk((uint16_t)id, b, 8))
@@ -243,8 +331,8 @@ void GS450H_Vehicle::DecodeCAN(int id, uint32_t *data) {
     // Byte 2 is the brake amount [C]. The unit is not known.
     Param::SetInt(Param::GsBrkAmt, b[2]);
   } else if (id == 0x025) {
-    // Not an OEM HV-ECU receive frame, and the 1.5 deg/bit scale is
-    // [H], so this is the raw signed 12-bit count only.
+    // The OEM HV-ECU does not receive 0x025, so it has no checksum to
+    // copy. 1.5 deg/bit is [H]. This is the raw signed 12-bit count.
     int raw = ((b[0] & 0x0F) << 8) | b[1];
     if ((raw & 0x800) != 0)
       raw -= 0x1000;
