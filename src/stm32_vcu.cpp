@@ -1284,8 +1284,6 @@ static void SetCanFilters() {
 
   selectedInverter->SetCanInterface(inverter_can);
   selectedVehicle->SetCanInterface(vehicle_can);
-  if (Param::GetInt(Param::Vehicle) == vehicles::vGS450H)
-    gs450hVehicle.SetChassisCan(canInterface[Param::GetInt(Param::Gs450Bus)]);
   selectedCharger->SetCanInterface(charger_can);
   selectedChargeInt->SetCanInterface(lim_can);
   selectedBMS->SetCanInterface(bms_can);
@@ -1340,7 +1338,6 @@ void Param::Change(Param::PARAM_NUM paramNum) {
     break;
   case Param::InverterCan:
   case Param::VehicleCan:
-  case Param::Gs450Bus:
   case Param::ShuntCan:
   case Param::LimCan:
   case Param::ChargerCan:

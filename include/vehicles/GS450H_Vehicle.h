@@ -20,19 +20,15 @@
 #ifndef GS450H_VEHICLE_H
 #define GS450H_VEHICLE_H
 
-/* Stand-in for the Lexus GS450h HV-ECU (89983-30200) on the car CAN.
- * VehicleCan is firmware bus 1 (logger bus 1, ECM/body). Gs450Bus is
- * firmware bus 2 (logger bus 0, chassis). Frames the OEM sends on both
- * are sent on both when the two controllers differ.
+/* Stand-in for the Lexus GS450h HV-ECU on the one CAN that stays in
+ * the car. That is VehicleCan. The other OEM link only joined the
+ * engine ECM to the HV-ECU, and both of those ECUs are removed, so
+ * this class does not open a second bus and does not listen for ECM
+ * frames.
  *
- * GsEcm bits, from the ECM frames this class receives:
- *   b0  0x039 byte1 bit1   engine stopped
- *   b1  0x039 byte2 0x77   engine-off sentinel
- *   b2  0x3C8 byte0 bit7   crank request
- *   b3  0x3C8 byte4 bit2   engine running
- *   b4  0x3CF byte0 bit4   ECM init done
- *   b5  a checksum-good ECM frame has been seen
- *   b6  0x484 seen recently (no checksum on that frame)
+ * What it sends are the HV frames logged on firmware bus 2 / logger
+ * bus 0, the bus the remaining modules (brake, steering, body) are
+ * still on. See GS450H_Vehicle.cpp.
  */
 
 #include "vehicles/vehicle.h"
@@ -41,27 +37,14 @@
 class GS450H_Vehicle : public Vehicle {
 public:
   void SetCanInterface(CanHardware *c);
-  void SetChassisCan(CanHardware *c);
   void Task1Ms();
-  void Task100Ms();
-  void DecodeCAN(int id, uint32_t *data);
   void SetRevCounter(int speed) { motorRpm = speed; }
   void SetTemperatureGauge(float temp) { (void)temp; }
   bool Ready();
 
 private:
-  CanHardware *chassis = 0;
   uint32_t tick = 0;
   int16_t motorRpm = 0;
-  uint16_t age039 = 10000;
-  uint16_t age3C8 = 10000;
-  uint16_t age3CF = 10000;
-  uint16_t age484 = 10000;
-  uint8_t ecmFlags = 0;
-
-  void SendOn(CanHardware *bus, uint32_t id, uint8_t *b, uint8_t dlc);
-  void Dispatch(uint8_t which, uint32_t id, uint8_t *b, uint8_t dlc);
-  void AgeEcm();
 };
 
 #endif /* GS450H_VEHICLE_H */

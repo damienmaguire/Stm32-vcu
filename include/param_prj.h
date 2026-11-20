@@ -26,16 +26,15 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 173
+// Next param id (increase when adding new parameter!): 172
 // Gs2Slew, Gs1Slew, GsFlagStep and GsTqBand shape GS450H inverter torque.
-// The OEM addresses are in GS450H.cpp. Gs450Bus is the chassis CAN for
-// the GS450h vehicle class (VehicleCan is the ECM/body bus).
+// The OEM addresses are in GS450H.cpp. The GS450h vehicle class uses
+// VehicleCan only.
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 9, 0, 5)                       \
   PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 11, 0, 6)                       \
-  PARAM_ENTRY(CAT_SETUP, Gs450Bus, CAN_DEV, 0, 1, 0, 172)                      \
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 5, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
@@ -318,10 +317,9 @@
   VALUE_ENTRY(SP51UMax, "V", 2146)                                             \
   VALUE_ENTRY(SP51UMin, "V", 2147)                                             \
   VALUE_ENTRY(SP51IDchg, "A", 2148)                                            \
-  VALUE_ENTRY(MthChkErr, "", 2149)                                             \
-  VALUE_ENTRY(GsEcm, GSECM, 2150)
+  VALUE_ENTRY(MthChkErr, "", 2149)
 
-// Next value Id: 2151
+// Next value Id: 2150
 
 // Dead params
 /*
@@ -447,8 +445,6 @@
 #define DIRLIM "0=None, 1=SpeedThres, 2=SpeedBrake"
 #define ABOVEBELOW "0=BelowOF,1=BelowScale, 2=AboveOF, 3=AboveScale"
 #define DRIVEINHIBITMODES "0=Off,1=Plug detect"
-#define GSECM                                                                  \
-  "b0=EngStop, b1=Sent77, b2=Crank, b3=Run, b4=Init, b5=Seen, b6=Rx484"
 
 #define CAN_PERIOD_100MS 0
 #define CAN_PERIOD_10MS 1
