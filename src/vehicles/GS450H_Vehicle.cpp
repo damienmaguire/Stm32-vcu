@@ -175,9 +175,9 @@ void GS450H_Vehicle::AgeEcm() {
   // A bit longer than the firmware supervision limits (0x039 ~83 ms,
   // 0x3C8 ~154 ms, 0x3CF ~233 ms, 0x484 ~1294 ms).
   if (age039 > 100)
-    ecmFlags &= (uint8_t) ~(ECM_ENG_STOP | ECM_SENTINEL);
+    ecmFlags &= (uint8_t)~(ECM_ENG_STOP | ECM_SENTINEL);
   if (age3C8 > 250)
-    ecmFlags &= (uint8_t) ~(ECM_CRANK | ECM_RUNNING);
+    ecmFlags &= (uint8_t)~(ECM_CRANK | ECM_RUNNING);
   if (age3CF > 400)
     ecmFlags &= (uint8_t)~ECM_INIT;
   if (age484 > 3000)
