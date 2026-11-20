@@ -41,16 +41,29 @@ public:
   bool Ready();
 
 private:
-  uint32_t tick = 0;
+  uint32_t nowUs = 0;
+  uint32_t ignAt = 0;
+  uint32_t busAt = 0;
+  uint32_t txOrigin = 0;
+  uint32_t dueUs[6] = {};
   int16_t motorRpm = 0;
+  int lastGear = 0;
   uint16_t age230 = 10000;
   uint16_t age320 = 10000;
+  bool ignWas = false;
+  bool busSeen = false;
+  bool txOn = false;
+  bool haveGear = false;
+  bool next540A5 = true;
   bool sw230 = false;
   bool sw320 = false;
 
   int GearCode() const;
   void ApplyGear(uint16_t id, uint8_t *b) const;
   void ApplyBrake() const;
+  void NoteBus();
+  void ResetTx();
+  void SendFrame(int slot, bool event540);
 };
 
 #endif /* GS450H_VEHICLE_H */
