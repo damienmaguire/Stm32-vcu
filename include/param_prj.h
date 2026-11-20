@@ -26,12 +26,16 @@
    2. Temporary parameters (id = 0)
    3. Display values
  */
-// Next param id (increase when adding new parameter!): 168
+// Next param id (increase when adding new parameter!): 173
+// Gs2Slew, Gs1Slew, GsFlagStep and GsTqBand shape GS450H inverter torque.
+// The OEM addresses are in GS450H.cpp. Gs450Bus is the chassis CAN for
+// the GS450h vehicle class (VehicleCan is the ECM/body bus).
 /*              category     name         unit       min     max     default id
  */
 #define PARAM_LIST                                                             \
   PARAM_ENTRY(CAT_SETUP, Inverter, INVMODES, 0, 9, 0, 5)                       \
-  PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 10, 0, 6)                       \
+  PARAM_ENTRY(CAT_SETUP, Vehicle, VEHMODES, 0, 11, 0, 6)                       \
+  PARAM_ENTRY(CAT_SETUP, Gs450Bus, CAN_DEV, 0, 1, 0, 172)                      \
   PARAM_ENTRY(CAT_SETUP, GearLvr, SHIFTERS, 0, 5, 0, 108)                      \
   PARAM_ENTRY(CAT_SETUP, Transmission, TRNMODES, 0, 1, 0, 78)                  \
   PARAM_ENTRY(CAT_SETUP, interface, CHGINT, 0, 4, 0, 39)                       \
@@ -85,6 +89,10 @@
   PARAM_ENTRY(CAT_THROTTLE, throtrpmfilt, "rpm/10ms", 0.1, 200, 15, 131)       \
   PARAM_ENTRY(CAT_LEXUS, Gear, LOWHIGH, 0, 3, 0, 27)                           \
   PARAM_ENTRY(CAT_LEXUS, OilPump, "%", 0, 100, 50, 28)                         \
+  PARAM_ENTRY(CAT_LEXUS, Gs2Slew, "dig", 1, 4000, 54, 168)                     \
+  PARAM_ENTRY(CAT_LEXUS, Gs1Slew, "dig", 1, 4000, 64, 169)                     \
+  PARAM_ENTRY(CAT_LEXUS, GsFlagStep, "dig", 1, 4000, 128, 170)                 \
+  PARAM_ENTRY(CAT_LEXUS, GsTqBand, "dig", 0, 1000, 0, 171)                     \
   PARAM_ENTRY(CAT_CRUISE, cruisestep, "rpm", 1, 1000, 200, 29)                 \
   PARAM_ENTRY(CAT_CRUISE, cruiseramp, "rpm/100ms", 1, 1000, 20, 30)            \
   PARAM_ENTRY(CAT_CRUISE, regenlevel, "", 0, 3, 2, 31)                         \
@@ -309,9 +317,11 @@
   VALUE_ENTRY(SP51ULink, "V", 2145)                                            \
   VALUE_ENTRY(SP51UMax, "V", 2146)                                             \
   VALUE_ENTRY(SP51UMin, "V", 2147)                                             \
-  VALUE_ENTRY(SP51IDchg, "A", 2148)
+  VALUE_ENTRY(SP51IDchg, "A", 2148)                                            \
+  VALUE_ENTRY(MthChkErr, "", 2149)                                             \
+  VALUE_ENTRY(GsEcm, GSECM, 2150)
 
-// Next value Id: 2149
+// Next value Id: 2151
 
 // Dead params
 /*
@@ -358,7 +368,7 @@
   "0=Absent, 1=ACStd, 2=ACchg, 3=Error, 4=CCS_Not_Rdy, 5=CCS_Rdy, 6=Static"
 #define VEHMODES                                                               \
   "0=BMW_E46, 1=BMW_E6x+, 2=Classic, 3=None, 5=BMW_E39, 6=VAG, 7=Subaru, "     \
-  "8=BMW_E31, 9=BMW_F11, 10=BMW_E92"
+  "8=BMW_E31, 9=BMW_F11, 10=BMW_E92, 11=GS450H"
 #define BMSMODES                                                               \
   "0=Off, 1=SimpBMS, 2=TiDaisychainSingle, 3=TiDaisychainDual, 4=LeafBms, "    \
   "5=RenaultKangoo33, 6=STW, 7=OIFlyingAdc, 8=BMW_SP51"
@@ -437,6 +447,8 @@
 #define DIRLIM "0=None, 1=SpeedThres, 2=SpeedBrake"
 #define ABOVEBELOW "0=BelowOF,1=BelowScale, 2=AboveOF, 3=AboveScale"
 #define DRIVEINHIBITMODES "0=Off,1=Plug detect"
+#define GSECM                                                                  \
+  "b0=EngStop, b1=Sent77, b2=Crank, b3=Run, b4=Init, b5=Seen, b6=Rx484"
 
 #define CAN_PERIOD_100MS 0
 #define CAN_PERIOD_10MS 1
@@ -554,8 +566,9 @@ enum vehicles {
   vVAG = 6,
   vSUBARU = 7,
   vBMW_E31 = 8,
-  vBMW_F11 = 9, // F11 Touring: stand in for the removed diesel ECU
-  vBMW_E92 = 10 // E92 N43: stand in for the removed MSD80 DME
+  vBMW_F11 = 9,  // F11 Touring: stand in for the removed diesel ECU
+  vBMW_E92 = 10, // E92 N43: stand in for the removed MSD80 DME
+  vGS450H = 11   // Lexus GS450h: stand in for the removed HV-ECU
 };
 
 enum _potmodes {

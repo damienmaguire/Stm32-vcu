@@ -72,6 +72,8 @@ private:
   void setTimerState(bool);
   void GS450Hgear();
   void GS450Houtput();
+  // GS450H only. Builds one HTM frame from the slewed torque.
+  void Gs450hPackHtm();
 };
 
 #endif /* GS450H_h */

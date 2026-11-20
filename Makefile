@@ -68,7 +68,7 @@ CPPFLAGS    = -Os -Wall -Wextra -Ilibopeninv/include -Iinclude/ -Ilibopencm3/inc
               -fno-unwind-tables $(CPUFLAGS) -ggdb3
 LDFLAGS  = -Llibopencm3/lib -T$(LDSCRIPT) $(LDFLAGS_ARCH) -nostartfiles -Wl,--gc-sections,-Map,$(MAPFILE)
 OBJSL		= stm32_vcu.o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
-           my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o BMW_E65.o GS450H.o temp_meas.o \
+           my_string.o digio.o my_fp.o printf.o anain.o throttle.o isa_shunt.o BMW_E65.o GS450H.o GS450H_Vehicle.o temp_meas.o \
            BMW_E39.o BMW_E92.o BMW_F11.o Can_VAG.o Can_OI.o MCP2515.o CANSPI.o outlanderinverter.o canhardware.o canmap.o \
            param_save.o errormessage.o stm32_can.o leafinv.o utils.o terminalcommands.o i3LIM.o \
            chademo.o amperaheater.o amperacharger.o subaruvehicle.o iomatrix.o bmw_sbox.o NissanPDM.o teslaCharger.o extCharger.o vag_sbox.o \
