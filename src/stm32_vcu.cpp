@@ -106,6 +106,7 @@
 #include "vehicles/BMW_E92.h"
 #include "vehicles/BMW_F11.h"
 #include "vehicles/Can_VAG.h"
+#include "vehicles/GS450H_Vehicle.h"
 #include "vehicles/V_Classic.h"
 #include "vehicles/subaruvehicle.h"
 #include "vehicles/vehicle.h"
@@ -164,6 +165,7 @@ static BMW_E65 e65Vehicle;
 static BMW_E39 e39Vehicle;
 static BMW_E92 e92Vehicle;
 static BMW_F11 f11Vehicle;
+static GS450H_Vehicle gs450hVehicle;
 static Can_VAG vagVehicle;
 static SubaruVehicle subaruVehicle;
 static GS450HClass gs450Inverter;
@@ -1024,6 +1026,10 @@ static void UpdateVehicle() {
   case vehicles::vBMW_E92:
     // E92: pretend to be the removed N43 MSD80 DME on PT-CAN.
     selectedVehicle = &e92Vehicle;
+    break;
+  case vehicles::vGS450H:
+    // GS450h: pretend to be the removed HV-ECU.
+    selectedVehicle = &gs450hVehicle;
     break;
   case vehicles::Classic:
     selectedVehicle = &classVehicle;

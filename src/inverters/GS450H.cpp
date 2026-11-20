@@ -71,6 +71,10 @@ static uint8_t *processing_rx_buffer = rx_buffer_b; // CPU reads here
 
 // Inverter processing delay counter
 static uint8_t inverter_delay_counter = 0;
+// Prius (case 7) and GS300H (case 12) still wait this long. The GS450H
+// path does not. OEM exchange 0x02FC2E is a 4-tick machine on the
+// FA20/FA22 port with DMAC channels 0 and 4. CSIB1 is a separate 66+66
+// on-board link and is not this frame.
 static const uint8_t INVERTER_PROCESSING_TIME_MS =
     3; // Give inverter time to process
 
@@ -95,6 +99,14 @@ static bool TorqueCut, ShiftInit = 0;
 static int8_t TorqueShiftRamp = 0;
 static uint8_t speedSum2;
 static uint8_t gearAct, gearReq, gearStep = 0;
+// Torque last written to HTM 5-6 (MG1) and 26-27 (MG2). The SetTorque
+// command is the other slot (11-12 / 32-33), matching the OEM pair.
+static int16_t mg1_final = 0;
+static int16_t mg2_final = 0;
+// GS450H frames rejected by the uint16 checksum. Saturates at 65535.
+static uint16_t mth_csum_errors = 0;
+// Checksum-good GS450H frames whose MTH[81] bit 0 was clear. Saturates.
+static uint16_t mth_gate_errors = 0;
 
 static void dma_read(uint8_t *data, int size);
 static void dma_write(const uint8_t *data, int size);
@@ -534,6 +546,9 @@ void GS450HClass::SetGS450H() {
     htm_state = 0;
     inv_status = 1; // must be 1 for gs450h
   }
+  // Don't carry a slewed command across an inverter re-select.
+  mg1_final = 0;
+  mg2_final = 0;
   DriveType = GS450H;
 }
 
@@ -570,6 +585,155 @@ void GS450HClass::CalcHTMChecksum(uint16_t len) {
   htm_data[len - 1] = htm_checksum >> 8;
 }
 
+// OEM MTH checksum at 0x02FD0E, same uint16 little-endian sum the HTM
+// writer uses at 0x02FEDA: bytes [0 .. len-3]. The old helper summed
+// mth_data, which is only filled after a frame is accepted, so it was
+// scoring the previous good frame.
+static bool Gs450hMthChecksumOk(const uint8_t *data, uint16_t len) {
+  uint16_t sum = 0;
+
+  if (len < 2)
+    return false;
+  for (uint16_t i = 0; i < (uint16_t)(len - 2); i++)
+    sum += data[i];
+  return sum == (uint16_t)(data[len - 2] | (data[len - 1] << 8));
+}
+
+static int16_t GsStepToward(int16_t now, int16_t target, int step) {
+  int32_t delta;
+
+  if (step < 1)
+    step = 1;
+  delta = (int32_t)target - (int32_t)now;
+  if (delta > step)
+    delta = step;
+  else if (delta < -(int32_t)step)
+    delta = -(int32_t)step;
+  return (int16_t)((int32_t)now + delta);
+}
+
+// GsTqBand 0 leaves the command alone. OEM's +/-160 band is at 0x082946
+// and 0x082D36, next to a creep bias (gp-664, 0x082D88) that is only [I]
+// and would roll the car with the pedal up, so that bias is not applied.
+static int16_t GsDeadband(int16_t target) {
+  int band = Param::GetInt(Param::GsTqBand);
+
+  if (band > 0 && target > -band && target < band)
+    return 0;
+  return target;
+}
+
+static void PutLeI16(uint8_t *p, int16_t v) {
+  p[0] = (uint8_t)v;
+  p[1] = (uint8_t)((uint16_t)v >> 8);
+}
+
+// finalOut is what goes in the "after the limiter" slot. slotOut is the
+// pre-limiter command. Both are 0 immediately when the inverter is not
+// in RUN, torque is cut for a shift, or the direction is neutral/park.
+static void Gs450hShapeTorque(int16_t *final1, int16_t *final2, int16_t *slot1,
+                              int16_t *slot2) {
+  int dir = Param::GetInt(Param::dir);
+  bool forceOff = TorqueCut || (Param::GetInt(Param::opmode) != MOD_RUN) ||
+                  dir == 0 || dir == 2;
+  int step1 = Param::GetInt(Param::Gs1Slew);
+  int step2 = Param::GetInt(Param::Gs2Slew);
+  int flagStep = Param::GetInt(Param::GsFlagStep);
+  int16_t cmd1;
+  int16_t cmd2;
+
+  if (forceOff) {
+    mg1_final = 0;
+    mg2_final = 0;
+    *slot1 = 0;
+    *slot2 = 0;
+    *final1 = 0;
+    *final2 = 0;
+    return;
+  }
+
+  // Inverter-requested clamp. MTH[21].6 -> MG1 (0x080AF4), MTH[53].6 ->
+  // MG2 (0x0830C0). OEM limits the change to +/-128 in the units it
+  // shifts >>2 before packing. These counts are the wire values, and
+  // 128 is the constant in the firmware. The wire step may be +/-32 [I];
+  // GsFlagStep is the knob for that.
+  if ((mth_data[21] & 0x40) != 0 && flagStep < step1)
+    step1 = flagStep;
+  if ((mth_data[53] & 0x40) != 0 && flagStep < step2)
+    step2 = flagStep;
+
+  // MG2 base ramp is 26/29/53/54 per tick (0x082C32). MG1 is +/-64
+  // (0x080A98). The later 0x077AE2 limiter (8800 / 3648) is much wider,
+  // so these defaults are the low-speed steps. Counts match the numbers
+  // SetTorque already writes; a step of 4000 is effectively no slew.
+  cmd1 = GsDeadband(mg1_torque);
+  cmd2 = GsDeadband(mg2_torque);
+  *slot1 = mg1_torque;
+  *slot2 = mg2_torque;
+  mg1_final = GsStepToward(mg1_final, cmd1, step1);
+  mg2_final = GsStepToward(mg2_final, cmd2, step2);
+  *final1 = mg1_final;
+  *final2 = mg2_final;
+}
+
+void GS450HClass::Gs450hPackHtm() {
+  int16_t mg1Wire;
+  int16_t mg2Wire;
+  int16_t mg1Slot;
+  int16_t mg2Slot;
+
+  Gs450hShapeTorque(&mg1Wire, &mg2Wire, &mg1Slot, &mg2Slot);
+
+  speedSum = mg2_speed + mg1_speed;
+  speedSum /= 113;
+  speedSum2 = speedSum;
+  htm_data[0] = speedSum2;
+
+  // TODO(sync note section 8, items 6-8 and 10): not changed.
+  // 18-21 stay 0. OEM's MG2 limits come from 0x079F46; a guessed
+  // limit could clamp drive torque, and the scale is not confirmed.
+  // 63-66 stay -5000 / 27500. OEM moves these and keeps a 500 floor
+  // (0x079AAC). The running values were not logged.
+  // 75-76 stay mg1_torque*4. OEM stores an MG2 Q12 ratio there
+  // (0x079F76), not MG1.
+  // Bytes 1, 15-17, 36-38, 60, 62, 71-74 and 77 stay at the existing
+  // constants. HTM[0] stays (mg1+mg2)/113.
+  // TODO(S-box): do not move 56-57 onto 28-29, do not treat byte 31 as
+  // the high half of 30-31, and do not rewrite byte 70. That reading
+  // of halfwords 0x30014, 0x30032, 0x30052, 0x3015A, 0x3017A and
+  // 0x3019E (sst.h that might be sst.b) is unconfirmed until the
+  // descrambler S-box is corrected. Those bytes stay as this frame
+  // already sends them.
+  htm_data[75] = (mg1_torque * 4) & 0xFF;
+  htm_data[76] = ((mg1_torque * 4) >> 8) & 0xFF;
+
+  // MG1 final is 5-6, target is 11-12 (OEM 0x034DEE / 0x034E02).
+  // Negative is still forward.
+  PutLeI16(&htm_data[5], (int16_t)(-mg1Wire));
+  PutLeI16(&htm_data[11], (int16_t)(-mg1Slot));
+
+  // MG2 final is 26-27, target is 32-33 (OEM 0x034EA0 / 0x034EB6).
+  PutLeI16(&htm_data[26], mg2Wire);
+  PutLeI16(&htm_data[32], mg2Slot);
+
+  htm_data[63] = (-5000) & 0xFF; // regen ability of battery
+  htm_data[64] = ((-5000) >> 8);
+
+  htm_data[65] = (27500) & 0xFF; // discharge ability of battery
+  htm_data[66] = ((27500) >> 8);
+
+  Param::SetInt(Param::MG1Raw, htm_data[5] | (htm_data[6] << 8));
+  Param::SetInt(Param::MG1Raw2, htm_data[75] | (htm_data[76] << 8));
+  Param::SetInt(Param::MG2Raw, htm_data[26] | (htm_data[27] << 8));
+
+  CalcHTMChecksum(80);
+
+  if (counter > 100)
+    counter = 0;
+  else
+    counter++;
+}
+
 void GS450HClass::Task1Ms() {
   // Update debug parameters
   Param::SetInt(Param::DMA_RxComplete, rx_complete_flag ? 1 : 0);
@@ -577,6 +741,8 @@ void GS450HClass::Task1Ms() {
   Param::SetInt(Param::DMA_RxTimeout, rx_timeout);
   Param::SetInt(Param::DMA_ConsecFail, consecutive_failures);
   Param::SetInt(Param::HTM_State, htm_state);
+  Param::SetInt(Param::MthChkErr, mth_csum_errors);
+  Param::SetInt(Param::MthGateErr, mth_gate_errors);
 
   switch (htm_state) {
   case 0:
@@ -615,32 +781,41 @@ void GS450HClass::Task1Ms() {
       if (processing_rx_buffer[1] == 0)
         inv_status = 1;
     }
-    htm_state++;
+    // Skip the 3 ms pause. Case 3 waits on the DMA flag, so the
+    // exchange lands near the OEM 4 ms at 0x02FC2E (arm, send, RX done
+    // + build). Lengths stay 80 out / 100 in and REQ polarity is
+    // unchanged. TIM2 and the USART stay at the existing 500 kHz, and
+    // the bit order is unchanged. The OEM clock is the FA20/FA22 port,
+    // not CSIB1, and it has not been measured on this harness.
+    htm_state = 3;
     break;
   case 2:
-    // Add delay to give inverter time to process the command
-    inverter_delay_counter++;
-    if (inverter_delay_counter >= INVERTER_PROCESSING_TIME_MS) {
-      inverter_delay_counter = 0;
-      htm_state++;
-    }
+    // Not used by GS450H any more. One tick, then the RX check, so a
+    // stale state cannot stick. Prius uses case 7 for this pause.
+    inverter_delay_counter = 0;
+    htm_state = 3;
     break;
   case 3:
     // Wait for RX completion with timeout
     if (rx_complete_flag) {
       rx_complete_flag = false;
-      // Check buffer integrity - processing_rx_buffer was swapped by ISR
-      if (VerifyMTHChecksum(100) == 0 &&
-          VerifyMTHChecksumNew(processing_rx_buffer, 100) == 0) {
-        consecutive_failures++;
-        if (consecutive_failures > MAX_FAILURES) {
-          statusInv = 0;
-          mg1_speed = 0;
-          mg2_speed = 0;
-          Param::SetInt(Param::cruisespeed, 0);
-        }
-      } else {
-        // exchange data and prepare next HTM frame using processing buffer
+      // Score the buffer the DMA just filled. OEM accepts the uint16
+      // sum (0x02FD0E) and then MTH[81] bit 0 (0x02FD42). The 8-bit
+      // alternative is not used on this path. A reject keeps the last
+      // good speeds, temps and voltage.
+      bool accept = Gs450hMthChecksumOk(processing_rx_buffer, 100);
+      if (!accept) {
+        if (mth_csum_errors < 65535)
+          mth_csum_errors++;
+      } else if ((processing_rx_buffer[81] & 0x01) == 0) {
+        // Count every checksum-good frame the OEM would still drop.
+        // MthGateEn defaults off, so the first car test only counts.
+        if (mth_gate_errors < 65535)
+          mth_gate_errors++;
+        if (Param::GetBool(Param::MthGateEn))
+          accept = false;
+      }
+      if (accept) {
         consecutive_failures = 0;
         statusInv = 1;
         dc_bus_voltage =
@@ -650,11 +825,11 @@ void GS450HClass::Task1Ms() {
         mg1_speed = processing_rx_buffer[6] | processing_rx_buffer[7] << 8;
         mg2_speed = processing_rx_buffer[31] | processing_rx_buffer[32] << 8;
 
-        // Copy to mth_data for compatibility with existing code
         for (int i = 0; i < 100; i++)
           mth_data[i] = processing_rx_buffer[i];
       }
-      htm_state++;
+      Gs450hPackHtm();
+      htm_state = 0;
     } else {
       // Handle timeout
       rx_timeout++;
@@ -664,63 +839,14 @@ void GS450HClass::Task1Ms() {
         mg1_speed = 0;
         mg2_speed = 0;
         Param::SetInt(Param::cruisespeed, 0);
-        htm_state++; // Move on despite timeout
+        Gs450hPackHtm();
+        htm_state = 0; // Move on despite timeout
       }
     }
     break;
   case 4:
-    // -3500 (reverse) to 3500 (forward)
-
-    // speed feedback
-    speedSum = mg2_speed + mg1_speed;
-    speedSum /= 113;
-    speedSum2 = speedSum;
-
-    htm_data[0] = speedSum2;
-    htm_data[75] = (mg1_torque * 4) & 0xFF;
-    htm_data[76] = ((mg1_torque * 4) >> 8) & 0xFF;
-
-    // mg1
-    htm_data[5] = (-mg1_torque) & 0xFF; // negative is forward
-    htm_data[6] = ((-mg1_torque) >> 8);
-    htm_data[11] = htm_data[5];
-    htm_data[12] = htm_data[6];
-
-    // mg2
-    htm_data[26] = (mg2_torque) & 0xFF; // positive is forward
-    htm_data[27] = ((mg2_torque) >> 8) & 0xFF;
-    htm_data[32] = htm_data[26];
-    htm_data[33] = htm_data[27];
-
-    htm_data[63] = (-5000) & 0xFF; // regen ability of battery
-    htm_data[64] = ((-5000) >> 8);
-
-    htm_data[65] = (27500) & 0xFF; // discharge ability of battery
-    htm_data[66] = ((27500) >> 8);
-
-    Param::SetInt(Param::MG1Raw, htm_data[5] | (htm_data[6] << 8));
-    Param::SetInt(Param::MG1Raw2, htm_data[75] | (htm_data[76] << 8));
-    Param::SetInt(Param::MG2Raw, htm_data[26] | (htm_data[27] << 8));
-
-    //!!moved to checksum function.
-    /*
-    htm_checksum=0;
-
-    for (int i = 0; i < 78; i++)
-        htm_checksum += htm_data[i];
-
-    htm_data[78]=htm_checksum&0xFF;
-    htm_data[79]=htm_checksum>>8;
-    */
-    CalcHTMChecksum(80);
-
-    if (counter > 100) {
-      // HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin );
-      counter = 0;
-    } else {
-      counter++;
-    }
-
+    // Kept so a stale state still sends one shaped frame and restarts.
+    Gs450hPackHtm();
     htm_state = 0;
     break;
 
