@@ -432,13 +432,44 @@ void BMW_E65::Engine_Data() {
 
   if (Param::GetInt(Param::opmode) == MOD_RUN) {
     EngRun = 0x60;
-    uint16_t injectors = 40604;
-    bytes[4] = injectors;
-    bytes[5] = injectors >> 8;
-  } else {
-    bytes[4] = 0x00;
-    bytes[5] = 0x00;
+
+    // Dynamic Fuel Consumption Accumulator (0x1D0 Bytes 4 & 5)
+    // In ZombieVerter, battery current idc is negative when discharging,
+    // positive when charging. Multiplying by -1 yields positive current during
+    // vehicle drive/acceleration.
+    float rawCurr = Param::GetFloat(Param::idc) * -1.0f;
+    float udc = Param::GetFloat(Param::udc);
+    float pwrKw = 0.0f;
+    if (rawCurr > 0.0f && udc > 50.0f) {
+      pwrKw = (rawCurr * udc) / 1000.0f;
+    }
+
+    float battCap = Param::GetFloat(Param::BattCap);
+    if (battCap < 5.0f) {
+      battCap = 40.0f; // Default fallback to 40 kWh if unconfigured
+    }
+
+    float mpgScale = (float)Param::GetInt(Param::bmwMpgScale) / 100.0f;
+    if (mpgScale <= 0.0f) {
+      mpgScale = 1.0f;
+    }
+
+    // In 100ms cycle (0.1s), energy used: DeltaWh = (pwrKw * 1000 / 3600) * 0.1
+    // = pwrKw / 36 Scaling to virtual 60L tank: ul_per_wh = 60,000 / battCap
+    // Delta uL = (pwrKw / 36) * (60000 / battCap) * mpgScale
+    //          = pwrKw * (1666.67f / battCap) * mpgScale
+    float delta_ul = pwrKw * (1666.67f / battCap) * mpgScale;
+
+    fuel_fraction_ul += delta_ul;
+    uint16_t whole_ul = (uint16_t)fuel_fraction_ul;
+    fuel_fraction_ul -= (float)whole_ul;
+    fuel_accumulator += whole_ul; // Naturally wraps at uint16_t (65535)
+
+    Param::SetInt(Param::bmwFuelAcc, fuel_accumulator);
   }
+
+  bytes[4] = fuel_accumulator & 0xFF;
+  bytes[5] = (fuel_accumulator >> 8) & 0xFF;
 
   float Curr = Param::GetFloat(Param::idc) * -1;
   Curr = Curr + 100;
