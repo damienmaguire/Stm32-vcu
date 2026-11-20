@@ -72,6 +72,8 @@ private:
   bool StartButt;
   bool isE90;
   bool ac_request_active = false;
+  uint16_t fuel_accumulator = 0;
+  float fuel_fraction_ul = 0.0f;
 };
 
 #endif /* BMW_E65_h */
