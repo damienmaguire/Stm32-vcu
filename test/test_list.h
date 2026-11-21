@@ -28,8 +28,13 @@ public:
   virtual void RunTest();
 };
 
+class ToyotaFramesTest : public IUnitTest {
+public:
+  virtual void RunTest();
+};
+
 #ifdef EXPORT_TESTLIST
-IUnitTest *testList[] = {new ThrottleTest(), NULL};
+IUnitTest *testList[] = {new ThrottleTest(), new ToyotaFramesTest(), NULL};
 #endif
 
 #endif // TEST_LIST_H_INCLUDED
