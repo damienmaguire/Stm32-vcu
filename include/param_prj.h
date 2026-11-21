@@ -121,6 +121,7 @@
   PARAM_ENTRY(CAT_BMS, BMS_VmaxLimit, "V", 0, 10, 4.2, 93)                     \
   PARAM_ENTRY(CAT_BMS, BMS_TminLimit, "°C", -100, 100, 5, 94)                  \
   PARAM_ENTRY(CAT_BMS, BMS_TmaxLimit, "°C", -100, 100, 50, 95)                 \
+  PARAM_ENTRY(CAT_BMS, BMS_IgnoreMaxRate, ONOFF, 0, 1, 0, 162)                 \
   PARAM_ENTRY(CAT_HEATER, Heater, HTTYPE, 0, 8, 0, 57)                         \
   PARAM_ENTRY(CAT_HEATER, Control, HTCTRL, 0, 2, 0, 58)                        \
   PARAM_ENTRY(CAT_HEATER, HeatPwr, "W", 0, 6500, 0, 59)                        \
@@ -179,6 +180,10 @@
   PARAM_ENTRY(CAT_PWM, DC_MinTemp, "", 1, 100, 0, 144)                         \
   PARAM_ENTRY(CAT_PWM, DC_MaxSOC, "", 1, 100, 10, 145)                         \
   PARAM_ENTRY(CAT_PWM, DC_MinSOC, "", 1, 100, 0, 146)                          \
+  PARAM_ENTRY(CAT_SETUP, bmwMpgScale, "%", 10, 500, 100, 163)                  \
+  /* MaxTorq: Max drivetrain torque (Nm) for CAN feedback & stability control  \
+   */                                                                          \
+  PARAM_ENTRY(CAT_THROTTLE, MaxTorq, "Nm", 50, 1000, 400, 164)                 \
   VALUE_ENTRY(version, VERSTR, 2000)                                           \
   VALUE_ENTRY(hwver, HWVERSTR, 2126)                                           \
   VALUE_ENTRY(opmode, OPMODES, 2002)                                           \
@@ -291,9 +296,15 @@
   VALUE_ENTRY(DMA_TxComplete, ONOFF, 2120)                                     \
   VALUE_ENTRY(DMA_RxTimeout, "", 2121)                                         \
   VALUE_ENTRY(DMA_ConsecFail, "", 2122)                                        \
-  VALUE_ENTRY(HTM_State, "", 2123)
+  VALUE_ENTRY(HTM_State, "", 2123)                                             \
+  VALUE_ENTRY(bmwFuelAcc, "ul", 2127)                                          \
+  VALUE_ENTRY(DSCTorqReq, "Nm", 2128)                                          \
+  VALUE_ENTRY(DSCActive, "", 2129)                                             \
+  VALUE_ENTRY(MSRActive, "", 2130)                                             \
+  VALUE_ENTRY(DSCFullOff, "", 2131)                                            \
+  VALUE_ENTRY(DTC, "", 2132)
 
-// Next value Id: 2127
+// Next value Id: 2133
 
 // Dead params
 /*

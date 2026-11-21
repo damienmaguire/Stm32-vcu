@@ -1,7 +1,12 @@
 name: CI
 on:
   push:
+    branches: [Vehicle_Testing]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

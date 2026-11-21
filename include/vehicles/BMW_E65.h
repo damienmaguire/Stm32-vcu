@@ -49,6 +49,9 @@ public:
   void handle1A0(uint32_t data[2]);
   void handle2FC(uint32_t data[2]);
   void handle480(uint32_t data[2]);
+  void handle19E(uint32_t data[2]);
+  void handle0B6(uint32_t data[2]);
+  float AdjustThrottle(float throttle) override;
   void SetE90(bool e90) { isE90 = e90; }
   void Engine_Data();
   void SetFuelGauge(float level);
@@ -72,6 +75,13 @@ private:
   bool StartButt;
   bool isE90;
   bool ac_request_active = false;
+  uint16_t fuel_accumulator = 0;
+  float fuel_fraction_ul = 0.0f;
+  uint8_t dtc = 0;
+  uint8_t dsc_full_off = 0;
+  uint16_t dsc_torque_req = 400;
+  bool dsc_active = false;
+  bool msr_active = false;
 };
 
 #endif /* BMW_E65_h */
