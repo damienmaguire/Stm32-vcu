@@ -20,7 +20,6 @@
 
 #include "HVAC/preheater.h"
 #include "digio.h"
-#include "errormessage.h"
 #include "iomatrix.h"
 #include "utils.h"
 
@@ -42,7 +41,6 @@ bool Preheater::GetRunPreHeat() { return Preheater::RunPreHeat; }
 void Preheater::Ms10Task() {
   Param::SetInt(Param::opmode, MOD_PREHEAT);
   Param::SetInt(Param::HeatReq, true);
-  ErrorMessage::UnpostAll();
   if (!Preheater::RunPreHeat) {
     Param::SetInt(Param::opmode, MOD_OFF);
     Param::SetInt(Param::HeatReq, false);
