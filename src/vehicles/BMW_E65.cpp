@@ -47,6 +47,8 @@ void BMW_E65::SetCanInterface(CanHardware *c) {
   can->RegisterUserMessage(0x2FC); // E90 Enclosure status
   can->RegisterUserMessage(0x480); // Network Management
   can->RegisterUserMessage(0x1A0); // Speed
+  can->RegisterUserMessage(0x19E); // DSC Status
+  can->RegisterUserMessage(0x0B6); // DSC Torque Demand
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////Handle incomming pt can messages from the car here
@@ -70,9 +72,98 @@ void BMW_E65::DecodeCAN(int id, uint32_t *data) {
     BMW_E65::handle480(data);
     break;
 
+  case 0x19E: // DSC Status
+    BMW_E65::handle19E(data);
+    break;
+
+  case 0x0B6: // DSC Torque Demand (Traction / Stability Control)
+    BMW_E65::handle0B6(data);
+    break;
+
   default:
     break;
   }
+}
+
+void BMW_E65::handle19E(uint32_t data[2]) {
+  uint8_t *bytes = (uint8_t *)data;
+
+  uint8_t dsc_off_state = bytes[1] & 0x0F;
+  uint8_t dtc_flag = (bytes[1] >> 4) & 0x01;
+
+  if (dsc_off_state == 0x0A) {
+    dsc_full_off = true;
+  } else {
+    dsc_full_off = false;
+  }
+
+  if (dtc_flag == 1) {
+    dtc = true;
+  } else {
+    dtc = false;
+  }
+
+  Param::SetInt(Param::DSCFullOff, dsc_full_off);
+  Param::SetInt(Param::DTC, dtc);
+}
+
+void BMW_E65::handle0B6(uint32_t data[2]) {
+  uint8_t *bytes = (uint8_t *)data;
+
+  // In BMW E90 PT-CAN (BN2000 Message 0x0B6 / 182):
+  // Byte 1:
+  //   Bits [5:4]: ST_TORQ_DSC (0 = Inactive, 1 = Fast ASR cut, 2 = Slow ASR
+  //   cut, 3 = Both) Bit 6:      ST_MSR (1 = Drag torque / regen backoff
+  //   requested)
+  uint8_t st_torq = (bytes[1] >> 4) & 0x03;
+  bool msr = ((bytes[1] >> 6) & 0x01) == 1;
+
+  // Bytes 2 & 3: TORQ_DSC (12-bit unsigned torque demand)
+  //   Low byte: bytes[2]
+  //   High nibble: bytes[3] & 0x0F
+  uint16_t raw_torq = bytes[2] | ((bytes[3] & 0x0F) << 8);
+
+  // Scaling: 0.5 Nm per bit
+  float dscTorqNm = raw_torq * 0.5f;
+
+  if (st_torq != 0) {
+    dsc_active = true;
+    dsc_torque_req = (uint16_t)dscTorqNm;
+  } else {
+    dsc_active = false;
+    dsc_torque_req = (uint16_t)Param::GetInt(Param::MaxTorq);
+  }
+
+  msr_active = msr;
+
+  Param::SetInt(Param::DSCActive, dsc_active ? 1 : 0);
+  Param::SetInt(Param::MSRActive, msr_active ? 1 : 0);
+  Param::SetFloat(Param::DSCTorqReq, dscTorqNm);
+}
+
+float BMW_E65::AdjustThrottle(float throttle) {
+  // commented out for now, as it was causing issues with regen braking and
+  // traction control. Just going to log the values for now and see if we can
+  // come up with a better solution later.
+
+  // 1. ASR: Acceleration Slip Regulation (DSC Torque cut on drive wheel spin)
+  // Only apply if DSC is active and the driver hasn't set DSC Full Off
+  // if (dsc_active && !dsc_full_off) {
+  //     float maxTorq = (float)Param::GetInt(Param::MaxTorq);
+  //     if (maxTorq > 0.0f && throttle > 0.0f) {
+  //         float dscLimitPercent = ((float)dsc_torque_req / maxTorq) * 100.0f;
+  //         if (dscLimitPercent < throttle) {
+  //             throttle = MAX(0.0f, dscLimitPercent);
+  //         }
+  //     }
+  // }
+
+  // 2. MSR: Motor-Schleppmoment-Regelung (Cancel regen braking on rear-axle
+  // lockup/skid) if (msr_active && throttle < 0.0f) {
+  //     throttle = 0.0f;
+  // }
+
+  return throttle;
 }
 
 void BMW_E65::handle130(uint32_t data[2]) {
@@ -261,8 +352,9 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In) {
     bytes[6] = 0x84;
     bytes[7] = 0x00;
   }
-  bytes[3] = 0x00;         // Pedal position 0-255
-  bytes[4] = RPM_A & 0xff; // lowByte(RPM_A);
+  float pedalPercent = MAX(0.0f, Param::GetFloat(Param::potnom));
+  bytes[3] = (uint8_t)(pedalPercent * 2.54f); // Pedal position 0-254
+  bytes[4] = RPM_A & 0xff;                    // lowByte(RPM_A);
   bytes[5] = RPM_A >> 8 & 0xff;
   ; // highByte(RPM_A);
 
@@ -285,14 +377,29 @@ void BMW_E65::SendAbsDscMessages(bool Brake_In) {
     a8_brake = 0x04;
   }
 
-  int16_t check_A8 = (A81 + 0x21 + 0xe0 + 0x21 + 0x1f + 0x0f + a8_brake + 0xa8);
+  // Dynamic torque feedback in 0x0A8 for closed-loop DSC traction control.
+  // MaxTorq scales potnom (0-100%) to actual drivetrain torque in Nm expected
+  // by DSC.
+  float actualTorq = (MAX(0.0f, Param::GetFloat(Param::potnom)) / 100.0f) *
+                     (float)Param::GetInt(Param::MaxTorq);
+  uint16_t a8_torq = (uint16_t)(actualTorq * 2.0f) +
+                     0x21; // 0.5 Nm per bit with idle offset (0x21)
+  if (a8_torq > 0x0FFF)
+    a8_torq = 0x0FFF;
+
+  uint8_t a8_byte2 = a8_torq & 0xFF;
+  uint8_t a8_byte3 =
+      0xE0 | ((a8_torq >> 8) & 0x0F); // Preserve 0xE0 status nibble
+
+  int16_t check_A8 =
+      (A81 + a8_byte2 + a8_byte3 + 0x21 + 0x1f + 0x0f + a8_brake + 0xa8);
   check_A8 = (check_A8 / 0x100) + (check_A8 & 0xff);
   check_A8 = check_A8 & 0xff;
 
   bytes[0] = check_A8; // checksum
   bytes[1] = A81;      // counter byte
-  bytes[2] = 0x21;
-  bytes[3] = 0xe0;
+  bytes[2] = a8_byte2; // Indicated Torque low byte
+  bytes[3] = a8_byte3; // Status nibble (0xE0) + Indicated Torque high nibble
   bytes[4] = 0x21;
   bytes[5] = 0x1f;
   bytes[6] = 0x0f;

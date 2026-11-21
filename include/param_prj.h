@@ -34,7 +34,7 @@
 #define VALUE_ENTRY_HW(name, unit, id, minHWVer) VALUE_ENTRY(name, unit, id)
 #endif
 
-// Next param id (increase when adding new parameter!): 163
+// Next param id (increase when adding new parameter!): 165
 /*              category     name         unit       min     max     default id
  * [minHWVer]
  */
@@ -179,7 +179,10 @@
   PARAM_ENTRY(CAT_PWM, DC_MinTemp, "", 1, 100, 0, 144)                         \
   PARAM_ENTRY(CAT_PWM, DC_MaxSOC, "", 1, 100, 10, 145)                         \
   PARAM_ENTRY(CAT_PWM, DC_MinSOC, "", 1, 100, 0, 146)                          \
-  PARAM_ENTRY(CAT_SETUP, bmwMpgScale, "%", 10, 500, 100, 162)                  \
+  PARAM_ENTRY(CAT_SETUP, bmwMpgScale, "%", 10, 500, 100, 163)                  \
+  /* MaxTorq: Max drivetrain torque (Nm) for CAN feedback & stability control  \
+   */                                                                          \
+  PARAM_ENTRY(CAT_THROTTLE, MaxTorq, "Nm", 50, 1000, 400, 164)                 \
   VALUE_ENTRY(version, VERSTR, 2000)                                           \
   VALUE_ENTRY(hwver, HWVERSTR, 2126)                                           \
   VALUE_ENTRY(opmode, OPMODES, 2002)                                           \
@@ -293,9 +296,14 @@
   VALUE_ENTRY(DMA_RxTimeout, "", 2121)                                         \
   VALUE_ENTRY(DMA_ConsecFail, "", 2122)                                        \
   VALUE_ENTRY(HTM_State, "", 2123)                                             \
-  VALUE_ENTRY(bmwFuelAcc, "ul", 2127)
+  VALUE_ENTRY(bmwFuelAcc, "ul", 2127)                                          \
+  VALUE_ENTRY(DSCTorqReq, "Nm", 2128)                                          \
+  VALUE_ENTRY(DSCActive, "", 2129)                                             \
+  VALUE_ENTRY(MSRActive, "", 2130)                                             \
+  VALUE_ENTRY(DSCFullOff, "", 2131)                                            \
+  VALUE_ENTRY(DTC, "", 2132)
 
-// Next value Id: 2128
+// Next value Id: 2133
 
 // Dead params
 /*

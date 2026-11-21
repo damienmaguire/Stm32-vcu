@@ -632,6 +632,7 @@ static void Ms10Task(void) {
     torquePercent = utils::ProcessThrottle(
         ABS(previousSpeed)); // run the throttle reading and checks and then
                              // generate Potnom
+    torquePercent = selectedVehicle->AdjustThrottle(torquePercent);
 
     // When requesting regen we need to be careful. If the car is not rolling
     // in the same direction as the selected gear, we will actually accelerate!
