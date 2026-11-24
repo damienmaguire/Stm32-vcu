@@ -187,7 +187,7 @@
   VALUE_ENTRY(hwver, HWVERSTR, 2126)                                           \
   VALUE_ENTRY(opmode, OPMODES, 2002)                                           \
   VALUE_ENTRY(chgtyp, CHGTYPS, 2003)                                           \
-  VALUE_ENTRY(lasterr, errorListString, 2004)                                  \
+  VALUE_ENTRY(lasterr, ERRORLIST, 2004)                                        \
   VALUE_ENTRY(status, STATUS, 2005)                                            \
   VALUE_ENTRY(CanAct, ONOFF, 2107)                                             \
   VALUE_ENTRY(TorqDerate, LIMITREASON, 2102)                                   \
@@ -375,6 +375,10 @@
 #define CANPERIODS "0=100ms, 1=10ms"
 #define COMPRESSMODES "0=None, 1=Outlander"
 #define COMP_STAT "0=NoHv, 1=HvPresent, 2=NoHeartBeat, 3=Start, 4=Running"
+#define ERRORLIST                                                              \
+  "0=NONE, 1=BMSCOMM, 2=OVERVOLTAGE, 3=PRECHARGE, 4=THROTTLE1, 5=THROTTLE2, "  \
+  "6=THROTTLE12, 7=THROTTLE12DIFF, 8=THROTTLEMODE, 9=CANTIMEOUT, "             \
+  "10=PWMCONFIGERROR, 11=TMPHSMAX, 12=TMPMMAX, 13=HVILERR"
 #define ERRLIGHTS "0=Off, 4=EPC, 8=engine"
 #define CRUISESTATES "0=None, 1=On, 2=Disable, 4=Set, 8=Resume"
 #define CDMSTAT                                                                \
