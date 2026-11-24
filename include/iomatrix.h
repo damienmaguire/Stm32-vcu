@@ -67,9 +67,17 @@ public: // order of these matters!
 
   static void AssignFromParams();
   static void AssignFromParamsAnalogue();
-  static DigIo *GetPin(pinfuncs f) { return functionToPin[f]; }
+  static DigIo *GetPin(pinfuncs f) {
+    if (f < LAST) {
+      return functionToPin[f];
+    }
+    return &DigIo::dummypin;
+  }
   static AnaIn *GetAnaloguePin(analoguepinfuncs f) {
-    return functionToPinAnalgoue[f];
+    if (f < LAST_ANAL) {
+      return functionToPinAnalgoue[f];
+    }
+    return &AnaIn::dummyAnal;
   }
 
 private:
@@ -78,7 +86,7 @@ private:
   static DigIo *const paramToPin[numPins];
 
   static AnaIn *functionToPinAnalgoue[LAST_ANAL];
-  static const int numAnaloguePins = 3;
+  static const int numAnaloguePins = 2;
   static AnaIn *const paramToPinAnalgue[numAnaloguePins];
 };
 
