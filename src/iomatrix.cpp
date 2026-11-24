@@ -39,14 +39,18 @@ void IOMatrix::AssignFromParams() {
 
   for (int i = 0; i < 10; i++) // First orignal IO pin params
   {
-    functionToPin[Param::GetInt((Param::PARAM_NUM)(FIRST_IO_PARAM + i))] =
-        paramToPin[i]; // Hard coded so hard coded bodge to fix
+    int func = Param::GetInt((Param::PARAM_NUM)(FIRST_IO_PARAM + i));
+    if (func >= 0 && func < LAST) {
+      functionToPin[func] = paramToPin[i];
+    }
   }
 
   for (int i = 10; i < numPins; i++) // PB1 PB2 PB3 params
   {
-    functionToPin[Param::GetInt((Param::PARAM_NUM)(SEC_IO_PARAM + i - 10))] =
-        paramToPin[i]; // Hard coded so hard coded bodge to fix
+    int func = Param::GetInt((Param::PARAM_NUM)(SEC_IO_PARAM + i - 10));
+    if (func >= 0 && func < LAST) {
+      functionToPin[func] = paramToPin[i];
+    }
   }
 }
 
@@ -58,7 +62,9 @@ void IOMatrix::AssignFromParamsAnalogue() {
   }
 
   for (int i = 0; i < numAnaloguePins; i++) {
-    functionToPinAnalgoue[Param::GetInt(
-        (Param::PARAM_NUM)(FIRST_AI_PARAM + i))] = paramToPinAnalgue[i];
+    int func = Param::GetInt((Param::PARAM_NUM)(FIRST_AI_PARAM + i));
+    if (func >= 0 && func < LAST_ANAL) {
+      functionToPinAnalgoue[func] = paramToPinAnalgue[i];
+    }
   }
 }
